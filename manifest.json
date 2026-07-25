@@ -1,0 +1,32 @@
+{
+  "name": "PRONET – Servicios en tu zona",
+  "short_name": "PRONET",
+  "description": "Red de recomendación de servicios del hogar y oficios en tu zona",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2B5BFF",
+  "theme_color": "#2B5BFF",
+  "lang": "es-AR",
+  "icons": [
+    {
+      "src": "iconos/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "iconos/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "iconos/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

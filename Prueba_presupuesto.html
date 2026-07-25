@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Propuesta de Servicio</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      padding: 20px;
+    }
+    .propuesta-form {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+    fieldset {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+    }
+    legend {
+      font-weight: bold;
+      padding: 0 8px;
+      color: #2c3e50;
+    }
+    .form-row {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .form-group {
+      flex: 1;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 12px;
+    }
+    label {
+      font-size: 0.9em;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #333;
+    }
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 0.95em;
+    }
+    .checkbox-group, .radio-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 5px;
+    }
+    .checkbox-group label, .radio-group label {
+      font-weight: normal;
+      cursor: pointer;
+    }
+    .form-actions {
+      text-align: right;
+      margin-top: 20px;
+    }
+    #btn-enviar-propuesta {
+      background-color: #27ae60;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #btn-enviar-propuesta:hover {
+      background-color: #219150;
+    }
+  </style>
+</head>
+<body>
+
+<form id="form-propuesta-servicio" class="propuesta-form">
+  
+  <fieldset>
+    <legend>Información de la Propuesta</legend>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="numero-propuesta">N° de Propuesta:</label>
+        <input type="text" id="numero-propuesta" name="numero_propuesta" value="PROP-2026-001" readonly>
+      </div>
+      <div class="form-group">
+        <label for="fecha-emision">Fecha de Emisión:</label>
+        <input type="date" id="fecha-emision" name="fecha_emision" required>
+      </div>
+      <div class="form-group">
+        <label for="validez-propuesta">Validez de la Oferta:</label>
+        <select id="validez-propuesta" name="validez_propuesta">
+          <option value="5">5 días de corrido</option>
+          <option value="10" selected>10 días de corrido</option>
+          <option value="15">15 días de corrido</option>
+          <option value="30">30 días de corrido</option>
+        </select>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Tipo de Servicio y Modalidad</legend>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="rubro-servicio">Rubro / Especialidad:</label>
+        <select id="rubro-servicio" name="rubro_servicio" required>
+          <option value="" disabled selected>Selecciona un rubro...</option>
+          <option value="electricidad">Electricidad</option>
+          <option value="pintura">Pintura</option>
+          <option value="pileta">Mantenimiento de Piletas</option>
+          <option value="cuidado">Cuidado de Personas / Asistencia</option>
+          <option value="plomeria">Plomería / Gas</option>
+          <option value="limpieza">Limpieza General</option>
+          <option value="otro">Otro Rubro</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="modalidad-trabajo">Modalidad de Contratación:</label>
+        <select id="modalidad-trabajo" name="modalidad_trabajo" required>
+          <option value="proyecto">Precio Cerrado / Proyecto Único</option>
+          <option value="por_hora">Por Hora / Jornada</option>
+          <option value="abono_semanal">Abono Semanal</option>
+          <option value="abono_mensual">Abono Mensual</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Categoría de Trabajo (selecciona las que apliquen):</label>
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="categoria_tarea[]" value="instalacion"> Instalación / Colocación</label>
+        <label><input type="checkbox" name="categoria_tarea[]" value="reparacion"> Reparación / Arreglo</label>
+        <label><input type="checkbox" name="categoria_tarea[]" value="mantenimiento"> Mantenimiento Preventivo</label>
+        <label><input type="checkbox" name="categoria_tarea[]" value="asistencia"> Acompañamiento / Cuidado</label>
+        <label><input type="checkbox" name="categoria_tarea[]" value="urgencia"> Servicio de Urgencia</label>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Alcance del Servicio</legend>
+    
+    <div class="form-group">
+      <label for="estado-inicial">Diagnóstico / Estado Inicial:</label>
+      <select id="estado-inicial" name="estado_inicial">
+        <option value="normal">Instalación / Situación Estándar</option>
+        <option value="requiere_reparacion">Requiere reparaciones previas antes de iniciar</option>
+        <option value="obra_nueva">Obra Nueva / Sin instalaciones previas</option>
+        <option value="evaluacion_pendiente">Sujeto a revisión presencial final</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="descripcion-servicio">Detalle de Tareas a Realizar:</label>
+      <textarea id="descripcion-servicio" name="descripcion_servicio" rows="4" placeholder="Ej: Pintado de 3 ambientes con fijador y dos manos de látex / Cuidado nocturno de lunes a viernes..." required></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Suministro de Insumos / Materiales:</label>
+      <div class="radio-group">
+        <label><input type="radio" name="politica_materiales" value="incluidos" checked> Todos los materiales están INCLUIDOS</label>
+        <label><input type="radio" name="politica_materiales" value="cliente"> Materiales a cargo del CLIENTE</label>
+        <label><input type="radio" name="politica_materiales" value="mixto"> Mano de obra incluida + Insumos básicos (Repuestos aparte)</label>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Tiempos y Requisitos de Acceso</legend>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label for="tiempo-estimado">Duración Estimada del Trabajo:</label>
+        <select id="tiempo-estimado" name="tiempo_estimado">
+          <option value="1_dia">1 Jornada (mismo día)</option>
+          <option value="2_3_dias">2 a 3 días</option>
+          <option value="1_semana">1 Semana</option>
+          <option value="continuo">Continuo / Servicio recurrente</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="horario-trabajo">Franja Horaria Preferente:</label>
+        <select id="horario-trabajo" name="horario_trabajo">
+          <option value="manana">Mañana (08:00 - 12:00 hs)</option>
+          <option value="tarde">Tarde (13:00 - 17:00 hs)</option>
+          <option value="jornada_completa">Jornada Completa</option>
+          <option value="nocturno">Guardia / Horario Nocturno</option>
+          <option value="a_convenir">A convenir con el cliente</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Requisitos Previos que debe garantizar el Cliente:</label>
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="requisitos[]" value="agua_luz" checked> Suministro de Agua y Luz activo</label>
+        <label><input type="checkbox" name="requisitos[]" value="espacio_despejado"> Espacio despejado de muebles/objetos</label>
+        <label><input type="checkbox" name="requisitos[]" value="permiso_consorcio"> Permisos de ingreso / Consorcio gestionado</label>
+        <label><input type="checkbox" name="requisitos[]" value="presencia_responsable"> Presencia de un adulto en la propiedad</label>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Presupuesto y Formas de Pago</legend>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label for="monto-mano-obra">Monto Mano de Obra ($):</label>
+        <input type="number" id="monto-mano-obra" name="monto_mano_obra" step="0.01" min="0" placeholder="0.00" required>
+      </div>
+
+      <div class="form-group">
+        <label for="monto-materiales">Monto Insumos/Materiales ($):</label>
+        <input type="number" id="monto-materiales" name="monto_materiales" step="0.01" min="0" placeholder="0.00" value="0.00">
+      </div>
+
+      <div class="form-group">
+        <label for="costo-traslado">Traslado / Adicional ($):</label>
+        <input type="number" id="costo-traslado" name="costo_traslado" step="0.01" min="0" placeholder="0.00" value="0.00">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="esquema-pago">Esquema / Anticipo:</label>
+        <select id="esquema-pago" name="esquema_pago">
+          <option value="100_final">100% al finalizar el trabajo</option>
+          <option value="50_50">50% Anticipo / 50% al finalizar</option>
+          <option value="30_70">30% Anticipo / 70% al finalizar</option>
+          <option value="semanal">Pago por semana vencida</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="garantia-servicio">Garantía del Servicio:</label>
+        <select id="garantia-servicio" name="garantia_servicio">
+          <option value="sin_garantia">Sin garantía adicional</option>
+          <option value="15_dias">15 Días de garantía</option>
+          <option value="30_dias" selected>30 Días de garantía</option>
+          <option value="90_dias">90 Días (3 meses) de garantía</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Medios de Pago Aceptados:</label>
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="medios_pago[]" value="transferencia" checked> Transferencia / CBU</label>
+        <label><input type="checkbox" name="medios_pago[]" value="efectivo" checked> Efectivo</label>
+        <label><input type="checkbox" name="medios_pago[]" value="mercado_pago"> Mercado Pago / QR</label>
+        <label><input type="checkbox" name="medios_pago[]" value="tarjeta_credito"> Tarjeta de Crédito / Débito</label>
+      </div>
+    </div>
+  </fieldset>
+
+  <div class="form-actions">
+    <button type="submit" id="btn-enviar-propuesta">Enviar Propuesta al Cliente</button>
+  </div>
+
+</form>
+
+</body>
+</html>
