@@ -2647,6 +2647,10 @@ document.addEventListener('DOMContentLoaded', function() {
       mostrarErrorLogin('Completá email y contraseña');
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      mostrarErrorLogin('El email no tiene un formato válido');
+      return;
+    }
     if (btn) btn.innerHTML = '<span style="opacity:.7">Ingresando...</span>';
     const res = await PronetDB.login(email, pw);
     if (btn) btn.innerHTML = 'Ingresar →';
@@ -3070,7 +3074,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const err    = document.getElementById('reg-error');
 
     if (!nombre || !email || !pw) { if (err) { err.textContent = 'Completá todos los campos'; err.style.display='block'; } return; }
-    if (pw.length < 6) { if (err) { err.textContent = 'La contraseña debe tener al menos 6 caracteres'; err.style.display='block'; } return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { if (err) { err.textContent = 'El email no tiene un formato válido'; err.style.display='block'; } return; }
+    if (pw.length < 8) { if (err) { err.textContent = 'La contraseña debe tener al menos 8 caracteres'; err.style.display='block'; } return; }
+    if (nombre.trim().split(/\s+/).length < 2) { if (err) { err.textContent = 'Ingresá nombre y apellido'; err.style.display='block'; } return; }
 
     const btn = document.getElementById('reg-submit');
     if (btn) btn.innerHTML = 'Creando cuenta...';
@@ -3142,10 +3148,38 @@ document.addEventListener('DOMContentLoaded', function() {
   function hideRecover() {
     document.getElementById('recover-panel').classList.remove('show');
     document.getElementById('recover-sent').style.display = 'none';
+    const errEl = document.getElementById('recover-error');
+    if (errEl) errEl.style.display = 'none';
+    const btn = document.querySelector('#recover-panel .btn-p');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar link de recuperación'; btn.style.display = ''; }
+    const inp = document.getElementById('pub-email');
+    if (inp) inp.value = '';
   }
-  function sendRecover() {
-    document.getElementById('recover-sent').style.display = 'block';
-    document.querySelector('#recover-panel .btn-p').style.display = 'none';
+  async function sendRecover() {
+    const email = (document.getElementById('pub-email')?.value || '').trim();
+    const errEl = document.getElementById('recover-error');
+    if (!email) {
+      if (errEl) { errEl.textContent = 'Ingresá tu email'; errEl.style.display = 'block'; }
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (errEl) { errEl.textContent = 'El email no tiene un formato válido'; errEl.style.display = 'block'; }
+      return;
+    }
+    if (errEl) errEl.style.display = 'none';
+    const btn = document.querySelector('#recover-panel .btn-p');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+    try {
+      const { error } = await window._sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/?reset=1',
+      });
+      if (error) throw error;
+      document.getElementById('recover-sent').style.display = 'block';
+      if (btn) btn.style.display = 'none';
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Enviar link de recuperación'; }
+      if (errEl) { errEl.textContent = 'No pudimos enviar el email. Intentá de nuevo.'; errEl.style.display = 'block'; }
+    }
   }
 
   function showBiometric() {
