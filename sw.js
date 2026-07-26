@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v45'; // v45: no interceptar externos (CSP connect-src) · v43: roles y separación admin ·  v16: fix ID duplicado np-titulo · v10: network-first para JS/CSS/HTML (fin del Ctrl+Shift+R en dev)
+const CACHE_VERSION = 'pronet-v46'; // v46: pushsubscriptionchange para renovar suscripciones expiradas · v45: no interceptar externos (CSP) · v43: roles
 
 const SHELL = [
   './',
@@ -108,5 +108,22 @@ self.addEventListener('notificationclick', (event) => {
       }
       return clients.openWindow(destino);
     })
+  );
+});
+
+// Si el servidor invalida la suscripción push (expiró o cambió de clave),
+// reuscribirse automáticamente para no perder notificaciones.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: event.oldSubscription?.options?.applicationServerKey,
+    }).then((sub) => {
+      return fetch('/api/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub),
+      }).catch(() => {}); // silencioso si no hay conectividad
+    }).catch(() => {})   // silencioso si el usuario revocó permisos
   );
 });

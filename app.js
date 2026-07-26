@@ -102,8 +102,8 @@ document.addEventListener('DOMContentLoaded', function() {
     analyticsAvanzado: true, // Analítica detallada
 
     // ── Config de demo ──
-    mostrarSelectorDemo: true, // Mostrar botones cliente/prestador en login (poner en false en prod)
-    panelConfiguracion:  true, // FIX: botón ⚙️ de niveles — antes no había forma de ocultarlo (poner en false en prod)
+    mostrarSelectorDemo: false,
+    panelConfiguracion:  true, // Botón ⚙️ de niveles — visible solo para admins (ver esAdmin() gate)
   };
 
   // Pantallas asociadas a cada feature — se ocultan del nav y bloquean en goTo
