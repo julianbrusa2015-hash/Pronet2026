@@ -177,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
     's-denuncia':         'nb-perfil',
     's-moderacion':       'nb-perfil',
     's-mis-propuestas':   'nb-pedidos',
+    's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-mis-propuestas','s-resena'];
 
