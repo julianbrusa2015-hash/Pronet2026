@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v44'; // v43: roles y separación admin ·  v16: fix ID duplicado np-titulo · v10: network-first para JS/CSS/HTML (fin del Ctrl+Shift+R en dev)
+const CACHE_VERSION = 'pronet-v45'; // v45: no interceptar externos (CSP connect-src) · v43: roles y separación admin ·  v16: fix ID duplicado np-titulo · v10: network-first para JS/CSS/HTML (fin del Ctrl+Shift+R en dev)
 
 const SHELL = [
   './',
@@ -75,16 +75,10 @@ self.addEventListener('fetch', (event) => {
         return res;
       }))
     );
-  } else {
-    // Network-first para fuentes y externos, con fallback offline al caché
-    event.respondWith(
-      fetch(req).then((res) => {
-        const copia = res.clone();
-        caches.open(CACHE_VERSION).then((c) => c.put(req, copia));
-        return res;
-      }).catch(() => caches.match(req))
-    );
   }
+  // Recursos externos (Google Fonts, CDN de supabase-js): no interceptar.
+  // Un fetch() desde el SW se evalúa contra connect-src, más restrictivo que
+  // el script-src/style-src que aplica cuando los carga la página directo.
 });
 
 // ═══ Notificaciones Push ═══
