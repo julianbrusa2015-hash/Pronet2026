@@ -5,7 +5,7 @@
 --   - Cada usuario tiene un array 'roles' (puede tener múltiples).
 --   - Rol 'admin' habilita paneles administrativos.
 --   - RLS de tablas admin-only chequea el rol.
---   - Tu cuenta vecinopuertos se marca como admin para retro-compatibilidad.
+--   - Las cuentas admin se marcan manualmente por email (ver sección 3).
 
 -- ── 1. Columna roles en perfiles ─────────────────────────────────
 alter table public.perfiles
@@ -29,15 +29,16 @@ returns boolean language sql security definer as $$
   );
 $$;
 
--- ── 3. Marcar vecinopuertos como admin ───────────────────────────
--- Ajustá el email si es distinto
+-- ── 3. Marcar cuentas admin ───────────────────────────────────────
+-- Reemplazá los emails de ejemplo por los de las cuentas admin reales
+-- antes de correr este bloque (ya se ejecutó una vez en producción,
+-- este UPDATE es idempotente y solo hace falta re-correrlo para dar
+-- de alta un nuevo admin).
 update public.perfiles
 set roles = array['admin', 'cliente']
 where id in (
   select id from auth.users
-  where email in ('vecinopuertos@pronet.test', 'julian@pronet.app')
-     or email ilike '%vecinopuertos%'
-     or email ilike '%argmodelia%'
+  where email in ('admin1@ejemplo.com', 'admin2@ejemplo.com')
 );
 
 -- ── 4. RLS de tablas admin-only ──────────────────────────────────

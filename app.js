@@ -176,6 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
     's-loyalty':            'nb-perfil',
     's-denuncia':         'nb-perfil',
     's-moderacion':       'nb-perfil',
+    's-mis-propuestas':   'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-mis-propuestas','s-resena'];
 
@@ -619,6 +620,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const versionTap = document.getElementById('version-tap');
     if (versionTap) {
       versionTap.addEventListener('click', () => {
+        // El PIN es solo un segundo paso rápido: el gate real es esAdmin()
+        // (rol verificado contra Supabase), así un no-admin ni ve el modal.
+        if (!esAdmin()) return;
         const modal = document.getElementById('admin-pin-modal');
         if (modal) {
           modal.style.display = 'flex';
@@ -632,11 +636,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Enter para confirmar PIN
     const pinInp = document.getElementById('admin-pin-input');
     if (pinInp) pinInp.addEventListener('keydown', e => { if (e.key === 'Enter') verificarPin(); });
-
-    // URL param: ?admin=true salta el PIN (para desarrollo rápido)
-    if (new URLSearchParams(window.location.search).get('admin') === 'true') {
-      setTimeout(() => abrirAdmin(), 1500);
-    }
   });
 
   function verificarPin() {

@@ -142,8 +142,6 @@ const PronetDB = (() => {
 
     // ══════════════════════════════════════════════════════════════════
     // NOTIFICACIONES PUSH (Web Push nativo + Edge Function)
-    // NOTA: la Edge Function se llama 'bright-service' en producción.
-    // Pendiente redesplegar con slug 'enviar-push' y actualizar PUSH_EDGE_FN abajo.
     // ══════════════════════════════════════════════════════════════════
 
     /** true si este navegador/dispositivo puede recibir push y hay clave configurada */
@@ -204,7 +202,7 @@ const PronetDB = (() => {
       if (!remoto) return { ok: false, error: 'Push requiere modo remoto' };
       try {
         // 1. Disparar el push (comportamiento original)
-        const PUSH_EDGE_FN = 'bright-service'; // cambiar a 'enviar-push' cuando se redespliegue
+        const PUSH_EDGE_FN = 'enviar-push';
         const { data, error } = await sb.functions.invoke(PUSH_EDGE_FN, { body: opciones });
         if (error) { console.warn('[PronetDB] notificar', error.message); return { ok: false, error: error.message }; }
 
@@ -294,18 +292,6 @@ const PronetDB = (() => {
       } catch(e) { console.warn('[PronetDB] insertarNotificacion', e.message); }
     },
 
-    /** Lista las reglas de puntos activas ordenadas por su campo orden. */
-    async listarLoyaltyReglas() {
-      if (!remoto) return [];
-      const { data, error } = await sb.from('loyalty_reglas')
-        .select('*')
-        .eq('activo', true)
-        .order('orden', { ascending: true })
-        .limit(20);
-      if (error) { console.warn('[PronetDB] listarLoyaltyReglas', error.message); return []; }
-      return data || [];
-    },
-
     // ══════════════════════════════════════════════════════════════════
     // CHAT REAL (chats_trabajo + mensajes_chat)
     // ══════════════════════════════════════════════════════════════════
@@ -316,16 +302,6 @@ const PronetDB = (() => {
       const { data, error } = await sb.rpc('abrir_chat_propuesta', { p_propuesta_id: propuestaId });
       if (error) { console.warn('[PronetDB] abrirChatPropuesta', error.message); return { ok: false, error: error.message }; }
       return { ok: true, chat_id: data };
-    },
-
-    /** Lista los chats del usuario logueado (como vecino o prestador). */
-    async listarChatsReales() {
-      if (!remoto) return [];
-      const { data, error } = await sb.from('chats_trabajo')
-        .select(`*, pedidos(titulo, icono, rubro), propuestas(precio, estado)`)
-        .order('hora_ultimo', { ascending: false, nullsFirst: false });
-      if (error) { console.warn('[PronetDB] listarChatsReales', error.message); return []; }
-      return data || [];
     },
 
     /** Lista los mensajes de un chat. */
@@ -409,12 +385,6 @@ const PronetDB = (() => {
       if (!remoto) return null;
       const { data } = await sb.from('perfiles').select('id').eq('prestador_id', prestadorId).maybeSingle();
       return data?.id || null;
-    },
-
-    /** Cierra un chat (solo lectura). Lo llama la RPC de reseña. */
-    async cerrarChat(chatId) {
-      if (!remoto) return;
-      await sb.from('chats_trabajo').update({ estado: 'cerrado' }).eq('id', chatId);
     },
 
     /** Cuenta mensajes no leídos del usuario en todos sus chats. */
@@ -1118,28 +1088,6 @@ const PronetDB = (() => {
     };
   });
 },
-
-    /** Crea o actualiza un chat con un prestador */
-    async guardarChat(prestadorId, prestadorNombre, prestadorIniciales, ultimoMensaje) {
-      const hora = new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
-      if (remoto) {
-        const { data: ex } = await sb.from('chats').select('id')
-          .eq('prestador_id', prestadorId).maybeSingle();
-        if (ex) {
-          await sb.from('chats').update({
-            ultimo_mensaje: ultimoMensaje, hora_ultimo: hora, no_leidos: 0
-          }).eq('id', ex.id);
-        } else {
-          await sb.from('chats').insert({
-            prestador_id: prestadorId, prestador_nombre: prestadorNombre,
-            prestador_iniciales: prestadorIniciales,
-            ultimo_mensaje: ultimoMensaje, hora_ultimo: hora,
-          });
-        }
-        return true;
-      }
-      return true;
-    },
 
     /** Vacía TODAS las colecciones locales (usado por "Reiniciar demo").
      *  Misma protección: nunca toca el servidor. */
