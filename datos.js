@@ -304,6 +304,16 @@ const PronetDB = (() => {
       return { ok: true, chat_id: data };
     },
 
+    /** Lista los chats_trabajo del usuario logueado, sin filtrar por estado
+     *  (la RLS ya los limita a los propios). Para checklists/estado real
+     *  que necesitan revisar el campo 'estado' del lado del cliente. */
+    async listarMisChats() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('chats_trabajo').select('*');
+      if (error) { console.warn('[PronetDB] listarMisChats', error.message); return []; }
+      return data || [];
+    },
+
     /** Lista los mensajes de un chat. */
     async listarMensajes(chatId) {
       if (!remoto) return [];

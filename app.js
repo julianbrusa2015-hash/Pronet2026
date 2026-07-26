@@ -834,13 +834,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const CHECKLIST_VECINO = [
     { id: 'perfil',    label: 'Completá tu perfil',         check: () => !!(usuarioActual?.nombre && usuarioActual?.zona) },
     { id: 'pedido',    label: 'Publicá tu primer pedido',   check: async () => { const p = await PronetDB.listar('pedidos').catch(()=>[]); return p.some(x=>x.usuario_id===usuarioActual?.id); } },
-    { id: 'elegir',    label: 'Elegí un prestador',         check: async () => { const c = await PronetDB.listarSimple('chats_trabajo').catch(()=>[]); return c.some(x=>x.vecino_id===usuarioActual?.id && ['activo','terminado_prestador','terminado_por_vecino','calificado'].includes(x.estado)); } },
+    { id: 'elegir',    label: 'Elegí un prestador',         check: async () => { const c = await PronetDB.listarMisChats().catch(()=>[]); return c.some(x=>x.vecino_id===usuarioActual?.id && ['activo','terminado_prestador','terminado_por_vecino','calificado'].includes(x.estado)); } },
     { id: 'resena',    label: 'Dejá tu primera reseña',     check: async () => { const r = await PronetDB.listar('resenas').catch(()=>[]); return r.some(x=>x.vecino_id===usuarioActual?.id); } },
   ];
   const CHECKLIST_PRESTADOR = [
     { id: 'perfil',    label: 'Completá tu perfil',              check: () => !!(usuarioActual?.nombre && usuarioActual?.descripcion) },
     { id: 'propuesta', label: 'Respondé tu primer pedido',       check: async () => { const p = await PronetDB.listar('propuestas').catch(()=>[]); return p.some(x=>x.prestador_id===usuarioActual?.prestador_id); } },
-    { id: 'trabajo',   label: 'Completá tu primer trabajo',      check: async () => { const c = await PronetDB.listarSimple('chats_trabajo').catch(()=>[]); return c.some(x=>x.prestador_id===usuarioActual?.prestador_id && ['calificado','terminado_por_vecino'].includes(x.estado)); } },
+    { id: 'trabajo',   label: 'Completá tu primer trabajo',      check: async () => { const c = await PronetDB.listarMisChats().catch(()=>[]); return c.some(x=>x.prestador_id===usuarioActual?.prestador_id && ['calificado','terminado_por_vecino'].includes(x.estado)); } },
     { id: 'resena',    label: 'Recibí tu primera reseña',        check: async () => { const r = await PronetDB.listar('resenas').catch(()=>[]); return r.some(x=>x.prestador_id===usuarioActual?.prestador_id); } },
   ];
   let _checklistEstados = [];
@@ -5363,7 +5363,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let chatId = null;
     try {
       if (PronetDB.esRemoto() && propuesta.id) {
-        const chats = await PronetDB.listarSimple('chats_trabajo');
+        const chats = await PronetDB.listarMisChats();
         const miChat = chats.find(c => c.propuesta_id === propuesta.id);
         if (miChat) { chatEstado = miChat.estado; chatId = miChat.id; }
       }
