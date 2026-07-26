@@ -1,0 +1,26 @@
+{
+  "name": "pronet-nueva-app-v01",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/julianbrusa2015-hash/Pronet2026.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/julianbrusa2015-hash/Pronet2026/issues"
+  },
+  "homepage": "https://github.com/julianbrusa2015-hash/Pronet2026#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.62.0"
+  }
+}
