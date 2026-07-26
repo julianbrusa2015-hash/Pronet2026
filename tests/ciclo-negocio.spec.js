@@ -17,13 +17,19 @@ async function esperarLoginScreen(page) {
 
 async function cerrarOverlays(page) {
   await page.evaluate(() => {
-    // Cerrar tutorial overlay
+    // Tutorial overlay
     const tut = document.getElementById('tutorial-overlay');
     if (tut) { tut.classList.remove('show'); tut.style.display = 'none'; }
-    // Cerrar onboarding/wizard
+    // Onboarding/wizard
     document.querySelectorAll('.onboarding-overlay, .wizard-overlay').forEach(el => {
       el.style.display = 'none';
     });
+    // Modal de zona (#zona-modal): cerrarlo si está activo
+    const zm = document.getElementById('zona-modal');
+    if (zm && (zm.classList.contains('active') || zm.style.display === 'flex')) {
+      zm.classList.remove('active');
+      zm.style.display = 'none';
+    }
   });
   await page.waitForTimeout(200);
 }
@@ -50,6 +56,17 @@ async function login(page, email, pw) {
 
   await page.locator('button.btn-p[onclick*="loginWith"]').click();
   await expect(page.locator('#login-screen')).toHaveClass(/hidden/, { timeout: 25000 });
+  // Esperar que la sesión de Supabase esté lista antes de operar con datos
+  await page.waitForFunction(() =>
+    window._sb && window._sb.auth && typeof window._sb.auth.getSession === 'function'
+  , { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(500);
+  const session = await page.evaluate(async () => {
+    if (!window._sb) return null;
+    const { data } = await window._sb.auth.getSession();
+    return data?.session?.user?.id || null;
+  });
+  if (!session) throw new Error(`Sesión Supabase no activa para ${email}`);
   await cerrarOverlays(page);
 }
 
@@ -61,6 +78,12 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
 
   // ── A. Vecino publica un pedido ───────────────────────────────────────────
   test('A. Vecino publica un pedido (3 pasos)', async ({ page }) => {
+    // Capturar console.warn para diagnosticar errores de Supabase
+    const warnings = [];
+    page.on('console', msg => {
+      if (msg.type() === 'warn' || msg.type() === 'error') warnings.push(msg.text());
+    });
+
     await page.goto('/');
     await login(page, VECINO.email, VECINO.pw);
 
@@ -80,7 +103,11 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
     await cerrarOverlays(page);
     await page.locator('#np-titulo').fill(TITULO_PEDIDO);
     await page.locator('#np-desc').fill('Descripción de prueba para test automatizado E2E. El tablero disyuntor se activa al encender el aire.');
-    // El rubro "Electricista" ya está seleccionado por defecto (.on)
+    // Seleccionar rubro Electricista explícitamente
+    const rubroElec = page.locator('#np-1 .form-opt').filter({ hasText: /electricist/i }).first();
+    if (await rubroElec.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await rubroElec.click();
+    }
     await page.locator('button[onclick="npNext(2)"]').click();
 
     // ── Paso 2: zona y urgencia ──
@@ -96,6 +123,19 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
     // ── Éxito ──
     await expect(page.locator('#np-exito')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('#np-exito')).toContainText('¡Pedido publicado!');
+
+    // Verificar que el pedido se guardó remotamente (Supabase), no solo en localStorage
+    const guardadoRemoto = await page.evaluate(async (titulo) => {
+      if (!window._sb) return false;
+      const { data } = await window._sb.from('pedidos').select('id').eq('titulo', titulo).limit(1);
+      return !!(data && data.length > 0);
+    }, TITULO_PEDIDO);
+    if (!guardadoRemoto) {
+      throw new Error(
+        `El pedido se guardó solo en localStorage (Supabase INSERT bloqueado).\n` +
+        `Warnings: ${warnings.join(' | ')}`
+      );
+    }
   });
 
   // ── B. Prestador ve el pedido y envía propuesta ───────────────────────────
@@ -103,18 +143,31 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
     await page.goto('/');
     await login(page, PRESTADOR.email, PRESTADOR.pw);
 
-    // Esperar que el feed cargue pedidos
-    await expect(page.locator('#home-feed-container .card').first()).toBeVisible({ timeout: 20000 });
+    // Esperar que el home del prestador cargue
+    await expect(page.locator('#s-home')).toHaveClass(/active/, { timeout: 10000 });
 
-    // Tomar el pedido más reciente (primero del feed o el que tiene nuestro título)
-    const todasLasCards = page.locator('#home-feed-container .card');
-    const count = await todasLasCards.count();
-    let targetCard = todasLasCards.first();
-    for (let i = 0; i < count; i++) {
-      const txt = await todasLasCards.nth(i).textContent();
-      if (txt && txt.includes('Test E2E')) { targetCard = todasLasCards.nth(i); break; }
+    // Clicar la categoría "Electricistas" para filtrar y forzar recarga del feed
+    const btnElectricistas = page.locator('#s-home .rubro, #s-home button')
+      .filter({ hasText: /electricista/i }).first();
+    if (await btnElectricistas.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await btnElectricistas.click();
+      await page.waitForTimeout(2000);
     }
-    await targetCard.click();
+
+    // Buscar el pedido Test E2E en el feed filtrado
+    await expect(page.locator('#home-feed-container .card').first()).toBeVisible({ timeout: 15000 });
+    const cards = page.locator('#home-feed-container .card');
+    const n = await cards.count();
+    let found = false;
+    for (let i = 0; i < n; i++) {
+      const txt = await cards.nth(i).textContent().catch(() => '');
+      if (txt.includes('Test E2E')) {
+        await cards.nth(i).click();
+        found = true;
+        break;
+      }
+    }
+    expect(found, 'No se encontró el pedido Test E2E en el feed de Electricistas').toBe(true);
 
     // Detalle del pedido
     await expect(page.locator('#s-detalle-pedido')).toHaveClass(/active/, { timeout: 8000 });
@@ -170,7 +223,13 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
     // Registrar handler de diálogos ANTES del click (confirm + alert)
     page.on('dialog', dialog => dialog.accept());
 
-    // Botón "Elegir" (solo aparece si el pedido no fue cerrado aún)
+    // Cerrar zona modal si está abierto (bloquea interacciones)
+    await cerrarOverlays(page);
+
+    // Esperar que las propuestas carguen (async) antes de buscar botones
+    const anyPropBtn = page.locator('.prop-select-btn').filter({ hasText: /elegir|chatear/i }).first();
+    await expect(anyPropBtn).toBeVisible({ timeout: 10000 });
+
     const btnElegir = page.locator('.prop-select-btn').filter({ hasText: /elegir/i });
     const btnChatear = page.locator('.prop-select-btn').filter({ hasText: /chatear/i });
 
@@ -178,7 +237,6 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
       await btnElegir.first().click();
       await expect(page.locator('#s-chat')).toHaveClass(/active/, { timeout: 15000 });
     } else {
-      await expect(btnChatear.first()).toBeVisible({ timeout: 5000 });
       await btnChatear.first().click();
       await expect(page.locator('#s-chat')).toHaveClass(/active/, { timeout: 15000 });
     }
