@@ -974,15 +974,35 @@ const PronetDB = (() => {
       return data || [];
     },
 
-    /** Descuenta puntos de loyalty por un canje y persiste en Supabase. */
-    async canjearPuntos(costo, nombre) {
+    /** Lista ítems del catálogo de canjes activos. tipo: 'prestador' | 'vecino' | 'ambos' */
+    async listarCatalogoCanje(tipo = 'ambos') {
+      if (!remoto) return [];
+      let q = sb.from('loyalty_canjes').select('*').eq('activo', true).order('orden');
+      if (tipo !== 'ambos') q = q.in('tipo', [tipo, 'ambos']);
+      const { data, error } = await q;
+      if (error) { console.warn('[PronetDB] listarCatalogoCanje', error.message); return []; }
+      return data || [];
+    },
+
+    /** Lista las solicitudes de canje del usuario actual. */
+    async listarMisSolicitudes() {
+      if (!remoto) return [];
+      const uid = await this.usuarioIdActual();
+      if (!uid) return [];
+      const { data, error } = await sb.from('loyalty_solicitudes')
+        .select('*').eq('usuario_id', uid).order('creado', { ascending: false }).limit(20);
+      if (error) { console.warn('[PronetDB] listarMisSolicitudes', error.message); return []; }
+      return data || [];
+    },
+
+    /** Descuenta puntos de loyalty por un canje y registra la solicitud pendiente. */
+    async canjearPuntos(costo, nombre, canjeId) {
       if (!remoto) return { ok: false, error: 'modo local' };
       try {
         const uid = await this.usuarioIdActual();
         if (!uid) return { ok: false, error: 'sin sesión' };
         const { data: perfil } = await sb.from('perfiles')
           .select('prestador_id').eq('id', uid).maybeSingle();
-        if (!perfil?.prestador_id) return { ok: false, error: 'sin perfil prestador' };
 
         // Verificar puntos disponibles antes de descontar
         const { data: loy } = await sb.from('loyalty')
@@ -990,9 +1010,19 @@ const PronetDB = (() => {
         const ptsActuales = loy?.puntos || 0;
         if (ptsActuales < costo) return { ok: false, error: 'puntos insuficientes' };
 
+        // Registrar solicitud pendiente (admin la aprueba manualmente)
+        await sb.from('loyalty_solicitudes').insert({
+          usuario_id: uid,
+          prestador_id: perfil?.prestador_id || null,
+          canje_id: canjeId || null,
+          nombre_canje: nombre,
+          puntos_descontados: costo,
+          estado: 'pendiente',
+        });
+
         // Registrar en historial (negativo = canje)
         await sb.from('loyalty_historial').insert({
-          prestador_id: perfil.prestador_id,
+          prestador_id: perfil?.prestador_id || null,
           puntos: -costo,
           tipo: 'canje',
           descripcion: 'Canje: ' + nombre,

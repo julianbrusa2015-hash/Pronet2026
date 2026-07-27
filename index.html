@@ -3184,78 +3184,9 @@
         </div>
       </div>
 
-      <div style="padding:0 14px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Para prestadores</div>
-
-      <div class="canje-card">
-        <div class="canje-ico">🎁</div>
-        <div class="canje-body">
-          <div class="canje-name">1 mes Plan Pro gratis</div>
-          <div class="canje-sub">Equivale a $4.999 ARS · Activación inmediata</div>
-          <div class="canje-costo">💜 2.500 puntos</div>
-        </div>
-        <button class="canje-btn" onclick="canjear(this, 2500, '1 mes Pro gratis')">Canjear</button>
-      </div>
-
-      <div class="canje-card">
-        <div class="canje-ico">🚀</div>
-        <div class="canje-body">
-          <div class="canje-name">Boost ×1.6 por 7 días</div>
-          <div class="canje-sub">Boost máximo en tu ranking zonal por una semana</div>
-          <div class="canje-costo">💜 1.500 puntos</div>
-        </div>
-        <button class="canje-btn" onclick="canjear(this, 1500, 'Boost ×1.6 por 7 días')">Canjear</button>
-      </div>
-
-      <div class="canje-card">
-        <div class="canje-ico">⭐</div>
-        <div class="canje-body">
-          <div class="canje-name">Badge "Prestador Élite"</div>
-          <div class="canje-sub">Visible en tu perfil y en el feed por 30 días</div>
-          <div class="canje-costo">💜 800 puntos</div>
-        </div>
-        <button class="canje-btn" onclick="canjear(this, 800, 'Badge Élite 30 días')">Canjear</button>
-      </div>
-
-      <div class="canje-card">
-        <div class="canje-ico">📊</div>
-        <div class="canje-body">
-          <div class="canje-name">Informe de competidores</div>
-          <div class="canje-sub">Quién está por encima en tu zona y por qué</div>
-          <div class="canje-costo">💜 500 puntos</div>
-        </div>
-        <button class="canje-btn" onclick="canjear(this, 500, 'Informe de competidores')">Canjear</button>
-      </div>
-
-      <div style="padding:14px 14px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Para clientes</div>
-
-      <div class="canje-card">
-        <div class="canje-ico">💰</div>
-        <div class="canje-body">
-          <div class="canje-name">Descuento $2.000 en tu próximo servicio</div>
-          <div class="canje-sub">Válido con cualquier prestador Premium · 30 días</div>
-          <div class="canje-costo">💜 1.000 puntos</div>
-        </div>
-        <button class="canje-btn" onclick="canjear(this, 1000, 'Descuento $2.000')">Canjear</button>
-      </div>
-
-      <div class="canje-card">
-        <div class="canje-ico">🏆</div>
-        <div class="canje-body">
-          <div class="canje-name">Badge "Vecino destacado"</div>
-          <div class="canje-sub">Tus reseñas pesan 1.5× en el ranking zonal</div>
-          <div class="canje-costo">💜 600 puntos</div>
-        </div>
-        <button class="canje-btn" onclick="canjear(this, 600, 'Badge Vecino destacado')">Canjear</button>
-      </div>
-
-      <div class="canje-card">
-        <div class="canje-ico">🎯</div>
-        <div class="canje-body">
-          <div class="canje-name">Acceso anticipado a funciones Beta</div>
-          <div class="canje-sub">Probá las nuevas funcionalidades antes que nadie</div>
-          <div class="canje-costo">💜 300 puntos</div>
-        </div>
-        <button class="canje-btn" onclick="canjear(this, 300, 'Acceso Beta')">Canjear</button>
+      <!-- Catálogo dinámico desde Supabase (loyalty_canjes) -->
+      <div id="lv-canjear-lista">
+        <div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando catálogo...</div>
       </div>
 
       <!-- Confirmación canje -->
@@ -3509,6 +3440,14 @@
 
     <div id="mod-lista" style="padding:12px 0 0">
       <div style="padding:60px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando denuncias...</div>
+    </div>
+
+    <!-- Canjes pendientes de aprobación -->
+    <div style="padding:20px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--border);margin-top:16px">
+      💜 Canjes pendientes
+    </div>
+    <div id="mod-canjes-lista" style="padding:0 0 12px">
+      <div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>
     </div>
 
   </div><!-- /moderacion -->

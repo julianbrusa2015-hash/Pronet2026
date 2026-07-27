@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (id === 's-buscar') { renderBusqueda('', filtroActivo); }
     // Si va a Chats, cargar lista de conversaciones
     if (id === 's-chats') { renderChats(); }
-    if (id === 's-moderacion') { renderModeracion(); }
+    if (id === 's-moderacion') { renderModeracion(); renderCanjesPendientes(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-catalogo') { renderCatalogo(); }
     if (id === 's-historial') { renderHistorial(); }
@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  async function canjear(btn, costo, nombre) {
+  async function canjear(btn, costo, nombre, canjeId) {
     if (ptsDisponibles < costo) {
       btn.textContent = 'Sin pts';
       btn.disabled = true;
@@ -374,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.disabled = true;
     btn.textContent = '⏳ Canjeando...';
 
-    const res = await PronetDB.canjearPuntos(costo, nombre).catch(() => ({ ok: false }));
+    const res = await PronetDB.canjearPuntos(costo, nombre, canjeId).catch(() => ({ ok: false }));
     if (!res.ok) {
       btn.disabled = false;
       btn.textContent = 'Canjear';
@@ -1427,6 +1427,53 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('#s-moderacion .chip').forEach(c => c.classList.remove('on'));
     if (chip) chip.classList.add('on');
     renderModeracion(filtro);
+  }
+
+  async function renderCanjesPendientes() {
+    const el = document.getElementById('mod-canjes-lista');
+    if (!el) return;
+    el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
+    try {
+      const { data } = await window._sb.from('loyalty_solicitudes')
+        .select('*, perfiles!usuario_id(nombre,email)')
+        .eq('estado', 'pendiente')
+        .order('creado', { ascending: false });
+      const items = data || [];
+      if (!items.length) {
+        el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">Sin canjes pendientes ✓</div>';
+        return;
+      }
+      el.innerHTML = items.map(s => {
+        const nombre = s.perfiles?.nombre || s.perfiles?.email || 'Usuario';
+        const hace = tiempoRelativo(s.creado);
+        return `<div class="mod-card" style="margin-bottom:10px">
+          <div class="mod-head">
+            <div style="font-size:16px">💜</div>
+            <div class="mod-tipo">${escHTML(s.nombre_canje)}</div>
+            <div class="mod-time">${escHTML(hace)}</div>
+          </div>
+          <div style="font-size:12px;color:var(--ink2);margin-bottom:10px">${escHTML(nombre)} · ${s.puntos_descontados.toLocaleString('es-AR')} pts</div>
+          <div class="mod-actions">
+            <button class="mod-btn mod-btn-ok"     onclick="accionCanje('${s.id}','aprobado')">✓ Aprobar</button>
+            <button class="mod-btn mod-btn-suspend" onclick="accionCanje('${s.id}','rechazado')">✗ Rechazar</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">Error al cargar.</div>';
+    }
+  }
+
+  async function accionCanje(id, estado) {
+    try {
+      const { error } = await window._sb.from('loyalty_solicitudes')
+        .update({ estado, resuelto: new Date().toISOString() }).eq('id', id);
+      if (error) throw error;
+      showToast && showToast(estado === 'aprobado' ? '✅ Canje aprobado' : '❌ Canje rechazado');
+      renderCanjesPendientes();
+    } catch(e) {
+      showToast && showToast('⚠️ No se pudo actualizar el canje');
+    }
   }
 
   function tiempoRelativo(fecha) {
@@ -3129,6 +3176,40 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>`).join('');
         } else {
           ganarDiv.innerHTML = '';
+        }
+      }
+
+      // Catálogo de canjes dinámico desde loyalty_canjes
+      const canjesDiv = document.getElementById('lv-canjear-lista');
+      if (canjesDiv) {
+        const tipoUsuario = esPrestador() ? 'prestador' : 'vecino';
+        const items = await PronetDB.listarCatalogoCanje(tipoUsuario).catch(() => []);
+        if (!items.length) {
+          canjesDiv.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">No hay beneficios disponibles por ahora.</div>';
+        } else {
+          // Agrupar por tipo para mostrar cabeceras
+          const prestItems = items.filter(i => i.tipo === 'prestador' || i.tipo === 'ambos');
+          const vecItems   = items.filter(i => i.tipo === 'vecino'    || i.tipo === 'ambos');
+          const renderItem = i => `
+            <div class="canje-card">
+              <div class="canje-ico">${escHTML(i.icono || '🎁')}</div>
+              <div class="canje-body">
+                <div class="canje-name">${escHTML(i.nombre)}</div>
+                ${i.descripcion ? `<div class="canje-sub">${escHTML(i.descripcion)}</div>` : ''}
+                <div class="canje-costo">💜 ${i.costo_puntos.toLocaleString('es-AR')} puntos</div>
+              </div>
+              <button class="canje-btn" onclick="canjear(this,${i.costo_puntos},'${escHTML(i.nombre).replace(/'/g,"\\'")}','${i.id}')">Canjear</button>
+            </div>`;
+          let html = '';
+          if (esPrestador() && prestItems.length) {
+            html += '<div style="padding:0 14px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Para prestadores</div>';
+            html += prestItems.map(renderItem).join('');
+          }
+          if (!esPrestador() && vecItems.length) {
+            html += '<div style="padding:0 14px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Para vecinos</div>';
+            html += vecItems.map(renderItem).join('');
+          }
+          canjesDiv.innerHTML = html;
         }
       }
 
