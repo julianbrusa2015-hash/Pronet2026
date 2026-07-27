@@ -2142,6 +2142,11 @@ document.addEventListener('DOMContentLoaded', function() {
     renderMapa();
   }
 
+  // Flag para registrar los listeners del mapa solo una vez (evita acumulación)
+  let mapaListenersOk = false;
+  let mapaScrollTimer = null;
+  let mapaIsDown = false, mapaStartX, mapaScrollLeft;
+
   async function renderMapa() {
     const wrap = document.getElementById('sheet-cards');
     if (!wrap) return;
@@ -2204,34 +2209,36 @@ document.addEventListener('DOMContentLoaded', function() {
       renderPinesMapa(prestadores);
     }
 
-    // Sincronización inversa: al scrollear el sheet, se resalta el pin
-    // de la card más centrada (solo entre las que tienen pin: las primeras 8)
-    let syncTimer = null;
-    wrap.addEventListener('scroll', () => {
-      clearTimeout(syncTimer);
-      syncTimer = setTimeout(() => {
-        const cards = wrap.querySelectorAll('.sheet-card');
-        if (!cards.length) return;
-        const centro = wrap.scrollLeft + wrap.clientWidth / 2;
-        let mejor = 0, mejorDist = Infinity;
-        cards.forEach((c, j) => {
-          const d = Math.abs((c.offsetLeft + c.offsetWidth / 2) - centro);
-          if (d < mejorDist) { mejorDist = d; mejor = j; }
-        });
-        cards.forEach((c, j) => c.classList.toggle('selected', j === mejor));
-        document.querySelectorAll('#mapa-pins .pin').forEach(el => {
-          el.classList.toggle('pin-activo', Number(el.dataset.idx) === mejor);
-        });
-      }, 120);
-    }, { passive: true });
+    // Registrar listeners una sola vez — renderMapa() se llama en cada visita al mapa
+    if (!mapaListenersOk) {
+      mapaListenersOk = true;
 
-    // Habilitar drag-to-scroll y wheel-scroll en desktop
-    let isDown = false, startX, scrollLeft;
-    wrap.addEventListener('mousedown', e => { isDown = true; startX = e.pageX - wrap.offsetLeft; scrollLeft = wrap.scrollLeft; wrap.style.cursor = 'grabbing'; });
-    wrap.addEventListener('mouseleave', () => { isDown = false; wrap.style.cursor = 'grab'; });
-    wrap.addEventListener('mouseup', () => { isDown = false; wrap.style.cursor = 'grab'; });
-    wrap.addEventListener('mousemove', e => { if (!isDown) return; e.preventDefault(); wrap.scrollLeft = scrollLeft - (e.pageX - wrap.offsetLeft - startX); });
-    wrap.addEventListener('wheel', e => { e.preventDefault(); wrap.scrollLeft += e.deltaY; }, { passive: false });
+      // Sincronización inversa: scrollear sheet resalta el pin correspondiente
+      wrap.addEventListener('scroll', () => {
+        clearTimeout(mapaScrollTimer);
+        mapaScrollTimer = setTimeout(() => {
+          const cards = wrap.querySelectorAll('.sheet-card');
+          if (!cards.length) return;
+          const centro = wrap.scrollLeft + wrap.clientWidth / 2;
+          let mejor = 0, mejorDist = Infinity;
+          cards.forEach((c, j) => {
+            const d = Math.abs((c.offsetLeft + c.offsetWidth / 2) - centro);
+            if (d < mejorDist) { mejorDist = d; mejor = j; }
+          });
+          cards.forEach((c, j) => c.classList.toggle('selected', j === mejor));
+          document.querySelectorAll('#mapa-pins .pin').forEach(el => {
+            el.classList.toggle('pin-activo', Number(el.dataset.idx) === mejor);
+          });
+        }, 120);
+      }, { passive: true });
+
+      // Drag-to-scroll y wheel-scroll en desktop
+      wrap.addEventListener('mousedown', e => { mapaIsDown = true; mapaStartX = e.pageX - wrap.offsetLeft; mapaScrollLeft = wrap.scrollLeft; wrap.style.cursor = 'grabbing'; });
+      wrap.addEventListener('mouseleave', () => { mapaIsDown = false; wrap.style.cursor = 'grab'; });
+      wrap.addEventListener('mouseup',    () => { mapaIsDown = false; wrap.style.cursor = 'grab'; });
+      wrap.addEventListener('mousemove',  e  => { if (!mapaIsDown) return; e.preventDefault(); wrap.scrollLeft = mapaScrollLeft - (e.pageX - wrap.offsetLeft - mapaStartX); });
+      wrap.addEventListener('wheel',      e  => { e.preventDefault(); wrap.scrollLeft += e.deltaY; }, { passive: false });
+    }
   }
 
   // Permite activar/desactivar cada feature suelta sin arrastrar un nivel
@@ -2853,16 +2860,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (err) { err.textContent = txt; err.style.display = 'block'; }
   }
 
-  // ── Mouse drag scroll para las cards del mapa en desktop ──
-  document.addEventListener('DOMContentLoaded', () => {
-    const el = document.getElementById('sheet-cards');
-    if (!el) return;
-    let isDown = false, startX, scrollLeft;
-    el.addEventListener('mousedown', e => { isDown = true; startX = e.pageX - el.offsetLeft; scrollLeft = el.scrollLeft; });
-    el.addEventListener('mouseleave', () => { isDown = false; });
-    el.addEventListener('mouseup', () => { isDown = false; });
-    el.addEventListener('mousemove', e => { if (!isDown) return; e.preventDefault(); const x = e.pageX - el.offsetLeft; el.scrollLeft = scrollLeft - (x - startX); });
-  });
   function inicialesDe(nombre) {
     if (!nombre) return '👤';
     const partes = nombre.trim().split(/\s+/);
