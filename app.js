@@ -6367,8 +6367,24 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBellCount();
         cargarSliderRangosDesdeDB();
         if (u.zona) { zonaActual = u.zona; actualizarZonaLabel(zonaActual); }
-        // Render con el usuario ya cargado — banner y feed correctos desde el arranque
-        renderHomeFeed(catActiva || 'todos');
+        // Prestador: arrancar el feed filtrado por su rubro
+        let catInicial = catActiva || 'todos';
+        if (esPrestador() && u.prestador_id) {
+          try {
+            const { data: prest } = await window._sb.from('prestadores')
+              .select('rubro').eq('id', u.prestador_id).maybeSingle();
+            if (prest?.rubro && prest.rubro !== 'General') {
+              const slug = prest.rubro.toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              catInicial = slug;
+              catActiva  = slug;
+              document.querySelectorAll('.rubro').forEach(r => {
+                r.classList.toggle('on', r.getAttribute('onclick')?.includes(`'${slug}'`));
+              });
+            }
+          } catch(e) {}
+        }
+        renderHomeFeed(catInicial);
         renderPedidosGuardados();
       } else {
         // Token inválido o expirado: mostrar login
