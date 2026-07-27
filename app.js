@@ -4910,7 +4910,7 @@ document.addEventListener('DOMContentLoaded', function() {
     chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
       if (payload.new && payload.new.chat_id === chatActualId) {
         const esPropio = payload.new.autor_id === usuarioActual.id;
-        if (!esPropio) { agregarBurbuja(payload.new.texto, payload.new.creado, false); PronetDB.marcarLeidos(chatActualId); }
+        if (!esPropio) { agregarBurbuja(payload.new.texto, payload.new.creado, false, payload.new.id); PronetDB.marcarLeidos(chatActualId); }
       }
     });
   }
@@ -5202,7 +5202,7 @@ document.addEventListener('DOMContentLoaded', function() {
         chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
           if (payload.new && payload.new.chat_id === chatActualId) {
             const esPropio = payload.new.autor_id === usuarioActual.id;
-            if (!esPropio) { agregarBurbuja(payload.new.texto, payload.new.creado, false); PronetDB.marcarLeidos(chatActualId); }
+            if (!esPropio) { agregarBurbuja(payload.new.texto, payload.new.creado, false, payload.new.id); PronetDB.marcarLeidos(chatActualId); }
           }
         });
       });
@@ -5452,7 +5452,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const esPropio = payload.new.autor_id === usuarioActual.id;
         // Si es propio ya lo mostramos por optimistic UI — no duplicar
         if (!esPropio) {
-          agregarBurbuja(payload.new.texto, payload.new.creado, false);
+          agregarBurbuja(payload.new.texto, payload.new.creado, false, payload.new.id);
           PronetDB.marcarLeidos(chatActualId);
         }
       }
@@ -5490,7 +5490,7 @@ document.addEventListener('DOMContentLoaded', function() {
         chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
           if (payload.new && payload.new.chat_id === chatActualId) {
             if (payload.new.autor_id !== usuarioActual.id) {
-              agregarBurbuja(payload.new.texto, payload.new.creado, false);
+              agregarBurbuja(payload.new.texto, payload.new.creado, false, payload.new.id);
               PronetDB.marcarLeidos(chatActualId);
             }
           }
@@ -5518,19 +5518,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     mensajes.forEach(m => {
       const esPropio = m.autor_id === usuarioActual.id;
-      agregarBurbuja(m.texto, m.creado, esPropio);
+      agregarBurbuja(m.texto, m.creado, esPropio, m.id);
     });
     body.scrollTop = body.scrollHeight;
   }
 
-  function agregarBurbuja(texto, creado, esPropio) {
+  function agregarBurbuja(texto, creado, esPropio, msgId) {
     const body = document.getElementById('chat-body');
     if (!body) return;
+    // Deduplicar: si ya existe un elemento con este ID, no agregar de nuevo
+    if (msgId && body.querySelector('[data-msg-id="' + msgId + '"]')) return;
     const placeholder = body.querySelector('div[style*="text-align:center"]');
     if (placeholder) placeholder.remove();
     const hora = new Date(creado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
     const div = document.createElement('div');
     div.className = 'msg ' + (esPropio ? 'out' : 'in');
+    if (msgId) div.dataset.msgId = msgId;
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
     bubble.textContent = texto;
@@ -5562,7 +5565,7 @@ document.addEventListener('DOMContentLoaded', function() {
       chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
         if (payload.new && payload.new.chat_id === chatActualId) {
           if (payload.new.autor_id !== usuarioActual.id) {
-            agregarBurbuja(payload.new.texto, payload.new.creado, false);
+            agregarBurbuja(payload.new.texto, payload.new.creado, false, payload.new.id);
             PronetDB.marcarLeidos(chatActualId);
           }
         }
