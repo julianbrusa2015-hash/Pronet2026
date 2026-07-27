@@ -4957,12 +4957,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Persistir en la BD
     if (PronetDB.esRemoto() && usuarioActual?.prestador_id) {
       try {
-        await PronetDB.actualizar('prestadores', usuarioActual.prestador_id, { activo });
+        const cambios = { activo };
+        // Al activarse, actualizar ubicación GPS real para que el pin del mapa sea preciso
+        if (activo && navigator.geolocation) {
+          await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                cambios.lat = pos.coords.latitude;
+                cambios.lng = pos.coords.longitude;
+                resolve();
+              },
+              () => resolve(), // sin GPS → igual guarda activo:true sin coords
+              { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+            );
+          });
+        }
+        await PronetDB.actualizar('prestadores', usuarioActual.prestador_id, cambios);
         showToast && showToast(activo ? '✅ Ahora estás disponible' : '⏸ Marcado como no disponible');
       } catch(e) {
         console.warn('[toggleDisp] error:', e.message);
         showToast && showToast('⚠️ No se pudo actualizar la disponibilidad');
-        // Revertir el toggle si falló
         cb.checked = !activo;
       }
     }
