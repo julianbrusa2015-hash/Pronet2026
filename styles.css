@@ -62,14 +62,13 @@
      black-translucent. El fallback de 0px es correcto — en browser el
      status bar no se superpone con el contenido. */
   @supports (padding-top: env(safe-area-inset-top)) {
-    .screens {
-      padding-top: env(safe-area-inset-top, 0px);
-    }
     .nav {
       padding-bottom: env(safe-area-inset-bottom, 0px);
       height: calc(80px + env(safe-area-inset-bottom, 0px));
     }
+    /* .screen es position:absolute;inset:0 — el padding va acá, no en .screens */
     .screen {
+      padding-top: env(safe-area-inset-top, 0px);
       padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
     }
     .pub-footer  { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
@@ -2118,7 +2117,7 @@
 
   .loyalty-hero {
     background: linear-gradient(160deg, #0D0F1A 0%, #1A1A2E 40%, #4A0080 100%);
-    padding: calc(52px + env(safe-area-inset-top, 0px)) 18px 32px; text-align: center; position: relative;
+    padding: 52px 18px 32px; text-align: center; position: relative;
   }
   .loyalty-hero::before {
     content: '';
