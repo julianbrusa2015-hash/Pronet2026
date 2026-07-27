@@ -27,6 +27,29 @@ window.PRONET_CONFIG.VAPID_PUBLIC_KEY = "BFvzCuNl7hsD6NmAhL63KqPPr1mMVTFiophRSDh
 
 // ── Constantes de negocio ──
 // Editables sin tocar app.js; cambian la lógica en prod con solo un redeploy.
+// ── Rangos de precio por rubro (fallback cuando catalogo_servicios no tiene datos) ──
+// Se sobreescriben en runtime con datos reales de la tabla catalogo_servicios.
+window.PRONET_CONFIG.SLIDER_RANGOS = {
+  'Limpieza':      { min: 30000,  max: 150000 },
+  'Electricistas': { min: 30000,  max: 300000 },
+  'Plomería':      { min: 30000,  max: 350000 },
+  'Pintura':       { min: 30000,  max: 500000 },
+  'Cuidado':       { min: 30000,  max: 150000 },
+  'Jardinería':    { min: 30000,  max: 250000 },
+  'Mascotas':      { min: 30000,  max: 150000 },
+  'Chef':          { min: 30000,  max: 300000 },
+  '_default':      { min: 30000,  max: 500000 },
+};
+
+// ── Niveles del programa Loyalty ──
+// Orden ascendente: cada nivel define su rango de puntos.
+window.PRONET_CONFIG.LOYALTY_NIVELES = [
+  { nombre: 'Bronce', emoji: '🥉', min: 0,     max: 1000  },
+  { nombre: 'Plata',  emoji: '🥈', min: 1000,  max: 5000  },
+  { nombre: 'Oro',    emoji: '🥇', min: 5000,  max: 10000 },
+  { nombre: 'Élite',  emoji: '💎', min: 10000, max: 25000 },
+];
+
 Object.assign(window.PRONET_CONFIG, {
   // Propuestas
   PROPUESTA_EXPIRACION_HS: 72,      // horas hasta que una propuesta expira automáticamente

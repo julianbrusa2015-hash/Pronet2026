@@ -2865,13 +2865,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const pts = loy.puntos || 0;
       const niv = loy.nivel || 'Bronce';
 
-      // Niveles y umbrales
-      const niveles = [
-        { nombre: 'Bronce', emoji: '🥉', min: 0, max: 1000 },
-        { nombre: 'Plata', emoji: '🥈', min: 1000, max: 5000 },
-        { nombre: 'Oro', emoji: '🥇', min: 5000, max: 10000 },
-        { nombre: 'Élite', emoji: '💎', min: 10000, max: 25000 },
-      ];
+      const niveles = PRONET_CONFIG.LOYALTY_NIVELES;
       const actual = niveles.find(n => n.nombre === niv) || niveles[0];
       const siguiente = niveles[niveles.indexOf(actual) + 1] || null;
       const progreso = actual.max > actual.min
@@ -5204,17 +5198,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Límites de slider por rubro (min_abs, max_abs, paso de escala)
-  const SLIDER_RANGOS = {
-    'Limpieza':      { min: 30000,  max: 150000  },
-    'Electricistas': { min: 30000,  max: 300000  },
-    'Plomería':      { min: 30000,  max: 350000  },
-    'Pintura':       { min: 30000,  max: 500000  },
-    'Cuidado':       { min: 30000,  max: 150000  },
-    'Jardinería':    { min: 30000,  max: 250000  },
-    'Mascotas':      { min: 30000,  max: 150000  },
-    'Chef':          { min: 30000,  max: 300000  },
-    '_default':      { min: 30000,  max: 500000  },
-  };
+  const SLIDER_RANGOS = PRONET_CONFIG.SLIDER_RANGOS;
   let npRubroActual = '_default';
 
   // Calcula los límites del slider según el rubro y el referencial del catálogo
