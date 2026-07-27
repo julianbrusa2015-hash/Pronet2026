@@ -3640,7 +3640,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Urgencia elegida
     const urgEl = document.querySelector('#np-urgencia-group .form-opt.on');
     const urgencia = urgEl ? (urgEl.dataset.urg || 'flexible') : 'flexible';
-    const precioMin=null,precioMax=null;
+
+    // Presupuesto — leer según la modalidad seleccionada (fijo / rango / convenir)
+    const modalPrecioEl = document.querySelector('.np-modal-precio.on');
+    const modalPrecio   = modalPrecioEl?.dataset.modal || 'convenir';
+    let precioMin = null, precioMax = null;
+    if (modalPrecio === 'fijo') {
+      const v = parseInt((document.getElementById('np-precio')?.value || '').replace(/\D/g, ''), 10);
+      if (v > 0) { precioMin = v; precioMax = v; }
+    } else if (modalPrecio === 'rango') {
+      precioMin = parseInt((document.getElementById('np-precio-min')?.value || '').replace(/\D/g, ''), 10) || null;
+      precioMax = parseInt((document.getElementById('np-precio-max')?.value || '').replace(/\D/g, ''), 10) || null;
+    }
 
     const pedido = await PronetDB.crear('pedidos', {
       titulo: titulo,
@@ -3685,6 +3696,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Limpiar el formulario para el próximo pedido
     const t = document.getElementById('np-titulo'); if (t) t.value = '';
     const d2 = document.getElementById('np-desc');  if (d2) d2.value = '';
+    ['np-precio','np-precio-min','np-precio-max'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     [1,2,3].forEach(i => { const el = document.getElementById('np-'+i); if(el) el.style.display='none'; });
     const ex = document.getElementById('np-exito'); if(ex) ex.style.display='flex';
   }
