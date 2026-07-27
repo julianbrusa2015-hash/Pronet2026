@@ -615,14 +615,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ── Panel Admin — acceso con PIN desde Mi Perfil ───────────────────
   // Tocar "PRONET v1.0" al final de Mi Perfil → pide PIN → abre admin
-  const ADMIN_PIN = '1234'; // Cambiar en producción
+  // Cambiar este valor en cada deploy; mínimo 6 dígitos.
+  const ADMIN_PIN = '847291';
 
   document.addEventListener('DOMContentLoaded', () => {
     const versionTap = document.getElementById('version-tap');
     if (versionTap) {
       versionTap.addEventListener('click', () => {
-        // El PIN es solo un segundo paso rápido: el gate real es esAdmin()
-        // (rol verificado contra Supabase), así un no-admin ni ve el modal.
         if (!esAdmin()) return;
         const modal = document.getElementById('admin-pin-modal');
         if (modal) {
@@ -639,19 +638,36 @@ document.addEventListener('DOMContentLoaded', function() {
     if (pinInp) pinInp.addEventListener('keydown', e => { if (e.key === 'Enter') verificarPin(); });
   });
 
-  function verificarPin() {
+  async function verificarPin() {
     const inp = document.getElementById('admin-pin-input');
     const err = document.getElementById('admin-pin-error');
     if (!inp) return;
-    if (inp.value === ADMIN_PIN) {
-      cerrarAdminPin();
-      abrirAdmin();
-    } else {
+
+    if (inp.value !== ADMIN_PIN) {
       if (err) err.textContent = 'Código incorrecto';
       inp.value = '';
       inp.style.border = '2px solid #EF4444';
       setTimeout(() => { inp.style.border = '2px solid var(--border)'; }, 1500);
+      return;
     }
+
+    // Re-verificar rol admin contra Supabase (previene bypass via DevTools)
+    if (err) err.textContent = 'Verificando…';
+    try {
+      const usuarioFresco = await PronetDB.usuarioActual();
+      if (!usuarioFresco?.roles?.includes('admin')) {
+        if (err) err.textContent = 'Acceso denegado';
+        inp.value = '';
+        return;
+      }
+    } catch (e) {
+      if (err) err.textContent = 'Error de verificación';
+      inp.value = '';
+      return;
+    }
+
+    cerrarAdminPin();
+    abrirAdmin();
   }
 
   function cerrarAdminPin(ev) {
@@ -1338,6 +1354,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Renderiza el panel de moderación dinámicamente
   async function renderModeracion(filtro = 'todas') {
+    if (!await verificarAdminServidor()) return;
     const listaEl = document.getElementById('mod-lista');
     if (!listaEl) return;
     listaEl.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
@@ -1430,6 +1447,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let catalogoActual = null;
 
   async function renderCatalogo() {
+    if (!await verificarAdminServidor()) return;
     const lista = document.getElementById('catalogo-lista');
     if (!lista) return;
     lista.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando catálogo...</div>';
@@ -2696,6 +2714,18 @@ document.addEventListener('DOMContentLoaded', function() {
   // ══ Roles y permisos ════════════════════════════════════════════════
   function esAdmin() {
     return usuarioActual?.roles?.includes('admin') === true;
+  }
+
+  // Re-verifica el rol admin contra Supabase (no confía en la memoria del cliente).
+  // Llaman las funciones que renderizan datos admin antes de mostrar nada.
+  async function verificarAdminServidor() {
+    try {
+      const u = await PronetDB.usuarioActual();
+      if (u?.roles?.includes('admin')) return true;
+    } catch (e) { /* red error */ }
+    goTo('s-home');
+    showToast && showToast('🛡 Esta sección es solo para administradores');
+    return false;
   }
 
   function reflejarUsuario() {

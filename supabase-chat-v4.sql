@@ -120,7 +120,35 @@ create policy "mensaje_marcar_leido"
           or ct.prestador_id = (select prestador_id from public.perfiles where id = auth.uid()))
     )
   )
-  with check (true);
+  with check (
+    -- Misma condición que USING: previene mover el mensaje a otro chat
+    exists (
+      select 1 from public.chats_trabajo ct
+      where ct.id = chat_id
+        and (ct.vecino_id = auth.uid()
+          or ct.prestador_id = (select prestador_id from public.perfiles where id = auth.uid()))
+    )
+  );
+
+-- Trigger: bloquea modificar cualquier campo excepto 'leido'
+create or replace function public.trg_mensajes_solo_leido_fn()
+returns trigger language plpgsql as $$
+begin
+  if new.chat_id  is distinct from old.chat_id  or
+     new.autor_id is distinct from old.autor_id or
+     new.texto    is distinct from old.texto    or
+     new.creado   is distinct from old.creado
+  then
+    raise exception 'CAMPO_PROTEGIDO: solo se permite modificar leido en mensajes_chat';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_mensajes_solo_leido on public.mensajes_chat;
+create trigger trg_mensajes_solo_leido
+  before update on public.mensajes_chat
+  for each row execute function public.trg_mensajes_solo_leido_fn();
 
 -- ── 5. Función: abrir chat al enviar propuesta ───────────────────
 create or replace function public.abrir_chat_propuesta(p_propuesta_id uuid)
