@@ -1032,6 +1032,16 @@ document.addEventListener('DOMContentLoaded', function() {
       wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">No hay pedidos disponibles en ' + (zonaActual || 'tu zona') + ' por ahora.<br>Probá cambiar de zona o rubro.</div>';
       return;
     }
+    // Enriquecer con nombre de quien publicó cada pedido (B-06)
+    if (window._sb) {
+      const uids = [...new Set(pedidos.map(p => p.usuario_id).filter(Boolean))];
+      if (uids.length > 0) {
+        const { data: prfs } = await window._sb.from('perfiles').select('id, nombre').in('id', uids);
+        const nombresMap = {};
+        (prfs || []).forEach(pr => { nombresMap[pr.id] = pr.nombre; });
+        pedidos = pedidos.map(p => ({ ...p, vecino_nombre: nombresMap[p.usuario_id] || null }));
+      }
+    }
     pedidos.forEach(p => wrap.appendChild(crearCardPedidoDisponible(p)));
   }
 
@@ -1088,12 +1098,16 @@ document.addEventListener('DOMContentLoaded', function() {
       if(sEl) sEl.textContent='Información para ayudarte a armar tu propuesta';
       if(fEl) fEl.style.display='none';
       renderInsightsPedido(p);
-      // Mostrar quién publicó el pedido
-      if (p.usuario_id && vecinoWrap) {
-        try {
-          const { data: perfil } = await window._sb.from('perfiles').select('nombre').eq('id', p.usuario_id).maybeSingle();
-          if (perfil?.nombre) { set('pd-vecino', perfil.nombre); vecinoWrap.style.display = ''; }
-        } catch(e) {}
+      // Mostrar quién publicó el pedido (B-06)
+      if (vecinoWrap) {
+        if (p.vecino_nombre) {
+          set('pd-vecino', p.vecino_nombre); vecinoWrap.style.display = '';
+        } else if (p.usuario_id && window._sb) {
+          try {
+            const { data: perfil } = await window._sb.from('perfiles').select('nombre').eq('id', p.usuario_id).maybeSingle();
+            if (perfil?.nombre) { set('pd-vecino', perfil.nombre); vecinoWrap.style.display = ''; }
+          } catch(e) {}
+        }
       }
     } else {
       if(tEl) tEl.textContent='🤖 Prestadores sugeridos para este pedido';
@@ -1310,12 +1324,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (p.presupuesto_min && p.presupuesto_max) presupuesto = '$' + p.presupuesto_min.toLocaleString('es-AR') + '–$' + p.presupuesto_max.toLocaleString('es-AR');
     else if (p.presupuesto_min) presupuesto = 'Desde $' + p.presupuesto_min.toLocaleString('es-AR');
     else presupuesto = 'A convenir';
+    const vecinoNombre = p.vecino_nombre ? escHTML(p.vecino_nombre) : null;
     card.innerHTML = `
       <div class="card-top">
         <div class="c-av" style="background:#EEF2FF;color:#2B5BFF;font-size:22px">${icono}</div>
         <div class="c-info">
           <div class="c-name">${titulo}</div>
           <div class="c-role">${rubro} · 📍 ${zona}</div>
+          ${vecinoNombre ? `<div class="c-role" style="color:var(--ink3);font-size:11px">👤 ${vecinoNombre}</div>` : ''}
           ${hace ? `<div class="c-role" style="color:var(--ink3);font-size:11px">${hace}</div>` : ''}
         </div>
       </div>
