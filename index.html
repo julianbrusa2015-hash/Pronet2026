@@ -661,16 +661,16 @@
 
       <div class="plan-card" data-solo-prestador="true" style="margin-top:14px">
         <div class="plan-top">
-          <div class="plan-name">Plan Pro Mensual · $4.999 ARS</div>
+          <div class="plan-name" id="perfil-plan-nombre">Plan Pro Mensual · $4.999 ARS</div>
           <div class="plan-renew">Renueva 15 ago</div>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-bottom:5px">
           <span>Visibilidad del mes</span>
-          <span style="color:var(--blue);font-weight:600">62% · boost ×1.4</span>
+          <span style="color:var(--blue);font-weight:600">62% · <span id="perfil-boost-texto">boost ×1.4</span></span>
         </div>
         <div class="prog-bg"><div class="prog"></div></div>
         <div class="prog-meta">
-          <span>3 / 3 servicios publicados</span>
+          <span>3 / <span id="perfil-servicios-max">3</span> servicios publicados</span>
           <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goTo('s-analytics')">📊 Ver analítica →</span>
         </div>
       </div>
@@ -1348,8 +1348,8 @@
           <div class="checkout-sub" id="checkout-sub">Anual · $44.999 ARS · Ahorrás $15.000</div>
 
           <div class="checkout-row"><span>Plan</span><span>Pro Anual</span></div>
-          <div class="checkout-row"><span>Boost</span><span style="color:var(--blue)">×1.4 activado</span></div>
-          <div class="checkout-row"><span>Servicios</span><span>3 publicaciones</span></div>
+          <div class="checkout-row"><span>Boost</span><span id="checkout-boost-val" style="color:var(--blue)">×1.4 activado</span></div>
+          <div class="checkout-row"><span>Servicios</span><span id="checkout-servicios-val">3 publicaciones</span></div>
           <div class="checkout-row"><span>Renovación</span><span id="checkout-renew">5 jul 2027</span></div>
           <div class="checkout-row"><span>Total</span><span id="checkout-total">$44.999 ARS</span></div>
 

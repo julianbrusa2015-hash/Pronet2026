@@ -971,9 +971,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const filtros = cat && cat !== 'todos' ? { rubro: rubroDeCat(cat) } : {};
     if (zonaActual) filtros.zona = zonaParaFiltro();
     let prestadores = await PronetDB.listarPrestadores(filtros);
-    // Aplicar boost ×1.4 a prestadores Pro y re-ordenar
+    // Aplicar boost a prestadores Pro/Empresa y re-ordenar (multiplicadores desde config.js)
+    const _boostPro     = window.PRONET_CONFIG?.BOOST_PRO     || 1.4;
+    const _boostEmpresa = window.PRONET_CONFIG?.BOOST_EMPRESA || 1.6;
     prestadores = prestadores
-      .map(p => ({ ...p, _score: (p.rating || 0) * (p.plan === 'pro' || p.plan === 'empresa' || p.premium ? 1.4 : 1.0) }))
+      .map(p => ({ ...p, _score: (p.rating || 0) * (
+        p.plan === 'empresa' ? _boostEmpresa :
+        (p.plan === 'pro' || p.premium) ? _boostPro : 1.0
+      ) }))
       .sort((a, b) => b._score - a._score);
     wrap.innerHTML = '';
     // Actualizar meta con conteo real
@@ -2862,7 +2867,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // SESIÓN Y GATING (Opción C: invitado + registro en puntos de conversión)
   // ══════════════════════════════════════════════════════════════════
   let usuarioActual = null; // null = invitado
-  let planActual = 'basico'; // 'basico' | 'pro' | 'empresa'
+  let planActual    = 'basico'; // 'basico' | 'pro' | 'empresa'
+  let periodoActual = 'mensual'; // 'mensual' | 'anual'
 
   // Acciones que requieren cuenta y su mensaje
   const ACCIONES_PROTEGIDAS = {
@@ -2997,6 +3003,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function reflejarPlan() {
     const isPro = esPro();
+    const _cfg  = window.PRONET_CONFIG || {};
     // Pantalla de suscripción: marcar qué plan está activo
     const btnBasico = document.getElementById('subs-btn-basico');
     const btnPro    = document.getElementById('subs-btn-pro');
@@ -3014,6 +3021,31 @@ document.addEventListener('DOMContentLoaded', function() {
     if (badgePlan) {
       badgePlan.textContent = isPro ? '⭐ Plan Pro' : '';
       badgePlan.style.display = isPro ? 'inline-block' : 'none';
+    }
+    // Card plan en Mi Perfil — nombre, boost y límite de servicios
+    const planNombreEl = document.getElementById('perfil-plan-nombre');
+    if (planNombreEl) {
+      if (isPro) {
+        const precio = periodoActual === 'anual'
+          ? (_cfg.PRECIO_PRO_ANUAL || '$44.999')
+          : (_cfg.PRECIO_PRO_MES   || '$4.999');
+        const label = periodoActual === 'anual' ? 'Anual' : 'Mensual';
+        planNombreEl.textContent = `Plan Pro ${label} · ${precio} ARS`;
+      } else {
+        planNombreEl.textContent = 'Plan Básico · Gratis';
+      }
+    }
+    const boostTextoEl = document.getElementById('perfil-boost-texto');
+    if (boostTextoEl) {
+      boostTextoEl.textContent = isPro
+        ? `boost ×${_cfg.BOOST_PRO || 1.4}`
+        : 'sin boost';
+    }
+    const serviciosMaxEl = document.getElementById('perfil-servicios-max');
+    if (serviciosMaxEl) {
+      serviciosMaxEl.textContent = isPro
+        ? (_cfg.SERVICIOS_PRO    || 3)
+        : (_cfg.SERVICIOS_BASICO || 1);
     }
   }
 
@@ -4452,9 +4484,11 @@ document.addEventListener('DOMContentLoaded', function() {
     return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
   }
   const _cfg = window.PRONET_CONFIG || {};
+  const _boostProSubs    = _cfg.BOOST_PRO     || 1.4;
+  const _serviciosProSubs = _cfg.SERVICIOS_PRO || 3;
   const prices = {
-    mes:   { amount: _cfg.PRECIO_PRO_MES || '$4.999',   period:'/ mes',  saving:'',                                      desc:'Cancelás cuando quieras.',                                              total:(_cfg.PRECIO_PRO_MES || '$4.999')   + ' ARS', renew: _calcRenew(1)  },
-    anual: { amount: _cfg.PRECIO_PRO_ANUAL || '$44.999', period:'/ año', saving:'Ahorrás ' + (_cfg.AHORRO_PRO_ANUAL || '$15.000'), desc:'Equivale a $3.750 por mes. Cancelás cuando quieras.', total:(_cfg.PRECIO_PRO_ANUAL || '$44.999') + ' ARS', renew: _calcRenew(12) },
+    mes:   { amount: _cfg.PRECIO_PRO_MES || '$4.999',   period:'/ mes',  saving:'',                                      desc:'Cancelás cuando quieras.',                                              total:(_cfg.PRECIO_PRO_MES || '$4.999')   + ' ARS', renew: _calcRenew(1),  boost: _boostProSubs, servicios: _serviciosProSubs },
+    anual: { amount: _cfg.PRECIO_PRO_ANUAL || '$44.999', period:'/ año', saving:'Ahorrás ' + (_cfg.AHORRO_PRO_ANUAL || '$15.000'), desc:'Equivale a $3.750 por mes. Cancelás cuando quieras.', total:(_cfg.PRECIO_PRO_ANUAL || '$44.999') + ' ARS', renew: _calcRenew(12), boost: _boostProSubs, servicios: _serviciosProSubs },
   };
   let currentBilling = 'anual';
 
@@ -4475,6 +4509,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('checkout-sub').textContent   = (currentBilling === 'anual' ? 'Anual' : 'Mensual') + ' · ' + p.total + (p.saving ? ' · ' + p.saving : '');
     document.getElementById('checkout-total').textContent = p.total;
     document.getElementById('checkout-renew').textContent = p.renew;
+    const boostEl     = document.getElementById('checkout-boost-val');
+    const serviciosEl = document.getElementById('checkout-servicios-val');
+    if (boostEl)     boostEl.textContent     = '×' + p.boost + ' activado';
+    if (serviciosEl) serviciosEl.textContent = p.servicios + ' publicaciones';
     const ov = document.getElementById('checkout-overlay');
     ov.classList.add('show');
   }
@@ -6399,7 +6437,8 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBellCount();
         cargarSliderRangosDesdeDB();
         PronetDB.obtenerSuscripcion().then(s => {
-          planActual = s.plan || 'basico';
+          planActual    = s.plan    || 'basico';
+          periodoActual = s.periodo || 'mensual';
           reflejarPlan();
         }).catch(() => {});
         if (u.zona) { zonaActual = u.zona; actualizarZonaLabel(zonaActual); }
