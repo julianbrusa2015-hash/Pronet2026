@@ -4053,6 +4053,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const badge=document.createElement('div');
       badge.style.cssText='font-size:10px;font-weight:700;color:#16A34A;background:#DCFCE7;border-radius:20px;padding:3px 10px;flex-shrink:0;white-space:nowrap';
       badge.textContent='● '+(p.estado||'Publicado');
+      // La parte superior de la card es siempre clickeable → abre el detalle (propuestas recibidas)
+      top.style.cursor = 'pointer';
+      top.addEventListener('click', () => abrirDetallePedido(p));
       top.appendChild(ico);top.appendChild(info);top.appendChild(badge);card.appendChild(top);
       const nProps=conteoProps[p.id]||0;
       if(nProps>0){const pb=document.createElement('button');pb.textContent='📬 '+nProps+' propuesta'+(nProps!==1?'s':'')+' recibida'+(nProps!==1?'s':'')+' — Ver y comparar →';pb.style.cssText='width:100%;margin-top:10px;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-s);border:1.5px solid #C7D5FF;border-radius:10px;padding:9px;cursor:pointer;font-family:inherit';pb.addEventListener('click',(e)=>{e.stopPropagation();abrirDetallePedido(p);});card.appendChild(pb);}

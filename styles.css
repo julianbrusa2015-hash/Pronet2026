@@ -2140,10 +2140,11 @@
 
   /* Puntos card */
   .pts-card {
-    background:white; border-radius:var(--r);
+    background:var(--white); border-radius:var(--r);
     margin: -24px 14px 0; padding:16px;
     box-shadow:0 4px 20px rgba(0,0,0,.12);
     display:flex; gap:0;
+    position:relative; z-index:1;
   }
   .pts-item { flex:1; text-align:center; }
   .pts-item:not(:last-child) { border-right:1px solid var(--border); }
