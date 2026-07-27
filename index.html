@@ -400,8 +400,8 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="f-ej-electricista-matriculado-con-12" class="form-label">Descripción breve</label>
-          <textarea id="f-ej-electricista-matriculado-con-12" name="f-ej-electricista-matriculado-con-12" class="ob-input" rows="3" style="resize:none;line-height:1.5" placeholder="Ej: Electricista matriculado con 12 años de experiencia..."></textarea>
+          <label for="pub-desc" class="form-label">Descripción breve</label>
+          <textarea id="pub-desc" name="pub-desc" class="ob-input" rows="3" style="resize:none;line-height:1.5" placeholder="Ej: Electricista matriculado con 12 años de experiencia..."></textarea>
         </div>
         <div style="height:80px"></div>
         <div class="pub-footer"><button class="btn-p" onclick="pubNext(2)">Continuar →</button></div>
@@ -420,8 +420,8 @@
         </div>
         <div class="step-label">Paso 2 de 5 · Datos del servicio</div>
         <div class="form-group">
-          <label for="f-ej-electricista-matriculado-escoba" class="form-label">Título del servicio</label>
-          <input id="f-ej-electricista-matriculado-escoba" name="f-ej-electricista-matriculado-escoba" class="ob-input" placeholder="Ej: Electricista matriculado · Escobar" value="Electricista matriculado · Instalaciones y urgencias">
+          <label for="pub-titulo" class="form-label">Título del servicio</label>
+          <input id="pub-titulo" name="pub-titulo" class="ob-input" placeholder="Ej: Electricista matriculado · Escobar">
         </div>
         <div class="form-group">
           <label id="lbl-grupo-2" class="form-label">Especialidades</label>
@@ -458,8 +458,8 @@
         </div>
         <div class="step-label">Paso 3 de 5 · Zona de cobertura</div>
         <div class="form-group">
-          <label for="f-ej-mitre-1245-escobar" class="form-label">Tu dirección base</label>
-          <input id="f-ej-mitre-1245-escobar" name="f-ej-mitre-1245-escobar" class="ob-input" placeholder="Ej: Mitre 1245, Escobar" value="Mitre 1245, Escobar">
+          <label for="pub-direccion" class="form-label">Tu dirección base</label>
+          <input id="pub-direccion" name="pub-direccion" class="ob-input" placeholder="Ej: Mitre 1245, Escobar">
         </div>
         <div class="form-group">
           <label id="lbl-grupo-4" class="form-label">¿Cómo definís tu zona?</label>
@@ -512,8 +512,8 @@
           </div>
         </div>
         <div class="ob-input-row">
-          <div class="ob-field"><label for="campo-1" class="ob-label">Mínimo (ARS)</label><input id="campo-1" name="campo-1" class="ob-input" value="6.000" type="text"></div>
-          <div class="ob-field"><label for="campo-2" class="ob-label">Máximo (ARS)</label><input id="campo-2" name="campo-2" class="ob-input" value="10.000" type="text"></div>
+          <div class="ob-field"><label for="pub-precio-min" class="ob-label">Mínimo (ARS)</label><input id="pub-precio-min" name="pub-precio-min" class="ob-input" placeholder="Ej: 6000" type="text" inputmode="numeric"></div>
+          <div class="ob-field"><label for="pub-precio-max" class="ob-label">Máximo (ARS)</label><input id="pub-precio-max" name="pub-precio-max" class="ob-input" placeholder="Ej: 10000" type="text" inputmode="numeric"></div>
         </div>
         <div style="background:var(--green-s);border-radius:12px;padding:12px 14px;font-size:12px;color:#047857;font-weight:500;margin:0 18px;display:flex;gap:8px;align-items:flex-start">
           <span style="font-size:16px;flex-shrink:0">📊</span>
@@ -578,10 +578,10 @@
         <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:700;color:var(--ink);margin-bottom:8px">¡Servicio publicado!</div>
         <div style="font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:24px">Ya aparecés en el ranking de Escobar. Los clientes pueden encontrarte ahora.</div>
         <div style="background:var(--blue-s);border:1.5px solid var(--blue);border-radius:16px;padding:16px;width:100%;text-align:left;margin-bottom:24px">
-          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Rubro</span><span style="font-weight:600">⚡ Electricista</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Zona</span><span style="font-weight:600">Escobar · 8 km</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Tarifa</span><span style="font-weight:600">$6.000–$10.000 / visita</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Pagos</span><span style="font-weight:600">💵 🏦 📲</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Rubro</span><span id="pub-ex-rubro" style="font-weight:600">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Zona</span><span id="pub-ex-zona" style="font-weight:600">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Tarifa</span><span id="pub-ex-tarifa" style="font-weight:600">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Pagos</span><span id="pub-ex-pagos" style="font-weight:600">—</span></div>
         </div>
         <button class="btn-p" style="width:100%" onclick="goTo('s-home');pubReset()">Ir al inicio</button>
       </div>

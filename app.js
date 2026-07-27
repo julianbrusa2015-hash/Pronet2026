@@ -3911,13 +3911,88 @@ document.addEventListener('DOMContentLoaded', function() {
     pubNext(step - 1);
   }
 
-  function pubFinalizar() {
-    for (let i = 1; i <= 5; i++) {
-      const el = document.getElementById('pub-' + i);
-      if (el) el.style.display = 'none';
+  async function pubFinalizar() {
+    if (!usuarioActual?.prestador_id) {
+      showToast && showToast('⚠️ Solo los prestadores pueden publicar un servicio');
+      return;
     }
+
+    const val = id => (document.getElementById(id)?.value || '').trim();
+
+    // Paso 1 — rubro y descripción
+    const rubroEl   = document.querySelector('#pub-1 .form-opt.on');
+    const rubroIcono = rubroEl?.querySelector('.opt-icon')?.textContent?.trim() || '';
+    const rubroNombre = rubroEl?.querySelector('.opt-lbl')?.textContent?.trim() || '';
+    if (!rubroNombre) { showToast && showToast('⚠️ Elegí un rubro en el paso 1'); pubNext(1); return; }
+    const descripcion = val('pub-desc');
+
+    // Paso 2 — especialidades
+    const especialidades = Array.from(document.querySelectorAll('#pub-2 .sub-opt.on'))
+      .map(e => e.textContent.trim()).filter(Boolean);
+
+    // Paso 3 — zona y radio
+    const direccion = val('pub-direccion');
+    const radioEl   = document.querySelector('#pub-3 .r-chip.on');
+    const radio     = radioEl?.textContent?.trim() || '';
+    const zonaTexto = [direccion, radio].filter(Boolean).join(' · ') || usuarioActual.zona || 'Escobar';
+
+    // Paso 4 — precio y tarifa
+    const tipoTarifa = document.querySelector('#pub-4 .pt-chip.on')?.textContent?.trim() || 'Por visita';
+    const precioMin  = parseInt((val('pub-precio-min')).replace(/\D/g, ''), 10) || null;
+    const precioMax  = parseInt((val('pub-precio-max')).replace(/\D/g, ''), 10) || null;
+    const urgencias  = document.getElementById('campo-3')?.checked ?? false;
+
+    // Paso 5 — medios de pago
+    const mediosPago = Array.from(document.querySelectorAll('#pub-5 .pago-opt.on .pago-lbl'))
+      .map(e => e.textContent.trim()).filter(Boolean);
+    if (!mediosPago.length) mediosPago.push('Efectivo');
+
+    const btn = document.querySelector('#pub-5 .btn-p');
+    if (btn) { btn.disabled = true; btn.textContent = 'Publicando...'; }
+
+    const cambios = {
+      rubro: rubroNombre,
+      descripcion: descripcion || null,
+      especialidades,
+      subrubro: especialidades[0] || null,
+      zona: direccion || usuarioActual.zona || 'Escobar',
+      medios_pago: mediosPago,
+      precio_min: precioMin,
+      precio_max: precioMax,
+      tipo_tarifa: tipoTarifa,
+      urgencias_24h: urgencias,
+    };
+
+    const r = await PronetDB.actualizar('prestadores', usuarioActual.prestador_id, cambios).catch(() => null);
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Publicar servicio'; }
+
+    if (!r) {
+      showToast && showToast('⚠️ No se pudo guardar el servicio. Intentá de nuevo.');
+      return;
+    }
+
+    // Sincronizar usuarioActual con los cambios guardados
+    Object.assign(usuarioActual, cambios);
+
+    // Poblar pantalla de éxito con datos reales
+    const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+    set('pub-ex-rubro', rubroIcono + ' ' + rubroNombre);
+    set('pub-ex-zona', zonaTexto);
+    const tarifaTxt = tipoTarifa === 'A convenir' ? 'A convenir'
+      : (precioMin && precioMax ? `$${precioMin.toLocaleString('es-AR')}–$${precioMax.toLocaleString('es-AR')} / ${tipoTarifa.toLowerCase()}`
+        : precioMin ? `desde $${precioMin.toLocaleString('es-AR')} / ${tipoTarifa.toLowerCase()}`
+        : tipoTarifa);
+    set('pub-ex-tarifa', tarifaTxt);
+    set('pub-ex-pagos', mediosPago.map(p =>
+      p.includes('Efectivo') ? '💵' : p.includes('Transferencia') ? '🏦' : p.includes('QR') ? '📲' : p
+    ).join(' '));
+
+    // Mostrar éxito
+    for (let i = 1; i <= 5; i++) { const el = document.getElementById('pub-' + i); if (el) el.style.display = 'none'; }
     const exito = document.getElementById('pub-exito');
     if (exito) exito.style.display = 'flex';
+
+    showToast && showToast('✅ Servicio publicado correctamente');
   }
 
   function pubReset() {
