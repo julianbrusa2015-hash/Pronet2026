@@ -6005,4 +6005,19 @@ document.addEventListener('DOMContentLoaded', function() {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       window.location.reload();
     });
+
+    // El SW nos avisa cuando renovó la suscripción push (pushsubscriptionchange).
+    // Lo guardamos en Supabase con la sesión activa del usuario.
+    navigator.serviceWorker.addEventListener('message', async (event) => {
+      if (event.data?.type !== 'push-resubscribed') return;
+      const sub = event.data.subscription;
+      if (!sub?.endpoint || !window._sb) return;
+      const uid = await PronetDB.usuarioIdActual();
+      if (!uid) return;
+      const { error } = await window._sb.from('push_suscripciones').upsert(
+        { usuario_id: uid, endpoint: sub.endpoint, p256dh: sub.keys?.p256dh, auth: sub.keys?.auth },
+        { onConflict: 'endpoint' }
+      );
+      if (error) console.warn('[PWA] push-resubscribed: no se pudo guardar la suscripción', error.message);
+    });
   }

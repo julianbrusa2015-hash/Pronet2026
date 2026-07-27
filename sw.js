@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v46'; // v46: pushsubscriptionchange para renovar suscripciones expiradas · v45: no interceptar externos (CSP) · v43: roles
+const CACHE_VERSION = 'pronet-v47'; // v47: pushsubscriptionchange vía postMessage a la página (sin /api propio) · v46: pushsubscriptionchange · v43: roles
 
 const SHELL = [
   './',
@@ -112,18 +112,21 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // Si el servidor invalida la suscripción push (expiró o cambió de clave),
-// reuscribirse automáticamente para no perder notificaciones.
+// reuscribirse y avisarle a la página para que guarde la nueva suscripción
+// en Supabase (el SW no tiene acceso al cliente JS ni al token de sesión).
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
     self.registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: event.oldSubscription?.options?.applicationServerKey,
     }).then((sub) => {
-      return fetch('/api/push-subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub),
-      }).catch(() => {}); // silencioso si no hay conectividad
-    }).catch(() => {})   // silencioso si el usuario revocó permisos
+      return self.clients
+        .matchAll({ type: 'window', includeUncontrolled: true })
+        .then((clientes) => {
+          clientes.forEach((c) =>
+            c.postMessage({ type: 'push-resubscribed', subscription: sub.toJSON() })
+          );
+        });
+    }).catch(() => {})
   );
 });
