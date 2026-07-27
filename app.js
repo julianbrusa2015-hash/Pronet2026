@@ -615,8 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ── Panel Admin — acceso con PIN desde Mi Perfil ───────────────────
   // Tocar "PRONET v1.0" al final de Mi Perfil → pide PIN → abre admin
-  // Cambiar este valor en cada deploy; mínimo 6 dígitos.
-  const ADMIN_PIN = '847291';
+  // El PIN se guarda en config_app (Supabase) y se verifica server-side via RPC.
 
   document.addEventListener('DOMContentLoaded', () => {
     const versionTap = document.getElementById('version-tap');
@@ -643,26 +642,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const err = document.getElementById('admin-pin-error');
     if (!inp) return;
 
-    if (inp.value !== ADMIN_PIN) {
-      if (err) err.textContent = 'Código incorrecto';
+    // Verificar PIN server-side — el valor real nunca viaja al cliente
+    if (err) err.textContent = 'Verificando…';
+    inp.disabled = true;
+    let pinOk = false;
+    try {
+      const { data, error } = await window._sb.rpc('fn_verificar_pin_admin', { p_pin: inp.value });
+      pinOk = data === true && !error;
+    } catch (e) { pinOk = false; }
+    inp.disabled = false;
+
+    if (!pinOk) {
+      if (err) err.textContent = 'Código incorrecto o acceso denegado';
       inp.value = '';
       inp.style.border = '2px solid #EF4444';
-      setTimeout(() => { inp.style.border = '2px solid var(--border)'; }, 1500);
-      return;
-    }
-
-    // Re-verificar rol admin contra Supabase (previene bypass via DevTools)
-    if (err) err.textContent = 'Verificando…';
-    try {
-      const usuarioFresco = await PronetDB.usuarioActual();
-      if (!usuarioFresco?.roles?.includes('admin')) {
-        if (err) err.textContent = 'Acceso denegado';
-        inp.value = '';
-        return;
-      }
-    } catch (e) {
-      if (err) err.textContent = 'Error de verificación';
-      inp.value = '';
+      setTimeout(() => { inp.style.border = '2px solid var(--border)'; if (err) err.textContent = ''; }, 1500);
       return;
     }
 
