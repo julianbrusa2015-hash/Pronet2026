@@ -5407,26 +5407,19 @@ document.addEventListener('DOMContentLoaded', function() {
   // Carga el precio referencial del catálogo para un rubro dado
   // y lo muestra en el bloque ref-inline del formulario de propuesta
   async function cargarRefPrecio(rubro) {
-    const refEl = document.getElementById('np-ref-inline');
+    const refEl   = document.getElementById('np-ref-inline');
     const refNota = document.getElementById('np-ref-nota');
     if (!refEl) return;
     try {
-      // catalogo_precios no tiene columna 'creado' — usar listarSimple
-      const catalogo = await PronetDB.listarSimple('catalogo_precios');
-      // Tomar los servicios del rubro, ordenados por precio_min
-      const items = catalogo
-        .filter(c => c.rubro === rubro)
-        .sort((a,b) => a.precio_min - b.precio_min);
-      if (items.length === 0) {
+      const ficha = await PronetDB.obtenerFichaPorRubro(rubro);
+      if (!ficha?.precio_ref_min) {
         refEl.style.display = 'none';
-        if(refNota) refNota.style.display = 'none';
+        if (refNota) refNota.style.display = 'none';
         return;
       }
-      // Rango total del rubro: desde el mínimo hasta el máximo
-      const minTotal = Math.min(...items.map(c => c.precio_min));
-      const maxTotal = Math.max(...items.map(c => c.precio_max));
-      const unidad = items[0].unidad || 'visita';
-      // Configurar los límites del slider dual con este rango y el rubro
+      const minTotal = ficha.precio_ref_min;
+      const maxTotal = ficha.precio_ref_max || ficha.precio_ref_min;
+      const unidad   = ficha.precio_unidad || 'visita';
       if (typeof configurarLimitesSlider === 'function') {
         configurarLimitesSlider(minTotal, maxTotal, rubro);
       }
@@ -5435,13 +5428,12 @@ document.addEventListener('DOMContentLoaded', function() {
         + maxTotal.toLocaleString('es-AR') + ' / ' + unidad;
       refEl.style.display = '';
       if (refNota) {
-        refNota.textContent = '⚠️ Referencial basado en ' + items.length + ' tipo'
-          + (items.length !== 1 ? 's' : '') + ' de servicio. Puede variar según complejidad.';
+        refNota.textContent = '⚠️ Referencial basado en precios habituales del rubro. Puede variar según complejidad.';
         refNota.style.display = '';
       }
     } catch(e) {
       refEl.style.display = 'none';
-      if(refNota) refNota.style.display = 'none';
+      if (refNota) refNota.style.display = 'none';
     }
   }
 
