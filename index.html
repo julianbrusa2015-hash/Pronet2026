@@ -830,6 +830,9 @@
       <div class="map-wrap">
         <div class="map-bg">
 
+          <!-- Google Maps se monta acá cuando MAPS_KEY está configurada -->
+          <div id="google-map" style="display:none;position:absolute;inset:0;width:100%;height:100%;z-index:0"></div>
+
           <!-- Header sobre el mapa -->
           <div class="map-header">
             <div class="map-search" onclick="goTo('s-buscar')">

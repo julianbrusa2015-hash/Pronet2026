@@ -2338,6 +2338,14 @@
   /* Chip de urgencia activo en el modal de editar pedido */
   .ep-urg.on { border-color: var(--blue) !important; background: var(--blue-s); color: var(--blue); }
 
+/* ═══ Google Maps: cuando la API está activa, ocultar el fondo CSS simulado ═══ */
+.map-bg.maps-activo { background: none; }
+.map-bg.maps-activo::before { display: none; }
+.map-bg.maps-activo > div[style*="left:50%"] { display: none; } /* oculta el punto azul CSS */
+/* El header y los chips flotan sobre el mapa real */
+.map-bg.maps-activo .map-header,
+.map-bg.maps-activo .map-filter-row { z-index: 10; }
+
 /* ═══ Pines dinámicos del mapa: estado activo (sincronizado con el sheet) ═══ */
 #mapa-pins .pin { transition: transform .2s ease, opacity .2s ease; }
 #mapa-pins .pin.pin-activo { z-index: 5; transform: scale(1.12); }

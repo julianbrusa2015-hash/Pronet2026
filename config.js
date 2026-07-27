@@ -50,6 +50,17 @@ window.PRONET_CONFIG.LOYALTY_NIVELES = [
   { nombre: 'Élite',  emoji: '💎', min: 10000, max: 25000 },
 ];
 
+// ── FASE 4: Google Maps ──
+// Pegá acá la clave pública de Google Maps (Maps JS API + Geocoding API).
+// Dejarlo vacío mantiene el mapa simulado actual; al completarlo activa el
+// mapa real con marcadores, distancias y GPS sin ningún otro cambio de código.
+//
+// Cómo obtenerla:
+//   console.cloud.google.com → nuevo proyecto → APIs & Services →
+//   Habilitar: Maps JavaScript API + Geocoding API →
+//   Credentials → Create API Key → restringir a tu dominio (pronetprueba.netlify.app)
+window.PRONET_CONFIG.MAPS_KEY = '';   // ← pegá tu key acá
+
 Object.assign(window.PRONET_CONFIG, {
   // Propuestas
   PROPUESTA_EXPIRACION_HS: 72,      // horas hasta que una propuesta expira automáticamente

@@ -1896,6 +1896,125 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // ── Google Maps ──────────────────────────────────────────────────────────
+  let mapaGoogle = null;       // instancia google.maps.Map
+  let mapaUserMarker = null;   // marcador de la ubicación del usuario
+  let mapaPrestMarkers = [];   // marcadores de los prestadores
+  let userLat = null, userLng = null; // coords GPS del usuario (null = desconocidas)
+
+  // Coordenadas del centro de Escobar como fallback
+  const ESCOBAR_LAT = -34.3486, ESCOBAR_LNG = -58.8100;
+
+  function calcDistanciaKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2
+            + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  function formatDistancia(km) {
+    return km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1).replace('.', ',') + ' km';
+  }
+
+  function cargarGoogleMapsAPI() {
+    const key = PRONET_CONFIG.MAPS_KEY;
+    if (!key) return Promise.resolve(false);
+    if (window.google?.maps) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      window._initGoogleMaps = () => { delete window._initGoogleMaps; resolve(true); };
+      const s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + key + '&callback=_initGoogleMaps&loading=async';
+      s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+  }
+
+  async function initMapaGoogle() {
+    if (mapaGoogle) return true;
+    const loaded = await cargarGoogleMapsAPI();
+    if (!loaded) return false;
+    const container = document.getElementById('google-map');
+    if (!container) return false;
+    container.style.display = 'block';
+    document.getElementById('mapa-pins')?.style.setProperty('display', 'none');
+    document.querySelector('#s-mapa .map-bg')?.classList.add('maps-activo');
+    const center = userLat ? { lat: userLat, lng: userLng } : { lat: ESCOBAR_LAT, lng: ESCOBAR_LNG };
+    mapaGoogle = new google.maps.Map(container, {
+      center,
+      zoom: 14,
+      mapTypeControl: false,
+      fullscreenControl: false,
+      streetViewControl: false,
+      zoomControl: true,
+      gestureHandling: 'greedy',
+      styles: [
+        { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+        { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
+      ],
+    });
+    return true;
+  }
+
+  function renderPinesGoogle(prestadores) {
+    mapaPrestMarkers.forEach(m => m.setMap(null));
+    mapaPrestMarkers = [];
+    const bounds = new google.maps.LatLngBounds();
+    if (userLat) bounds.extend({ lat: userLat, lng: userLng });
+    prestadores.forEach((p, i) => {
+      if (!p.lat || !p.lng) return;
+      const rubro = p.rubro || '';
+      const icono = rubro.includes('lectric') ? '⚡'
+                  : rubro.includes('impieza') ? '🧹'
+                  : rubro.includes('uidado') ? '👶'
+                  : rubro.includes('ascotas') ? '🐕'
+                  : rubro.includes('ardineria') || rubro.includes('ardinería') ? '🌿'
+                  : rubro.includes('lomeria') || rubro.includes('lomería') ? '🚰'
+                  : rubro.includes('intura') ? '🎨'
+                  : '🔧';
+      const label = { text: icono + ' ' + escHTML((p.nombre||'').split(' ')[0]), fontSize: '11px', fontWeight: '600' };
+      const marker = new google.maps.Marker({
+        position: { lat: p.lat, lng: p.lng },
+        map: mapaGoogle,
+        title: p.nombre || 'Prestador',
+        label,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: p.premium ? '#F59E0B' : '#2B5BFF',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        },
+      });
+      marker.addListener('click', () => {
+        const cards = document.querySelectorAll('.sheet-card');
+        cards.forEach((c, j) => c.classList.toggle('selected', j === i));
+        cards[i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+      });
+      mapaPrestMarkers.push(marker);
+      bounds.extend({ lat: p.lat, lng: p.lng });
+    });
+    if (!bounds.isEmpty() && mapaPrestMarkers.length > 0) mapaGoogle.fitBounds(bounds, 60);
+  }
+
+  async function geocodificarDireccion(direccion) {
+    const key = PRONET_CONFIG.MAPS_KEY;
+    if (!key || !direccion) return null;
+    try {
+      const resp = await fetch(
+        'https://maps.googleapis.com/maps/api/geocode/json?address='
+        + encodeURIComponent(direccion + ', Escobar, Buenos Aires, Argentina')
+        + '&key=' + key
+      );
+      const data = await resp.json();
+      if (data.status !== 'OK' || !data.results[0]) return null;
+      return data.results[0].geometry.location;
+    } catch (e) { return null; }
+  }
+  // ── /Google Maps ─────────────────────────────────────────────────────────
+
   // Genera una posición pseudo-aleatoria pero consistente para un prestador
   // basada en su ID — siempre el mismo pin en el mismo lugar
   function posicionPin(id, index) {
@@ -2044,6 +2163,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!wrap) return;
     wrap.innerHTML = '<div style="padding:20px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando prestadores cercanos...</div>';
 
+    // Intentar inicializar Google Maps (no bloquea si no hay key)
+    const mapsActivo = await initMapaGoogle();
+
     // Leer filtros activos de los chips
     const filtros = {};
     if (zonaActual) filtros.zona = zonaParaFiltro();
@@ -2059,7 +2181,9 @@ document.addEventListener('DOMContentLoaded', function() {
       wrap.innerHTML = '<div style="padding:20px 14px;text-align:center;font-size:13px;color:var(--ink3)">No hay prestadores en ' + (zonaActual || 'tu zona') + '.</div>';
       return;
     }
-    const distancias = ['300 m', '600 m', '800 m', '1.2 km', '1.5 km', '2 km', '2.4 km', '3 km'];
+
+    // Distancias reales si el usuario dio GPS y el prestador tiene coords; fake si no
+    const distanciasFake = ['300 m', '600 m', '800 m', '1.2 km', '1.5 km', '2 km', '2.4 km', '3 km'];
     prestadores.forEach((p, i) => {
       const card = document.createElement('div');
       card.className = 'sheet-card' + (i === 0 ? ' selected' : '');
@@ -2067,6 +2191,12 @@ document.addEventListener('DOMContentLoaded', function() {
       card.addEventListener('click', () => { prestadorActual = p; openChat(p.id || 'x'); });
       const badgeVerif = p.verificado ? ' <svg class="verified-badge" viewBox="0 0 18 20" fill="none"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
       const badgePrem = p.premium ? ' · ⭐ Premium' : (p.verificado ? ' · ✓ Verif.' : '');
+      let distTxt;
+      if (userLat && p.lat && p.lng) {
+        distTxt = formatDistancia(calcDistanciaKm(userLat, userLng, p.lat, p.lng));
+      } else {
+        distTxt = distanciasFake[i % distanciasFake.length];
+      }
       card.innerHTML = `
         <div class="sc-top">
           <div class="sc-av" style="background:${escHTML(p.color_bg||'#EEF2FF')};color:${escHTML(p.color_text||'#2B5BFF')}">${avatarInner(p)}</div>
@@ -2075,7 +2205,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="sc-role">${escHTML(p.rubro||'')}</div>
           </div>
         </div>
-        <div class="sc-disp"><div class="sc-disp-dot"></div><div class="sc-disp-txt">Disponible ahora · ${distancias[i % distancias.length]}</div></div>
+        <div class="sc-disp"><div class="sc-disp-dot"></div><div class="sc-disp-txt">Disponible ahora · ${distTxt}</div></div>
         <div class="sc-price">$${(p.precio||0).toLocaleString('es-AR')} <span style="font-size:9px;color:var(--ink3)">/ ${escHTML(p.precio_unidad||'visita')}</span></div>
         <div class="sc-dist">⭐ ${(p.rating||5).toFixed(1)} · ${escHTML(p.zona||'Escobar')}${badgePrem}</div>
         <button class="sc-btn">💬 Solicitar servicio</button>`;
@@ -2083,8 +2213,12 @@ document.addEventListener('DOMContentLoaded', function() {
       wrap.appendChild(card);
     });
 
-    // Renderizar pines dinámicos en el mapa
-    renderPinesMapa(prestadores);
+    // Pines: Google Maps markers si la API está cargada, CSS pins si no
+    if (mapsActivo) {
+      renderPinesGoogle(prestadores);
+    } else {
+      renderPinesMapa(prestadores);
+    }
 
     // Sincronización inversa: al scrollear el sheet, se resalta el pin
     // de la card más centrada (solo entre las que tienen pin: las primeras 8)
@@ -2335,16 +2469,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     navigator.geolocation.getCurrentPosition(
-      // Éxito
       function(pos) {
-        // En la zona de Escobar, asignar la zona más cercana (simplificado)
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+
+        // Centrar el mapa real si está activo
+        if (mapaGoogle) {
+          mapaGoogle.setCenter({ lat: userLat, lng: userLng });
+          if (mapaUserMarker) mapaUserMarker.setMap(null);
+          mapaUserMarker = new google.maps.Marker({
+            position: { lat: userLat, lng: userLng },
+            map: mapaGoogle,
+            title: 'Tu ubicación',
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: '#2B5BFF',
+              fillOpacity: 1,
+              strokeColor: '#fff',
+              strokeWeight: 3,
+            },
+            zIndex: 100,
+          });
+        }
+
+        // Asignar zona
         zonaActual = 'Escobar';
         document.querySelectorAll('.zona-option').forEach((o,i) => o.classList.toggle('active', i===0));
         guardarEstado();
         if (lbl) lbl.innerHTML = '✅ Ubicación detectada: Escobar';
         setTimeout(() => cerrarZonaModal(), 800);
       },
-      // Error
       function(err) {
         const msgs = {
           1: '🔒 Permiso denegado. Activá la ubicación en Ajustes del navegador.',
@@ -2353,7 +2508,6 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         if (lbl) lbl.innerHTML = msgs[err.code] || msgs[2];
       },
-      // Opciones: timeout de 10 segundos
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
   }
@@ -2589,6 +2743,11 @@ document.addEventListener('DOMContentLoaded', function() {
           subrubro: especialidades[0] || null,
         };
         if (fotoPerfilNueva) cambios.foto_url = fotoPerfilNueva;
+        // Geocodificar zona para actualizar coordenadas en el mapa
+        if (PRONET_CONFIG.MAPS_KEY && usuarioActual.zona) {
+          const coords = await geocodificarDireccion(usuarioActual.zona);
+          if (coords) { cambios.lat = coords.lat; cambios.lng = coords.lng; }
+        }
         const r = await PronetDB.actualizar('prestadores', usuarioActual.prestador_id, cambios);
         ok = !!r;
       }
