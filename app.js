@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Mostrar la vista según el rol real
       const vBusco = document.getElementById('pview-busco');
       const vPresto = document.getElementById('pview-presto');
-      if (usuarioActual && usuarioActual.tipo === 'prestador') {
+      if (esPrestador()) {
         if (vBusco) vBusco.style.display = 'none';
         if (vPresto) vPresto.style.display = 'block';
       } else {
@@ -413,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const key = 'pronet_tutorial_visto_' + (usuarioActual?.id || 'anon');
     if (!forzar && localStorage.getItem(key)) return;
     // Elegir steps según rol
-    const esPrestador = !!(usuarioActual?.prestador_id || usuarioActual?.tipo === 'prestador');
+    const esPrestador = esPrestador();
     tutorialStepsActual = esPrestador ? TUTORIAL_PRESTADOR : TUTORIAL_VECINO;
     tutorialStep = 0;
     // Ajustar dots dinámicamente
@@ -873,7 +873,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const label  = document.getElementById('home-checklist-label');
     if (!wrap) return;
 
-    const esPrestador = !!(usuarioActual.prestador_id || usuarioActual.tipo === 'prestador');
+    const esPrestador = esPrestador();
     _checklistItems = esPrestador ? CHECKLIST_PRESTADOR : CHECKLIST_VECINO;
 
     _checklistEstados = await Promise.all(_checklistItems.map(async item => {
@@ -931,7 +931,7 @@ document.addEventListener('DOMContentLoaded', function() {
   window.cerrarChecklist = cerrarChecklist;
 
   function irAChecklistItem(id) {
-    const esPrestador = !!(usuarioActual?.prestador_id || usuarioActual?.tipo === 'prestador');
+    const esPrestador = esPrestador();
     if (id === 'perfil')     goTo('s-miperfil');
     if (id === 'pedido')     goTo('s-pedidos');
     if (id === 'elegir')     goTo('s-pedidos');       // Vecino → ver sus pedidos y propuestas recibidas
@@ -958,7 +958,7 @@ document.addEventListener('DOMContentLoaded', function() {
     renderChecklist(); // Checklist de primeros pasos
 
     // ── Vista PRESTADOR: mostrar pedidos disponibles para ofertar ──
-    if (usuarioActual && usuarioActual.tipo === 'prestador') {
+    if (esPrestador()) {
       return renderPedidosDisponibles(cat);
     }
 
@@ -1862,7 +1862,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sub = document.getElementById('home-banner-sub');
     if (!title || !sub) return;
     const tipo = usuarioActual ? usuarioActual.tipo : 'invitado';
-    if (tipo === 'prestador') {
+    if (esPrestador()) {
       // Prestador: invitarlo a completar su perfil / ver pedidos
       if (icon) icon.textContent = '💼';
       title.textContent = 'Mirá los pedidos disponibles';
@@ -1883,7 +1883,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Acción del banner según contexto
   function bannerAction() {
     const tipo = usuarioActual ? usuarioActual.tipo : 'invitado';
-    if (tipo === 'prestador') {
+    if (esPrestador()) {
       // Llevar a la pantalla completa de pedidos (con filtros y todos los pedidos)
       goTo('s-pedidos');
     } else if (tipo === 'cliente') {
@@ -2716,6 +2716,10 @@ document.addEventListener('DOMContentLoaded', function() {
     return usuarioActual?.roles?.includes('admin') === true;
   }
 
+  function esPrestador() {
+    return !!(usuarioActual?.tipo === 'prestador' || usuarioActual?.prestador_id);
+  }
+
   // Re-verifica el rol admin contra Supabase (no confía en la memoria del cliente).
   // Llaman las funciones que renderizan datos admin antes de mostrar nada.
   async function verificarAdminServidor() {
@@ -2732,8 +2736,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // CTA "Quiero ofrecer mis servicios": solo visible para clientes, no para prestadores ni admin
     const ctaPrestador = document.getElementById('cta-ser-prestador');
     if (ctaPrestador) {
-      const esPrestador = usuarioActual && usuarioActual.tipo === 'prestador';
-      ctaPrestador.style.display = (esPrestador || esAdmin()) ? 'none' : '';
+      ctaPrestador.style.display = (esPrestador() || esAdmin()) ? 'none' : '';
     }
     // Ocultar/mostrar todos los elementos admin-only según el rol del usuario
     const admin = esAdmin();
@@ -2753,7 +2756,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (placeholder) placeholder.style.display = 'none';
     // Nav inferior: Buscar y Cerca solo para clientes
     // (para prestadores se ocultan en activarHomePrestador)
-    if (usuarioActual && usuarioActual.tipo !== 'prestador') {
+    if (!esPrestador()) {
       const nbBuscar = document.getElementById('nb-buscar');
       const nbMapa   = document.getElementById('nb-mapa');
       if (nbBuscar) nbBuscar.style.display = '';
@@ -2765,7 +2768,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!usuarioActual) return;
     const nombre = usuarioActual.nombre || 'Usuario';
     const inic = inicialesDe(nombre);
-    const tipo = admin ? 'Administrador' : (usuarioActual.tipo === 'prestador' ? 'Prestador' : 'Cliente');
+    const tipo = admin ? 'Administrador' : (esPrestador() ? 'Prestador' : 'Cliente');
     const zona = usuarioActual.zona || 'Escobar';
 
     // Ocultar PRONET Points para admin (solo es para prestadores)
@@ -3054,7 +3057,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateBellCount(); // badge inicial al entrar a la app
     cargarSliderRangosDesdeDB();
     // Cargar KPIs de analítica para los tiles de Mi perfil (solo para prestadores)
-    if (usuarioActual?.tipo === 'prestador') {
+    if (esPrestador()) {
       PronetDB.obtenerAnalitica('30d').then(data => {
         if (!data) return;
         const vistas = data.vistas_mes || 0;
@@ -3067,7 +3070,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sincronizar zona del usuario con la zona activa de la app
     if (usuarioActual?.zona) { zonaActual = usuarioActual.zona; actualizarZonaLabel(zonaActual); }
     const tipo = usuarioActual?.tipo || userTipo || 'cliente';
-    if (tipo === 'prestador') {
+    if (esPrestador()) {
       goTo('s-home');
       activarHomePrestador();
       setTimeout(() => mostrarTutorial(), 1000);
@@ -5786,7 +5789,7 @@ document.addEventListener('DOMContentLoaded', function() {
     PronetDB.suscribir('pedidos',(payload)=>{
       if(payload.eventType!=='INSERT') return;
       const ped=payload.new||{};
-      if(!usuarioActual||usuarioActual.tipo!=='prestador') return;
+      if(!esPrestador()) return;
       if(ped.usuario_id===usuarioActual.id) return;
       showToast('📋 Nuevo pedido: "'+(ped.titulo||'ver detalle')+'"',()=>abrirDetallePedido(ped),false);
       const home=document.getElementById('s-home');
@@ -5805,7 +5808,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return;
       }
-      if(payload.eventType==='INSERT'&&usuarioActual.tipo!=='prestador'&&!soyAutor){
+      if(payload.eventType==='INSERT'&&!esPrestador()&&!soyAutor){
         showToast('📬 Nueva propuesta por $'+(pr.precio||0).toLocaleString('es-AR')+' — Tocá para comparar',()=>goTo('s-pedidos'),true);
         agregarNotifCampanita('📬 Nueva propuesta por $'+(pr.precio||0).toLocaleString('es-AR'),()=>goTo('s-pedidos'));
         if (PronetDB.esRemoto() && usuarioActual?.id) {
