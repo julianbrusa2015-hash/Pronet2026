@@ -4958,8 +4958,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (PronetDB.esRemoto() && usuarioActual?.prestador_id) {
       try {
         const cambios = { activo };
-        // Al activarse, actualizar ubicación GPS real para que el pin del mapa sea preciso
+        // Al activarse, capturar GPS real para posicionar el pin en el mapa
         if (activo && navigator.geolocation) {
+          showToast && showToast('📍 Obteniendo tu ubicación...');
           await new Promise((resolve) => {
             navigator.geolocation.getCurrentPosition(
               (pos) => {
@@ -4967,13 +4968,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 cambios.lng = pos.coords.longitude;
                 resolve();
               },
-              () => resolve(), // sin GPS → igual guarda activo:true sin coords
-              { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+              (err) => {
+                const msgs = { 1: 'Permiso de ubicación denegado', 2: 'No se pudo obtener la ubicación', 3: 'Tiempo agotado al obtener ubicación' };
+                showToast && showToast('⚠️ ' + (msgs[err.code] || 'Sin ubicación') + ' — aparecerás en la zona general');
+                resolve();
+              },
+              { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
             );
           });
         }
         await PronetDB.actualizar('prestadores', usuarioActual.prestador_id, cambios);
-        showToast && showToast(activo ? '✅ Ahora estás disponible' : '⏸ Marcado como no disponible');
+        const coordsTxt = cambios.lat ? ' · 📍 ubicación actualizada' : '';
+        showToast && showToast(activo ? '✅ Ahora estás disponible' + coordsTxt : '⏸ Marcado como no disponible');
       } catch(e) {
         console.warn('[toggleDisp] error:', e.message);
         showToast && showToast('⚠️ No se pudo actualizar la disponibilidad');
