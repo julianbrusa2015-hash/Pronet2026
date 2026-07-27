@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
     denuncias:         ['s-denuncia','s-moderacion'],
     loyalty:           ['s-loyalty'],
     editarPerfilPro:   ['s-edit-perfil','s-historial'],
-    suscripcionPro:    ['s-subs'],
+    suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
   };
 
