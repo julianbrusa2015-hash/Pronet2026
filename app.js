@@ -245,6 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (id === 's-chats') { renderChats(); }
     if (id === 's-moderacion') { renderModeracion(); renderCanjesPendientes(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
+    if (id === 's-subs')    { reflejarPlan(); }
     if (id === 's-catalogo') { renderCatalogo(); }
     if (id === 's-historial') { renderHistorial(); }
     if (id === 's-notif') { renderNotificaciones(); }
@@ -969,7 +970,11 @@ document.addEventListener('DOMContentLoaded', function() {
     wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     const filtros = cat && cat !== 'todos' ? { rubro: rubroDeCat(cat) } : {};
     if (zonaActual) filtros.zona = zonaParaFiltro();
-    const prestadores = await PronetDB.listarPrestadores(filtros);
+    let prestadores = await PronetDB.listarPrestadores(filtros);
+    // Aplicar boost ×1.4 a prestadores Pro y re-ordenar
+    prestadores = prestadores
+      .map(p => ({ ...p, _score: (p.rating || 0) * (p.plan === 'pro' || p.plan === 'empresa' || p.premium ? 1.4 : 1.0) }))
+      .sort((a, b) => b._score - a._score);
     wrap.innerHTML = '';
     // Actualizar meta con conteo real
     const meta = document.getElementById('home-cat-meta');
@@ -2857,6 +2862,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // SESIÓN Y GATING (Opción C: invitado + registro en puntos de conversión)
   // ══════════════════════════════════════════════════════════════════
   let usuarioActual = null; // null = invitado
+  let planActual = 'basico'; // 'basico' | 'pro' | 'empresa'
 
   // Acciones que requieren cuenta y su mensaje
   const ACCIONES_PROTEGIDAS = {
@@ -2973,6 +2979,10 @@ document.addEventListener('DOMContentLoaded', function() {
     return !!(usuarioActual?.tipo === 'prestador' || usuarioActual?.prestador_id);
   }
 
+  function esPro() {
+    return planActual === 'pro' || planActual === 'empresa';
+  }
+
   // Re-verifica el rol admin contra Supabase (no confía en la memoria del cliente).
   // Llaman las funciones que renderizan datos admin antes de mostrar nada.
   async function verificarAdminServidor() {
@@ -2983,6 +2993,28 @@ document.addEventListener('DOMContentLoaded', function() {
     goTo('s-home');
     showToast && showToast('🛡 Esta sección es solo para administradores');
     return false;
+  }
+
+  function reflejarPlan() {
+    const isPro = esPro();
+    // Pantalla de suscripción: marcar qué plan está activo
+    const btnBasico = document.getElementById('subs-btn-basico');
+    const btnPro    = document.getElementById('subs-btn-pro');
+    if (btnBasico) {
+      btnBasico.className = isPro ? 'pc-cta ghost' : 'pc-cta active-plan';
+      btnBasico.textContent = isPro ? 'Plan actual ✓' : '✓ Tu plan actual';
+    }
+    if (btnPro) {
+      btnPro.className = isPro ? 'pc-cta active-plan' : 'pc-cta primary';
+      btnPro.textContent = isPro ? '⭐ Plan Pro activo' : 'Activar Plan Pro →';
+      btnPro.onclick = isPro ? null : () => abrirCheckout('pro');
+    }
+    // Badge plan en Mi Perfil
+    const badgePlan = document.getElementById('perfil-plan-badge');
+    if (badgePlan) {
+      badgePlan.textContent = isPro ? '⭐ Plan Pro' : '';
+      badgePlan.style.display = isPro ? 'inline-block' : 'none';
+    }
   }
 
   function reflejarUsuario() {
@@ -6366,6 +6398,10 @@ document.addEventListener('DOMContentLoaded', function() {
         iniciarRealtime();
         updateBellCount();
         cargarSliderRangosDesdeDB();
+        PronetDB.obtenerSuscripcion().then(s => {
+          planActual = s.plan || 'basico';
+          reflejarPlan();
+        }).catch(() => {});
         if (u.zona) { zonaActual = u.zona; actualizarZonaLabel(zonaActual); }
         // Prestador: arrancar el feed filtrado por su rubro
         let catInicial = catActiva || 'todos';

@@ -1040,6 +1040,21 @@ const PronetDB = (() => {
       }
     },
 
+    /** Devuelve la suscripción activa del usuario (o basico por defecto). */
+    async obtenerSuscripcion() {
+      if (!remoto) return { plan: 'basico', estado: 'activo' };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { plan: 'basico', estado: 'activo' };
+      const { data } = await sb.from('suscripciones')
+        .select('plan, estado, periodo, vence_en, activado_en')
+        .eq('usuario_id', uid).maybeSingle();
+      if (!data) return { plan: 'basico', estado: 'activo' };
+      if (data.vence_en && new Date(data.vence_en) < new Date()) {
+        return { ...data, plan: 'basico', estado: 'vencido' };
+      }
+      return data;
+    },
+
     /** Cuenta las denuncias pendientes (solo admin ve todas por RLS). */
     async contarDenunciasPendientes() {
       if (!remoto) return 0;

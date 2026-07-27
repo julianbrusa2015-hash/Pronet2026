@@ -601,7 +601,7 @@
         <div class="my-name" id="perfil-nombre">Julián López</div>
         <div id="perfil-email" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px"></div>
         <div id="perfil-sub" style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px">Escobar · Prestador</div>
-        <div class="my-plan" data-solo-prestador="true">⭐ Plan Pro · Activo</div>
+        <div class="my-plan" id="perfil-plan-badge" data-solo-prestador="true" style="display:none"></div>
       </div>
 
       <!-- Toggle disponible ahora -->
@@ -1243,7 +1243,7 @@
             <div class="pc-feat"><span class="fi fx">✗</span><span style="color:var(--ink3)">Sin badge Premium</span></div>
             <div class="pc-feat"><span class="fi fx">✗</span><span style="color:var(--ink3)">Sin estadísticas de visibilidad</span></div>
           </div>
-          <button class="pc-cta active-plan">✓ Tu plan actual</button>
+          <button class="pc-cta active-plan" id="subs-btn-basico">✓ Tu plan actual</button>
         </div>
 
         <!-- Pro — destacado -->
@@ -1271,7 +1271,7 @@
             <div class="pc-feat"><span class="fi">✓</span><span>Modo disponible + zona + chat</span></div>
             <div class="pc-feat"><span class="fi">✓</span><span>Soporte prioritario por WhatsApp</span></div>
           </div>
-          <button class="pc-cta primary" onclick="abrirCheckout('pro')">Activar Plan Pro →</button>
+          <button class="pc-cta primary" id="subs-btn-pro" onclick="abrirCheckout('pro')">Activar Plan Pro →</button>
         </div>
 
         <!-- Empresa -->
