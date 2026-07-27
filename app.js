@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Si va al Mapa, cargar prestadores cercanos
     if (id === 's-mapa') { renderMapa(); }
     // Si va a Editar perfil, poblar con datos del usuario
-    if (id === 's-miperfil') { refrescarMenuPush(); }
+    if (id === 's-miperfil') { refrescarMenuPush(); reflejarPlan(); }
     if (id === 's-edit-perfil' && usuarioActual) {
       const partes = (usuarioActual.nombre || '').split(' ');
       const setV = (elid, val) => { const e = document.getElementById(elid); if (e) e.value = val; };
@@ -4529,14 +4529,39 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function confirmarPago() {
+    // Actualizar estado en memoria inmediatamente (sin esperar a Supabase)
+    planActual    = 'pro';
+    periodoActual = currentBilling;
+    reflejarPlan();
+
     document.getElementById('checkout-overlay').classList.remove('show');
     setTimeout(() => {
       document.getElementById('subs-success').classList.add('show');
     }, 200);
+
+    // Persistir en Supabase en background
+    if (window._sb) {
+      PronetDB.usuarioIdActual().then(uid => {
+        if (!uid) return;
+        const vence = new Date();
+        vence.setMonth(vence.getMonth() + (currentBilling === 'anual' ? 12 : 1));
+        window._sb.from('suscripciones').upsert({
+          usuario_id: uid,
+          plan: 'pro',
+          estado: 'activo',
+          periodo: currentBilling,
+          activado_en: new Date().toISOString(),
+          vence_en: vence.toISOString()
+        }, { onConflict: 'usuario_id' }).then(({ error }) => {
+          if (error) console.warn('[subs] Error al guardar suscripción:', error.message);
+        });
+      });
+    }
   }
 
   function cerrarSubsSuccess() {
     document.getElementById('subs-success').classList.remove('show');
+    reflejarPlan();
     goTo('s-miperfil');
   }
 
