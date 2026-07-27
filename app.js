@@ -4088,7 +4088,58 @@ document.addEventListener('DOMContentLoaded', function() {
     showOb('ob-1');
   }
 
-  function obNext(step) { showOb('ob-' + step); }
+  function obNext(step) {
+    if (step === 8) poblarExitoOnboarding();
+    showOb('ob-' + step);
+  }
+
+  function poblarExitoOnboarding() {
+    const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const set = (id, txt, color) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = txt;
+      el.style.color = color || '';
+    };
+
+    // Nombre — paso 2
+    const nombre = [val('f-ej-roberto'), val('f-ej-pena')].filter(Boolean).join(' ') || '—';
+    set('sc-nombre', nombre);
+
+    // Rubro — paso 3: ícono + label del rubro seleccionado
+    const rubroEl = document.querySelector('#ob-3 .rubro-opt.on');
+    const rubroIcono = rubroEl ? rubroEl.querySelector('.ro-icon')?.textContent || '' : '';
+    const rubroLbl   = rubroEl ? (rubroEl.querySelector('.ro-lbl')?.textContent || '').replace(/\s+/g, ' ').trim() : '';
+    set('sc-rubro', rubroIcono && rubroLbl ? rubroIcono + ' ' + rubroLbl : '—');
+
+    // Zona — paso 4: dirección + radio seleccionado
+    const dir   = val('f-ej-mitre-1245-escobar-2');
+    const radio = document.querySelector('#ob-4 .r-chip.on')?.textContent?.trim() || '';
+    const zona  = [dir, radio].filter(Boolean).join(' · ') || '—';
+    set('sc-zona', zona);
+
+    // Tarifa — paso 6: tipo + rango de precio
+    const tipo    = document.querySelector('#ob-6 .pt-chip.on')?.textContent?.trim() || '';
+    const precMin = val('f-ej-6000');
+    const precMax = val('f-ej-10000');
+    let tarifa = '—';
+    if (precMin || precMax) {
+      tarifa = ['$' + precMin, '$' + precMax].filter(v => v !== '$').join('–');
+      if (tipo) tarifa += ' / ' + tipo.toLowerCase();
+    } else if (tipo) {
+      tarifa = tipo;
+    }
+    set('sc-tarifa', tarifa);
+
+    // Pagos — paso 7: emojis de los métodos seleccionados
+    const pagosEl = document.querySelectorAll('#ob-7 .pago-opt.on .pago-ico');
+    const pagos   = Array.from(pagosEl).map(e => e.textContent.trim()).join(' ') || '—';
+    set('sc-pagos', pagos);
+
+    // Mapa en tiempo real — paso 7
+    const mapaActivo = document.getElementById('campo-19')?.checked;
+    set('sc-mapa', mapaActivo ? '✓ Activo' : '— Inactivo', mapaActivo ? 'var(--green)' : 'var(--ink3)');
+  }
 
   function obBack(step) {
     if (step <= 1) { showOb('ob-splash'); return; }
