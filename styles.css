@@ -74,6 +74,13 @@
     }
     .pub-footer  { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
     .chat-footer { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+    /* Sticky headers: al hacer scroll se anclan debajo de la status bar, no detrás */
+    .appbar,
+    .search-header,
+    .chat-header,
+    .pub-header {
+      top: env(safe-area-inset-top, 0px);
+    }
   }
   @media (display-mode: standalone) {
     .status { display: none !important; }
@@ -1876,12 +1883,12 @@
 
   .login-hero {
     background: linear-gradient(160deg, #0D0F1A 0%, #1A3ACC 60%, #2B5BFF 100%);
-    padding: 48px 32px 40px; text-align: center; flex-shrink: 0;
+    padding: 28px 24px 24px; text-align: center; flex-shrink: 0;
   }
-  .login-logo { font-family:'Sora',sans-serif; font-size:42px; font-weight:800; color:white; letter-spacing:-1px; }
-  .login-tag  { font-size:14px; color:rgba(255,255,255,.7); margin-top:6px; }
+  .login-logo { font-family:'Sora',sans-serif; font-size:36px; font-weight:800; color:white; letter-spacing:-1px; }
+  .login-tag  { font-size:13px; color:rgba(255,255,255,.7); margin-top:4px; }
 
-  .login-body { flex:1; overflow-y:auto; padding:28px 24px; scrollbar-width:none; }
+  .login-body { flex:1; overflow-y:auto; padding:20px 24px; scrollbar-width:none; }
   .login-body::-webkit-scrollbar { display:none; }
 
   .login-title { font-family:'Sora',sans-serif; font-size:20px; font-weight:700; color:var(--ink); margin-bottom:4px; }
@@ -2111,7 +2118,7 @@
 
   .loyalty-hero {
     background: linear-gradient(160deg, #0D0F1A 0%, #1A1A2E 40%, #4A0080 100%);
-    padding: calc(52px + env(safe-area-inset-top, 0px)) 18px 32px; text-align: center; position: relative; overflow: hidden;
+    padding: calc(52px + env(safe-area-inset-top, 0px)) 18px 32px; text-align: center; position: relative;
   }
   .loyalty-hero::before {
     content: '';

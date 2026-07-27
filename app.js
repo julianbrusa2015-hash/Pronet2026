@@ -1029,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let pedidoActual = null;
 
   /** Abre el detalle de un pedido poblándolo con datos reales */
-  function abrirDetallePedido(p) {
+  async function abrirDetallePedido(p) {
     pedidoActual = p;
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set('pd-rubro', (p.icono || '📋') + ' ' + (p.rubro || 'Servicio'));
@@ -1061,9 +1061,12 @@ document.addEventListener('DOMContentLoaded', function() {
       hace = hs < 1 ? 'Hace menos de 1h' : hs < 24 ? `Hace ${hs}h` : `Hace ${Math.floor(hs/24)}d`;
     }
     set('pd-tiempo', hace);
+    // Ocultar "Pedido por" por defecto; se muestra solo al prestador
+    const vecinoWrap = document.getElementById('pd-vecino-wrap');
+    if (vecinoWrap) vecinoWrap.style.display = 'none';
     // Poblar propuestas sugeridas con prestadores reales del rubro
     const soyDuenia2 = usuarioActual && p.usuario_id === usuarioActual.id;
-    const esPrestadorView = usuarioActual && usuarioActual.tipo === 'prestador' && usuarioActual.prestador_id && !soyDuenia2;
+    const esPrestadorView = usuarioActual && esPrestador() && !soyDuenia2;
     const tEl=document.getElementById('pd-props-title'),sEl=document.getElementById('pd-props-sub'),fEl=document.getElementById('pd-props-foot');
     if(soyDuenia2){
       if(tEl) tEl.textContent='📬 Propuestas recibidas';
@@ -1075,6 +1078,13 @@ document.addEventListener('DOMContentLoaded', function() {
       if(sEl) sEl.textContent='Información para ayudarte a armar tu propuesta';
       if(fEl) fEl.style.display='none';
       renderInsightsPedido(p);
+      // Mostrar quién publicó el pedido
+      if (p.usuario_id && vecinoWrap) {
+        try {
+          const { data: perfil } = await window._sb.from('perfiles').select('nombre').eq('id', p.usuario_id).maybeSingle();
+          if (perfil?.nombre) { set('pd-vecino', perfil.nombre); vecinoWrap.style.display = ''; }
+        } catch(e) {}
+      }
     } else {
       if(tEl) tEl.textContent='🤖 Prestadores sugeridos para este pedido';
       if(sEl) sEl.textContent='Ordenados por ranking zonal y puntuación';
@@ -2869,7 +2879,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const res = await PronetDB.login(email, pw);
     if (btn) btn.innerHTML = 'Ingresar →';
     if (!res.ok) {
-      mostrarErrorLogin(res.error === 'Invalid login credentials' ? 'Email o contraseña incorrectos' : res.error);
+      const msgLogin = typeof res.error === 'string' ? res.error : (res.error?.message || 'Error al ingresar');
+      mostrarErrorLogin(msgLogin === 'Invalid login credentials' ? 'Email o contraseña incorrectos' : msgLogin);
       return;
     }
     // Verificar confirmación de email directo desde Auth (no desde el perfil mezclado)
@@ -2931,7 +2942,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // CTA "Quiero ofrecer mis servicios": solo visible para clientes, no para prestadores ni admin
     const ctaPrestador = document.getElementById('cta-ser-prestador');
     if (ctaPrestador) {
-      ctaPrestador.style.display = (esPrestador() || esAdmin()) ? 'none' : '';
+      // Solo visible para invitados — un vecino logueado ya tiene cuenta y "Registrate" no aplica
+      ctaPrestador.style.display = (usuarioActual || esPrestador() || esAdmin()) ? 'none' : '';
     }
     // Ocultar/mostrar todos los elementos admin-only según el rol del usuario
     const admin = esAdmin();
@@ -3003,6 +3015,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (pAv) pAv.textContent = inic;
     const pNom = document.getElementById('perfil-nombre');
     if (pNom) pNom.textContent = nombre;
+    const pEmail = document.getElementById('perfil-email');
+    if (pEmail) pEmail.textContent = usuarioActual?.email || '';
     const pSub = document.getElementById('perfil-sub');
     if (pSub) pSub.textContent = zona + ' · ' + tipo;
 
@@ -3308,7 +3322,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btn) btn.innerHTML = 'Crear cuenta';
 
     if (!res.ok) {
-      if (err) { err.textContent = res.error === 'User already registered' ? 'Ese email ya está registrado' : res.error; err.style.display='block'; }
+      const msgError = typeof res.error === 'string' ? res.error : (res.error?.message || 'Error al crear la cuenta');
+      if (err) { err.textContent = msgError === 'User already registered' ? 'Ese email ya está registrado' : msgError; err.style.display='block'; }
       return;
     }
 
@@ -4919,9 +4934,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const lista = document.getElementById('chats-lista');
     const vacio = document.getElementById('chats-vacio');
     if (!lista) return;
+    // Deduplicar por id por si Supabase devuelve la misma fila más de una vez
+    const unicos = [...new Map(chats.map(c => [c.id, c])).values()];
     const filtrados = chatsFiltroActual === 'todos'
-      ? chats
-      : chats.filter(c => c.estado === chatsFiltroActual);
+      ? unicos
+      : unicos.filter(c => c.estado === chatsFiltroActual);
     lista.innerHTML = '';
     if (filtrados.length === 0) {
       if (vacio) vacio.style.display = '';
@@ -6131,8 +6148,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       if(payload.eventType==='INSERT'&&!esPrestador()&&!soyAutor){
-        showToast('📬 Nueva propuesta por $'+(pr.precio||0).toLocaleString('es-AR')+' — Tocá para comparar',()=>goTo('s-pedidos'),true);
+        showToast('📬 Nueva propuesta por $'+(pr.precio||0).toLocaleString('es-AR')+' — Tocá para comparar',()=>goTo('s-pedidos'),true); // persistente
         agregarNotifCampanita('📬 Nueva propuesta por $'+(pr.precio||0).toLocaleString('es-AR'),()=>goTo('s-pedidos'));
+        updateBellCount();
         if (PronetDB.esRemoto() && usuarioActual?.id) {
           PronetDB.insertarNotificacion({ usuario_id: usuarioActual.id, tipo: 'propuesta',
             titulo: '📬 Nueva propuesta por $'+(pr.precio||0).toLocaleString('es-AR'),
@@ -6170,6 +6188,14 @@ document.addEventListener('DOMContentLoaded', function() {
       const soyVecino  = chat.vecino_id    === usuarioActual.id;
       const soyPrestador = usuarioActual.prestador_id && chat.prestador_id === usuarioActual.prestador_id;
       if (!soyVecino && !soyPrestador) return; // no es mi chat
+
+      // — Nuevo chat: notificar al prestador y refrescar lista si está abierta —
+      if (payload.eventType === 'INSERT' && soyPrestador) {
+        showToast('💬 Un vecino quiere contactarte', () => goTo('s-chats'), true);
+        agregarNotifCampanita('💬 Un vecino quiere contactarte', () => goTo('s-chats'));
+        const chatsScreen = document.getElementById('s-chats');
+        if (chatsScreen && chatsScreen.classList.contains('active')) renderChats();
+      }
 
       // — Refresco en vivo de s-estado-propuesta (funciona con INSERT y UPDATE) —
       const epAbierta = document.getElementById('s-estado-propuesta');

@@ -1241,6 +1241,21 @@ const PronetDB = (() => {
       if (!user) return null;
       // Traer el perfil vinculado
       const { data: perfil } = await sb.from('perfiles').select('*').eq('id', user.id).maybeSingle();
+      // Si es prestador sin fila en prestadores (bug de registro), crearla ahora
+      if (perfil && perfil.tipo === 'prestador' && !perfil.prestador_id) {
+        try {
+          const { data: nuevoPrestador } = await sb.from('prestadores').insert({
+            nombre: perfil.nombre || user.email,
+            zona:   perfil.zona  || 'Escobar',
+            rubro:  'General',
+            activo: true,
+          }).select('id').single();
+          if (nuevoPrestador?.id) {
+            await sb.from('perfiles').update({ prestador_id: nuevoPrestador.id }).eq('id', user.id);
+            perfil.prestador_id = nuevoPrestador.id;
+          }
+        } catch(e) { console.warn('[PronetDB] auto-crear prestador', e.message); }
+      }
       return { id: user.id, email: user.email, ...(perfil || {}) };
     },
 
