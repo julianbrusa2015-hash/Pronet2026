@@ -1973,20 +1973,10 @@ document.addEventListener('DOMContentLoaded', function() {
                   : rubro.includes('lomeria') || rubro.includes('lomería') ? '🚰'
                   : rubro.includes('intura') ? '🎨'
                   : '🔧';
-      const label = { text: icono + ' ' + escHTML((p.nombre||'').split(' ')[0]), fontSize: '11px', fontWeight: '600' };
       const marker = new google.maps.Marker({
         position: { lat: p.lat, lng: p.lng },
         map: mapaGoogle,
-        title: p.nombre || 'Prestador',
-        label,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: p.premium ? '#F59E0B' : '#2B5BFF',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2,
-        },
+        title: (p.nombre || 'Prestador') + ' · ' + icono,
       });
       marker.addListener('click', () => {
         const cards = document.querySelectorAll('.sheet-card');
