@@ -3005,11 +3005,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const isPro = esPro();
     const _cfg  = window.PRONET_CONFIG || {};
     // Pantalla de suscripción: marcar qué plan está activo
-    const btnBasico = document.getElementById('subs-btn-basico');
-    const btnPro    = document.getElementById('subs-btn-pro');
+    const btnBasico   = document.getElementById('subs-btn-basico');
+    const badgeBasico = document.getElementById('subs-badge-basico');
+    const btnPro      = document.getElementById('subs-btn-pro');
+    if (badgeBasico) {
+      badgeBasico.textContent = isPro ? 'Gratis · Disponible siempre' : 'Gratis · Plan actual';
+    }
     if (btnBasico) {
-      btnBasico.className = isPro ? 'pc-cta ghost' : 'pc-cta active-plan';
-      btnBasico.textContent = isPro ? 'Plan actual ✓' : '✓ Tu plan actual';
+      btnBasico.className   = isPro ? 'pc-cta ghost' : 'pc-cta active-plan';
+      btnBasico.textContent = isPro ? 'Cambiar a Básico' : '✓ Tu plan actual';
+      btnBasico.onclick     = isPro ? () => showToast('Para cancelar tu suscripción contactá a soporte.') : null;
     }
     if (btnPro) {
       btnPro.className = isPro ? 'pc-cta active-plan' : 'pc-cta primary';
@@ -4529,6 +4534,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function confirmarPago() {
+    // Feedback visual inmediato en el botón para que no parezca que no respondió
+    const btnConfirmar = document.querySelector('#checkout-overlay .btn-p');
+    if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Activando…'; }
+
     // Actualizar estado en memoria inmediatamente (sin esperar a Supabase)
     planActual    = 'pro';
     periodoActual = currentBilling;
@@ -4536,8 +4545,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('checkout-overlay').classList.remove('show');
     setTimeout(() => {
+      if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Confirmar pago seguro 🔒'; }
       document.getElementById('subs-success').classList.add('show');
-    }, 200);
+    }, 300);
 
     // Persistir en Supabase en background
     if (window._sb) {
