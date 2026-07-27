@@ -413,8 +413,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const key = 'pronet_tutorial_visto_' + (usuarioActual?.id || 'anon');
     if (!forzar && localStorage.getItem(key)) return;
     // Elegir steps según rol
-    const esPrestador = esPrestador();
-    tutorialStepsActual = esPrestador ? TUTORIAL_PRESTADOR : TUTORIAL_VECINO;
+    const esPrest = esPrestador();
+    tutorialStepsActual = esPrest ? TUTORIAL_PRESTADOR : TUTORIAL_VECINO;
     tutorialStep = 0;
     // Ajustar dots dinámicamente
     const dotsWrap = document.getElementById('tt-dots');
@@ -873,8 +873,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const label  = document.getElementById('home-checklist-label');
     if (!wrap) return;
 
-    const esPrestador = esPrestador();
-    _checklistItems = esPrestador ? CHECKLIST_PRESTADOR : CHECKLIST_VECINO;
+    const esPrest = esPrestador();
+    _checklistItems = esPrest ? CHECKLIST_PRESTADOR : CHECKLIST_VECINO;
 
     _checklistEstados = await Promise.all(_checklistItems.map(async item => {
       try { const r = item.check(); return r instanceof Promise ? await r : r; } catch(e) { return false; }
@@ -931,13 +931,13 @@ document.addEventListener('DOMContentLoaded', function() {
   window.cerrarChecklist = cerrarChecklist;
 
   function irAChecklistItem(id) {
-    const esPrestador = esPrestador();
+    const esPrest = esPrestador();
     if (id === 'perfil')     goTo('s-miperfil');
     if (id === 'pedido')     goTo('s-pedidos');
-    if (id === 'elegir')     goTo('s-pedidos');       // Vecino → ver sus pedidos y propuestas recibidas
-    if (id === 'propuesta')  goTo('s-mis-propuestas'); // Prestador → ver pedidos disponibles
-    if (id === 'trabajo')    goTo('s-mis-propuestas'); // Prestador → ver sus propuestas activas
-    if (id === 'resena')     goTo(esPrestador ? 's-miperfil' : 's-pedidos');
+    if (id === 'elegir')     goTo('s-pedidos');
+    if (id === 'propuesta')  goTo('s-mis-propuestas');
+    if (id === 'trabajo')    goTo('s-mis-propuestas');
+    if (id === 'resena')     goTo(esPrest ? 's-miperfil' : 's-pedidos');
   }
   window.irAChecklistItem = irAChecklistItem;
 
