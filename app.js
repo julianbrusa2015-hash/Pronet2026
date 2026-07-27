@@ -1888,7 +1888,7 @@ document.addEventListener('DOMContentLoaded', function() {
     items.forEach(t => {
       const fecha = new Date(t.creado);
       const key = fecha.getFullYear() + '-' + String(fecha.getMonth()+1).padStart(2,'0');
-      const label = fecha.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+      const label = fecha.toLocaleDateString('es-AR', { month: 'long', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' });
       if (!grupos[key]) grupos[key] = { label, items: [] };
       grupos[key].items.push(t);
     });
@@ -1906,7 +1906,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const precioTxt = t.modalidad === 'rango'
           ? '$' + (t.precio||0).toLocaleString('es-AR') + '–$' + (t.precio_max||0).toLocaleString('es-AR')
           : '$' + (t.precio||0).toLocaleString('es-AR');
-        const fechaTxt = new Date(t.creado).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+        const fechaTxt = new Date(t.creado).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', timeZone: 'America/Argentina/Buenos_Aires' });
         const iniciales = (t.vecino_nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
         const colores = ['#ECFDF5,#059669','#EEF2FF,#2B5BFF','#FFF8EC,#C67D00','#F5F3FF,#7C3AED','#F0FDF4,#16A34A','#FFF1F2,#E11D48'];
         const col = colores[t.vecino_nombre?.charCodeAt(0) % colores.length] || colores[0];
@@ -4040,7 +4040,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const fecha = new Date(p.creado);
       const meta = document.createElement('div');
       meta.style.cssText = 'font-size:11px;color:var(--ink3);margin-top:3px';
-      meta.textContent = [p.rubro, p.zona, fecha.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'})].filter(Boolean).join(' · ');
+      meta.textContent = [p.rubro, p.zona, fecha.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:'America/Argentina/Buenos_Aires'})].filter(Boolean).join(' · ');
 
       info.appendChild(title);
       info.appendChild(meta);
@@ -5528,7 +5528,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!body) return;
     const placeholder = body.querySelector('div[style*="text-align:center"]');
     if (placeholder) placeholder.remove();
-    const hora = new Date(creado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const hora = new Date(creado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
     const div = document.createElement('div');
     div.className = 'msg ' + (esPropio ? 'out' : 'in');
     const bubble = document.createElement('div');
