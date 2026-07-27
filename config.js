@@ -77,6 +77,14 @@ Object.assign(window.PRONET_CONFIG, {
   IMG_PORTFOLIO_PX: 800,            // ancho máximo al redimensionar fotos de portfolio
   IMG_TRABAJO_PX: 1024,             // ancho máximo al redimensionar fotos de trabajo terminado
 
+  // Suscripción Plan Pro (actualizar cuando cambien los precios, sin tocar app.js)
+  PRECIO_PRO_MES:   '$4.999',
+  PRECIO_PRO_ANUAL: '$44.999',
+  AHORRO_PRO_ANUAL: '$15.000',
+
+  // Analytics
+  CONVERSION_PROMEDIO_ZONAL: 9,        // % de conversión promedio zonal (vistas → contactos)
+
   // UI / previews
   RESENAS_PREVIEW: 5,               // reseñas visibles antes del botón "ver todas"
   ESPECIALIDADES_CARD: 4,           // especialidades mostradas en tarjeta de prestador

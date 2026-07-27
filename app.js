@@ -365,24 +365,33 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  function canjear(btn, costo, nombre) {
+  async function canjear(btn, costo, nombre) {
     if (ptsDisponibles < costo) {
       btn.textContent = 'Sin pts';
       btn.disabled = true;
       return;
     }
-    ptsDisponibles -= costo;
-    btn.textContent = '✓ Canjeado';
     btn.disabled = true;
+    btn.textContent = '⏳ Canjeando...';
+
+    const res = await PronetDB.canjearPuntos(costo, nombre).catch(() => ({ ok: false }));
+    if (!res.ok) {
+      btn.disabled = false;
+      btn.textContent = 'Canjear';
+      showToast && showToast('⚠️ No se pudo canjear. Revisá tu conexión.');
+      return;
+    }
+
+    ptsDisponibles = res.puntos ?? (ptsDisponibles - costo);
+    btn.textContent = '✓ Canjeado';
     btn.style.background = 'var(--green)';
-    // Show toast
+
     const toast = document.getElementById('canje-confirm');
     if (toast) {
       toast.textContent = '✓ ¡' + nombre + ' activado!';
       toast.style.display = 'block';
       setTimeout(() => { toast.style.display = 'none'; }, 2500);
     }
-    // Update available points display
     const ptsEl = document.querySelector('#s-loyalty .pts-card .pts-item:nth-child(2) .pts-val');
     if (ptsEl) ptsEl.textContent = ptsDisponibles.toLocaleString('es');
   }
@@ -2184,7 +2193,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (userLat && p.lat && p.lng) {
         distTxt = formatDistancia(calcDistanciaKm(userLat, userLng, p.lat, p.lng));
       } else {
-        distTxt = distanciasFake[i % distanciasFake.length];
+        distTxt = '';
       }
       card.innerHTML = `
         <div class="sc-top">
@@ -2194,7 +2203,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="sc-role">${escHTML(p.rubro||'')}</div>
           </div>
         </div>
-        <div class="sc-disp"><div class="sc-disp-dot"></div><div class="sc-disp-txt">Disponible ahora · ${distTxt}</div></div>
+        <div class="sc-disp"><div class="sc-disp-dot"></div><div class="sc-disp-txt">Disponible ahora${distTxt ? ' · ' + distTxt : ''}</div></div>
         <div class="sc-price">$${(p.precio||0).toLocaleString('es-AR')} <span style="font-size:9px;color:var(--ink3)">/ ${escHTML(p.precio_unidad||'visita')}</span></div>
         <div class="sc-dist">⭐ ${(p.rating||5).toFixed(1)} · ${escHTML(p.zona||'Escobar')}${badgePrem}</div>
         <button class="sc-btn">💬 Solicitar servicio</button>`;
@@ -2484,12 +2493,41 @@ document.addEventListener('DOMContentLoaded', function() {
           });
         }
 
-        // Asignar zona
-        zonaActual = 'Escobar';
-        document.querySelectorAll('.zona-option').forEach((o,i) => o.classList.toggle('active', i===0));
-        guardarEstado();
-        if (lbl) lbl.innerHTML = '✅ Ubicación detectada: Escobar';
-        setTimeout(() => cerrarZonaModal(), 800);
+        // Detectar zona via Geocoder si Google Maps está disponible
+        const _aplicarZona = (zonaDetectada) => {
+          zonaActual = zonaDetectada;
+          document.querySelectorAll('.zona-option').forEach(o => {
+            const nombre = o.querySelector('.zo-name')?.textContent.trim();
+            o.classList.toggle('active', nombre === zonaDetectada);
+          });
+          guardarEstado();
+          if (lbl) lbl.innerHTML = '✅ Ubicación detectada: ' + zonaDetectada;
+          setTimeout(() => cerrarZonaModal(), 800);
+        };
+        if (typeof google !== 'undefined' && google.maps?.Geocoder) {
+          new google.maps.Geocoder().geocode(
+            { location: { lat: userLat, lng: userLng } },
+            (results, status) => {
+              let zonaDetectada = 'Escobar';
+              if (status === 'OK' && results.length) {
+                const knownZonas = Object.keys(ZONA_DB);
+                outer: for (const r of results) {
+                  for (const comp of r.address_components) {
+                    const n = comp.long_name;
+                    const match = knownZonas.find(z =>
+                      n.toLowerCase().includes(z.toLowerCase()) ||
+                      z.toLowerCase().includes(n.toLowerCase())
+                    );
+                    if (match) { zonaDetectada = match; break outer; }
+                  }
+                }
+              }
+              _aplicarZona(zonaDetectada);
+            }
+          );
+        } else {
+          _aplicarZona('Escobar');
+        }
       },
       function(err) {
         const msgs = {
@@ -3291,7 +3329,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const shareData = {
       title: 'PRONET — Servicios de confianza en tu barrio',
       text: '¡Encontrá electricistas, plomeros, niñeras y más en tu zona! Precio referencial, ranking zonal y contratá directo. Probalo gratis 👇',
-      url: 'https://pronetprueba.netlify.app'
+      url: window.location.origin
     };
     if (navigator.share) {
       try {
@@ -3368,15 +3406,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function showBiometric() {
+  async function showBiometric() {
     const ov = document.getElementById('bio-overlay');
     ov.classList.add('show');
-    // Simular autenticación biométrica exitosa en 2 segundos
-    setTimeout(() => {
-      ov.classList.remove('show');
+    // Verificar que existe una sesión activa en Supabase (no simular)
+    const { data } = await (window._sb?.auth?.getSession().catch(() => ({ data: {} })) || Promise.resolve({ data: {} }));
+    ov.classList.remove('show');
+    if (data?.session) {
       document.getElementById('login-screen').classList.add('hidden');
-      goTo('s-home');
-    }, 2000);
+      restaurarSesion();
+    } else {
+      showToast && showToast('⚠️ Sesión expirada. Iniciá sesión con tu cuenta.');
+    }
   }
   function hideBiometric() {
     document.getElementById('bio-overlay').classList.remove('show');
@@ -4129,7 +4170,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Hint de conversión vs promedio zonal
       const hintEl = funnelEl.nextElementSibling;
       if (hintEl) {
-        const promedio = 9;
+        const promedio = parseInt(window.PRONET_CONFIG?.CONVERSION_PROMEDIO_ZONAL) || 9;
         if (vistas === 0) {
           hintEl.innerHTML = '💡 Compartí tu perfil para empezar a acumular vistas y medir tu conversión.';
         } else {
@@ -4277,9 +4318,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // renderAnalytica se llama desde goTo('s-analytics') directamente
 
   // ── Suscripción ─────────────────────────────────────────────────────
+  function _calcRenew(meses) {
+    const d = new Date();
+    d.setMonth(d.getMonth() + meses);
+    return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  const _cfg = window.PRONET_CONFIG || {};
   const prices = {
-    mes:   { amount:'$4.999',  period:'/ mes',  saving:'',              desc:'Cancelás cuando quieras.',                       total:'$4.999 ARS',  renew:'5 ago 2026' },
-    anual: { amount:'$44.999', period:'/ año',  saving:'Ahorrás $15.000', desc:'Equivale a $3.750 por mes. Cancelás cuando quieras.', total:'$44.999 ARS', renew:'5 jul 2027' },
+    mes:   { amount: _cfg.PRECIO_PRO_MES || '$4.999',   period:'/ mes',  saving:'',                                      desc:'Cancelás cuando quieras.',                                              total:(_cfg.PRECIO_PRO_MES || '$4.999')   + ' ARS', renew: _calcRenew(1)  },
+    anual: { amount: _cfg.PRECIO_PRO_ANUAL || '$44.999', period:'/ año', saving:'Ahorrás ' + (_cfg.AHORRO_PRO_ANUAL || '$15.000'), desc:'Equivale a $3.750 por mes. Cancelás cuando quieras.', total:(_cfg.PRECIO_PRO_ANUAL || '$44.999') + ' ARS', renew: _calcRenew(12) },
   };
   let currentBilling = 'anual';
 
@@ -4959,6 +5006,8 @@ document.addEventListener('DOMContentLoaded', function() {
       set('rev-role', (p.rubro || '') + ' · ' + (p.zona || 'Escobar'));
       const tag = document.getElementById('rev-tag');
       if (tag) tag.textContent = (p.icono || '⚡') + ' ' + (p.rubro || 'Servicio') + ' · $' + (p.precio || 0).toLocaleString('es-AR');
+      const fechaInput = document.getElementById('campo-15');
+      if (fechaInput && !fechaInput.value) fechaInput.value = new Date().toISOString().split('T')[0];
       const ta = document.getElementById('rev-texto');
       if (ta) {
         ta.value = '';
@@ -5000,9 +5049,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ].filter(Boolean).join(' · ').slice(0, 500);
 
     if (!chatActualId) {
-      // Sin chat activo — guardar solo visual (demo)
-      const suc = document.getElementById('rev-success');
-      if (suc) suc.classList.add('show');
+      showToast && showToast('⚠️ No hay un trabajo activo para reseñar');
       return;
     }
 
@@ -5641,18 +5688,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalidad = npModalPrecio || 'fijo';
     if (modalidad === 'fijo') {
       precio = parseInt((document.getElementById('np-precio')?.value||'').replace(/\D/g,''),10);
-      if(!precio || precio<=0){alert('Ingresá tu precio para este trabajo.');return;}
+      if(!precio || precio<=0){showToast && showToast('⚠️ Ingresá tu precio para este trabajo.');return;}
     } else if (modalidad === 'rango') {
       precio_min = parseInt((document.getElementById('np-precio-min')?.value||'').replace(/\D/g,''),10);
       precio_max = parseInt((document.getElementById('np-precio-max')?.value||'').replace(/\D/g,''),10);
-      if(!precio_min || !precio_max || precio_min<=0 || precio_max<=0){alert('Completá el rango de precios.');return;}
-      if(precio_min >= precio_max){alert('El precio mínimo debe ser menor al máximo.');return;}
+      if(!precio_min || !precio_max || precio_min<=0 || precio_max<=0){showToast && showToast('⚠️ Completá el rango de precios.');return;}
+      if(precio_min >= precio_max){showToast && showToast('⚠️ El precio mínimo debe ser menor al máximo.');return;}
       precio = precio_min; // el "precio base" es el mínimo, para compatibilidad con orden y filtros
     } else if (modalidad === 'convenir') {
       precio = 0; // se define después
     }
     const mensaje=(document.getElementById('np-mensaje')?.value||'').trim();
-    if(!plazoNP){alert('Elegí tu disponibilidad para este trabajo.');return;}
+    if(!plazoNP){showToast && showToast('⚠️ Elegí tu disponibilidad para este trabajo.');return;}
     // Subir adjunto si hay uno seleccionado
     let adjuntoData = { adjunto_url: null, adjunto_tipo: null, adjunto_nombre: null };
     if (adjuntoPropuesta?.file) {
@@ -5661,7 +5708,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (res) { adjuntoData = { adjunto_url: res.url, adjunto_tipo: res.tipo, adjunto_nombre: res.nombre }; }
       else { showToast && showToast('⚠️ No se pudo subir el adjunto, pero la propuesta se enviará igual.'); }
     }
-    if(!usuarioActual||!usuarioActual.prestador_id){alert('Tu perfil de prestador no está completo todavía.');return;}
+    if(!usuarioActual||!usuarioActual.prestador_id){showToast && showToast('⚠️ Tu perfil de prestador no está completo todavía.');return;}
     if(btn){btn.disabled=true;btn.textContent='⏳ Enviando...';}
     try {
       // Salvaguarda: si propuestaMia quedó apuntando a otro pedido, ignorarla
@@ -5698,7 +5745,7 @@ document.addEventListener('DOMContentLoaded', function() {
           url: '/#propuestas',
         }).catch(()=>{});
       }
-      alert(idExistente?'✅ Propuesta actualizada.':'✅ ¡Propuesta enviada! Te avisamos cuando el vecino la vea.');
+      showToast && showToast(idExistente?'✅ Propuesta actualizada.':'✅ ¡Propuesta enviada! Te avisamos cuando el vecino la vea.');
       // Construir objeto propuesta actualizado para poblar la pantalla de estado
       const propObj = { id: propuestaId, pedido_id: pedidoActual.id, precio, precio_min, precio_max, modalidad_precio: modalidad, plazo: plazoNP, creado: propuestaValida?.creado || new Date().toISOString() };
       goTo('s-estado-propuesta');
@@ -5706,9 +5753,9 @@ document.addEventListener('DOMContentLoaded', function() {
       cargarEstadoPropuesta(pedidoActual, propObj);
     } catch(e) {
       const msg=(e&&e.message)||'';
-      if(msg.includes('duplicate')||msg.includes('23505')) alert('Ya tenés una propuesta en este pedido.');
-      else if(msg.includes('row-level security')||msg.includes('policy')) alert('No se pudo enviar: este pedido ya no acepta propuestas.');
-      else alert('No se pudo enviar la propuesta. Revisá tu conexión.');
+      if(msg.includes('duplicate')||msg.includes('23505')) showToast && showToast('⚠️ Ya tenés una propuesta en este pedido.');
+      else if(msg.includes('row-level security')||msg.includes('policy')) showToast && showToast('⚠️ Este pedido ya no acepta propuestas.');
+      else showToast && showToast('⚠️ No se pudo enviar la propuesta. Revisá tu conexión.');
     } finally { if(btn){btn.disabled=false;btn.textContent='📤 Enviar propuesta';} }
   }
 

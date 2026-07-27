@@ -295,8 +295,8 @@
         <div style="cursor:pointer;margin-bottom:12px" onclick="goTo('s-home')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
         </div>
-        <div class="prof-av" id="prof-av">RP</div>
-        <div class="prof-name" id="prof-name">Roberto Peña <svg class="verified-badge-lg" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="prof-av" id="prof-av"></div>
+        <div class="prof-name" id="prof-name"></div>
         <div class="prof-sub" id="prof-sub">Electricista · Instalaciones, reparaciones y urgencias</div>
         <div class="prof-tags" id="prof-tags">
           <div class="prof-tag">📍 Cubre 8 km</div>
@@ -1599,15 +1599,15 @@
       <!-- Hero éxito -->
       <div class="confirm-hero">
         <div class="confirm-check">🎉</div>
-        <div class="confirm-title" id="conf-title">¡Elegiste a Roberto Peña!</div>
+        <div class="confirm-title" id="conf-title">¡Elegiste al prestador!</div>
         <div class="confirm-sub">Le enviamos una notificación ahora mismo. Podés chatear con él para coordinar los detalles.</div>
       </div>
 
       <!-- Card del prestador elegido -->
       <div class="selected-card">
-        <div id="conf-av" style="width:52px;height:52px;border-radius:14px;background:#EEF2FF;color:#2B5BFF;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0">RP</div>
+        <div id="conf-av" style="width:52px;height:52px;border-radius:14px;background:#EEF2FF;color:#2B5BFF;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0"></div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:700;color:var(--ink)" id="conf-name">Roberto Peña</div>
+          <div style="font-size:15px;font-weight:700;color:var(--ink)" id="conf-name"></div>
           <div style="font-size:12px;color:var(--ink3);margin-top:2px">⚡ Electricista · #1 Puertos del Lago</div>
           <div class="sc-badge" id="conf-precio">$7.500 precio fijo</div>
         </div>
@@ -2134,8 +2134,8 @@
           </div>
           <div style="font-size:15px;font-weight:700;color:white;flex:1">Dejar reseña</div>
         </div>
-        <div class="rev-av-lg" id="rev-av">RP</div>
-        <div class="rev-pname" id="rev-name">Roberto Peña</div>
+        <div class="rev-av-lg" id="rev-av"></div>
+        <div class="rev-pname" id="rev-name"></div>
         <div class="rev-prole" id="rev-role">Electricista · Puertos del Lago</div>
         <div class="rev-service-tag" id="rev-tag">⚡ Instalación eléctrica · $8.000</div>
       </div>
@@ -2207,16 +2207,13 @@
         <div style="margin:14px 18px 0;background:var(--blue-s);border-radius:14px;padding:14px">
           <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">📊 Impacto de tu reseña</div>
           <div style="font-size:12px;color:var(--ink2);display:flex;flex-direction:column;gap:6px" id="rev-impacto">
-            <div>⭐ Roberto sube su puntuación de <strong>4.9 → 4.9</strong> (74 reseñas)</div>
-            <div>🏆 Refuerza su posición <strong>#1 en Escobar · Electricistas</strong></div>
-            <div>👥 Tu recomendación suma <strong>+1 punto extra</strong> al score zonal</div>
           </div>
         </div>
 
         <!-- Fecha del servicio -->
         <div style="margin:14px 18px 0">
           <div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px">Fecha del servicio</div>
-          <input id="campo-15" name="campo-15" class="ob-input" type="date" value="2026-07-04" style="font-size:14px">
+          <input id="campo-15" name="campo-15" class="ob-input" type="date" style="font-size:14px">
         </div>
 
         <!-- Separador y CTA denuncia -->
@@ -2250,11 +2247,11 @@
         <div class="rev-impact">
           <div class="ri-row">
             <div class="ri-icon">🏆</div>
-            <div class="ri-txt" id="ri-ranking">Roberto sigue <strong>#1 en Puertos del Lago</strong> · Electricistas</div>
+            <div class="ri-txt" id="ri-ranking"></div>
           </div>
           <div class="ri-row">
             <div class="ri-icon">⭐</div>
-            <div class="ri-txt" id="ri-puntuacion">Nueva puntuación: <strong>4.9 · 75 reseñas</strong></div>
+            <div class="ri-txt" id="ri-puntuacion"></div>
           </div>
           <div class="ri-row">
             <div class="ri-icon">👥</div>
@@ -3365,9 +3362,9 @@
 
     <!-- Card del prestador denunciado -->
     <div style="background:white;border-radius:var(--r);margin:-20px 14px 0;padding:14px;box-shadow:0 4px 20px rgba(0,0,0,.10);display:flex;gap:10px;align-items:center">
-      <div id="den-av" style="width:44px;height:44px;border-radius:12px;background:#EEF2FF;color:#2B5BFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0">RP</div>
+      <div id="den-av" style="width:44px;height:44px;border-radius:12px;background:#EEF2FF;color:#2B5BFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0"></div>
       <div>
-        <div id="den-nombre" style="font-size:14px;font-weight:700;color:var(--ink)">Roberto Peña</div>
+        <div id="den-nombre" style="font-size:14px;font-weight:700;color:var(--ink)"></div>
         <div id="den-rol" style="font-size:11px;color:var(--ink3)">Electricista · Puertos del Lago</div>
       </div>
     </div>

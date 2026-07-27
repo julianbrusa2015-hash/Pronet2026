@@ -974,6 +974,42 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Descuenta puntos de loyalty por un canje y persiste en Supabase. */
+    async canjearPuntos(costo, nombre) {
+      if (!remoto) return { ok: false, error: 'modo local' };
+      try {
+        const uid = await this.usuarioIdActual();
+        if (!uid) return { ok: false, error: 'sin sesión' };
+        const { data: perfil } = await sb.from('perfiles')
+          .select('prestador_id').eq('id', uid).maybeSingle();
+        if (!perfil?.prestador_id) return { ok: false, error: 'sin perfil prestador' };
+
+        // Verificar puntos disponibles antes de descontar
+        const { data: loy } = await sb.from('loyalty')
+          .select('puntos').eq('usuario_id', uid).maybeSingle();
+        const ptsActuales = loy?.puntos || 0;
+        if (ptsActuales < costo) return { ok: false, error: 'puntos insuficientes' };
+
+        // Registrar en historial (negativo = canje)
+        await sb.from('loyalty_historial').insert({
+          prestador_id: perfil.prestador_id,
+          puntos: -costo,
+          tipo: 'canje',
+          descripcion: 'Canje: ' + nombre,
+        });
+
+        // Actualizar tabla loyalty
+        const nuevosPuntos = ptsActuales - costo;
+        const nivel = nuevosPuntos >= 10000 ? 'Élite' : nuevosPuntos >= 5000 ? 'Oro' : nuevosPuntos >= 1000 ? 'Plata' : 'Bronce';
+        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevosPuntos, nivel });
+
+        return { ok: true, puntos: nuevosPuntos };
+      } catch(e) {
+        console.warn('[PronetDB] canjearPuntos', e.message);
+        return { ok: false, error: e.message };
+      }
+    },
+
     /** Cuenta las denuncias pendientes (solo admin ve todas por RLS). */
     async contarDenunciasPendientes() {
       if (!remoto) return 0;
