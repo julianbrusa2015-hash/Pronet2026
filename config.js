@@ -24,3 +24,28 @@ window.PRONET_CONFIG = {
 // ── FASE 3: Notificaciones push ──
 // Clave PÚBLICA de VAPID (la privada va como secret en Supabase, NUNCA acá).
 window.PRONET_CONFIG.VAPID_PUBLIC_KEY = "BFvzCuNl7hsD6NmAhL63KqPPr1mMVTFiophRSDhhDujMYEnGVx3NsLnPZDgVG0Xg_jPJocWE-aDxRnVK_Yfq8Vo";
+
+// ── Constantes de negocio ──
+// Editables sin tocar app.js; cambian la lógica en prod con solo un redeploy.
+Object.assign(window.PRONET_CONFIG, {
+  // Propuestas
+  PROPUESTA_EXPIRACION_HS: 72,      // horas hasta que una propuesta expira automáticamente
+  INACTIVIDAD_CIERRE_DIAS: 7,       // días sin actividad para que el vecino pueda cerrar el pedido
+
+  // Búsqueda / descubrimiento
+  RATING_TOP: 4.5,                  // umbral para el filtro "top" en el listado de prestadores
+  SUGERIDOS_PEDIDO: 3,              // cantidad de prestadores sugeridos al crear un pedido
+  MAPA_PRESTADORES_MAX: 8,          // pines máximos en el mapa (evita saturación visual)
+
+  // Contenido
+  PEDIDO_FOTOS_MAX: 4,              // fotos máximas al publicar un pedido
+  ADJUNTO_MAX_MB: 5,                // tamaño máximo de adjunto en chat (MB)
+  IMG_PORTFOLIO_PX: 800,            // ancho máximo al redimensionar fotos de portfolio
+  IMG_TRABAJO_PX: 1024,             // ancho máximo al redimensionar fotos de trabajo terminado
+
+  // UI / previews
+  RESENAS_PREVIEW: 5,               // reseñas visibles antes del botón "ver todas"
+  ESPECIALIDADES_CARD: 4,           // especialidades mostradas en tarjeta de prestador
+  NOTIF_CUERPO_MAX: 80,             // caracteres máximos en el cuerpo de una push notification
+  CHAT_PREVIEW_MAX: 50,             // caracteres de preview en la notificación de chat
+});

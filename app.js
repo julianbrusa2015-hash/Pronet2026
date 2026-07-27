@@ -724,7 +724,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tagsEl) {
       const tags = [];
       if (p.premium) tags.push('⭐ Premium');
-      (p.especialidades || []).slice(0, 4).forEach(e => tags.push(escHTML(e)));
+      (p.especialidades || []).slice(0, PRONET_CONFIG.ESPECIALIDADES_CARD).forEach(e => tags.push(escHTML(e)));
       tags.push('📍 ' + escHTML(p.zona || 'Escobar'));
       tagsEl.innerHTML = tags.map(t => '<div class="prof-tag">' + t + '</div>').join('')
         + (p.verificado ? '<div class="b-verified"><svg width="10" height="11" viewBox="0 0 18 20" fill="none"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Verificado</div>' : '');
@@ -784,7 +784,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const texto = tags ? partes.slice(1).join(' · ') : partes.join(' · ');
       return { tags, texto };
     };
-    const aMostrar = verTodas ? resenas : resenas.slice(0, 5);
+    const aMostrar = verTodas ? resenas : resenas.slice(0, PRONET_CONFIG.RESENAS_PREVIEW);
     wrap.innerHTML = aMostrar.map(r => {
       const nombre = r.perfiles?.nombre || 'Vecino';
       const zona = r.perfiles?.zona ? ' · ' + r.perfiles.zona : '';
@@ -800,7 +800,7 @@ document.addEventListener('DOMContentLoaded', function() {
           ${texto ? `<div class="rev-txt">${escHTML(texto)}</div>` : ''}
         </div>`;
     }).join('');
-    if (!verTodas && resenas.length > 5) {
+    if (!verTodas && resenas.length > PRONET_CONFIG.RESENAS_PREVIEW) {
       wrap.innerHTML += `<div style="text-align:center;font-size:13px;color:var(--blue);padding:8px 0;cursor:pointer" onclick="window.renderResenasPerfil('${prestadorId}', true)">Ver las ${resenas.length} reseñas →</div>`;
     }
   }
@@ -1159,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Expiración
     let expiraTxt = '';
     if (pedido.expira_en || pedido.creado) {
-      const base = pedido.expira_en ? new Date(pedido.expira_en) : new Date(new Date(pedido.creado).getTime() + 72 * 3600000);
+      const base = pedido.expira_en ? new Date(pedido.expira_en) : new Date(new Date(pedido.creado).getTime() + PRONET_CONFIG.PROPUESTA_EXPIRACION_HS * 3600000);
       const horas = Math.max(0, Math.floor((base - Date.now()) / 3600000));
       if (horas > 0) expiraTxt = horas + ' horas';
     }
@@ -1222,7 +1222,7 @@ document.addEventListener('DOMContentLoaded', function() {
       filtros.rubro = alt;
       prestadores = await PronetDB.listarPrestadores(filtros);
     }
-    prestadores = [...prestadores].sort((a,b) => (b.rating||0)-(a.rating||0)).slice(0, 3);
+    prestadores = [...prestadores].sort((a,b) => (b.rating||0)-(a.rating||0)).slice(0, PRONET_CONFIG.SUGERIDOS_PEDIDO);
     wrap.innerHTML = '';
     if (prestadores.length === 0) {
       wrap.innerHTML = '<div style="padding:20px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay prestadores de este rubro en la zona.</div>';
@@ -1324,7 +1324,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const prestadores = await PronetDB.listarPrestadores(filtros);
     // Filtros locales
     let resultado = prestadores;
-    if (filtro === 'top') resultado = prestadores.filter(p => p.rating >= 4.5);
+    if (filtro === 'top') resultado = prestadores.filter(p => p.rating >= PRONET_CONFIG.RATING_TOP);
     if (filtro === 'economico') resultado = [...prestadores].sort((a,b) => (a.precio||0)-(b.precio||0));
     wrap.innerHTML = '';
     const zonaLabel = hayTexto ? 'toda la red' : (zonaActual || 'Escobar');
@@ -1651,7 +1651,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (fotos.length >= 10) { showToast && showToast('⚠️ Límite de 10 fotos alcanzado'); return; }
     showToast && showToast('⏳ Subiendo foto...');
     // Resize a 800px antes de subir
-    const resized = await resizarImagen(file, 800);
+    const resized = await resizarImagen(file, PRONET_CONFIG.IMG_PORTFOLIO_PX);
     const result = await PronetDB.subirFotoPortfolio(usuarioActual.prestador_id, resized).catch(() => null);
     if (result) {
       showToast && showToast('✅ Foto agregada');
@@ -1712,7 +1712,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const fotos = await PronetDB.listarFotosTrabajo(chatActualId).catch(() => []);
     if (fotos.length >= 5) { showToast && showToast('⚠️ Límite de 5 fotos por trabajo'); return; }
     showToast && showToast('⏳ Subiendo foto...');
-    const resized = await resizarImagen(file, 1024);
+    const resized = await resizarImagen(file, PRONET_CONFIG.IMG_TRABAJO_PX);
     const result = await PronetDB.subirFotoTrabajo(chatActualId, resized).catch(() => null);
     if (result) {
       showToast && showToast('✅ Foto agregada al trabajo');
@@ -1970,7 +1970,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!wrap) return;
     wrap.innerHTML = '';
     // Máximo 8 pines para no saturar el mapa
-    const visibles = prestadores.slice(0, 8);
+    const visibles = prestadores.slice(0, PRONET_CONFIG.MAPA_PRESTADORES_MAX);
     // Calcular todas las posiciones primero y separar las que chocan
     const posiciones = separarPines(visibles.map((p, i) => posicionPin(p.id, i)));
     visibles.forEach((p, i) => {
@@ -3428,7 +3428,7 @@ document.addEventListener('DOMContentLoaded', function() {
       grid.appendChild(slot);
     });
     // Slot para agregar (máximo 4 fotos)
-    if (npFotosArchivos.length < 4) {
+    if (npFotosArchivos.length < PRONET_CONFIG.PEDIDO_FOTOS_MAX) {
       const add = document.createElement('div');
       add.className = 'foto-slot';
       add.innerHTML = '<div class="fs-icon">➕</div><div class="fs-lbl">Agregar foto</div>';
@@ -3440,7 +3440,7 @@ document.addEventListener('DOMContentLoaded', function() {
   /** Maneja la selección de archivos desde el input */
   function npAgregarFotos(input) {
     const files = Array.from(input.files || []);
-    const restantes = 4 - npFotosArchivos.length;
+    const restantes = PRONET_CONFIG.PEDIDO_FOTOS_MAX - npFotosArchivos.length;
     files.slice(0, restantes).forEach(f => npFotosArchivos.push(f));
     input.value = ''; // reset para permitir re-seleccionar el mismo archivo
     npRenderFotosGrid();
@@ -4284,7 +4284,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Verificar si pasaron 7 días sin actividad (para habilitar cierre del vecino)
         if (soyVecino && chat.ultimo_evento_at) {
           const dias = (Date.now() - new Date(chat.ultimo_evento_at).getTime()) / 86400000;
-          if (dias >= 7) {
+          if (dias >= PRONET_CONFIG.INACTIVIDAD_CIERRE_DIAS) {
             // Mostrar banner de tomar control y ocultar el de cancelar
             // (no tiene sentido mostrar ambos — el cierre tiene prioridad)
             show('chat-vecino-cierre-banner');
@@ -4565,7 +4565,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (chat) {
           const soyVecino = usuarioActual?.id === chat.vecino_id;
           const titulo = '❌ ' + (usuarioActual?.nombre || (soyVecino ? 'El vecino' : 'El prestador')) + ' canceló el trabajo';
-          const cuerpo = motivoSeleccionado + (txt ? ': ' + txt.slice(0, 80) : '');
+          const cuerpo = motivoSeleccionado + (txt ? ': ' + txt.slice(0, PRONET_CONFIG.NOTIF_CUERPO_MAX) : '');
           if (soyVecino && chat.prestador_id) {
             const destinatarioId = await PronetDB.usuarioIdDePrestador(chat.prestador_id).catch(() => null);
             if (destinatarioId) {
@@ -4779,7 +4779,7 @@ document.addEventListener('DOMContentLoaded', function() {
           usuario_id: destinatarioId,
           tipo: 'resena',
           titulo: '⭐ Recibiste una reseña de ' + puntos + ' estrella' + (puntos > 1 ? 's' : ''),
-          cuerpo: textoFinal.slice(0, 80) || 'Un vecino calificó tu trabajo',
+          cuerpo: textoFinal.slice(0, PRONET_CONFIG.NOTIF_CUERPO_MAX) || 'Un vecino calificó tu trabajo',
           url: '/#s-miperfil',
         }).catch(() => {});
       }
@@ -5032,7 +5032,7 @@ document.addEventListener('DOMContentLoaded', function() {
             usuario_id: destinatarioId,
             tipo: 'mensaje',
             titulo: '💬 Nuevo mensaje de ' + escHTML(usuarioActual.nombre || 'un usuario'),
-            cuerpo: txt.slice(0, 80),
+            cuerpo: txt.slice(0, PRONET_CONFIG.NOTIF_CUERPO_MAX),
             url: '/#s-chats',
           }).catch(() => {});
         }
@@ -5073,7 +5073,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function onAdjuntoPropuestaSelected(input) {
     const file = input.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { showToast && showToast('⚠️ El archivo supera los 5 MB'); input.value=''; return; }
+    if (file.size > PRONET_CONFIG.ADJUNTO_MAX_MB * 1024 * 1024) { showToast && showToast('⚠️ El archivo supera los ' + PRONET_CONFIG.ADJUNTO_MAX_MB + ' MB'); input.value=''; return; }
     adjuntoPropuesta = { file, tipo: file.type.includes('pdf') ? 'pdf' : 'imagen', nombre: file.name };
     const preview = document.getElementById('np-adjunto-preview');
     const icono = document.getElementById('np-adjunto-icono');
@@ -5534,7 +5534,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // — Expira en —
     let expiraTxt = '';
     if (pedido.expira_en || pedido.creado) {
-      const base = pedido.expira_en ? new Date(pedido.expira_en) : new Date(new Date(pedido.creado).getTime() + 72 * 3600000);
+      const base = pedido.expira_en ? new Date(pedido.expira_en) : new Date(new Date(pedido.creado).getTime() + PRONET_CONFIG.PROPUESTA_EXPIRACION_HS * 3600000);
       const horas = Math.max(0, Math.floor((base - Date.now()) / 3600000));
       if (horas > 0) expiraTxt = ' · Expira en ' + horas + 'hs';
     }
@@ -5829,7 +5829,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (msg.autor_id === usuarioActual.id) return;
       if (chatActualId === msg.chat_id) return; // el chat local ya lo recibe
       // Notificar en campanita y toast
-      const txt = (msg.texto || '').slice(0, 50);
+      const txt = (msg.texto || '').slice(0, PRONET_CONFIG.CHAT_PREVIEW_MAX);
       const preview = txt + (txt.length >= 50 ? '...' : '');
       showToast('💬 Nuevo mensaje: "' + preview + '"', () => goTo('s-chats'), false);
       agregarNotifCampanita('💬 Nuevo mensaje: "' + preview + '"', () => goTo('s-chats'));
