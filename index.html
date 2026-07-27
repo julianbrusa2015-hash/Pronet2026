@@ -1151,14 +1151,14 @@
               <div style="font-size:10px;color:var(--ink3);margin-top:4px">Reseñas totales</div>
             </div>
             <div style="text-align:center;padding:8px;border-top:1px solid var(--border)">
-              <div style="font-size:26px;font-weight:800;color:var(--ink)">5</div>
+              <div id="rep-recom" style="font-size:26px;font-weight:800;color:var(--ink)">—</div>
               <div style="font-size:10px;color:var(--ink3);margin-top:4px">Recomendaciones</div>
-              <div style="font-size:10px;font-weight:700;color:var(--green);margin-top:2px">▲ +2 vs mes ant.</div>
+              <div id="rep-recom-delta" style="font-size:10px;font-weight:700;color:var(--ink3);margin-top:2px">este mes</div>
             </div>
             <div style="text-align:center;padding:8px;border-top:1px solid var(--border)">
-              <div style="font-size:26px;font-weight:800;color:var(--blue)">94%</div>
+              <div id="rep-tasa" style="font-size:26px;font-weight:800;color:var(--blue)">—</div>
               <div style="font-size:10px;color:var(--ink3);margin-top:4px">Tasa de respuesta</div>
-              <div style="font-size:10px;font-weight:700;color:var(--green);margin-top:2px">Excelente</div>
+              <div id="rep-tasa-label" style="font-size:10px;font-weight:700;color:var(--ink3);margin-top:2px">calculando…</div>
             </div>
           </div>
         </div>
@@ -2516,11 +2516,11 @@
         </div>
         <div class="ob-field">
           <label for="login-email-2" class="ob-label">Email</label>
-          <input class="ob-input" placeholder="tu@email.com" type="email" id="login-email-2" name="email" autocomplete="email">
+          <input class="ob-input" placeholder="tu@email.com" type="email" id="login-email-2" name="email" autocomplete="email" required>
         </div>
         <div class="ob-field">
           <label for="reg-pass2" class="ob-label">Contraseña</label>
-          <input class="ob-input" placeholder="Mínimo 8 caracteres" type="password" id="reg-pass2" name="password" autocomplete="new-password">
+          <input class="ob-input" placeholder="Mínimo 8 caracteres" type="password" id="reg-pass2" name="password" autocomplete="new-password" required minlength="8">
         </div>
       </div>
       <div class="ob-footer"><button class="btn-p" onclick="obNext(3)">Continuar →</button></div>

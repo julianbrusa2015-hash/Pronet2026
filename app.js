@@ -2803,12 +2803,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function loginWith(method, ev) {
     const btn = ev && ev.target ? ev.target.closest('button') : null;
-    // Google / Apple: aún no configurados
+    // Google / Apple: OAuth — redirige al proveedor y vuelve via restaurarSesion()
     if (method === 'google' || method === 'apple') {
-      alert('El ingreso con ' + (method === 'google' ? 'Google' : 'Apple') + ' estará disponible próximamente. Por ahora usá tu email.');
+      if (btn) btn.innerHTML = 'Redirigiendo…';
+      const res = await PronetDB.loginConOAuth(method);
+      if (!res.ok) {
+        if (btn) btn.innerHTML = method === 'google' ? '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px;margin-right:8px;vertical-align:middle">Continuar con Google' : 'Continuar con Apple';
+        mostrarErrorLogin('No se pudo conectar con ' + (method === 'google' ? 'Google' : 'Apple') + '. Intentá de nuevo.');
+      }
+      // Si ok: el browser está redirigiendo al proveedor OAuth — no continuar
       return;
     }
     // Email
+    if (!reportarInvalidos('login-email', 'login-pw')) return;
     const email = (document.getElementById('login-email')?.value || '').trim();
     const pw    = (document.getElementById('login-pw')?.value || '').trim();
     if (!email || !pw) {
@@ -2835,6 +2842,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     usuarioActual = await PronetDB.usuarioActual();
     entrarApp();
+  }
+
+  /** Dispara validación nativa del browser en una lista de IDs de inputs.
+   *  Devuelve false (y muestra tooltip) si alguno falla. */
+  function reportarInvalidos(...ids) {
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el && !el.reportValidity()) return false;
+    }
+    return true;
   }
 
   function mostrarErrorLogin(txt) {
@@ -3244,6 +3261,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modal) modal.style.display = 'none';
   }
   async function hacerRegistro() {
+    if (!reportarInvalidos('reg-nombre', 'reg-email', 'reg-pw')) return;
     const nombre = (document.getElementById('reg-nombre')?.value || '').trim();
     const email  = (document.getElementById('reg-email')?.value || '').trim();
     const pw     = (document.getElementById('reg-pw')?.value || '').trim();
@@ -3499,6 +3517,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function npNext(step) {
     // ── Validación temprana: al salir del paso 1, exigir título y descripción ──
     if (step === 2) {
+      if (!reportarInvalidos('np-titulo', 'np-desc')) return;
       const titulo = (document.getElementById('np-titulo')?.value || '').trim();
       const desc   = (document.getElementById('np-desc')?.value || '').trim();
       if (!titulo || !desc) {
@@ -4087,7 +4106,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Reputación — datos reales del prestador logueado
-    const pRep = await PronetDB.obtener('prestadores', usuarioActual?.prestador_id).catch(() => null);
+    const pid = usuarioActual?.prestador_id;
+    const [pRep, recom, tasa] = await Promise.all([
+      PronetDB.obtener('prestadores', pid).catch(() => null),
+      pid ? PronetDB.contarRecomendaciones(pid).catch(() => ({ actual: 0, anterior: 0 })) : { actual: 0, anterior: 0 },
+      pid ? PronetDB.calcularTasaRespuesta(pid).catch(() => null) : null,
+    ]);
     if (pRep) {
       const rating = pRep.rating || 0;
       const resenas = pRep.resenas || 0;
@@ -4097,6 +4121,33 @@ document.addEventListener('DOMContentLoaded', function() {
       if (ratingEl) ratingEl.textContent = rating.toFixed(1);
       if (starsEl) starsEl.textContent = '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
       if (resenasEl) resenasEl.textContent = resenas;
+    }
+    // Recomendaciones del mes actual vs anterior
+    const recomEl = document.getElementById('rep-recom');
+    const recomDelta = document.getElementById('rep-recom-delta');
+    if (recomEl) recomEl.textContent = recom.actual;
+    if (recomDelta) {
+      const diff = recom.actual - recom.anterior;
+      if (diff > 0) {
+        recomDelta.textContent = `▲ +${diff} vs mes ant.`;
+        recomDelta.style.color = 'var(--green)';
+      } else if (diff < 0) {
+        recomDelta.textContent = `▼ ${diff} vs mes ant.`;
+        recomDelta.style.color = 'var(--red, #E53935)';
+      } else {
+        recomDelta.textContent = recom.anterior > 0 ? `= igual que mes ant.` : `este mes`;
+        recomDelta.style.color = 'var(--ink3)';
+      }
+    }
+    // Tasa de respuesta
+    const tasaEl = document.getElementById('rep-tasa');
+    const tasaLabel = document.getElementById('rep-tasa-label');
+    if (tasaEl) tasaEl.textContent = tasa !== null ? `${tasa}%` : '—';
+    if (tasaLabel) {
+      if (tasa === null) { tasaLabel.textContent = 'sin datos aún'; tasaLabel.style.color = 'var(--ink3)'; }
+      else if (tasa >= 90) { tasaLabel.textContent = 'Excelente'; tasaLabel.style.color = 'var(--green)'; }
+      else if (tasa >= 70) { tasaLabel.textContent = 'Buena'; tasaLabel.style.color = 'var(--blue)'; }
+      else { tasaLabel.textContent = 'Mejorable'; tasaLabel.style.color = 'var(--red, #E53935)'; }
     }
   }
 
@@ -4878,9 +4929,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Guardar en Supabase
+    const recomendar = document.getElementById('chk-recomendar')?.checked ?? false;
     const btn = document.querySelector('#s-resena .rev-submit-btn, #s-resena button[onclick*="enviarResena"]');
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
-    const res = await PronetDB.dejarResena(chatActualId, puntos, textoFinal);
+    const res = await PronetDB.dejarResena(chatActualId, puntos, textoFinal, recomendar);
     if (btn) { btn.disabled = false; btn.textContent = 'Publicar mi reseña →'; }
 
     if (!res.ok) {
@@ -6088,6 +6140,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (loginEl) loginEl.classList.add('hidden');
         reflejarUsuario();
         iniciarRealtime();
+        updateBellCount();
+        cargarSliderRangosDesdeDB();
+        if (u.zona) { zonaActual = u.zona; actualizarZonaLabel(zonaActual); }
         // Render con el usuario ya cargado — banner y feed correctos desde el arranque
         renderHomeFeed(catActiva || 'todos');
         renderPedidosGuardados();

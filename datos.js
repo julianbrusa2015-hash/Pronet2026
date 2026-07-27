@@ -355,15 +355,45 @@ const PronetDB = (() => {
     },
 
     /** Deja una reseña, cierra el chat y recalcula el rating del prestador. */
-    async dejarResena(chatId, puntos, comentario = '') {
+    async dejarResena(chatId, puntos, comentario = '', recomendar = false) {
       if (!remoto) return { ok: false, error: 'Las reseñas requieren modo remoto' };
       const { data, error } = await sb.rpc('dejar_resena', {
         p_chat_id: chatId,
         p_puntos: puntos,
         p_comentario: comentario || null,
+        p_recomendar: !!recomendar,
       });
       if (error) { console.warn('[PronetDB] dejarResena', error.message); return { ok: false, error: error.message }; }
       return data || { ok: true };
+    },
+
+    /** Cuenta recomendaciones (recomendar=true) de un prestador: mes actual y mes anterior. */
+    async contarRecomendaciones(prestadorId) {
+      if (!remoto) return { actual: 0, anterior: 0 };
+      const now = new Date();
+      const inicioActual  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const inicioAnterior = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+      const [{ count: actual }, { count: anterior }] = await Promise.all([
+        sb.from('resenas').select('*', { count: 'exact', head: true })
+          .eq('prestador_id', prestadorId).eq('recomendar', true).gte('creado', inicioActual),
+        sb.from('resenas').select('*', { count: 'exact', head: true })
+          .eq('prestador_id', prestadorId).eq('recomendar', true)
+          .gte('creado', inicioAnterior).lt('creado', inicioActual),
+      ]);
+      return { actual: actual || 0, anterior: anterior || 0 };
+    },
+
+    /** Calcula tasa de respuesta: % de chats donde el prestador envió al menos un mensaje. */
+    async calcularTasaRespuesta(prestadorId) {
+      if (!remoto) return null;
+      const { data: chats } = await sb.from('chats_trabajo')
+        .select('id').eq('prestador_id', prestadorId);
+      if (!chats?.length) return null;
+      const ids = chats.map(c => c.id);
+      const { data: msgs } = await sb.from('mensajes_chat')
+        .select('chat_id').in('chat_id', ids).eq('autor_id', prestadorId);
+      const respondidos = new Set(msgs?.map(m => m.chat_id) || []).size;
+      return Math.round((respondidos / chats.length) * 100);
     },
 
     /** Lista las reseñas de un prestador. */
@@ -1150,6 +1180,19 @@ const PronetDB = (() => {
       if (!remoto) { try { localStorage.removeItem('pronet-usuario'); } catch (e) {} return true; }
       await sb.auth.signOut();
       return true;
+    },
+
+    /** Inicia login con proveedor OAuth (google | apple).
+     *  Redirige al proveedor; la vuelta la maneja restaurarSesion() automáticamente. */
+    async loginConOAuth(provider) {
+      if (!remoto) return { ok: false, error: 'OAuth requiere modo remoto' };
+      const redirectTo = window.location.origin + window.location.pathname;
+      const { error } = await sb.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo, scopes: 'email profile' },
+      });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
     },
 
     /** Devuelve el usuario logueado (con su perfil) o null */
