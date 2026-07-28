@@ -2,9 +2,6 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<style>
-  :root { --sat: env(safe-area-inset-top); }
-</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -48,28 +45,6 @@
 
 <div class="phone">
 
-  <script>
-    // PWA standalone en iOS: agregar padding-top igual al safe-area-inset-top
-    // para que el contenido no quede debajo de la barra de status del sistema.
-    // Se ejecuta antes del primer render para evitar saltos visuales.
-    if (window.navigator.standalone === true ||
-        window.matchMedia('(display-mode: standalone)').matches) {
-      document.addEventListener('DOMContentLoaded', function() {
-        const screens = document.querySelector('.screens');
-        if (screens) {
-          // Leer el safe-area-inset-top real del sistema
-          const sat = parseInt(
-            getComputedStyle(document.documentElement)
-              .getPropertyValue('--sat') || '0'
-          ) || 0;
-          // Fallback: en iPhone con notch/Dynamic Island suele ser 44-59px
-          screens.style.paddingTop = sat > 0
-            ? sat + 'px'
-            : 'env(safe-area-inset-top, 44px)';
-        }
-      });
-    }
-  </script>
 
   <!-- STATUS BAR -->
   <div class="status">
@@ -767,13 +742,13 @@
         </div>
       </div>
 
-      <!-- CTA: convertirse en prestador (solo visible para invitados; reflejarUsuario() lo muestra) -->
+      <!-- CTA: convertirse en prestador (visible para invitados y vecinos sin prestador_id) -->
       <div id="cta-ser-prestador" style="margin:0 14px 12px;display:none">
-        <div class="menu-item" onclick="goTo('s-publicar')" style="border:1.5px solid var(--blue);border-radius:14px">
+        <div class="menu-item" onclick="quieroSerPrestador()" style="border:1.5px solid var(--blue);border-radius:14px">
           <div class="m-icon" style="background:var(--blue-s)">🔧</div>
           <div class="m-txt">
-            <div class="m-title" style="color:var(--blue)">Quiero ofrecer mis servicios</div>
-            <div class="m-sub">Registrate como prestador — es gratis</div>
+            <div class="m-title" id="cta-prestador-titulo" style="color:var(--blue)">Quiero ofrecer mis servicios</div>
+            <div class="m-sub" id="cta-prestador-sub">Registrate como prestador — es gratis</div>
           </div>
           <div class="m-chev" style="color:var(--blue)">›</div>
         </div>

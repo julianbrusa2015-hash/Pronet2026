@@ -2925,6 +2925,29 @@ document.addEventListener('DOMContentLoaded', function() {
     mostrarFormRegistro();
   }
 
+  // CTA "Quiero ofrecer mis servicios": maneja invitados y vecinos logueados
+  async function quieroSerPrestador() {
+    if (!usuarioActual) {
+      // Invitado → registro con tipo prestador pre-seleccionado
+      const radioP = document.querySelector('input[name="reg-tipo"][value="prestador"]');
+      if (radioP) radioP.checked = true;
+      document.getElementById('login-screen').classList.remove('hidden');
+      mostrarFormRegistro();
+      return;
+    }
+    // Vecino logueado sin perfil prestador → upgrade de cuenta
+    if (!window._sb) { showToast('Sin conexión'); return; }
+    const { error } = await window._sb.from('perfiles')
+      .update({ tipo: 'prestador' })
+      .eq('id', usuarioActual.id);
+    if (error) { showToast('No se pudo activar el perfil de prestador'); return; }
+    // usuarioActual() auto-crea el registro en prestadores si falta
+    usuarioActual = await PronetDB.usuarioActual();
+    reflejarUsuario();
+    showToast('Perfil de prestador activado. Completá tus datos.');
+    goTo('s-edit-perfil');
+  }
+
   async function loginWith(method, ev) {
     const btn = ev && ev.target ? ev.target.closest('button') : null;
     // Google / Apple: OAuth — redirige al proveedor y vuelve via restaurarSesion()
@@ -3071,11 +3094,17 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function reflejarUsuario() {
-    // CTA "Quiero ofrecer mis servicios": solo visible para clientes, no para prestadores ni admin
+    // CTA "Quiero ofrecer mis servicios": visible para invitados y vecinos sin prestador_id
     const ctaPrestador = document.getElementById('cta-ser-prestador');
     if (ctaPrestador) {
-      // Solo visible para invitados — un vecino logueado ya tiene cuenta y "Registrate" no aplica
-      ctaPrestador.style.display = (usuarioActual || esPrestador() || esAdmin()) ? 'none' : '';
+      const ocultar = esPrestador() || esAdmin();
+      ctaPrestador.style.display = ocultar ? 'none' : '';
+      if (!ocultar) {
+        const sub = document.getElementById('cta-prestador-sub');
+        if (sub) sub.textContent = usuarioActual
+          ? 'Agregá un perfil de prestador a tu cuenta'
+          : 'Registrate como prestador — es gratis';
+      }
     }
     // Ocultar/mostrar todos los elementos admin-only según el rol del usuario
     const admin = esAdmin();
