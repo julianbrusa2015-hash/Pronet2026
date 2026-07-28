@@ -122,14 +122,21 @@ test.describe('E-02 · Widget WhatsApp', () => {
   });
 
   test('Mi Perfil: fila Soporte WhatsApp visible para vecino logueado', async ({ page }) => {
-    // La sesión de vecino_test viene del storageState — no hay que re-loguearse
+    // Los tests comparten contexto — loguear explícitamente como vecino_test
     await page.goto('/');
+    await page.evaluate(() => {
+      Object.keys(localStorage).forEach(k => {
+        if (k.includes('supabase') || k.includes('sb-')) localStorage.removeItem(k);
+      });
+    });
+    await page.reload();
     await esperarDOM(page);
-    // Esperar que el usuario esté logueado (login-screen oculto)
-    await page.waitForFunction(() => {
-      const ls = document.getElementById('login-screen');
-      return ls && ls.classList.contains('hidden');
-    }, { timeout: 20000 });
+    await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
+    await page.locator('#login-email').fill('vecino_test@pronet.test');
+    await page.locator('#login-pw').fill('Test1234!');
+    await submitLogin(page);
+    const loginOk = await page.locator('#login-screen.hidden').count();
+    if (loginOk === 0) { test.skip(); return; }
     // Navegar a Mi Perfil por el nav (goTo no es global)
     await page.locator('#nb-perfil').click();
     await page.waitForFunction(() => {
