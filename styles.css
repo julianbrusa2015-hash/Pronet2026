@@ -1685,7 +1685,7 @@
   .login-body::-webkit-scrollbar { display:none; }
 
   .login-title { font-family:'Sora',sans-serif; font-size:20px; font-weight:700; color:var(--ink); margin-bottom:4px; }
-  .login-sub   { font-size:13px; color:var(--ink3); margin-bottom:24px; }
+  .login-sub   { font-size:13px; color:var(--ink3); margin-bottom:14px; }
 
   /* Social buttons */
   .social-btn {
@@ -1880,7 +1880,7 @@
   .login-body::-webkit-scrollbar { display:none; }
 
   .login-title { font-family:'Sora',sans-serif; font-size:20px; font-weight:700; color:var(--ink); margin-bottom:4px; }
-  .login-sub   { font-size:13px; color:var(--ink3); margin-bottom:24px; }
+  .login-sub   { font-size:13px; color:var(--ink3); margin-bottom:14px; }
 
   /* Social buttons */
   .social-btn {

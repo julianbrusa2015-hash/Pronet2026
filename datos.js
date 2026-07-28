@@ -201,12 +201,7 @@ const PronetDB = (() => {
     async notificar(opciones) {
       if (!remoto) return { ok: false, error: 'Push requiere modo remoto' };
       try {
-        // 1. Disparar el push (comportamiento original)
-        const PUSH_EDGE_FN = 'enviar-push';
-        const { data, error } = await sb.functions.invoke(PUSH_EDGE_FN, { body: opciones });
-        if (error) { console.warn('[PronetDB] notificar', error.message); return { ok: false, error: error.message }; }
-
-        // 2. Persistir en tabla notificaciones para la campanita in-app
+        // 1. Persistir en notificaciones (campanita in-app) — siempre, independiente del push
         if (opciones.destino === 'usuario' && opciones.usuario_id) {
           try {
             await sb.from('notificaciones').insert({
@@ -234,6 +229,11 @@ const PronetDB = (() => {
             }
           } catch(e) { console.warn('[PronetDB] notificar insert rubro', e.message); }
         }
+
+        // 2. Disparar el push (best-effort — si falla, la campanita ya fue guardada)
+        const PUSH_EDGE_FN = 'enviar-push';
+        const { data, error } = await sb.functions.invoke(PUSH_EDGE_FN, { body: opciones });
+        if (error) { console.warn('[PronetDB] notificar push', error.message); }
 
         return data || { ok: true };
       } catch (e) { return { ok: false, error: String(e) }; }
@@ -851,25 +851,55 @@ const PronetDB = (() => {
       // Fallback: si no hay fila o puntos = 0, calcular desde el historial
       if (!error && data && data.puntos > 0) return data;
 
-      // Calcular desde historial
       const { data: perfil } = await sb.from('perfiles')
         .select('prestador_id').eq('id', uid).maybeSingle();
-      if (!perfil?.prestador_id) return { puntos: 0, nivel: 'Bronce' };
 
-      const { data: hist } = await sb.from('loyalty_historial')
-        .select('puntos')
-        .eq('prestador_id', perfil.prestador_id);
+      // Buscar historial por prestador_id (si es prestador) o por usuario_id (vecino)
+      let histQ = sb.from('loyalty_historial').select('puntos');
+      histQ = perfil?.prestador_id
+        ? histQ.eq('prestador_id', perfil.prestador_id)
+        : histQ.eq('usuario_id', uid);
+      const { data: hist } = await histQ;
 
       const total = (hist || []).reduce((s, h) => s + h.puntos, 0);
       const nivel = total >= 10000 ? 'Élite' : total >= 5000 ? 'Oro' : total >= 1000 ? 'Plata' : 'Bronce';
 
-      // Actualizar la fila de loyalty para dejarla sincronizada
       if (total > 0) {
         await sb.from('loyalty').upsert({ usuario_id: uid, puntos: total, nivel })
           .catch(() => {});
       }
 
       return { puntos: total, nivel };
+    },
+
+    /** Acredita puntos a un usuario (vecino o prestador). Uso interno post-evento. */
+    async acreditarPuntos(puntos, tipo, descripcion, { prestadorId = null, usuarioId = null } = {}) {
+      if (!remoto || puntos <= 0) return { ok: false };
+      try {
+        const uid = usuarioId || await this.usuarioIdActual();
+        if (!uid) return { ok: false };
+
+        // Historial — usuario_id siempre, prestador_id cuando aplica
+        await sb.from('loyalty_historial').insert({
+          usuario_id: uid,
+          prestador_id: prestadorId || null,
+          puntos,
+          tipo,
+          descripcion,
+        }).catch(e => console.warn('[PronetDB] acreditarPuntos historial', e.message));
+
+        // Actualizar balance consolidado
+        const { data: loy } = await sb.from('loyalty')
+          .select('puntos').eq('usuario_id', uid).maybeSingle();
+        const nuevo = (loy?.puntos || 0) + puntos;
+        const nivel = nuevo >= 10000 ? 'Élite' : nuevo >= 5000 ? 'Oro' : nuevo >= 1000 ? 'Plata' : 'Bronce';
+        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevo, nivel });
+
+        return { ok: true, puntos: nuevo };
+      } catch(e) {
+        console.warn('[PronetDB] acreditarPuntos', e.message);
+        return { ok: false };
+      }
     },
 
     /** Sube un adjunto de propuesta al bucket y devuelve la URL pública. */
@@ -956,20 +986,22 @@ const PronetDB = (() => {
       return data || [];
     },
 
-    /** Lista el historial de puntos del prestador logueado. */
+    /** Lista el historial de puntos del usuario logueado (prestador o vecino). */
     async listarLoyaltyHistorial(limite = 30) {
       if (!remoto) return [];
       const uid = await this.usuarioIdActual();
       if (!uid) return [];
-      // Buscar el prestador_id del usuario logueado
       const { data: perfil } = await sb.from('perfiles')
         .select('prestador_id').eq('id', uid).maybeSingle();
-      if (!perfil?.prestador_id) return [];
-      const { data, error } = await sb.from('loyalty_historial')
-        .select('*')
-        .eq('prestador_id', perfil.prestador_id)
-        .order('creado', { ascending: false })
-        .limit(limite);
+
+      // Prestadores: buscar por prestador_id (historial pre-existente)
+      // Vecinos: buscar por usuario_id (historial nuevo post-migración)
+      let q = sb.from('loyalty_historial').select('*')
+        .order('creado', { ascending: false }).limit(limite);
+      q = perfil?.prestador_id
+        ? q.eq('prestador_id', perfil.prestador_id)
+        : q.eq('usuario_id', uid);
+      const { data, error } = await q;
       if (error) { console.warn('[PronetDB] listarLoyaltyHistorial', error.message); return []; }
       return data || [];
     },

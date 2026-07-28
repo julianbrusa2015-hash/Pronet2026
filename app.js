@@ -222,19 +222,34 @@ document.addEventListener('DOMContentLoaded', function() {
     if (id === 's-nuevo-pedido') { npNext(1); }
     // Si va a Pedidos, refrescar la lista desde la base de datos
     if (id === 's-pedidos') {
-      renderPedidosGuardados();
-      // Ocultar los tabs de rol: el rol ya lo define el login
+      // Tabs siempre ocultos — el rol lo define el login, no una selección manual
       const tabs = document.getElementById('ped-tabs');
-      if (tabs && usuarioActual) tabs.style.display = 'none';
+      if (tabs) tabs.style.display = 'none';
       // Mostrar la vista según el rol real
       const vBusco = document.getElementById('pview-busco');
       const vPresto = document.getElementById('pview-presto');
       if (esPrestador()) {
         if (vBusco) vBusco.style.display = 'none';
         if (vPresto) vPresto.style.display = 'block';
+        renderPedidosGuardados();
+      } else if (!usuarioActual) {
+        // Invitado: mostrar CTA para registrarse
+        if (vBusco) vBusco.style.display = 'block';
+        if (vPresto) vPresto.style.display = 'none';
+        const lista = document.getElementById('mis-pedidos-guardados');
+        const count = document.getElementById('ped-count');
+        if (count) count.textContent = '0 pedidos';
+        if (lista) lista.innerHTML = `
+          <div style="padding:32px 18px;text-align:center">
+            <div style="font-size:48px;margin-bottom:12px">📋</div>
+            <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:8px">Publicá tu primer pedido</div>
+            <div style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:20px">Creá una cuenta gratis y recibí propuestas de prestadores verificados de tu barrio.</div>
+            <button onclick="mostrarFormRegistro()" style="background:var(--blue);color:white;border:none;border-radius:14px;padding:14px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;width:100%">Registrate gratis →</button>
+          </div>`;
       } else {
         if (vBusco) vBusco.style.display = 'block';
         if (vPresto) vPresto.style.display = 'none';
+        renderPedidosGuardados();
       }
     }
     // Si va a Home, cargar prestadores
@@ -550,6 +565,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ocultar botón "Publicar pedido" — los prestadores ofertan, no publican pedidos
     const btnPub = document.getElementById('btn-publicar-pedido');
     if (btnPub) btnPub.style.display = 'none';
+    // Pre-filtrar feed por el rubro del prestador
+    if (usuarioActual?.rubro) {
+      const cat = catDeRubro(usuarioActual.rubro);
+      if (cat) {
+        catActiva = cat;
+        document.querySelectorAll('.rubro').forEach(r => r.classList.remove('on'));
+        const chip = document.getElementById('cat-' + cat);
+        if (chip) chip.classList.add('on');
+      }
+    }
   }
 
   // ── Sistema de denuncias ─────────────────────────────────────────────
@@ -763,6 +788,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Cargar reseñas reales (async, no bloquea la navegación)
     renderResenasPerfil(p.id);
+    // Cargar recomendaciones de vecinos (async)
+    if (PronetDB.esRemoto() && p.id) {
+      PronetDB.contarRecomendaciones(p.id).then(({ actual }) => {
+        const el = document.getElementById('prof-recom');
+        if (el) el.textContent = actual || 0;
+        // Badge en los tags si tiene al menos 1 recomendación este mes
+        const tagsEl = document.getElementById('prof-tags');
+        if (tagsEl && actual > 0) {
+          const badge = document.createElement('div');
+          badge.className = 'prof-tag';
+          badge.style.cssText = 'background:#EEF2FF;color:#2B5BFF';
+          badge.textContent = '👥 ' + actual + (actual === 1 ? ' recomendación' : ' recomendaciones');
+          tagsEl.appendChild(badge);
+        }
+      }).catch(() => {});
+    }
   }
 
   /** Renderiza las reseñas reales de un prestador en el perfil */
@@ -953,6 +994,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const CAT_SLUG_A_RUBRO = { jardineria: 'Jardinería', plomeria: 'Plomería' };
   function rubroDeCat(cat) {
     return CAT_SLUG_A_RUBRO[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
+  }
+  /** Inverso de rubroDeCat — devuelve el slug de cat para un rubro del prestador */
+  function catDeRubro(rubro) {
+    if (!rubro) return null;
+    const norm = r => r.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const chips = document.querySelectorAll('.rubro[id^="cat-"]');
+    for (const chip of chips) {
+      const slug = chip.id.replace('cat-', '');
+      if (norm(rubroDeCat(slug)) === norm(rubro)) return slug;
+    }
+    return null;
   }
 
   async function renderHomeFeed(cat) {
@@ -3534,6 +3586,25 @@ document.addEventListener('DOMContentLoaded', function() {
     entrarApp();
   }
 
+  // ══ SOPORTE WHATSAPP ══════════════════════════════════════════════
+  function abrirSoporteWhatsapp() {
+    const popup = document.getElementById('wa-popup');
+    if (!popup) return;
+    const isOpen = popup.style.display !== 'none';
+    if (isOpen) { popup.style.display = 'none'; return; }
+    const num = window.PRONET_CONFIG?.WHATSAPP_SOPORTE || '5491140618983';
+    const msg = encodeURIComponent('Hola, necesito ayuda con PRONET 👋');
+    const link = document.getElementById('wa-popup-link');
+    if (link) link.href = 'https://wa.me/' + num + '?text=' + msg;
+    popup.style.display = 'block';
+  }
+  function cerrarWaPopup() {
+    const popup = document.getElementById('wa-popup');
+    if (popup) popup.style.display = 'none';
+  }
+  window.abrirSoporteWhatsapp = abrirSoporteWhatsapp;
+  window.cerrarWaPopup = cerrarWaPopup;
+
   // ══ COMPARTIR APP ═════════════════════════════════════════════════
   async function compartirApp() {
     const shareData = {
@@ -5353,7 +5424,20 @@ document.addEventListener('DOMContentLoaded', function() {
           cuerpo: textoFinal.slice(0, PRONET_CONFIG.NOTIF_CUERPO_MAX) || 'Un vecino calificó tu trabajo',
           url: '/#s-miperfil',
         }).catch(() => {});
+
+        // Loyalty: prestador gana 100 pts por reseña recibida
+        PronetDB.acreditarPuntos(100, 'resena', 'Reseña recibida', {
+          prestadorId: prestadorActual.id,
+          usuarioId: destinatarioId,
+        }).catch(() => {});
       }
+    }
+
+    // Loyalty: vecino gana 50 pts por dejar una reseña
+    if (usuarioActual) {
+      PronetDB.acreditarPuntos(50, 'resena', 'Dejaste una reseña', {
+        usuarioId: usuarioActual.id,
+      }).catch(() => {});
     }
 
     // Cerrar la pantalla de reseña después de 2 segundos

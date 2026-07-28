@@ -93,6 +93,9 @@ Object.assign(window.PRONET_CONFIG, {
   // Analytics
   CONVERSION_PROMEDIO_ZONAL: 9,        // % de conversión promedio zonal (vistas → contactos)
 
+  // Soporte
+  WHATSAPP_SOPORTE: '5491140618983', // número de WhatsApp del equipo PRONET (sin + ni espacios)
+
   // UI / previews
   RESENAS_PREVIEW: 5,               // reseñas visibles antes del botón "ver todas"
   ESPECIALIDADES_CARD: 4,           // especialidades mostradas en tarjeta de prestador
