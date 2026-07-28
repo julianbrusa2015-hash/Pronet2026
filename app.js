@@ -3537,6 +3537,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function entrarInvitado() {
     usuarioActual = null;
     document.getElementById('login-screen').classList.add('hidden');
+    reflejarUsuario();
     goTo('s-home');
   }
 
