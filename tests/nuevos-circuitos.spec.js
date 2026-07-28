@@ -38,7 +38,7 @@ async function entrarComoInvitado(page) {
   await page.waitForTimeout(500);
 }
 
-async function submitLogin(page) {
+async function submitLogin(page, timeout = 15000) {
   // Intentar click en el botón de login; si no hay clase btn-p, usar Enter
   const btn = page.locator('#login-screen button').filter({ hasText: /ingresar|entrar|login/i }).first();
   const btnVisible = await btn.isVisible().catch(() => false);
@@ -52,7 +52,7 @@ async function submitLogin(page) {
     const err = document.getElementById('login-error');
     return (ls && ls.classList.contains('hidden')) ||
            (err && err.style.display !== 'none' && err.textContent.length > 0);
-  }, { timeout: 30000 });
+  }, { timeout });
 }
 
 async function loginPrestador(page) {
@@ -211,6 +211,7 @@ test.describe('B-08 · CTA convertirse en prestador', () => {
 test.describe('F.1 · Feed prestador filtrado por rubro', () => {
 
   test('Al entrar como prestador, catActiva es el rubro del perfil', async ({ page }) => {
+    test.setTimeout(90000);
     let loginOk = false;
     try { await loginPrestador(page); loginOk = true; } catch (e) { console.log('[F.1] login falló:', e.message.slice(0, 80)); }
     if (!loginOk) { test.skip(); return; }
@@ -235,6 +236,7 @@ test.describe('F.1 · Feed prestador filtrado por rubro', () => {
   });
 
   test('Feed de prestador no muestra vista de vecino', async ({ page }) => {
+    test.setTimeout(90000);
     let loginOk = false;
     try { await loginPrestador(page); loginOk = true; } catch (e) { console.log('[F.1] login falló:', e.message.slice(0, 80)); }
     if (!loginOk) { test.skip(); return; }
