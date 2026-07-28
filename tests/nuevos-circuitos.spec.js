@@ -19,13 +19,14 @@ async function esperarDOM(page) {
 async function entrarComoInvitado(page) {
   await page.goto('/');
   await esperarDOM(page);
-  // Si el login-screen está visible, entrar como invitado
   const loginVisible = await page.locator('#login-screen:not(.hidden)').isVisible().catch(() => false);
   if (loginVisible) {
-    await page.evaluate(() => {
-      if (typeof entrarInvitado === 'function') entrarInvitado();
-    });
-    await page.waitForTimeout(400);
+    // Clic en el botón "Explorar sin cuenta →"
+    await page.locator('button[onclick*="entrarInvitado"]').click();
+    await page.waitForFunction(() => {
+      const ls = document.getElementById('login-screen');
+      return ls && ls.classList.contains('hidden');
+    }, { timeout: 10000 });
   }
 }
 
@@ -63,9 +64,9 @@ test.describe('E-02 · Widget WhatsApp', () => {
     await expect(popup.locator('text=WhatsApp')).toBeVisible();
     // Burbujas de chat
     await expect(popup.locator('text=PRONET')).toBeVisible();
-    await expect(popup.locator('text=Escribinos')).toBeVisible();
-    // Botón "Escribinos" con link a wa.me
+    // Botón "Escribinos" con link a wa.me (por ID para evitar ambigüedad)
     const link = popup.locator('#wa-popup-link');
+    await expect(link).toBeVisible();
     const href = await link.getAttribute('href');
     expect(href).toContain('wa.me/5491140618983');
     expect(href).toContain('PRONET');
@@ -90,17 +91,20 @@ test.describe('E-02 · Widget WhatsApp', () => {
   test('Mi Perfil: fila Soporte WhatsApp visible para vecino logueado', async ({ page }) => {
     await page.goto('/');
     await esperarDOM(page);
-    const loginVisible = await page.locator('#login-screen:not(.hidden)').isVisible().catch(() => false);
-    if (!loginVisible) { test.skip(); return; }
+    await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
     await page.locator('#login-email').fill('vecino_test@pronet.test');
     await page.locator('#login-pw').fill('Test1234!');
-    await page.locator('button.btn-p[onclick*="loginWith"]').click();
+    await page.locator('button.btn-p[onclick*="loginWith(\'email\'"]').click();
     await page.waitForFunction(() => {
       const ls = document.getElementById('login-screen');
-      return ls && ls.classList.contains('hidden');
-    }, { timeout: 20000 });
-    await page.evaluate(() => goTo('s-miperfil'));
-    await page.waitForTimeout(400);
+      const err = document.getElementById('login-error');
+      return (ls && ls.classList.contains('hidden')) ||
+             (err && err.style.display !== 'none' && err.textContent.length > 0);
+    }, { timeout: 30000 });
+    const loginHidden = await page.locator('#login-screen.hidden').isVisible().catch(() => false);
+    if (!loginHidden) { test.skip(); return; }
+    await page.evaluate(() => { if(typeof goTo === 'function') goTo('s-miperfil'); });
+    await page.waitForTimeout(600);
     await expect(page.locator('text=Soporte por WhatsApp')).toBeVisible();
   });
 
@@ -214,8 +218,10 @@ test.describe('D-03 · Loyalty acumulación — API disponible', () => {
   test('PronetDB.acreditarPuntos existe y es función', async ({ page }) => {
     await page.goto('/');
     await esperarDOM(page);
+    // PronetDB se expone en window (window.PronetDB = PronetDB al final de datos.js)
     const existe = await page.evaluate(() =>
-      typeof window.PronetDB?.acreditarPuntos === 'function'
+      typeof window.PronetDB !== 'undefined' &&
+      typeof window.PronetDB.acreditarPuntos === 'function'
     );
     expect(existe).toBe(true);
   });

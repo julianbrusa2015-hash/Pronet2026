@@ -1380,3 +1380,6 @@ const PronetDB = (() => {
     },
   };
 })();
+
+// Exponer para acceso desde consola y tests
+window.PronetDB = PronetDB;
