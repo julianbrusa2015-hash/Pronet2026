@@ -3523,6 +3523,28 @@ document.addEventListener('DOMContentLoaded', function() {
           + '<span>' + pts.toLocaleString('es-AR') + ' pts actuales</span>'
           + '<span>' + actual.max.toLocaleString('es-AR') + ' pts</span>';
       }
+      // Marcar nivel activo en el tab Niveles
+      ['bronce','plata','oro','elite'].forEach(n => {
+        const nc = document.getElementById('nc-' + n);
+        if (!nc) return;
+        const esActual = niv.toLowerCase() === (n === 'elite' ? 'élite' : n);
+        nc.classList.toggle('active', esActual);
+        const nameEl = nc.querySelector('.nivel-name');
+        if (nameEl) nameEl.textContent = (n === 'elite' ? 'Élite' : n.charAt(0).toUpperCase() + n.slice(1)) + (esActual ? ' ← Vos' : '');
+      });
+
+      // Ordenar secciones ganar-pts según rol: vecinos ven su sección primero
+      const secPrest  = document.getElementById('lv-ganar-sec-prestador');
+      const secCliente = document.getElementById('lv-ganar-sec-cliente');
+      const ganarCont  = document.getElementById('lv-ganar');
+      if (secPrest && secCliente && ganarCont) {
+        if (!esPrestador()) {
+          ganarCont.insertBefore(secCliente, secPrest);
+        } else {
+          ganarCont.insertBefore(secPrest, secCliente);
+        }
+      }
+
       // Cards dinámicas de "Ganar puntos" desde loyalty_reglas
       const ganarDiv = document.getElementById('lv-ganar-prestador');
       if (ganarDiv) {

@@ -3190,49 +3190,52 @@
     <!-- ── GANAR PUNTOS ── -->
     <div id="lv-ganar" style="padding-top:14px">
 
-      <div style="padding:0 14px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Para prestadores</div>
-
-      <!-- Cards dinámicas desde loyalty_reglas -->
-      <div id="lv-ganar-prestador">
-        <div style="text-align:center;padding:24px;color:#999;font-size:13px">Cargando...</div>
+      <div id="lv-ganar-sec-prestador">
+        <div style="padding:0 14px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Para prestadores</div>
+        <!-- Cards dinámicas desde loyalty_reglas -->
+        <div id="lv-ganar-prestador">
+          <div style="text-align:center;padding:24px;color:#999;font-size:13px">Cargando...</div>
+        </div>
       </div>
 
-      <div style="padding:14px 14px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Para clientes</div>
+      <div id="lv-ganar-sec-cliente">
+        <div style="padding:14px 14px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Para vecinos</div>
 
-      <div class="acc-card">
-        <div class="acc-ico" style="background:#FFF8EC">✍️</div>
-        <div class="acc-body">
-          <div class="acc-name">Dejar una reseña detallada</div>
-          <div class="acc-sub">Reseña con más de 50 caracteres</div>
+        <div class="acc-card">
+          <div class="acc-ico" style="background:#FFF8EC">✍️</div>
+          <div class="acc-body">
+            <div class="acc-name">Dejar una reseña detallada</div>
+            <div class="acc-sub">Reseña con más de 50 caracteres</div>
+          </div>
+          <div class="acc-pts">+200 pts</div>
         </div>
-        <div class="acc-pts">+200 pts</div>
-      </div>
 
-      <div class="acc-card">
-        <div class="acc-ico" style="background:#ECFDF5">👥</div>
-        <div class="acc-body">
-          <div class="acc-name">Recomendar a un vecino</div>
-          <div class="acc-sub">Recomendación pública de un prestador</div>
+        <div class="acc-card">
+          <div class="acc-ico" style="background:#ECFDF5">👥</div>
+          <div class="acc-body">
+            <div class="acc-name">Recomendar a un vecino</div>
+            <div class="acc-sub">Recomendación pública de un prestador</div>
+          </div>
+          <div class="acc-pts">+300 pts</div>
         </div>
-        <div class="acc-pts">+300 pts</div>
-      </div>
 
-      <div class="acc-card">
-        <div class="acc-ico" style="background:#EEF2FF">📋</div>
-        <div class="acc-body">
-          <div class="acc-name">Publicar un pedido</div>
-          <div class="acc-sub">En la bolsa de trabajo</div>
+        <div class="acc-card">
+          <div class="acc-ico" style="background:#EEF2FF">📋</div>
+          <div class="acc-body">
+            <div class="acc-name">Publicar un pedido</div>
+            <div class="acc-sub">En la bolsa de trabajo</div>
+          </div>
+          <div class="acc-pts">+150 pts</div>
         </div>
-        <div class="acc-pts">+150 pts</div>
-      </div>
 
-      <div class="acc-card">
-        <div class="acc-ico" style="background:#FFF1F2">🎁</div>
-        <div class="acc-body">
-          <div class="acc-name">Referir a un nuevo usuario</div>
-          <div class="acc-sub">Se registra con tu código y contrata su primer servicio</div>
+        <div class="acc-card">
+          <div class="acc-ico" style="background:#FFF1F2">🎁</div>
+          <div class="acc-body">
+            <div class="acc-name">Referir a un nuevo usuario</div>
+            <div class="acc-sub">Se registra con tu código y contrata su primer servicio</div>
+          </div>
+          <div class="acc-pts">+500 pts</div>
         </div>
-        <div class="acc-pts">+500 pts</div>
       </div>
 
       <div style="height:16px"></div>
@@ -3271,7 +3274,7 @@
 
       <div class="niveles-grid">
 
-        <div class="nivel-card">
+        <div class="nivel-card" id="nc-bronce">
           <div class="nivel-icon">🥉</div>
           <div class="nivel-name">Bronce</div>
           <div class="nivel-range">0 – 999 pts</div>
@@ -3282,7 +3285,7 @@
           </div>
         </div>
 
-        <div class="nivel-card">
+        <div class="nivel-card" id="nc-plata">
           <div class="nivel-icon">🥈</div>
           <div class="nivel-name">Plata</div>
           <div class="nivel-range">1.000 – 4.999 pts</div>
@@ -3294,9 +3297,9 @@
           </div>
         </div>
 
-        <div class="nivel-card active">
+        <div class="nivel-card" id="nc-oro">
           <div class="nivel-icon">🥇</div>
-          <div class="nivel-name">Oro ← Vos</div>
+          <div class="nivel-name">Oro</div>
           <div class="nivel-range">5.000 – 9.999 pts</div>
           <div class="nivel-benefits">
             · Todo lo de Plata<br>
@@ -3307,7 +3310,7 @@
           </div>
         </div>
 
-        <div class="nivel-card">
+        <div class="nivel-card" id="nc-elite">
           <div class="nivel-icon">💎</div>
           <div class="nivel-name">Élite</div>
           <div class="nivel-range">10.000+ pts</div>
