@@ -775,11 +775,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const btn = document.getElementById('prof-contactar');
     if (btn) {
-      btn.innerHTML = '💬 Contactar · $' + (p.precio || 0).toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita');
+      const precioTexto = p.precio ? ' · $' + p.precio.toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita') : '';
+      btn.innerHTML = '💬 Contactar' + precioTexto;
       btn.onclick = () => {
         if (PronetDB.esRemoto() && p.id) PronetDB.registrarContacto(p.id, 'perfil').catch(() => {});
         openChat(p.id || 'x');
       };
+    }
+    // Botón reseña: solo si el vecino tiene un trabajo completado con este prestador
+    const btnResena = document.getElementById('prof-btn-resena');
+    if (btnResena) {
+      btnResena.style.display = 'none';
+      if (usuarioActual && !esPrestador() && PronetDB.esRemoto()) {
+        PronetDB.listarMisChats().then(chats => {
+          const tuvoTrabajo = chats.some(c =>
+            c.prestador_id === p.id &&
+            ['calificado','terminado_por_vecino','terminado_prestador'].includes(c.estado)
+          );
+          if (tuvoTrabajo && btnResena) btnResena.style.display = '';
+        }).catch(() => {});
+      }
     }
     goTo('s-prof');
     // Registrar vista (async, no bloquea la navegación)
@@ -6481,6 +6496,11 @@ document.addEventListener('DOMContentLoaded', function() {
             titulo: '🎉 ¡Te eligieron! Trabajo confirmado por $'+(pr.precio||0).toLocaleString('es-AR'),
             url: '/#s-mis-propuestas' }).catch(() => {});
         }
+        // Refrescar s-estado-propuesta si está activa y es esta propuesta
+        const epScreen = document.getElementById('s-estado-propuesta');
+        if (epScreen?.classList.contains('active') && propuestaMia?.id === pr.id && pedidoActual) {
+          cargarEstadoPropuesta(pedidoActual, { ...propuestaMia, estado: 'elegida' });
+        }
         return;
       }
       if(payload.eventType==='INSERT'&&!esPrestador()&&!soyAutor){
@@ -6584,6 +6604,16 @@ document.addEventListener('DOMContentLoaded', function() {
       if (estado === 'calificado') {
         actualizarBannersChat(chat.id);
       }
+    });
+
+    // Realtime de notificaciones: actualiza la campana cuando llega una nueva
+    PronetDB.suscribir('notificaciones', (payload) => {
+      if (!payload.new || !usuarioActual) return;
+      if (payload.new.usuario_id !== usuarioActual.id) return;
+      if (payload.eventType !== 'INSERT') return;
+      const notif = payload.new;
+      agregarNotifCampanita(notif.titulo, notif.url ? () => { if(notif.url.includes('#')) goTo(notif.url.split('#')[1]); } : null);
+      updateBellCount();
     });
   }
 
