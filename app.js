@@ -1234,7 +1234,7 @@ document.addEventListener('DOMContentLoaded', function() {
           set('pd-vecino', p.vecino_nombre); vecinoWrap.style.display = '';
         } else if (p.usuario_id && window._sb) {
           try {
-            const { data: perfil } = await window._sb.from('perfiles').select('nombre').eq('id', p.usuario_id).maybeSingle();
+            const { data: perfil } = await window._sb.from('perfiles_publicos').select('nombre').eq('id', p.usuario_id).maybeSingle();
             if (perfil?.nombre) { set('pd-vecino', perfil.nombre); vecinoWrap.style.display = ''; }
           } catch(e) {}
         }
