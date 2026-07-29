@@ -1592,17 +1592,28 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!el) return;
     el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     try {
-      const { data } = await window._sb.from('loyalty_solicitudes')
-        .select('*, perfiles!usuario_id(nombre,email)')
+      const { data, error } = await window._sb.from('loyalty_solicitudes')
+        .select('*')
         .eq('estado', 'pendiente')
         .order('creado', { ascending: false });
+      if (error) throw error;
       const items = data || [];
       if (!items.length) {
         el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">Sin canjes pendientes ✓</div>';
         return;
       }
+
+      // Traer nombres por separado desde perfiles_publicos (perfiles tiene RLS de lectura propia)
+      const uids = [...new Set(items.map(s => s.usuario_id).filter(Boolean))];
+      let nombresPorId = {};
+      if (uids.length) {
+        const { data: perfilesData } = await window._sb.from('perfiles_publicos')
+          .select('id, nombre').in('id', uids);
+        (perfilesData || []).forEach(p => { nombresPorId[p.id] = p.nombre; });
+      }
+
       el.innerHTML = items.map(s => {
-        const nombre = s.perfiles?.nombre || s.perfiles?.email || 'Usuario';
+        const nombre = nombresPorId[s.usuario_id] || 'Usuario';
         const hace = tiempoRelativo(s.creado);
         return `<div class="mod-card" style="margin-bottom:10px">
           <div class="mod-head">
@@ -1618,6 +1629,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>`;
       }).join('');
     } catch(e) {
+      console.warn('[renderCanjesPendientes]', e.message || e);
       el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">Error al cargar.</div>';
     }
   }
