@@ -6953,3 +6953,18 @@ document.addEventListener('DOMContentLoaded', function() {
       if (error) console.warn('[PWA] push-resubscribed: no se pudo guardar la suscripción', error.message);
     });
   }
+
+  // Fix teclado iOS en PWA: ocultar nav mientras el teclado esta abierto en s-chat
+  if (window.visualViewport) {
+    const nav = document.querySelector('.nav');
+    window.visualViewport.addEventListener('resize', () => {
+      if (!nav) return;
+      const chatActive = document.getElementById('s-chat')?.classList.contains('active');
+      const keyboardOpen = window.visualViewport.height < window.innerHeight * 0.75;
+      if (chatActive && keyboardOpen) {
+        nav.style.display = 'none';
+      } else {
+        nav.style.display = '';
+      }
+    });
+  }
