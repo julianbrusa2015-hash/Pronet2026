@@ -507,6 +507,28 @@ const PronetDB = (() => {
       return true;
     },
 
+    // ── CONFIGURACIÓN GLOBAL DE LA APP ───────────────────────────────────
+
+    /** Lee la tabla config_app y la devuelve como objeto { clave: valor }. */
+    async obtenerConfigApp() {
+      if (!remoto) return {};
+      const { data, error } = await sb.from('config_app').select('clave, valor');
+      if (error) { console.warn('[PronetDB] obtenerConfigApp', error.message); return {}; }
+      const out = {};
+      (data || []).forEach(r => { out[r.clave] = r.valor; });
+      return out;
+    },
+
+    /** Guarda un valor de configuración (solo admin, por RLS). */
+    async guardarConfigApp(clave, valor) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { error } = await sb.from('config_app').upsert({
+        clave, valor: String(valor), actualizado: new Date().toISOString(),
+      }, { onConflict: 'clave' });
+      if (error) { console.warn('[PronetDB] guardarConfigApp', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
+    },
+
     /** Propuestas que el prestador creó en el mes calendario actual.
      *  Ante error devuelve 0 (falla abierta): un límite de plan no debe
      *  bloquear al usuario por una caída transitoria de red. */

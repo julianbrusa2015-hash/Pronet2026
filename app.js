@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (id === 's-buscar') { renderBusqueda('', filtroActivo); }
     // Si va a Chats, cargar lista de conversaciones
     if (id === 's-chats') { renderChats(); }
-    if (id === 's-moderacion') { renderModeracion(); }
+    if (id === 's-moderacion') { renderModeracion(); renderConfigAdmin(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -3419,9 +3419,26 @@ document.addEventListener('DOMContentLoaded', function() {
     return `<span class="badge ${clase}">${cfg.emoji} ${escHTML(cfg.badge_label)}</span>`;
   }
 
+  // Config global de la app (tabla config_app). Se carga al restaurar sesión.
+  let configApp = {};
+
+  /** ¿Los planes pagos están habilitados? Lo controla el admin. */
+  function planesPagosActivos() {
+    return configApp.planes_pagos_activos === 'true';
+  }
+
+  /** Plan cuyos límites aplican realmente.
+   *  En prelanzamiento (pagos desactivados) Base recibe los límites de Plus:
+   *  el número no es arbitrario, es el mismo que después se vende. Los planes
+   *  superiores nunca se degradan. Misma regla que plan_para_limites() en SQL. */
+  function planParaLimites(plan) {
+    if (planesPagosActivos()) return plan;
+    return plan === 'base' ? 'plus' : plan;
+  }
+
   /** Límite del plan activo para un recurso. null = ilimitado. */
   function limitePlan(campo) {
-    const v = getPlanConfig(planActual)[campo];
+    const v = getPlanConfig(planParaLimites(planActual))[campo];
     return v == null ? null : v;
   }
 
@@ -3435,6 +3452,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const usadas = await PronetDB.contarPropuestasMes(pid).catch(() => 0);
     return { ok: usadas < limite, usadas, limite };
   }
+
+  /** Pinta el estado del interruptor de planes pagos en el panel admin. */
+  function renderConfigAdmin() {
+    const chk = document.getElementById('cfg-planes-pagos');
+    const est = document.getElementById('cfg-planes-estado');
+    const on  = planesPagosActivos();
+    if (chk) chk.checked = on;
+    if (est) {
+      est.textContent = on
+        ? 'Activados · los usuarios pueden contratar Plus, Pro y Elite'
+        : 'Desactivados · etapa fundadora, solo Base con límites de Plus';
+      est.style.color = on ? 'var(--green)' : 'var(--ink3)';
+    }
+  }
+
+  async function togglePlanesPagos(el) {
+    const nuevo = !!el.checked;
+    el.disabled = true;
+    const res = await PronetDB.guardarConfigApp('planes_pagos_activos', nuevo ? 'true' : 'false');
+    el.disabled = false;
+    if (!res.ok) {
+      el.checked = !nuevo; // revertir: el cambio no se guardó
+      showToast && showToast('⚠️ No se pudo guardar. ' + (res.error || ''));
+      return;
+    }
+    configApp.planes_pagos_activos = nuevo ? 'true' : 'false';
+    renderConfigAdmin();
+    reflejarPlan();
+    showToast && showToast(nuevo
+      ? '💳 Planes pagos activados. Base baja a 3 propuestas/mes.'
+      : '🎉 Planes pagos desactivados. Todos vuelven a límites de Plus.');
+  }
+
+  window.togglePlanesPagos = togglePlanesPagos;
 
   /** Aviso de límite alcanzado, con el nombre del plan actual. */
   function avisarLimitePlan(texto) {
@@ -3457,6 +3508,19 @@ document.addEventListener('DOMContentLoaded', function() {
   function reflejarPlan() {
     const cfg = getPlanConfig(planActual);
     const ids = ['base','plus','pro','elite'];
+    const pagosOn = planesPagosActivos();
+
+    // Prelanzamiento: ocultar los planes pagos y el acceso a Suscripción.
+    // Sin MercadoPago integrado, dejarlos visibles permitiría activarlos gratis.
+    ids.filter(id => id !== 'base').forEach(id => {
+      const card = document.getElementById('subs-card-' + id);
+      if (card) card.style.display = pagosOn ? '' : 'none';
+    });
+    const avisoPre = document.getElementById('subs-aviso-prelanzamiento');
+    if (avisoPre) avisoPre.style.display = pagosOn ? 'none' : '';
+    document.querySelectorAll('[data-feature="suscripcionPro"]').forEach(el => {
+      if (!pagosOn) el.style.display = 'none';
+    });
 
     // Pantalla de suscripción: marcar plan activo en cada card
     ids.forEach(id => {
@@ -7218,6 +7282,9 @@ document.addEventListener('DOMContentLoaded', function() {
         iniciarRealtime();
         updateBellCount();
         cargarSliderRangosDesdeDB();
+        // La config debe estar antes de reflejarPlan(): define si los planes
+        // pagos se muestran y qué límites aplican.
+        configApp = await PronetDB.obtenerConfigApp().catch(() => ({}));
         PronetDB.obtenerSuscripcion().then(s => {
           planActual    = s.plan    || 'base';
           periodoActual = s.periodo || 'mensual';
