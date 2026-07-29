@@ -1010,6 +1010,69 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Lista TODOS los ítems del catálogo (activos e inactivos) — uso admin/ABM. */
+    async listarCatalogoCanjeAdmin() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('loyalty_canjes').select('*').order('orden');
+      if (error) { console.warn('[PronetDB] listarCatalogoCanjeAdmin', error.message); return []; }
+      return data || [];
+    },
+
+    /** Crea o actualiza un ítem del catálogo de canjes (admin). */
+    async guardarCanje(canje) {
+      if (!remoto) return { ok: false };
+      try {
+        const payload = {
+          nombre: canje.nombre,
+          descripcion: canje.descripcion || null,
+          icono: canje.icono || '🎁',
+          costo_puntos: canje.costo_puntos,
+          tipo: canje.tipo || 'ambos',
+          activo: canje.activo !== false,
+          orden: canje.orden || 0,
+          tipo_beneficio: canje.tipo_beneficio || 'manual',
+          valor_beneficio: canje.valor_beneficio || '',
+        };
+        if (canje.id) {
+          const { error } = await sb.from('loyalty_canjes').update(payload).eq('id', canje.id);
+          if (error) throw error;
+        } else {
+          const { error } = await sb.from('loyalty_canjes').insert(payload);
+          if (error) throw error;
+        }
+        return { ok: true };
+      } catch(e) {
+        console.warn('[PronetDB] guardarCanje', e.message);
+        return { ok: false, error: e.message };
+      }
+    },
+
+    /** Activa/desactiva un ítem del catálogo (admin). */
+    async toggleCanjeActivo(id, activo) {
+      if (!remoto) return { ok: false };
+      try {
+        const { error } = await sb.from('loyalty_canjes').update({ activo }).eq('id', id);
+        if (error) throw error;
+        return { ok: true };
+      } catch(e) {
+        console.warn('[PronetDB] toggleCanjeActivo', e.message);
+        return { ok: false, error: e.message };
+      }
+    },
+
+    /** Elimina un ítem del catálogo de canjes (admin). */
+    async eliminarCanje(id) {
+      if (!remoto) return { ok: false };
+      try {
+        const { error } = await sb.from('loyalty_canjes').delete().eq('id', id);
+        if (error) throw error;
+        return { ok: true };
+      } catch(e) {
+        console.warn('[PronetDB] eliminarCanje', e.message);
+        return { ok: false, error: e.message };
+      }
+    },
+
     /** Lista las solicitudes de canje del usuario actual. */
     async listarMisSolicitudes() {
       if (!remoto) return [];
@@ -1063,6 +1126,37 @@ const PronetDB = (() => {
       } catch(e) {
         console.warn('[PronetDB] canjearPuntos', e.message);
         return { ok: false, error: e.message };
+      }
+    },
+
+    /** Aplica el beneficio de un canje aprobado según su tipo_beneficio.
+     *  tipo_beneficio: 'plan_mes' (valor='plus'|'pro'|'elite') | 'puntos_extra' (valor='500') | 'manual'
+     *  Devuelve { ok, mensaje } — mensaje es el texto a mostrar en la notificación al usuario. */
+    async aplicarBeneficio(tipoBeneficio, valorBeneficio, usuarioId, nombreCanje) {
+      try {
+        if (tipoBeneficio === 'plan_mes') {
+          const { data: actual } = await sb.from('suscripciones')
+            .select('vence_en').eq('usuario_id', usuarioId).maybeSingle();
+          const base = actual?.vence_en && new Date(actual.vence_en) > new Date()
+            ? new Date(actual.vence_en) : new Date();
+          base.setMonth(base.getMonth() + 1);
+          const { error } = await sb.from('suscripciones').upsert({
+            usuario_id: usuarioId, plan: valorBeneficio, estado: 'activo',
+            periodo: 'mensual', vence_en: base.toISOString(), activado_en: new Date().toISOString(),
+          });
+          if (error) throw error;
+          return { ok: true, mensaje: 'Tu plan ' + valorBeneficio + ' fue activado por 1 mes.' };
+        }
+        if (tipoBeneficio === 'puntos_extra') {
+          const n = parseInt(valorBeneficio, 10) || 0;
+          if (n > 0) await this.acreditarPuntos(n, 'canje', 'Bonus: ' + nombreCanje, { usuarioId });
+          return { ok: true, mensaje: 'Recibiste ' + n.toLocaleString('es-AR') + ' puntos extra.' };
+        }
+        // manual: sin acción automática
+        return { ok: true, mensaje: 'Tu canje "' + nombreCanje + '" fue aprobado. Nos contactaremos para coordinar la entrega.' };
+      } catch(e) {
+        console.warn('[PronetDB] aplicarBeneficio', e.message);
+        return { ok: false, mensaje: '' };
       }
     },
 

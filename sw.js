@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v51'; // v51: 4 planes Base/Plus/Pro/Elite + tabla comparativa en loyalty
+const CACHE_VERSION = 'pronet-v52'; // v52: canjes con beneficio automático + notificación + ABM admin
 
 const SHELL = [
   './',

@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (id === 's-buscar') { renderBusqueda('', filtroActivo); }
     // Si va a Chats, cargar lista de conversaciones
     if (id === 's-chats') { renderChats(); }
-    if (id === 's-moderacion') { renderModeracion(); renderCanjesPendientes(); }
+    if (id === 's-moderacion') { renderModeracion(); renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
     if (id === 's-catalogo') { renderCatalogo(); }
@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function togglePago(el) { el.classList.toggle('on'); }
 
   // ── Loyalty ──────────────────────────────────────────────────────────
-  let ptsDisponibles = 3800;
+  let ptsDisponibles = 0; // se sincroniza con la DB real en renderLoyaltyScreen()
 
   function switchLoyalty(tab) {
     ['ganar','canjear','niveles','planes','historial'].forEach(t => {
@@ -1624,15 +1624,178 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function accionCanje(id, estado) {
     try {
+      const { data: sol, error: errSol } = await window._sb.from('loyalty_solicitudes')
+        .select('*, loyalty_canjes(tipo_beneficio, valor_beneficio)').eq('id', id).maybeSingle();
+      if (errSol) throw errSol;
+
       const { error } = await window._sb.from('loyalty_solicitudes')
         .update({ estado, resuelto: new Date().toISOString() }).eq('id', id);
       if (error) throw error;
+
+      if (estado === 'aprobado' && sol) {
+        const tipoBen  = sol.loyalty_canjes?.tipo_beneficio || 'manual';
+        const valorBen = sol.loyalty_canjes?.valor_beneficio || '';
+        const res = await PronetDB.aplicarBeneficio(tipoBen, valorBen, sol.usuario_id, sol.nombre_canje);
+        await PronetDB.notificar({
+          destino: 'usuario', usuario_id: sol.usuario_id, tipo: 'loyalty',
+          titulo: '✅ Canje aprobado', cuerpo: res.mensaje || ('Tu canje "' + sol.nombre_canje + '" fue aprobado.'),
+          url: '/#s-loyalty',
+        }).catch(() => {});
+      } else if (estado === 'rechazado' && sol) {
+        // Devolver los puntos descontados al usuario
+        await PronetDB.acreditarPuntos(sol.puntos_descontados, 'canje', 'Reembolso: ' + sol.nombre_canje, { usuarioId: sol.usuario_id }).catch(() => {});
+        await PronetDB.notificar({
+          destino: 'usuario', usuario_id: sol.usuario_id, tipo: 'loyalty',
+          titulo: '❌ Canje rechazado', cuerpo: 'Tu canje "' + sol.nombre_canje + '" fue rechazado. Se te devolvieron los puntos.',
+          url: '/#s-loyalty',
+        }).catch(() => {});
+      }
+
       showToast && showToast(estado === 'aprobado' ? '✅ Canje aprobado' : '❌ Canje rechazado');
       renderCanjesPendientes();
     } catch(e) {
       showToast && showToast('⚠️ No se pudo actualizar el canje');
     }
   }
+
+  // ── ABM Beneficios PRONET Points (admin) ────────────────────────────
+  async function renderBeneficiosAdmin() {
+    const el = document.getElementById('mod-beneficios-lista');
+    if (!el) return;
+    el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
+    try {
+      const items = await PronetDB.listarCatalogoCanjeAdmin();
+      if (!items.length) {
+        el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">Sin beneficios cargados aún.</div>';
+        return;
+      }
+      const tipoBenLbl = { manual: 'Manual', plan_mes: 'Regala plan', puntos_extra: 'Puntos extra' };
+      el.innerHTML = items.map(i => `
+        <div class="acc-card" style="opacity:${i.activo ? '1' : '.5'}">
+          <div class="acc-ico" style="background:#F3E8FF">${escHTML(i.icono || '🎁')}</div>
+          <div class="acc-body">
+            <div class="acc-name">${escHTML(i.nombre)}</div>
+            <div class="acc-sub">${i.costo_puntos.toLocaleString('es-AR')} pts · ${escHTML(i.tipo)} · ${escHTML(tipoBenLbl[i.tipo_beneficio] || 'Manual')}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button onclick="abrirFormCanje('${i.id}')" style="background:var(--surface);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px">✏️</button>
+            <button onclick="toggleCanjeAdmin('${i.id}',${!i.activo})" style="background:var(--surface);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px">${i.activo ? '🚫' : '✅'}</button>
+            <button onclick="eliminarCanjeAdmin('${i.id}','${escHTML(i.nombre).replace(/'/g,"\\'")}')" style="background:var(--surface);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px">🗑️</button>
+          </div>
+        </div>`).join('');
+    } catch(e) {
+      el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">Error al cargar.</div>';
+    }
+  }
+
+  let _canjesAdminCache = [];
+
+  function onCambioTipoBeneficio() {
+    const tipo = document.getElementById('cf-tipo-beneficio').value;
+    const wrap = document.getElementById('cf-valor-wrap');
+    const selPlan = document.getElementById('cf-valor-plan');
+    const inpPts  = document.getElementById('cf-valor-puntos');
+    const lbl = document.getElementById('cf-valor-label');
+    if (tipo === 'manual') {
+      wrap.style.display = 'none';
+    } else if (tipo === 'plan_mes') {
+      wrap.style.display = ''; lbl.textContent = 'Plan a regalar';
+      selPlan.style.display = ''; inpPts.style.display = 'none';
+    } else if (tipo === 'puntos_extra') {
+      wrap.style.display = ''; lbl.textContent = 'Cantidad de puntos';
+      selPlan.style.display = 'none'; inpPts.style.display = '';
+    }
+  }
+  window.onCambioTipoBeneficio = onCambioTipoBeneficio;
+
+  async function abrirFormCanje(id) {
+    document.getElementById('cf-id').value = '';
+    document.getElementById('cf-nombre').value = '';
+    document.getElementById('cf-descripcion').value = '';
+    document.getElementById('cf-icono').value = '🎁';
+    document.getElementById('cf-costo').value = '';
+    document.getElementById('cf-tipo').value = 'ambos';
+    document.getElementById('cf-tipo-beneficio').value = 'manual';
+    document.getElementById('cf-activo').checked = true;
+    document.getElementById('canje-form-title').textContent = 'Nuevo beneficio';
+    onCambioTipoBeneficio();
+
+    if (id) {
+      if (!_canjesAdminCache.length) _canjesAdminCache = await PronetDB.listarCatalogoCanjeAdmin();
+      const item = _canjesAdminCache.find(c => c.id === id);
+      if (item) {
+        document.getElementById('canje-form-title').textContent = 'Editar beneficio';
+        document.getElementById('cf-id').value = item.id;
+        document.getElementById('cf-nombre').value = item.nombre || '';
+        document.getElementById('cf-descripcion').value = item.descripcion || '';
+        document.getElementById('cf-icono').value = item.icono || '🎁';
+        document.getElementById('cf-costo').value = item.costo_puntos || '';
+        document.getElementById('cf-tipo').value = item.tipo || 'ambos';
+        document.getElementById('cf-tipo-beneficio').value = item.tipo_beneficio || 'manual';
+        document.getElementById('cf-activo').checked = item.activo !== false;
+        onCambioTipoBeneficio();
+        if (item.tipo_beneficio === 'plan_mes') document.getElementById('cf-valor-plan').value = item.valor_beneficio || 'plus';
+        if (item.tipo_beneficio === 'puntos_extra') document.getElementById('cf-valor-puntos').value = item.valor_beneficio || '';
+      }
+    }
+    document.getElementById('canje-form-overlay').classList.add('show');
+  }
+  window.abrirFormCanje = abrirFormCanje;
+
+  function cerrarFormCanje() {
+    document.getElementById('canje-form-overlay').classList.remove('show');
+  }
+  window.cerrarFormCanje = cerrarFormCanje;
+
+  async function guardarFormCanje() {
+    const nombre = document.getElementById('cf-nombre').value.trim();
+    const costo  = parseInt(document.getElementById('cf-costo').value, 10);
+    if (!nombre || !costo || costo <= 0) {
+      showToast && showToast('⚠️ Completá nombre y costo en puntos');
+      return;
+    }
+    const tipoBen = document.getElementById('cf-tipo-beneficio').value;
+    let valorBen = '';
+    if (tipoBen === 'plan_mes') valorBen = document.getElementById('cf-valor-plan').value;
+    if (tipoBen === 'puntos_extra') valorBen = document.getElementById('cf-valor-puntos').value;
+
+    const canje = {
+      id: document.getElementById('cf-id').value || null,
+      nombre,
+      descripcion: document.getElementById('cf-descripcion').value.trim(),
+      icono: document.getElementById('cf-icono').value.trim() || '🎁',
+      costo_puntos: costo,
+      tipo: document.getElementById('cf-tipo').value,
+      tipo_beneficio: tipoBen,
+      valor_beneficio: valorBen,
+      activo: document.getElementById('cf-activo').checked,
+    };
+    const res = await PronetDB.guardarCanje(canje);
+    if (res.ok) {
+      showToast && showToast('✅ Beneficio guardado');
+      cerrarFormCanje();
+      _canjesAdminCache = [];
+      renderBeneficiosAdmin();
+    } else {
+      showToast && showToast('⚠️ No se pudo guardar');
+    }
+  }
+  window.guardarFormCanje = guardarFormCanje;
+
+  async function toggleCanjeAdmin(id, nuevoActivo) {
+    const res = await PronetDB.toggleCanjeActivo(id, nuevoActivo);
+    if (res.ok) { _canjesAdminCache = []; renderBeneficiosAdmin(); }
+    else showToast && showToast('⚠️ No se pudo actualizar');
+  }
+  window.toggleCanjeAdmin = toggleCanjeAdmin;
+
+  async function eliminarCanjeAdmin(id, nombre) {
+    if (!confirm('¿Eliminar el beneficio "' + nombre + '"? Esta acción no se puede deshacer.')) return;
+    const res = await PronetDB.eliminarCanje(id);
+    if (res.ok) { showToast && showToast('🗑️ Beneficio eliminado'); _canjesAdminCache = []; renderBeneficiosAdmin(); }
+    else showToast && showToast('⚠️ No se pudo eliminar');
+  }
+  window.eliminarCanjeAdmin = eliminarCanjeAdmin;
 
   function tiempoRelativo(fecha) {
     const diff = (Date.now() - new Date(fecha).getTime()) / 1000;
@@ -3499,6 +3662,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const loy = await PronetDB.obtenerLoyalty();
       const pts = loy.puntos || 0;
       const niv = loy.nivel || 'Bronce';
+      ptsDisponibles = pts; // sincroniza el balance local con la DB real (evita drift)
 
       const niveles = PRONET_CONFIG.LOYALTY_NIVELES;
       const actual = niveles.find(n => n.nombre === niv) || niveles[0];
@@ -3633,6 +3797,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (items.length) {
           setT('loy-total', ptsTotal.toLocaleString('es-AR'));
           setT('loy-disponibles', ptsTotal.toLocaleString('es-AR'));
+          ptsDisponibles = ptsTotal; // mantiene sincronizado el balance usado en canjear()
         }
         setT('loy-mes', ptsMes.toLocaleString('es-AR'));
 

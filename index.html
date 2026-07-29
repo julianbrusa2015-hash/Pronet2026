@@ -3610,7 +3610,76 @@
       <div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>
     </div>
 
+    <!-- ABM Beneficios PRONET Points -->
+    <div style="padding:20px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--border);margin-top:16px;display:flex;align-items:center;justify-content:space-between">
+      <span>🎁 Beneficios PRONET Points</span>
+      <button onclick="abrirFormCanje(null)" style="background:var(--blue);color:white;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">+ Nuevo</button>
+    </div>
+    <div id="mod-beneficios-lista" style="padding:0 14px 12px">
+      <div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>
+    </div>
+
   </div><!-- /moderacion -->
+
+  <!-- ══ MODAL ABM BENEFICIO PRONET POINTS ═══════════════════════════════ -->
+  <div class="checkout-overlay" id="canje-form-overlay" onclick="if(event.target===this) cerrarFormCanje()">
+    <div class="checkout-sheet" style="max-height:85vh;overflow-y:auto">
+      <div class="checkout-handle"></div>
+      <div class="checkout-title" id="canje-form-title">Nuevo beneficio</div>
+      <input type="hidden" id="cf-id">
+
+      <div class="form-group" style="margin-top:10px">
+        <label class="form-label">Nombre</label>
+        <input type="text" id="cf-nombre" class="ob-input" placeholder="Ej: 20% off próxima renovación">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción (opcional)</label>
+        <input type="text" id="cf-descripcion" class="ob-input" placeholder="Detalle breve del beneficio">
+      </div>
+      <div style="display:flex;gap:10px">
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Ícono (emoji)</label>
+          <input type="text" id="cf-icono" class="ob-input" placeholder="🎁" maxlength="4">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Costo en puntos</label>
+          <input type="number" id="cf-costo" class="ob-input" placeholder="500" min="1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Para quién</label>
+        <select id="cf-tipo" class="ob-input">
+          <option value="ambos">Ambos</option>
+          <option value="prestador">Solo prestadores</option>
+          <option value="vecino">Solo vecinos</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo de beneficio (aplicación automática al aprobar)</label>
+        <select id="cf-tipo-beneficio" class="ob-input" onchange="onCambioTipoBeneficio()">
+          <option value="manual">Manual (el equipo lo entrega por fuera)</option>
+          <option value="plan_mes">Regala 1 mes de plan</option>
+          <option value="puntos_extra">Acredita puntos extra</option>
+        </select>
+      </div>
+      <div class="form-group" id="cf-valor-wrap" style="display:none">
+        <label class="form-label" id="cf-valor-label">Valor</label>
+        <select id="cf-valor-plan" class="ob-input" style="display:none">
+          <option value="plus">Plus</option>
+          <option value="pro">Pro</option>
+          <option value="elite">Elite</option>
+        </select>
+        <input type="number" id="cf-valor-puntos" class="ob-input" placeholder="500" min="1" style="display:none">
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="cf-activo" checked style="width:18px;height:18px">
+        <label class="form-label" style="margin:0" for="cf-activo">Activo (visible para usuarios)</label>
+      </div>
+
+      <button class="btn-p" style="width:100%;margin-top:8px" onclick="guardarFormCanje()">Guardar beneficio</button>
+      <button style="width:100%;margin-top:8px;background:none;border:none;color:var(--ink3);font-size:13px;padding:10px;cursor:pointer" onclick="cerrarFormCanje()">Cancelar</button>
+    </div>
+  </div>
 
   <!-- ══ MODAL CONFIRMAR ZONA ══════════════════════════════════════════ -->
   <div class="zona-modal-overlay" id="zona-modal">
