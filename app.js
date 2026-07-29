@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Si va al Mapa, cargar prestadores cercanos
     if (id === 's-mapa') { renderMapa(); }
     // Si va a Editar perfil, poblar con datos del usuario
-    if (id === 's-miperfil') { refrescarMenuPush(); reflejarPlan(); }
+    if (id === 's-miperfil') { refrescarMenuPush(); reflejarPlan(); mostrarBannerPrimerTrabajoPro(); }
     if (id === 's-edit-perfil' && usuarioActual) {
       const partes = (usuarioActual.nombre || '').split(' ');
       const setV = (elid, val) => { const e = document.getElementById(elid); if (e) e.value = val; };
@@ -3379,6 +3379,48 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // ── Celebración primer trabajo ───────────────────────────────────────
+  async function verificarCelebracionPrimerTrabajo() {
+    if (!PronetDB.esRemoto() || !usuarioActual?.id) return;
+    const storageKey = 'pronet_celebracion_primer_trabajo_' + usuarioActual.id;
+    if (localStorage.getItem(storageKey)) return;
+    // Buscar notificación pendiente de primer trabajo
+    const { data } = await window._sb
+      .from('notificaciones')
+      .select('id')
+      .eq('usuario_id', usuarioActual.id)
+      .eq('tipo', 'celebracion_primer_trabajo')
+      .eq('leida', false)
+      .maybeSingle();
+    if (!data) return;
+    // Marcar como leída para no volver a mostrar
+    await window._sb.from('notificaciones').update({ leida: true }).eq('id', data.id);
+    localStorage.setItem(storageKey, '1');
+    const loy = await PronetDB.obtenerLoyalty().catch(() => ({ puntos: 500, nivel: 'Bronce' }));
+    setTimeout(() => mostrarModalPrimerTrabajo(loy.puntos || 500, loy.nivel || 'Bronce'), 800);
+  }
+
+  function mostrarModalPrimerTrabajo(puntos, nivel) {
+    const META = { Bronce: 1000, Plata: 3000, Oro: 99999 };
+    const SIGUIENTE = { Bronce: 'Plata', Plata: 'Oro', Oro: 'Oro' };
+    const meta = META[nivel] || 1000;
+    const siguiente = SIGUIENTE[nivel] || 'Plata';
+    const pct = Math.min(100, Math.round((puntos / meta) * 100));
+    const modal = document.getElementById('modal-primer-trabajo');
+    if (!modal) return;
+    const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    el('mpt-puntos', puntos.toLocaleString('es-AR'));
+    el('mpt-nivel', nivel);
+    el('mpt-meta-txt', puntos.toLocaleString('es-AR') + ' / ' + meta.toLocaleString('es-AR') + ' pts → ' + siguiente);
+    const bar = document.getElementById('mpt-barra');
+    if (bar) bar.style.width = pct + '%';
+    modal.style.display = 'flex';
+  }
+  window.cerrarModalPrimerTrabajo = () => {
+    const m = document.getElementById('modal-primer-trabajo');
+    if (m) m.style.display = 'none';
+  };
+
   // ── Pantalla completa de Loyalty (dinámico) ─────────────────────────
   async function renderLoyaltyScreen() {
     try {
@@ -3553,6 +3595,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  async function mostrarBannerPrimerTrabajoPro() {
+    const banner = document.getElementById('banner-primer-trabajo-pro');
+    if (!banner || !esPrestador() || !PronetDB.esRemoto()) return;
+    if (planActual === 'pro' || planActual === 'empresa') { banner.style.display = 'none'; return; }
+    const { data } = await window._sb
+      .from('chats_trabajo')
+      .select('id', { count: 'exact', head: true })
+      .eq('prestador_id', usuarioActual.prestador_id)
+      .eq('estado', 'calificado');
+    const count = data?.length ?? 0;
+    banner.style.display = count >= 1 ? '' : 'none';
+  }
+
   // ── Rankings del prestador (dinámico) ──────────────────────────────
   async function cargarRankingsPerfil() {
     const wrap = document.getElementById('mp-rankings');
@@ -3605,6 +3660,9 @@ document.addEventListener('DOMContentLoaded', function() {
     iniciarRealtime();
     updateBellCount(); // badge inicial al entrar a la app
     cargarSliderRangosDesdeDB();
+    // Verificar si hay una celebración de primer trabajo pendiente (solo prestadores)
+    if (esPrestador()) verificarCelebracionPrimerTrabajo().catch(() => {});
+
     // Cargar KPIs de analítica para los tiles de Mi perfil (solo para prestadores)
     if (esPrestador()) {
       PronetDB.obtenerAnalitica('30d').then(data => {
@@ -5560,6 +5618,39 @@ document.addEventListener('DOMContentLoaded', function() {
           prestadorId: prestadorActual.id,
           usuarioId: destinatarioId,
         }).catch(() => {});
+
+        // Detectar primer trabajo: si es el primero, +400 pts extra y push especial
+        if (PronetDB.esRemoto()) {
+          const { data: trabajosAnteriores } = await window._sb
+            .from('chats_trabajo')
+            .select('id', { count: 'exact', head: true })
+            .eq('prestador_id', prestadorActual.id)
+            .eq('estado', 'calificado');
+          const esPrimero = (trabajosAnteriores?.length ?? 0) <= 1;
+          if (esPrimero) {
+            PronetDB.acreditarPuntos(400, 'primer_trabajo', 'Primer trabajo cerrado', {
+              prestadorId: prestadorActual.id,
+              usuarioId: destinatarioId,
+            }).catch(() => {});
+            PronetDB.notificar({
+              destino: 'usuario',
+              usuario_id: destinatarioId,
+              tipo: 'primer_trabajo',
+              titulo: '🏆 Tu primer trabajo quedó registrado',
+              cuerpo: 'Cerraste tu primer trabajo en PRONET. Ganaste 500 puntos y ya sos Bronce. El barrio te empieza a conocer.',
+              url: '/#s-loyalty',
+            }).catch(() => {});
+            // Marcar para que el prestador vea el modal al abrir la app
+            try {
+              await window._sb.from('notificaciones').insert({
+                usuario_id: destinatarioId,
+                tipo: 'celebracion_primer_trabajo',
+                titulo: 'primer_trabajo',
+                leida: false,
+              });
+            } catch(e) {}
+          }
+        }
       }
     }
 
