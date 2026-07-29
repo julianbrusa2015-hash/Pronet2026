@@ -1231,7 +1231,7 @@ const PronetDB = (() => {
       pedido_titulo: c.pedidos?.titulo || 'Trabajo',
       rubro: c.pedidos?.rubro || '',
       ultimo_mensaje: ultimo?.texto || 'Sin mensajes aún',
-      hora_ultimo: ultimo ? new Date(ultimo.creado).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '',
+      hora_ultimo: ultimo ? new Date(ultimo.creado).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Argentina/Buenos_Aires'}) : '',
     };
   });
 },
