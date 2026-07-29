@@ -25,11 +25,13 @@ on conflict (clave) do nothing;  -- no pisar el valor si ya fue configurado
 
 alter table public.config_app enable row level security;
 
--- Cualquier usuario logueado puede leer la config (no hay nada sensible).
+-- Lectura pública, incluidos invitados sin sesión: la app necesita saber si
+-- los planes pagos están activos ANTES de que el usuario se loguee, para no
+-- mostrarle planes que no puede comprar. No hay nada sensible acá.
 drop policy if exists "config_lectura" on public.config_app;
 create policy "config_lectura"
   on public.config_app for select
-  to authenticated
+  to anon, authenticated
   using (true);
 
 -- Solo admin la modifica.

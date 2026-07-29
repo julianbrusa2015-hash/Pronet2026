@@ -7264,6 +7264,12 @@ document.addEventListener('DOMContentLoaded', function() {
   // renderHomeFeed va DENTRO de restaurarSesion para evitar el flash de
   // contenido de invitado al abrir la PWA en iOS (race condition de timing)
   (async function restaurarSesion() {
+    // La config global no depende de la sesión: un invitado también tiene que
+    // ver los planes pagos ocultos si están desactivados. Si falla la lectura,
+    // configApp queda vacío y planesPagosActivos() da false — el default seguro.
+    configApp = await (PronetDB?.obtenerConfigApp?.() || Promise.resolve({})).catch(() => ({}));
+    reflejarPlan();
+
     if (typeof PronetDB === 'undefined' || !PronetDB.usuarioActual) {
       renderHomeFeed('todos'); // sin sesión disponible: render como invitado
       return;
@@ -7295,9 +7301,6 @@ document.addEventListener('DOMContentLoaded', function() {
         iniciarRealtime();
         updateBellCount();
         cargarSliderRangosDesdeDB();
-        // La config debe estar antes de reflejarPlan(): define si los planes
-        // pagos se muestran y qué límites aplican.
-        configApp = await PronetDB.obtenerConfigApp().catch(() => ({}));
         PronetDB.obtenerSuscripcion().then(s => {
           planActual    = s.plan    || 'base';
           periodoActual = s.periodo || 'mensual';

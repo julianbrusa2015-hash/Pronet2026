@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v69'; // v69: superficie de test para specs de planes
+const CACHE_VERSION = 'pronet-v70'; // v70: fix planes pagos visibles para invitados sin sesión
 
 const SHELL = [
   './',
