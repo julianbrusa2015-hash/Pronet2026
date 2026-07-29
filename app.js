@@ -3487,6 +3487,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
   window.togglePlanesPagos = togglePlanesPagos;
 
+  // Superficie de test: funciones puras del sistema de planes, para que los
+  // specs de Playwright puedan verificarlas sin depender del estado de la DB.
+  window._planesAPI = {
+    getPlanConfig,
+    planParaLimites,
+    planesPagosActivos,
+    limitePlan,
+    badgePlanPrestador,
+    planActual:  () => planActual,
+    configApp:   () => ({ ...configApp }),
+  };
+
   /** Aviso de límite alcanzado, con el nombre del plan actual. */
   function avisarLimitePlan(texto) {
     const cfg = getPlanConfig(planActual);
