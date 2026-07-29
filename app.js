@@ -213,6 +213,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     const t = document.getElementById(id);
     if (t) { t.classList.add('active'); }
+    // Ocultar FAB de WhatsApp en pantallas con input de texto (chat)
+    const SIN_FAB = ['s-chat', 's-nueva-propuesta', 's-nuevo-pedido', 's-publicar'];
+    const fab = document.getElementById('wa-fab');
+    if (fab) fab.style.display = SIN_FAB.includes(id) ? 'none' : '';
     document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
     const nb = navMap[id];
     if (nb) { const btn = document.getElementById(nb); if(btn) btn.classList.add('active'); }
