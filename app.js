@@ -5016,9 +5016,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    // Mostrar link de denuncia solo para vecinos con feature activa
+    // Mostrar link de denuncia solo para el vecino del chat con feature activa
     const denLink = document.getElementById('chat-denuncia-link');
-    if (denLink && FEATURES.denuncias && !esPrestador()) denLink.style.display = '';
+    if (denLink && FEATURES.denuncias && soyVecino) denLink.style.display = 'block';
     const show = id => { const el = document.getElementById(id); if (el) el.style.display = 'flex'; };
     const showBlock = id => { const el = document.getElementById(id); if (el) el.style.display = 'block'; };
     switch (estado) {
