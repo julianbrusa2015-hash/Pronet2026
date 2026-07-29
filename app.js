@@ -406,8 +406,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     ptsDisponibles = res.puntos ?? (ptsDisponibles - costo);
-    btn.textContent = '✓ Canjeado';
-    btn.style.background = 'var(--green)';
 
     const toast = document.getElementById('canje-confirm');
     if (toast) {
@@ -415,8 +413,9 @@ document.addEventListener('DOMContentLoaded', function() {
       toast.style.display = 'block';
       setTimeout(() => { toast.style.display = 'none'; }, 2500);
     }
-    const ptsEl = document.querySelector('#s-loyalty .pts-card .pts-item:nth-child(2) .pts-val');
-    if (ptsEl) ptsEl.textContent = ptsDisponibles.toLocaleString('es');
+    // Refresca toda la pantalla (KPIs, nivel, badge, catálogo) para evitar
+    // que solo un campo se actualice y el resto quede desincronizado.
+    await renderLoyaltyScreen();
   }
 
   // ── Tutorial Onboarding ───────────────────────────────────────────────

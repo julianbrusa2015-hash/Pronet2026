@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v57'; // v57: aplicarBeneficio propaga error real + evita lookup perfiles bloqueado por RLS
+const CACHE_VERSION = 'pronet-v58'; // v58: canjear() refresca toda la pantalla en vez de un campo suelto
 
 const SHELL = [
   './',
