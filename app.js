@@ -3180,7 +3180,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function tieneDoblePerfil() {
-    return !!(usuarioActual?.prestador_id);
+    // Solo vecinos que TAMBIÉN tienen un perfil de prestador (no prestadores puros)
+    return !!(usuarioActual?.prestador_id && usuarioActual?.tipo !== 'prestador');
   }
 
   function toggleModoRol() {
