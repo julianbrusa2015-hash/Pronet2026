@@ -2051,7 +2051,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const count = document.getElementById('portfolio-count');
     if (!grid || !prestadorId) return;
     const fotos = await PronetDB.listarPortfolio(prestadorId).catch(() => []);
-    if (count) count.textContent = fotos.length + '/10';
+    const maxFotos = limitePlan('fotos_portfolio');
+    if (count) count.textContent = fotos.length + '/' + (maxFotos == null ? '∞' : maxFotos);
     if (fotos.length === 0) {
       grid.innerHTML = '<div style="padding:16px 0;text-align:center;font-size:12px;color:var(--ink3);grid-column:span 3">Sin fotos aún</div>';
       return;
@@ -2070,7 +2071,11 @@ document.addEventListener('DOMContentLoaded', function() {
     event.target.value = '';
     if (!usuarioActual?.prestador_id) { showToast && showToast('⚠️ No tenés perfil de prestador'); return; }
     const fotos = await PronetDB.listarPortfolio(usuarioActual.prestador_id).catch(() => []);
-    if (fotos.length >= 10) { showToast && showToast('⚠️ Límite de 10 fotos alcanzado'); return; }
+    const maxFotos = limitePlan('fotos_portfolio');
+    if (maxFotos != null && fotos.length >= maxFotos) {
+      avisarLimitePlan('Llegaste al límite de ' + maxFotos + ' fotos de portfolio');
+      return;
+    }
     showToast && showToast('⏳ Subiendo foto...');
     // Resize a 800px antes de subir
     const resized = await resizarImagen(file, PRONET_CONFIG.IMG_PORTFOLIO_PX);
@@ -3396,6 +3401,29 @@ document.addEventListener('DOMContentLoaded', function() {
     return planes.find(p => p.id === (id || planActual)) || planes[0] || {};
   }
 
+  /** Límite del plan activo para un recurso. null = ilimitado. */
+  function limitePlan(campo) {
+    const v = getPlanConfig(planActual)[campo];
+    return v == null ? null : v;
+  }
+
+  /** ¿Le queda cupo de propuestas al prestador este mes?
+   *  Devuelve { ok, usadas, limite }. */
+  async function puedeEnviarPropuesta() {
+    const limite = limitePlan('propuestas_mes');
+    if (limite == null) return { ok: true };
+    const pid = usuarioActual?.prestador_id;
+    if (!pid) return { ok: true };
+    const usadas = await PronetDB.contarPropuestasMes(pid).catch(() => 0);
+    return { ok: usadas < limite, usadas, limite };
+  }
+
+  /** Aviso de límite alcanzado, con el nombre del plan actual. */
+  function avisarLimitePlan(texto) {
+    const cfg = getPlanConfig(planActual);
+    showToast && showToast('⚠️ ' + texto + ' en tu Plan ' + cfg.nombre + '. Mejorá tu plan en Mi Perfil → Suscripción.');
+  }
+
   // Re-verifica el rol admin contra Supabase (no confía en la memoria del cliente).
   // Llaman las funciones que renderizan datos admin antes de mostrar nada.
   async function verificarAdminServidor() {
@@ -3471,7 +3499,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     const serviciosMaxEl = document.getElementById('perfil-servicios-max');
     if (serviciosMaxEl) {
-      serviciosMaxEl.textContent = cfg.propuestas_mes ? cfg.propuestas_mes : 'Ilimitadas';
+      serviciosMaxEl.textContent = cfg.propuestas_mes ? cfg.propuestas_mes : '∞';
+    }
+    const usadasEl = document.getElementById('perfil-propuestas-usadas');
+    if (usadasEl && usuarioActual?.prestador_id) {
+      PronetDB.contarPropuestasMes(usuarioActual.prestador_id)
+        .then(n => { usadasEl.textContent = n; })
+        .catch(() => {});
     }
   }
 
@@ -5527,10 +5561,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const miaEstePedido = mias.find(pr => pr.pedido_id === chat.pedido_id && pr.prestador_id === usuarioActual.prestador_id && pr.estado === 'pendiente');
       if (miaEstePedido) propuestaMia = miaEstePedido;
     } catch(e) {}
-    // Recordar que venimos del chat para transicionar el estado al enviar
-    window._chatOrigenPropuesta = chatActualId;
-    // Abrir el formulario normal de propuesta
-    abrirNuevaPropuesta();
+    // Sólo marcar el origen si el formulario llegó a abrirse: si el plan no
+    // deja enviar más propuestas, una marca colgada transicionaría este chat
+    // al enviar una propuesta de otro pedido.
+    const abierto = await abrirNuevaPropuesta();
+    window._chatOrigenPropuesta = abierto ? chatActualId : null;
   }
 
   /** Prestador marca el trabajo como terminado. */
@@ -6354,6 +6389,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if(completo) { pedidoActual = completo; p = completo; }
       } catch(e) {}
     }
+    // Editar una propuesta existente no consume cupo; sólo las nuevas.
+    const editando=propuestaMia&&(propuestaMia.estado==='pendiente'||propuestaMia.estado==='retirada');
+    if(!editando){
+      const cupo = await puedeEnviarPropuesta();
+      if(!cupo.ok){
+        avisarLimitePlan('Ya enviaste tus ' + cupo.limite + ' propuestas de este mes');
+        return;
+      }
+    }
     const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
     set('np-icono', p.icono || '📋');
     set('nprop-titulo', p.titulo || 'Pedido');
@@ -6365,7 +6409,6 @@ document.addEventListener('DOMContentLoaded', function() {
     set('np-meta','📍 '+(p.zona||'Escobar')+' · '+presupuesto+' · '+(urgMap[p.urgencia]||'Flexible'));
     const refEl=document.getElementById('np-presupuesto-ref');
     if(refEl){const tiene=!!(p.presupuesto_min||p.presupuesto_max);refEl.textContent=tiene?'Presupuesto estimado del cliente: '+presupuesto:'';refEl.style.display=tiene?'':'none';}
-    const editando=propuestaMia&&(propuestaMia.estado==='pendiente'||propuestaMia.estado==='retirada');
     const precio=document.getElementById('np-precio'),mensaje=document.getElementById('np-mensaje');
     document.querySelectorAll('#s-nueva-propuesta .form-opt').forEach(o=>o.classList.remove('on'));
     if(editando){
@@ -6378,6 +6421,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnEnv=document.getElementById('np-enviar');
     if(btnEnv) btnEnv.textContent=editando?'💾 Actualizar propuesta':'📤 Enviar propuesta';
     goTo('s-nueva-propuesta');
+    return true;
   }
 
   function selPlazoNP(el){document.querySelectorAll('#s-nueva-propuesta [data-plazo]').forEach(o=>o.classList.remove('on'));el.classList.add('on');plazoNP=el.dataset.plazo;}

@@ -495,6 +495,22 @@ const PronetDB = (() => {
       return true;
     },
 
+    /** Propuestas que el prestador creó en el mes calendario actual.
+     *  Ante error devuelve 0 (falla abierta): un límite de plan no debe
+     *  bloquear al usuario por una caída transitoria de red. */
+    async contarPropuestasMes(prestadorId) {
+      if (!remoto || !prestadorId) return 0;
+      const inicio = new Date();
+      inicio.setDate(1);
+      inicio.setHours(0, 0, 0, 0);
+      const { count, error } = await sb.from('propuestas')
+        .select('id', { count: 'exact', head: true })
+        .eq('prestador_id', prestadorId)
+        .gte('creado', inicio.toISOString());
+      if (error) { console.warn('[PronetDB] contarPropuestasMes', error.message); return 0; }
+      return count || 0;
+    },
+
     // ── FOTOS DE PORTFOLIO ───────────────────────────────────────────────
 
     /** Lista las fotos del portfolio de un prestador. */
