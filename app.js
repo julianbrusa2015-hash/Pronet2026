@@ -2989,8 +2989,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let ok = true;
     try {
       // 1. Perfil del usuario (nombre + teléfono)
-      const perfilNuevo = await PronetDB.actualizar('perfiles', usuarioActual.id, { nombre, telefono });
-      if (perfilNuevo) { usuarioActual.nombre = nombre; usuarioActual.telefono = telefono; }
+      const perfilCambios = { nombre, telefono };
+      if (fotoPerfilNueva) perfilCambios.foto_url = fotoPerfilNueva;
+      const perfilNuevo = await PronetDB.actualizar('perfiles', usuarioActual.id, perfilCambios);
+      if (perfilNuevo) { usuarioActual.nombre = nombre; usuarioActual.telefono = telefono; if (fotoPerfilNueva) usuarioActual.foto_url = fotoPerfilNueva; }
       // 2. Fila del prestador (si lo es)
       if (usuarioActual.prestador_id) {
         const especialidades = Array.from(document.querySelectorAll('#edit-especialidades .sub-opt.on')).map(e => e.dataset.esp);
@@ -3324,7 +3326,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const homeAv = document.getElementById('home-avatar');
     if (homeAv) homeAv.textContent = inic;
     const pAv = document.getElementById('perfil-avatar');
-    if (pAv) pAv.textContent = inic;
+    if (pAv) {
+      if (usuarioActual.foto_url) {
+        pAv.style.backgroundImage = 'url("' + usuarioActual.foto_url + '")';
+        pAv.style.backgroundSize = 'cover';
+        pAv.style.backgroundPosition = 'center';
+        pAv.textContent = '';
+      } else {
+        pAv.style.backgroundImage = '';
+        pAv.textContent = inic;
+      }
+    }
     const pNom = document.getElementById('perfil-nombre');
     if (pNom) pNom.textContent = nombre;
     const pEmail = document.getElementById('perfil-email');
