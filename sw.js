@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v53'; // v53: fix canjes pendientes no visibles por RLS + error silencioso
+const CACHE_VERSION = 'pronet-v54'; // v54: fix ambigüedad FK loyalty_canjes en accionCanje
 
 const SHELL = [
   './',

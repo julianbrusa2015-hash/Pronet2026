@@ -1637,7 +1637,7 @@ document.addEventListener('DOMContentLoaded', function() {
   async function accionCanje(id, estado) {
     try {
       const { data: sol, error: errSol } = await window._sb.from('loyalty_solicitudes')
-        .select('*, loyalty_canjes(tipo_beneficio, valor_beneficio)').eq('id', id).maybeSingle();
+        .select('*, loyalty_canjes!loyalty_solicitudes_canje_id_fkey(tipo_beneficio, valor_beneficio)').eq('id', id).maybeSingle();
       if (errSol) throw errSol;
 
       const { error } = await window._sb.from('loyalty_solicitudes')
