@@ -797,14 +797,27 @@ document.addEventListener('DOMContentLoaded', function() {
       ).join('');
     }
 
+    // Badge de suspensión en el perfil
+    const suspBadge = document.getElementById('prof-suspendido-badge');
+    if (suspBadge) suspBadge.style.display = p.suspendido ? '' : 'none';
+
     const btn = document.getElementById('prof-contactar');
     if (btn) {
-      const precioTexto = p.precio ? ' · $' + p.precio.toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita') : '';
-      btn.innerHTML = '💬 Contactar' + precioTexto;
-      btn.onclick = () => {
-        if (PronetDB.esRemoto() && p.id) PronetDB.registrarContacto(p.id, 'perfil').catch(() => {});
-        openChat(p.id || 'x');
-      };
+      if (p.suspendido) {
+        btn.innerHTML = '🚫 Cuenta suspendida';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.onclick = null;
+      } else {
+        btn.disabled = false;
+        btn.style.opacity = '';
+        const precioTexto = p.precio ? ' · $' + p.precio.toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita') : '';
+        btn.innerHTML = '💬 Contactar' + precioTexto;
+        btn.onclick = () => {
+          if (PronetDB.esRemoto() && p.id) PronetDB.registrarContacto(p.id, 'perfil').catch(() => {});
+          openChat(p.id || 'x');
+        };
+      }
     }
     // Link denuncia: solo para vecinos logueados, no para el propio prestador ni admin
     const denunciaWrap = document.getElementById('prof-denuncia-wrap');
@@ -914,6 +927,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const badgeVerif = p.verificado
       ? `<svg class="verified-badge" viewBox="0 0 18 20" fill="none"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
     const badgePrem = p.premium ? '<span class="badge b-prem">⭐ Premium</span>' : '';
+    const badgeSusp = p.suspendido ? '<div style="background:#FEE2E2;color:#BE123C;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;margin:6px 0">🚫 Cuenta suspendida</div>' : '';
     const estrellas = Math.round(p.rating || 5);
     const stars = Array(5).fill(0).map((_,i) =>
       `<span class="star${i >= estrellas ? ' e' : ''}">★</span>`).join('');
@@ -936,6 +950,7 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
         </div>
       </div>
+      ${badgeSusp}
       ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
       <div class="c-foot">
         <div class="c-price">$${(p.precio||0).toLocaleString('es-AR')} <span>/ ${p.precio_unidad||'visita'}</span></div>
@@ -1488,7 +1503,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!listaEl) return;
     listaEl.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     try {
-      const { data: todas } = await window._sb.from('denuncias').select('*').order('creado', { ascending: false });
+      const { data: todas } = await window._sb.from('denuncias')
+        .select('*, perfiles!denunciado_id(nombre, prestador_id, prestadores(id, suspendido, denuncias_confirmadas))')
+        .order('creado', { ascending: false });
       const denuncias = todas || [];
       // Stats
       const setPendientes = denuncias.filter(d => d.estado === 'pendiente').length;
@@ -1516,6 +1533,18 @@ document.addEventListener('DOMContentLoaded', function() {
           ? '<div class="badge-revision">⚠️ En revisión</div>'
           : '<div style="background:var(--green-s);color:var(--green);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700">✓ Resuelta</div>';
         const hace = d.creado ? tiempoRelativo(d.creado) : '';
+        const perfil = d.perfiles || {};
+        const prestadorInfo = perfil.prestadores || {};
+        const prestadorId = perfil.prestador_id || prestadorInfo.id || null;
+        const suspendido = !!prestadorInfo.suspendido;
+        const nDenuncias = prestadorInfo.denuncias_confirmadas || 0;
+        const nombreDenunciado = perfil.nombre ? `<span style="font-size:12px;color:var(--ink2)">Denunciado: <b>${escHTML(perfil.nombre)}</b>${nDenuncias > 0 ? ` · ${nDenuncias} denuncia/s confirmada/s` : ''}</span>` : '';
+        const toggleBtnHTML = prestadorId ? `
+          <button class="mod-btn ${suspendido ? 'mod-btn-ok' : 'mod-btn-suspend'}"
+            onclick="toggleSuspensionPrestador('${prestadorId}', ${!suspendido})"
+            style="margin-top:6px;width:100%">
+            ${suspendido ? '✅ Reactivar prestador' : '🚫 Suspender prestador'}
+          </button>` : '';
         const card = document.createElement('div');
         card.className = 'mod-card ' + (clases[d.estado] || '');
         card.innerHTML = `
@@ -1524,14 +1553,16 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="mod-tipo">${escHTML(d.motivo)}</div>
             <div class="mod-time">${escHTML(hace)}</div>
           </div>
-          <div style="display:flex;gap:8px;margin-bottom:8px">${badgeHTML}</div>
+          <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">${badgeHTML}${suspendido ? '<div style="background:#FEE2E2;color:#BE123C;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700">🚫 Suspendido</div>' : ''}</div>
+          ${nombreDenunciado ? `<div style="margin-bottom:6px">${nombreDenunciado}</div>` : ''}
           <div class="mod-desc">${escHTML(d.detalle || 'Sin detalle')}</div>
           ${d.estado !== 'resuelta' ? `
           <div class="mod-actions">
             <button class="mod-btn mod-btn-suspend" onclick="accionDenuncia('${d.id}','resuelta','baja')">Confirmar baja</button>
             <button class="mod-btn mod-btn-info" onclick="accionDenuncia('${d.id}','en_revision','contacto')">Contactar partes</button>
             <button class="mod-btn mod-btn-ok" onclick="accionDenuncia('${d.id}','resuelta','desestimada')">Desestimar</button>
-          </div>` : ''}`;
+          </div>` : ''}
+          ${toggleBtnHTML}`;
         listaEl.appendChild(card);
       });
     } catch (e) {
@@ -1602,19 +1633,38 @@ document.addEventListener('DOMContentLoaded', function() {
   async function accionDenuncia(id, nuevoEstado, tipo) {
     const labels = { baja: 'Baja confirmada', contacto: 'Partes contactadas', desestimada: 'Denuncia desestimada' };
     try {
-      const { error } = await window._sb.from('denuncias').update({ estado: nuevoEstado }).eq('id', id);
-      if (error) throw error;
-      showToast && showToast('✅ ' + (labels[tipo] || 'Actualizado'));
+      if (tipo === 'baja') {
+        // Usa RPC SECURITY DEFINER: marca resuelta + incrementa contador + auto-suspende si >= 3
+        const { data, error } = await window._sb.rpc('confirmar_baja_prestador', { p_denuncia_id: id });
+        if (error) throw error;
+        if (data?.suspendido) {
+          showToast && showToast('🚫 Prestador suspendido automáticamente (3 denuncias confirmadas)', null, true);
+        } else {
+          showToast && showToast('✅ Baja confirmada (' + (data?.denuncias || '?') + ' denuncia/s)');
+        }
+      } else {
+        const { error } = await window._sb.from('denuncias').update({ estado: nuevoEstado }).eq('id', id);
+        if (error) throw error;
+        showToast && showToast('✅ ' + (labels[tipo] || 'Actualizado'));
+      }
       renderModeracion();
-      // Actualizar badge en Mi Perfil si está visible
       cargarBadgeDenuncias && cargarBadgeDenuncias();
     } catch (e) {
-      const esConectividad = e?.message?.includes('Failed to fetch') || e?.message?.includes('NetworkError') || e?.code === 'ERR_INTERNET_DISCONNECTED';
-      if (esConectividad) {
-        showToast && showToast('⚠️ Sin conexión. Intentá de nuevo.');
-      } else {
-        showToast && showToast('❌ Error al actualizar: ' + (e?.message || 'intentá de nuevo'));
-      }
+      const esConectividad = e?.message?.includes('Failed to fetch') || e?.message?.includes('NetworkError');
+      showToast && showToast(esConectividad ? '⚠️ Sin conexión. Intentá de nuevo.' : '❌ Error al actualizar: ' + (e?.message || 'intentá de nuevo'));
+    }
+  }
+
+  async function toggleSuspensionPrestador(prestadorId, suspender) {
+    try {
+      const { data, error } = await window._sb.rpc('admin_toggle_suspension', {
+        p_prestador_id: prestadorId, p_suspendido: suspender
+      });
+      if (error) throw error;
+      showToast && showToast(suspender ? '🚫 Prestador suspendido' : '✅ Prestador reactivado');
+      renderModeracion();
+    } catch (e) {
+      showToast && showToast('❌ Error: ' + (e?.message || 'intentá de nuevo'));
     }
   }
 
