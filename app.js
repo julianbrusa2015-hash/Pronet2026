@@ -5423,6 +5423,9 @@ document.addEventListener('DOMContentLoaded', function() {
         goTo('s-chat');
         document.getElementById('chat-body').innerHTML =
           '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
+        // Mostrar link de denuncia directamente con vecino_id del chat de la lista
+        const denLink = document.getElementById('chat-denuncia-link');
+        if (denLink) denLink.style.display = (c.vecino_id === usuarioActual?.id) ? 'block' : 'none';
         await cargarMensajesChat();
         await actualizarBannersChat(chatActualId);
         if (chatSuscripcion) chatSuscripcion();
