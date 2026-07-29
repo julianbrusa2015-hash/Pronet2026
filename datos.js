@@ -666,32 +666,10 @@ const PronetDB = (() => {
 
     async iniciarConsulta(pedidoId) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
-      const uid = await this.usuarioIdActual();
-      if (!uid) return { ok: false, error: 'Sin sesión' };
-      const { data: perfil } = await sb.from('perfiles').select('prestador_id').eq('id', uid).maybeSingle();
-      if (!perfil?.prestador_id) return { ok: false, error: 'Solo prestadores pueden consultar' };
-      // Verificar si ya existe un chat de este prestador para este pedido
-      const { data: existente } = await sb.from('chats_trabajo')
-        .select('id, estado')
-        .eq('pedido_id', pedidoId)
-        .eq('prestador_id', perfil.prestador_id)
-        .maybeSingle();
-      if (existente) return { ok: true, chat_id: existente.id, estado: existente.estado };
-      // Traer vecino del pedido
-      const { data: pedido } = await sb.from('pedidos').select('usuario_id').eq('id', pedidoId).maybeSingle();
-      if (!pedido) return { ok: false, error: 'Pedido no encontrado' };
-      const { data, error } = await sb.from('chats_trabajo')
-        .insert({
-          pedido_id: pedidoId,
-          propuesta_id: null,
-          vecino_id: pedido.usuario_id,
-          prestador_id: perfil.prestador_id,
-          estado: 'consulta',
-          ultimo_evento_at: new Date().toISOString(),
-        })
-        .select().single();
-      if (error) { console.warn('[PronetDB] iniciarConsulta', error.message); return { ok: false, error: error.message }; }
-      return { ok: true, chat_id: data.id, estado: 'consulta' };
+      // Usa RPC SECURITY DEFINER para evitar el bloqueo de RLS en INSERT
+      const { data, error } = await sb.rpc('iniciar_consulta_prestador', { p_pedido_id: pedidoId });
+      if (error) { console.warn('[PronetDB] iniciarConsulta rpc', error.message); return { ok: false, error: error.message }; }
+      return data || { ok: false, error: 'Respuesta vacía' };
     },
 
     /** Envía la propuesta formal desde el chat de consulta.
