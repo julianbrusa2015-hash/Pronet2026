@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v50'; // v50: loyalty niveles dinámico + ganar-pts por rol
+const CACHE_VERSION = 'pronet-v51'; // v51: 4 planes Base/Plus/Pro/Elite + tabla comparativa en loyalty
 
 const SHELL = [
   './',

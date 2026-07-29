@@ -380,9 +380,11 @@ document.addEventListener('DOMContentLoaded', function() {
   let ptsDisponibles = 3800;
 
   function switchLoyalty(tab) {
-    ['ganar','canjear','niveles','historial'].forEach(t => {
-      document.getElementById('lt-'+t).classList.toggle('on', t===tab);
-      document.getElementById('lv-'+t).style.display = t===tab ? 'block' : 'none';
+    ['ganar','canjear','niveles','planes','historial'].forEach(t => {
+      const ltEl = document.getElementById('lt-'+t);
+      const lvEl = document.getElementById('lv-'+t);
+      if (ltEl) ltEl.classList.toggle('on', t===tab);
+      if (lvEl) lvEl.style.display = t===tab ? 'block' : 'none';
     });
   }
 
@@ -3034,8 +3036,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // SESIÓN Y GATING (Opción C: invitado + registro en puntos de conversión)
   // ══════════════════════════════════════════════════════════════════
   let usuarioActual = null; // null = invitado
-  let planActual    = 'basico'; // 'basico' | 'pro' | 'empresa'
-  let periodoActual = 'mensual'; // 'mensual' | 'anual'
+  let planActual    = 'base'; // 'base' | 'plus' | 'pro' | 'elite'
+  let periodoActual = 'anual'; // 'mensual' | 'anual'
 
   // Acciones que requieren cuenta y su mensaje
   const ACCIONES_PROTEGIDAS = {
@@ -3201,7 +3203,12 @@ document.addEventListener('DOMContentLoaded', function() {
   window.toggleModoRol = toggleModoRol;
 
   function esPro() {
-    return planActual === 'pro' || planActual === 'empresa';
+    return planActual === 'plus' || planActual === 'pro' || planActual === 'elite';
+  }
+
+  function getPlanConfig(id) {
+    const planes = (window.PRONET_CONFIG || {}).PLANES || [];
+    return planes.find(p => p.id === (id || planActual)) || planes[0] || {};
   }
 
   // Re-verifica el rol admin contra Supabase (no confía en la memoria del cliente).
@@ -3217,55 +3224,64 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function reflejarPlan() {
-    const isPro = esPro();
-    const _cfg  = window.PRONET_CONFIG || {};
-    // Pantalla de suscripción: marcar qué plan está activo
-    const btnBasico   = document.getElementById('subs-btn-basico');
-    const badgeBasico = document.getElementById('subs-badge-basico');
-    const btnPro      = document.getElementById('subs-btn-pro');
-    if (badgeBasico) {
-      badgeBasico.textContent = isPro ? 'Gratis · Disponible siempre' : 'Gratis · Plan actual';
-    }
-    if (btnBasico) {
-      btnBasico.className   = isPro ? 'pc-cta ghost' : 'pc-cta active-plan';
-      btnBasico.textContent = isPro ? 'Cambiar a Básico' : '✓ Tu plan actual';
-      btnBasico.onclick     = isPro ? () => showToast('Para cancelar tu suscripción contactá a soporte.') : null;
-    }
-    if (btnPro) {
-      btnPro.className = isPro ? 'pc-cta active-plan' : 'pc-cta primary';
-      btnPro.textContent = isPro ? '⭐ Plan Pro activo' : 'Activar Plan Pro →';
-      btnPro.onclick = isPro ? null : () => abrirCheckout('pro');
-    }
+    const cfg = getPlanConfig(planActual);
+    const ids = ['base','plus','pro','elite'];
+
+    // Pantalla de suscripción: marcar plan activo en cada card
+    ids.forEach(id => {
+      const btn  = document.getElementById('subs-btn-' + id);
+      const card = document.getElementById('subs-card-' + id);
+      if (!btn) return;
+      const esActual = planActual === id;
+      if (esActual) {
+        btn.className   = 'pc-cta active-plan';
+        btn.textContent = '✓ Tu plan actual';
+        btn.onclick     = null;
+        if (id !== 'elite') btn.style.cssText = '';
+        if (card) card.classList.add('current');
+      } else {
+        if (card) card.classList.remove('current');
+        if (id === 'base') {
+          btn.className   = 'pc-cta ghost';
+          btn.textContent = 'Cambiar a Base';
+          btn.onclick     = () => showToast('Para cancelar tu suscripción contactá a soporte.');
+          btn.style.cssText = '';
+        } else {
+          const pCfg = getPlanConfig(id);
+          btn.className   = 'pc-cta primary';
+          if (id === 'elite') btn.style.cssText = 'background:linear-gradient(135deg,#92400E,#D97706);border:none';
+          else btn.style.cssText = '';
+          btn.textContent = 'Activar Plan ' + pCfg.nombre + ' →';
+          btn.onclick     = () => abrirCheckout(id);
+        }
+      }
+    });
+
     // Badge plan en Mi Perfil
     const badgePlan = document.getElementById('perfil-plan-badge');
     if (badgePlan) {
-      badgePlan.textContent = isPro ? '⭐ Plan Pro' : '';
-      badgePlan.style.display = isPro ? 'inline-block' : 'none';
+      badgePlan.textContent   = cfg.emoji + ' Plan ' + cfg.nombre;
+      badgePlan.style.display = planActual !== 'base' ? 'inline-block' : 'none';
     }
-    // Card plan en Mi Perfil — nombre, boost y límite de servicios
+    // Card plan en Mi Perfil — nombre y boost
     const planNombreEl = document.getElementById('perfil-plan-nombre');
     if (planNombreEl) {
-      if (isPro) {
-        const precio = periodoActual === 'anual'
-          ? (_cfg.PRECIO_PRO_ANUAL || '$44.999')
-          : (_cfg.PRECIO_PRO_MES   || '$4.999');
-        const label = periodoActual === 'anual' ? 'Anual' : 'Mensual';
-        planNombreEl.textContent = `Plan Pro ${label} · ${precio} ARS`;
+      if (planActual === 'base') {
+        planNombreEl.textContent = 'Plan Base · Gratis';
       } else {
-        planNombreEl.textContent = 'Plan Básico · Gratis';
+        const precio = periodoActual === 'anual'
+          ? '$' + (cfg.precio_anual || 0).toLocaleString('es-AR')
+          : '$' + (cfg.precio_mes  || 0).toLocaleString('es-AR');
+        planNombreEl.textContent = 'Plan ' + cfg.nombre + ' ' + (periodoActual === 'anual' ? 'Anual' : 'Mensual') + ' · ' + precio + ' ARS';
       }
     }
     const boostTextoEl = document.getElementById('perfil-boost-texto');
     if (boostTextoEl) {
-      boostTextoEl.textContent = isPro
-        ? `boost ×${_cfg.BOOST_PRO || 1.4}`
-        : 'sin boost';
+      boostTextoEl.textContent = cfg.loyalty_boost > 1 ? 'boost ×' + cfg.loyalty_boost : 'sin boost';
     }
     const serviciosMaxEl = document.getElementById('perfil-servicios-max');
     if (serviciosMaxEl) {
-      serviciosMaxEl.textContent = isPro
-        ? (_cfg.SERVICIOS_PRO    || 3)
-        : (_cfg.SERVICIOS_BASICO || 1);
+      serviciosMaxEl.textContent = cfg.propuestas_mes ? cfg.propuestas_mes : 'Ilimitadas';
     }
   }
 
@@ -4845,38 +4861,46 @@ document.addEventListener('DOMContentLoaded', function() {
     d.setMonth(d.getMonth() + meses);
     return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
   }
-  const _cfg = window.PRONET_CONFIG || {};
-  const _boostProSubs    = _cfg.BOOST_PRO     || 1.4;
-  const _serviciosProSubs = _cfg.SERVICIOS_PRO || 3;
-  const prices = {
-    mes:   { amount: _cfg.PRECIO_PRO_MES || '$4.999',   period:'/ mes',  saving:'',                                      desc:'Cancelás cuando quieras.',                                              total:(_cfg.PRECIO_PRO_MES || '$4.999')   + ' ARS', renew: _calcRenew(1),  boost: _boostProSubs, servicios: _serviciosProSubs },
-    anual: { amount: _cfg.PRECIO_PRO_ANUAL || '$44.999', period:'/ año', saving:'Ahorrás ' + (_cfg.AHORRO_PRO_ANUAL || '$15.000'), desc:'Equivale a $3.750 por mes. Cancelás cuando quieras.', total:(_cfg.PRECIO_PRO_ANUAL || '$44.999') + ' ARS', renew: _calcRenew(12), boost: _boostProSubs, servicios: _serviciosProSubs },
-  };
-  let currentBilling = 'anual';
+
+  let currentBilling     = 'anual';
+  let currentCheckoutPlan = 'pro';
 
   function switchBilling(btn, mode) {
     currentBilling = mode;
     document.querySelectorAll('.pt-btn').forEach(b => b.classList.remove('on'));
     btn.classList.add('on');
-    const p = prices[mode];
-    document.getElementById('pro-amount').textContent  = p.amount;
-    document.getElementById('pro-period').textContent  = p.period;
-    document.getElementById('pro-saving').textContent  = p.saving;
-    document.getElementById('pro-saving').style.display = p.saving ? 'inline' : 'none';
-    document.getElementById('pro-desc').textContent    = p.desc;
+    const esAnual = mode === 'anual';
+    const planes  = (window.PRONET_CONFIG || {}).PLANES || [];
+    planes.filter(p => p.id !== 'base').forEach(p => {
+      const precio   = esAnual ? p.precio_anual : p.precio_mes;
+      const amountEl = document.getElementById(p.id + '-amount');
+      const periodEl = document.getElementById(p.id + '-period');
+      const savingEl = document.getElementById(p.id + '-saving');
+      const descEl   = document.getElementById(p.id + '-desc');
+      if (amountEl) amountEl.textContent = '$' + precio.toLocaleString('es-AR');
+      if (periodEl) periodEl.textContent = esAnual ? '/ año' : '/ mes';
+      if (savingEl) { savingEl.textContent = esAnual ? '2 meses gratis' : ''; savingEl.style.display = esAnual ? 'inline' : 'none'; }
+      if (descEl)   descEl.textContent   = esAnual
+        ? 'Equivale a $' + p.precio_mes.toLocaleString('es-AR') + ' por mes. Cancelás cuando quieras.'
+        : 'Cancelás cuando quieras.';
+    });
   }
 
-  function abrirCheckout(plan) {
-    const p = prices[currentBilling];
-    document.getElementById('checkout-sub').textContent   = (currentBilling === 'anual' ? 'Anual' : 'Mensual') + ' · ' + p.total + (p.saving ? ' · ' + p.saving : '');
-    document.getElementById('checkout-total').textContent = p.total;
-    document.getElementById('checkout-renew').textContent = p.renew;
-    const boostEl     = document.getElementById('checkout-boost-val');
-    const serviciosEl = document.getElementById('checkout-servicios-val');
-    if (boostEl)     boostEl.textContent     = '×' + p.boost + ' activado';
-    if (serviciosEl) serviciosEl.textContent = p.servicios + ' publicaciones';
-    const ov = document.getElementById('checkout-overlay');
-    ov.classList.add('show');
+  function abrirCheckout(planId) {
+    currentCheckoutPlan = planId;
+    const cfg    = getPlanConfig(planId);
+    const esAnual = currentBilling === 'anual';
+    const precio  = esAnual ? cfg.precio_anual : cfg.precio_mes;
+    const total   = '$' + precio.toLocaleString('es-AR') + ' ARS';
+    const setT = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setT('checkout-title',        'Activar Plan ' + cfg.nombre);
+    setT('checkout-sub',          (esAnual ? 'Anual' : 'Mensual') + ' · ' + total + (esAnual ? ' · 2 meses gratis' : ''));
+    setT('checkout-plan-label',   cfg.nombre + ' ' + (esAnual ? 'Anual' : 'Mensual'));
+    setT('checkout-boost-val',    '×' + cfg.loyalty_boost + ' activado');
+    setT('checkout-propuestas-val', cfg.propuestas_mes ? cfg.propuestas_mes + '/mes' : 'Ilimitadas');
+    setT('checkout-renew',        _calcRenew(esAnual ? 12 : 1));
+    setT('checkout-total',        total);
+    document.getElementById('checkout-overlay').classList.add('show');
   }
 
   function cerrarCheckout(e) {
@@ -4891,18 +4915,21 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function confirmarPago() {
-    // Feedback visual inmediato en el botón para que no parezca que no respondió
     const btnConfirmar = document.querySelector('#checkout-overlay .btn-p');
     if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Activando…'; }
 
-    // Actualizar estado en memoria inmediatamente (sin esperar a Supabase)
-    planActual    = 'pro';
+    planActual    = currentCheckoutPlan;
     periodoActual = currentBilling;
     reflejarPlan();
 
     document.getElementById('checkout-overlay').classList.remove('show');
+    const cfg = getPlanConfig(planActual);
     setTimeout(() => {
       if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Confirmar pago seguro 🔒'; }
+      const titleEl = document.getElementById('subs-success-title');
+      const subEl   = document.getElementById('subs-success-sub');
+      if (titleEl) titleEl.textContent = '¡Plan ' + cfg.nombre + ' activado!';
+      if (subEl)   subEl.textContent   = 'Tu loyalty boost ×' + cfg.loyalty_boost + ' ya está activo.';
       document.getElementById('subs-success').classList.add('show');
     }, 300);
 

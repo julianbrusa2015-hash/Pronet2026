@@ -77,18 +77,46 @@ Object.assign(window.PRONET_CONFIG, {
   IMG_PORTFOLIO_PX: 800,            // ancho máximo al redimensionar fotos de portfolio
   IMG_TRABAJO_PX: 1024,             // ancho máximo al redimensionar fotos de trabajo terminado
 
-  // Suscripción Plan Pro (actualizar cuando cambien los precios, sin tocar app.js)
-  PRECIO_PRO_MES:   '$4.999',
-  PRECIO_PRO_ANUAL: '$44.999',
-  AHORRO_PRO_ANUAL: '$15.000',
-
-  // Boost de ranking por plan (multiplicador sobre el score base)
-  BOOST_PRO:     1.4,
-  BOOST_EMPRESA: 1.6,
-
-  // Publicaciones máximas de servicios por plan
-  SERVICIOS_BASICO:  1,
-  SERVICIOS_PRO:     3,
+  // Planes de suscripción (4 tiers: Base · Plus · Pro · Elite)
+  // Precios en ARS. Anual = 10 meses (2 meses gratis).
+  PLANES: [
+    {
+      id: 'base', nombre: 'Base', emoji: '🆓',
+      precio_mes: 0, precio_anual: 0,
+      propuestas_mes: 3, fotos_portfolio: 3,
+      badge_label: 'Gratuito',
+      loyalty_boost: 1.0,
+      badge_busqueda: false, desempate: false,
+      estadisticas: false,
+    },
+    {
+      id: 'plus', nombre: 'Plus', emoji: '⚡',
+      precio_mes: 4990, precio_anual: 49900,
+      propuestas_mes: 10, fotos_portfolio: 10,
+      badge_label: 'Plus',
+      loyalty_boost: 1.25,
+      badge_busqueda: false, desempate: false,
+      estadisticas: 'basicas',
+    },
+    {
+      id: 'pro', nombre: 'Pro', emoji: '⭐',
+      precio_mes: 9990, precio_anual: 99900,
+      propuestas_mes: null, fotos_portfolio: 20,
+      badge_label: 'Pro',
+      loyalty_boost: 1.5,
+      badge_busqueda: true, desempate: true,
+      estadisticas: 'completas',
+    },
+    {
+      id: 'elite', nombre: 'Elite', emoji: '💎',
+      precio_mes: 19990, precio_anual: 199900,
+      propuestas_mes: null, fotos_portfolio: null,
+      badge_label: 'Elite',
+      loyalty_boost: 2.0,
+      badge_busqueda: true, desempate: 'primero',
+      estadisticas: 'export',
+    },
+  ],
 
   // Analytics
   CONVERSION_PROMEDIO_ZONAL: 9,        // % de conversión promedio zonal (vistas → contactos)

@@ -1271,12 +1271,12 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
         </div>
         <div style="font-size:32px;margin-bottom:8px">⭐</div>
-        <h2>Potenciá tu perfil</h2>
-        <p>Con el Plan Pro subís más rápido en el ranking<br>y recibís hasta 3× más contactos</p>
+        <h2>Elegí tu plan</h2>
+        <p>Base · Plus · Pro · Elite — empezá gratis y crecé a tu ritmo</p>
         <div class="plan-toggle">
           <button class="pt-btn" onclick="switchBilling(this,'mes')" id="btn-mes">Mensual</button>
           <button class="pt-btn on" onclick="switchBilling(this,'anual')" id="btn-anual">
-            Anual <span class="subs-save">−25%</span>
+            Anual <span class="subs-save">2 meses gratis</span>
           </button>
         </div>
       </div>
@@ -1284,97 +1284,126 @@
       <!-- Plan cards -->
       <div class="plan-cards-wrap">
 
-        <!-- Básico -->
-        <div class="plan-card-full">
+        <!-- Base -->
+        <div class="plan-card-full" id="subs-card-base">
           <div class="pc-header">
-            <div class="pc-badge free" id="subs-badge-basico">Gratis · Plan actual</div>
-            <div class="pc-name">Básico</div>
+            <div class="pc-badge free" id="subs-badge-base">🆓 Plan actual</div>
+            <div class="pc-name">Base</div>
             <div class="pc-price">
               <span class="pc-amount">$0</span>
               <span class="pc-period">/ siempre</span>
             </div>
-            <div class="pc-desc">Para empezar a construir tu reputación en la zona.</div>
+            <div class="pc-desc">Para empezar a construir tu reputación en el barrio.</div>
           </div>
           <div class="pc-divider"></div>
           <div class="boost-bar-wrap" style="padding-top:12px">
-            <div class="boost-label"><span>Boost de ranking</span><span>×1.0 (sin boost)</span></div>
+            <div class="boost-label"><span>Loyalty boost</span><span style="color:var(--ink3)">×1.0 (sin boost)</span></div>
+            <div class="boost-track"><div class="boost-fill" style="width:0%"></div></div>
+          </div>
+          <div class="pc-features">
+            <div class="pc-feat"><span class="fi">✓</span><span><strong>3 propuestas</strong> por mes</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span><strong>3 fotos</strong> de portfolio</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Chat con clientes</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Soporte por WhatsApp</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Badge <strong>Gratuito</strong> en perfil</span></div>
+            <div class="pc-feat"><span class="fi fx">✗</span><span style="color:var(--ink3)">Sin estadísticas</span></div>
+          </div>
+          <button class="pc-cta active-plan" id="subs-btn-base">✓ Tu plan actual</button>
+        </div>
+
+        <!-- Plus -->
+        <div class="plan-card-full" id="subs-card-plus">
+          <div class="pc-header">
+            <div class="pc-badge" style="background:#EFF6FF;color:#1D4ED8" id="subs-badge-plus">⚡ Plus</div>
+            <div class="pc-name">Plus</div>
+            <div class="pc-price">
+              <span class="pc-amount" id="plus-amount">$49.900</span>
+              <span class="pc-period" id="plus-period">/ año</span>
+              <span class="pc-saving" id="plus-saving">2 meses gratis</span>
+            </div>
+            <div class="pc-desc" id="plus-desc">Equivale a $4.990 por mes. Cancelás cuando quieras.</div>
+          </div>
+          <div class="pc-divider"></div>
+          <div class="boost-bar-wrap" style="padding-top:12px">
+            <div class="boost-label"><span>Loyalty boost</span><span style="color:#1D4ED8">×1.25 activo</span></div>
             <div class="boost-track"><div class="boost-fill" style="width:25%"></div></div>
           </div>
           <div class="pc-features">
-            <div class="pc-feat"><span class="fi">✓</span><span>1 servicio publicado</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Zona de cobertura definida</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Modo disponible en tiempo real</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span><strong>10 propuestas</strong> por mes</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span><strong>10 fotos</strong> de portfolio</span></div>
             <div class="pc-feat"><span class="fi">✓</span><span>Chat con clientes</span></div>
-            <div class="pc-feat"><span class="fi fx">✗</span><span style="color:var(--ink3)">Sin badge Premium</span></div>
-            <div class="pc-feat"><span class="fi fx">✗</span><span style="color:var(--ink3)">Sin estadísticas de visibilidad</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Soporte por WhatsApp</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Badge <strong>Plus</strong> en perfil</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas básicas <em style="color:var(--ink3)">(próx.)</em></span></div>
           </div>
-          <button class="pc-cta active-plan" id="subs-btn-basico">✓ Tu plan actual</button>
+          <button class="pc-cta primary" id="subs-btn-plus" onclick="abrirCheckout('plus')">Activar Plan Plus →</button>
         </div>
 
         <!-- Pro — destacado -->
-        <div class="plan-card-full recommended">
+        <div class="plan-card-full recommended" id="subs-card-pro">
           <div class="pc-header">
-            <div class="pc-badge rec">⭐ Más popular · Recomendado</div>
+            <div class="pc-badge rec" id="subs-badge-pro">⭐ Más popular · Recomendado</div>
             <div class="pc-name">Pro</div>
-            <div class="pc-price" id="pro-price">
-              <span class="pc-amount" id="pro-amount">$44.999</span>
+            <div class="pc-price">
+              <span class="pc-amount" id="pro-amount">$99.900</span>
               <span class="pc-period" id="pro-period">/ año</span>
-              <span class="pc-saving" id="pro-saving">Ahorrás $15.000</span>
+              <span class="pc-saving" id="pro-saving">2 meses gratis</span>
             </div>
-            <div class="pc-desc" id="pro-desc">Equivale a $3.750 por mes. Cancelás cuando quieras.</div>
+            <div class="pc-desc" id="pro-desc">Equivale a $9.990 por mes. Cancelás cuando quieras.</div>
           </div>
           <div class="pc-divider"></div>
           <div class="boost-bar-wrap" style="padding-top:12px">
-            <div class="boost-label"><span>Boost de ranking</span><span style="color:var(--blue)">×1.4 activo</span></div>
-            <div class="boost-track"><div class="boost-fill" style="width:70%"></div></div>
+            <div class="boost-label"><span>Loyalty boost</span><span style="color:var(--blue)">×1.5 activo</span></div>
+            <div class="boost-track"><div class="boost-fill" style="width:50%"></div></div>
           </div>
           <div class="pc-features">
-            <div class="pc-feat"><span class="fi">✓</span><span><strong>3 servicios</strong> publicados</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span><strong>Boost ×1.4</strong> en el ranking zonal</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span><strong>Badge ⭐ Premium</strong> visible en el feed</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span><strong>Estadísticas</strong> de visibilidad y contactos</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Modo disponible + zona + chat</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Soporte prioritario por WhatsApp</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span><strong>Propuestas ilimitadas</strong></span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span><strong>20 fotos</strong> de portfolio</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Badge <strong>⭐ Pro</strong> + desempate en ranking</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Chat + WhatsApp soporte</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas completas <em style="color:var(--ink3)">(próx.)</em></span></div>
           </div>
           <button class="pc-cta primary" id="subs-btn-pro" onclick="abrirCheckout('pro')">Activar Plan Pro →</button>
         </div>
 
-        <!-- Empresa -->
-        <div class="plan-card-full">
+        <!-- Elite -->
+        <div class="plan-card-full" id="subs-card-elite">
           <div class="pc-header">
-            <div class="pc-badge biz">🏢 Para empresas y consorcios</div>
-            <div class="pc-name">Empresa</div>
+            <div class="pc-badge biz" id="subs-badge-elite">💎 Elite</div>
+            <div class="pc-name">Elite</div>
             <div class="pc-price">
-              <span class="pc-amount">A convenir</span>
+              <span class="pc-amount" id="elite-amount">$199.900</span>
+              <span class="pc-period" id="elite-period">/ año</span>
+              <span class="pc-saving" id="elite-saving">2 meses gratis</span>
             </div>
-            <div class="pc-desc">Para empresas con múltiples prestadores o consorcios que necesitan contratar servicios frecuentemente.</div>
+            <div class="pc-desc" id="elite-desc">Equivale a $19.990 por mes. Cancelás cuando quieras.</div>
           </div>
           <div class="pc-divider"></div>
           <div class="boost-bar-wrap" style="padding-top:12px">
-            <div class="boost-label"><span>Boost de ranking</span><span style="color:var(--gold)">×1.6 máximo</span></div>
+            <div class="boost-label"><span>Loyalty boost</span><span style="color:#92400E">×2.0 máximo</span></div>
             <div class="boost-track"><div class="boost-fill" style="width:100%;background:linear-gradient(90deg,var(--gold),#F59E0B)"></div></div>
           </div>
           <div class="pc-features">
-            <div class="pc-feat"><span class="fi">✓</span><span><strong>Perfiles múltiples</strong> de prestadores</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span><strong>Panel corporativo</strong> de gestión</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span><strong>Boost ×1.6</strong> en el ranking</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Reporte mensual de actividad</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Soporte dedicado 24/7</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span><strong>Propuestas ilimitadas</strong></span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span><strong>Fotos ilimitadas</strong> de portfolio</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Badge <strong>💎 Elite</strong> + primero en ranking</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Chat + WhatsApp soporte</span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas + exportar <em style="color:var(--ink3)">(próx.)</em></span></div>
           </div>
-          <button class="pc-cta ghost" onclick="">Contactar por WhatsApp →</button>
+          <button class="pc-cta primary" id="subs-btn-elite" onclick="abrirCheckout('elite')" style="background:linear-gradient(135deg,#92400E,#D97706);border:none">Activar Plan Elite →</button>
         </div>
 
       </div>
 
-      <!-- Comparativa rápida -->
+      <!-- Por qué subir de plan -->
       <div style="margin:20px 14px 0;background:white;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">¿Vale la pena el Pro?</div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">💡 ¿Vale la pena subir de plan?</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink2)">
-            <span style="font-size:16px">📈</span>Los prestadores Pro reciben en promedio <strong style="color:var(--blue)">3× más contactos</strong> que los orgánicos
+            <span style="font-size:16px">📈</span>Más propuestas = más chances de cerrar trabajos cada mes
           </div>
           <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink2)">
-            <span style="font-size:16px">🏆</span>El badge Premium genera <strong style="color:var(--blue)">+42% de confianza</strong> en los clientes según nuestros datos
+            <span style="font-size:16px">⭐</span>El loyalty boost Pro/Elite acumula puntos más rápido y desbloquea canjes exclusivos
           </div>
           <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink2)">
             <span style="font-size:16px">💰</span>Con 1 trabajo extra por mes ya cubrís el costo del plan anual
@@ -1409,14 +1438,14 @@
       <div class="checkout-overlay" id="checkout-overlay" onclick="cerrarCheckout(event)">
         <div class="checkout-sheet">
           <div class="checkout-handle"></div>
-          <div class="checkout-title">Activar Plan Pro</div>
-          <div class="checkout-sub" id="checkout-sub">Anual · $44.999 ARS · Ahorrás $15.000</div>
+          <div class="checkout-title" id="checkout-title">Activar Plan Pro</div>
+          <div class="checkout-sub" id="checkout-sub">Anual · $99.900 ARS · 2 meses gratis</div>
 
-          <div class="checkout-row"><span>Plan</span><span>Pro Anual</span></div>
-          <div class="checkout-row"><span>Boost</span><span id="checkout-boost-val" style="color:var(--blue)">×1.4 activado</span></div>
-          <div class="checkout-row"><span>Servicios</span><span id="checkout-servicios-val">3 publicaciones</span></div>
+          <div class="checkout-row"><span>Plan</span><span id="checkout-plan-label">Pro Anual</span></div>
+          <div class="checkout-row"><span>Loyalty boost</span><span id="checkout-boost-val" style="color:var(--blue)">×1.5 activado</span></div>
+          <div class="checkout-row"><span>Propuestas/mes</span><span id="checkout-propuestas-val">Ilimitadas</span></div>
           <div class="checkout-row"><span>Renovación</span><span id="checkout-renew">5 jul 2027</span></div>
-          <div class="checkout-row"><span>Total</span><span id="checkout-total">$44.999 ARS</span></div>
+          <div class="checkout-row"><span>Total</span><span id="checkout-total">$99.900 ARS</span></div>
 
           <div style="font-size:12px;font-weight:600;color:var(--ink2);margin:14px 0 8px">Método de pago</div>
           <div class="checkout-methods">
@@ -1438,8 +1467,8 @@
       <!-- Éxito pago -->
       <div class="rev-success" id="subs-success" style="z-index:90">
         <div class="rev-success-icon">🎉</div>
-        <div class="rev-success-title">¡Plan Pro activado!</div>
-        <div class="rev-success-sub">Tu boost ×1.4 ya está activo. Vas a notar más visitas y contactos en las próximas horas.</div>
+        <div class="rev-success-title" id="subs-success-title">¡Plan Pro activado!</div>
+        <div class="rev-success-sub" id="subs-success-sub">Tu boost ×1.5 ya está activo. Vas a notar más visitas y contactos en las próximas horas.</div>
         <div class="rev-impact">
           <div class="ri-row"><div class="ri-icon">⭐</div><div class="ri-txt">Badge <strong>Premium</strong> visible en el feed</div></div>
           <div class="ri-row"><div class="ri-icon">🏆</div><div class="ri-txt">Boost <strong>×1.4</strong> en tu ranking zonal activo</div></div>
@@ -3184,6 +3213,7 @@
       <div class="lt on" id="lt-ganar" onclick="switchLoyalty('ganar')" style="white-space:nowrap">Ganar pts</div>
       <div class="lt" id="lt-canjear" onclick="switchLoyalty('canjear')">Canjear</div>
       <div class="lt" id="lt-niveles" onclick="switchLoyalty('niveles')">Niveles</div>
+      <div class="lt" id="lt-planes" onclick="switchLoyalty('planes')">Planes</div>
       <div class="lt" id="lt-historial" onclick="switchLoyalty('historial')">Historial</div>
     </div>
 
@@ -3333,6 +3363,67 @@
         </div>
       </div>
 
+      <div style="height:16px"></div>
+    </div>
+
+    <!-- ── PLANES ── -->
+    <div id="lv-planes" style="display:none;padding:14px 0">
+      <div style="padding:0 14px 10px;font-size:13px;color:var(--ink2);line-height:1.6">
+        Tu loyalty boost depende de tu plan. Subir de plan acumula puntos más rápido y desbloquea canjes exclusivos.
+      </div>
+      <div style="overflow-x:auto;padding:0 14px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:340px">
+          <thead>
+            <tr style="background:var(--surface)">
+              <th style="padding:10px 8px;text-align:left;font-weight:700;color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.5px">Feature</th>
+              <th style="padding:10px 6px;text-align:center;color:var(--ink3)">Base</th>
+              <th style="padding:10px 6px;text-align:center;color:#1D4ED8">Plus</th>
+              <th style="padding:10px 6px;text-align:center;color:var(--blue)">Pro</th>
+              <th style="padding:10px 6px;text-align:center;color:#92400E">Elite</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:10px 8px;color:var(--ink2)">Propuestas/mes</td>
+              <td style="padding:10px 6px;text-align:center;color:var(--ink3)">3</td>
+              <td style="padding:10px 6px;text-align:center">10</td>
+              <td style="padding:10px 6px;text-align:center">∞</td>
+              <td style="padding:10px 6px;text-align:center">∞</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border);background:var(--surface2,var(--surface))">
+              <td style="padding:10px 8px;color:var(--ink2)">Fotos portfolio</td>
+              <td style="padding:10px 6px;text-align:center;color:var(--ink3)">3</td>
+              <td style="padding:10px 6px;text-align:center">10</td>
+              <td style="padding:10px 6px;text-align:center">20</td>
+              <td style="padding:10px 6px;text-align:center">∞</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:10px 8px;color:var(--ink2)">Loyalty boost</td>
+              <td style="padding:10px 6px;text-align:center;color:var(--ink3)">×1.0</td>
+              <td style="padding:10px 6px;text-align:center;color:#1D4ED8;font-weight:700">×1.25</td>
+              <td style="padding:10px 6px;text-align:center;color:var(--blue);font-weight:700">×1.5</td>
+              <td style="padding:10px 6px;text-align:center;color:#92400E;font-weight:700">×2.0</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border);background:var(--surface2,var(--surface))">
+              <td style="padding:10px 8px;color:var(--ink2)">Badge en ranking</td>
+              <td style="padding:10px 6px;text-align:center;color:var(--ink3)">—</td>
+              <td style="padding:10px 6px;text-align:center;color:var(--ink3)">—</td>
+              <td style="padding:10px 6px;text-align:center">⭐</td>
+              <td style="padding:10px 6px;text-align:center">💎 primero</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:10px 8px;color:var(--ink2)">Estadísticas</td>
+              <td style="padding:10px 6px;text-align:center;color:var(--ink3)">—</td>
+              <td style="padding:10px 6px;text-align:center;font-size:11px">Básicas</td>
+              <td style="padding:10px 6px;text-align:center;font-size:11px">Completas</td>
+              <td style="padding:10px 6px;text-align:center;font-size:11px">+ Export</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin:14px 14px 0">
+        <button onclick="goTo('s-subs')" style="width:100%;background:var(--blue);color:white;border:none;border-radius:14px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">Ver planes y precios →</button>
+      </div>
       <div style="height:16px"></div>
     </div>
 
