@@ -2686,7 +2686,7 @@ document.addEventListener('DOMContentLoaded', function() {
     bolsaTrabajo:       { label: 'Bolsa de trabajo',    grupo: 'Nivel 1' },
     tutorialOnboarding: { label: 'Tutorial onboarding', grupo: 'Nivel 1' },
     badgeVerificado:    { label: 'Badge verificado',    grupo: 'Nivel 2' },
-    suscripcionPro:     { label: 'Suscripción Pro',     grupo: 'Nivel 2' },
+    suscripcionPro:     { label: 'Planes y suscripción', grupo: 'Nivel 2' },
     catalogoPrecios:    { label: 'Catálogo de precios', grupo: 'Nivel 2' },
     editarPerfilPro:    { label: 'Editar perfil pro',   grupo: 'Nivel 2' },
     denuncias:          { label: 'Denuncias',           grupo: 'Nivel 2' },
@@ -3518,9 +3518,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     const avisoPre = document.getElementById('subs-aviso-prelanzamiento');
     if (avisoPre) avisoPre.style.display = pagosOn ? 'none' : '';
-    document.querySelectorAll('[data-feature="suscripcionPro"]').forEach(el => {
-      if (!pagosOn) el.style.display = 'none';
-    });
+    // Los accesos a Suscripción se ocultan por clase en <body>, NO tocando los
+    // elementos [data-feature] directamente: aplicarFeatureFlags() les reescribe
+    // el display y el último en correr ganaba, haciendo reaparecer el menú.
+    document.body.classList.toggle('planes-pagos-off', !pagosOn);
 
     // Pantalla de suscripción: marcar plan activo en cada card
     ids.forEach(id => {

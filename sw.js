@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v67'; // v67: interruptor admin de planes pagos (etapa fundadora)
+const CACHE_VERSION = 'pronet-v68'; // v68: fix conflicto entre flag suscripcionPro y config planes_pagos_activos
 
 const SHELL = [
   './',

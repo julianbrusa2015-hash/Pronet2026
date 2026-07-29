@@ -394,6 +394,13 @@
   body.feature-badgeVerificado-off .b-verified {
     display: none !important;
   }
+  /* Etapa fundadora: planes pagos desactivados desde config_app.
+     Se oculta por clase en <body> para no pelear con aplicarFeatureFlags(),
+     que reescribe el display de todo [data-feature]. */
+  body.planes-pagos-off [data-feature="suscripcionPro"] {
+    display: none !important;
+  }
+
   body.feature-suscripcionPro-off .b-prem,
   body.feature-suscripcionPro-off .pro-lock,
   body.feature-suscripcionPro-off .pro-lock-overlay {
