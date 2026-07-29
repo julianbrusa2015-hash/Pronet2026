@@ -35,11 +35,14 @@
 <!-- FIX fuentes: cargadas vía <link> (el @import dentro del <style> era inválido y se ignoraba) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preload" href="app.js" as="script">
+<link rel="preload" href="datos.js" as="script">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap">
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="config.js" defer></script>
 </head>
 <body>
 
@@ -3778,7 +3781,7 @@
 
 
 
-<script src="datos.js"></script>
-<script src="app.js"></script>
+<script src="datos.js" defer></script>
+<script src="app.js" defer></script>
 </body>
 </html>
