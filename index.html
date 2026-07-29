@@ -958,14 +958,14 @@
         <button onclick="abrirModalCancelar()" style="background:none;border:none;color:var(--red);font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline">Cancelar trabajo</button>
       </div>
 
-      <!-- Link denuncia desde chat (solo vecinos) -->
-      <div id="chat-denuncia-link" style="display:none;padding:6px 16px 8px;text-align:center;flex-shrink:0;border-top:1px solid var(--border)">
-        <span onclick="goTo('s-denuncia')" style="font-size:11px;color:var(--ink3);cursor:pointer;text-decoration:underline">⚑ Hacer una denuncia sobre este prestador</span>
-      </div>
-
       <!-- Banner: chat cerrado genérico -->
       <div id="chat-cerrado-banner" style="display:none;background:var(--surface2);border-top:1px solid var(--border);padding:10px 16px;text-align:center;font-size:12px;color:var(--ink3);flex-shrink:0">
         🔒 Este chat está cerrado. El trabajo fue completado.
+      </div>
+
+      <!-- Link denuncia desde chat (solo vecinos) -->
+      <div id="chat-denuncia-link" style="display:none;padding:8px 16px 10px;text-align:center;flex-shrink:0;border-top:1px solid var(--border);background:var(--surface2)">
+        <span onclick="goTo('s-denuncia')" style="font-size:12px;color:var(--red,#DC2626);cursor:pointer;font-weight:500">⚑ Hacer una denuncia sobre este prestador</span>
       </div>
 
       <!-- Banner: propuesta rechazada (vecino eligió a otro) -->
