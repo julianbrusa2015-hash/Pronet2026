@@ -348,9 +348,9 @@ document.addEventListener('DOMContentLoaded', function() {
         : `<div class="rank-num" style="background:var(--surface);color:var(--ink3);font-size:13px;font-weight:700">${i+1}</div>`;
       const estrellas = Math.round(p.rating || 5);
       const stars = Array(5).fill(0).map((_,j) => `<span class="star${j >= estrellas ? ' e' : ''}" style="font-size:10px">★</span>`).join('');
-      const badge = p.premium
-        ? '<span style="font-size:10px;color:#B86A00;font-weight:700">⭐ Premium</span>'
-        : (p.verificado ? '<span style="font-size:10px;color:#047857;font-weight:700">✓ Verif.</span>' : '');
+      const badge = badgePlanPrestador(p.plan)
+        || (p.premium ? '<span style="font-size:10px;color:#B86A00;font-weight:700">⭐ Premium</span>'
+        : (p.verificado ? '<span style="font-size:10px;color:#047857;font-weight:700">✓ Verif.</span>' : ''));
       item.innerHTML = `
         ${numHTML}
         <div class="rank-av" style="background:${escHTML(p.color_bg||'#EEF2FF')};color:${escHTML(p.color_text||'#2B5BFF')}">${avatarInner(p)}</div>
@@ -938,7 +938,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const badgeVerif = p.verificado
       ? `<svg class="verified-badge" viewBox="0 0 18 20" fill="none"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
-    const badgePrem = p.premium ? '<span class="badge b-prem">⭐ Premium</span>' : '';
+    // El badge de plan reemplaza al de "Premium" (campo legacy); si el
+    // prestador no tiene un plan con badge, cae al premium viejo.
+    const badgePrem = badgePlanPrestador(p.plan) || (p.premium ? '<span class="badge b-prem">⭐ Premium</span>' : '');
     const badgeSusp = p.suspendido ? '<div style="background:#FEE2E2;color:#BE123C;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;margin:6px 0">🚫 Cuenta suspendida</div>' : '';
     const estrellas = Math.round(p.rating || 5);
     const stars = Array(5).fill(0).map((_,i) =>
@@ -3403,6 +3405,18 @@ document.addEventListener('DOMContentLoaded', function() {
   function getPlanConfig(id) {
     const planes = (window.PRONET_CONFIG || {}).PLANES || [];
     return planes.find(p => p.id === (id || planActual)) || planes[0] || {};
+  }
+
+  /** Badge del plan de un prestador para las cards de búsqueda.
+   *  Sólo los planes con badge_busqueda lo muestran (hoy Pro y Elite).
+   *  Recibe el plan del prestador, no el del usuario que mira. */
+  function badgePlanPrestador(plan) {
+    if (!plan) return '';
+    const planes = (window.PRONET_CONFIG || {}).PLANES || [];
+    const cfg = planes.find(p => p.id === plan);
+    if (!cfg || !cfg.badge_busqueda) return '';
+    const clase = plan === 'elite' ? 'b-elite' : 'b-pro';
+    return `<span class="badge ${clase}">${cfg.emoji} ${escHTML(cfg.badge_label)}</span>`;
   }
 
   /** Límite del plan activo para un recurso. null = ilimitado. */

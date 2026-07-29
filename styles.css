@@ -365,6 +365,9 @@
   }
   .b-prem { background: var(--gold-s); color: #B86A00; }
   .b-org  { background: var(--green-s); color: #047857; }
+  /* Badges de plan en cards de búsqueda — sólo planes con badge_busqueda */
+  .b-pro   { background: #EEF2FF; color: #3730A3; }
+  .b-elite { background: linear-gradient(135deg,#FEF3C7,#FDE68A); color: #92400E; }
 
   /* Badge verificado — escudo */
   .verified-badge {

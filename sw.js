@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v65'; // v65: fix boton publicar pedido visible para prestadores en s-pedidos
+const CACHE_VERSION = 'pronet-v66'; // v66: badge de plan Pro/Elite en cards de búsqueda y ranking
 
 const SHELL = [
   './',
