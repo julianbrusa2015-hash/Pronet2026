@@ -3155,6 +3155,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ocultar secciones exclusivas de prestador si no tiene prestador_id
     const tienePrestadorId = !!(usuarioActual && usuarioActual.prestador_id);
     document.querySelectorAll('[data-solo-prestador="true"]').forEach(el => {
+      const feat = el.dataset.feature;
+      if (feat && !FEATURES[feat]) return; // deja que aplicarFeatureFlags controle este elemento
       el.style.display = tienePrestadorId ? '' : 'none';
     });
     // Con CSS grid 2x2, el Catálogo Admin ocupa su celda cuando está visible
@@ -3180,11 +3182,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const tipo = admin ? 'Administrador' : (esPrestador() ? 'Prestador' : 'Cliente');
     const zona = usuarioActual.zona || 'Escobar';
 
-    // Ocultar PRONET Points para admin (solo es para prestadores)
+    // Ocultar PRONET Points para admin o si el feature está desactivado
     const loyaltyTile = document.querySelector('[data-feature="loyalty"]');
-    if (loyaltyTile) loyaltyTile.style.display = esAdmin() ? 'none' : '';
+    if (loyaltyTile) loyaltyTile.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
     const loyaltyMenu = document.querySelector('.menu-item[data-feature="loyalty"]');
-    if (loyaltyMenu) loyaltyMenu.style.display = esAdmin() ? 'none' : '';
+    if (loyaltyMenu) loyaltyMenu.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
 
     // Para admin: botón Pedidos del nav lleva al Panel de Moderación
     const nbPedidos = document.getElementById('nb-pedidos');
@@ -6391,7 +6393,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function abrirCobertura(){goTo('s-publicar');pubNext(3);}
   async function abrirMisResenas(){
     if(!usuarioActual||!usuarioActual.prestador_id){alert('Tu perfil de prestador no está completo todavía.');return;}
-    try{const prestadores=await PronetDB.listarPrestadores({});const yo=prestadores.find(p=>p.id===usuarioActual.prestador_id);if(yo)abrirPerfilPrestador(yo);else alert('No se encontró tu perfil.');}catch(e){alert('No se pudo cargar tu perfil.');}
+    try{const yo=await PronetDB.obtener('prestadores',usuarioActual.prestador_id);if(yo)abrirPerfilPrestador(yo);else alert('No se encontró tu perfil.');}catch(e){alert('No se pudo cargar tu perfil.');}
   }
   async function abrirMisPropuestas(){
     if(!usuarioActual||!usuarioActual.prestador_id){alert('Tu perfil de prestador no está completo todavía.');return;}
