@@ -3171,9 +3171,25 @@ document.addEventListener('DOMContentLoaded', function() {
     return usuarioActual?.roles?.includes('admin') === true;
   }
 
+  // modoRol: null = auto-detect, 'vecino' = forzar modo vecino aunque tenga prestador_id
+  let modoRol = localStorage.getItem('pronet-modo-rol') || null;
+
   function esPrestador() {
+    if (modoRol === 'vecino') return false;
     return !!(usuarioActual?.tipo === 'prestador' || usuarioActual?.prestador_id);
   }
+
+  function tieneDoblePerfil() {
+    return !!(usuarioActual?.prestador_id);
+  }
+
+  function toggleModoRol() {
+    modoRol = modoRol === 'vecino' ? null : 'vecino';
+    localStorage.setItem('pronet-modo-rol', modoRol || '');
+    reflejarUsuario();
+    goTo('s-home');
+  }
+  window.toggleModoRol = toggleModoRol;
 
   function esPro() {
     return planActual === 'pro' || planActual === 'empresa';
@@ -3354,6 +3370,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const pSub = document.getElementById('perfil-sub');
     if (pSub) pSub.textContent = zona + ' · ' + tipo;
 
+    // ── Toggle doble perfil ──
+    const toggleCard = document.getElementById('doble-perfil-toggle');
+    if (toggleCard) {
+      toggleCard.style.display = tieneDoblePerfil() ? '' : 'none';
+      const lbl = document.getElementById('modo-actual-lbl');
+      const btn = document.getElementById('modo-cambiar-btn');
+      if (lbl) lbl.textContent = modoRol === 'vecino' ? 'Vecino' : 'Prestador';
+      if (btn) btn.textContent = modoRol === 'vecino' ? 'Cambiar a Prestador →' : 'Cambiar a Vecino →';
+    }
     // ── DINÁMICO: badge de mensajes no leídos ──
     cargarBadgeMensajes();
     // ── DINÁMICO: PRONET Points ──

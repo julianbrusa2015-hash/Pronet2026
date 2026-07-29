@@ -609,6 +609,15 @@
         </label>
       </div>
 
+      <!-- Toggle doble perfil: visible solo si tiene prestador_id -->
+      <div id="doble-perfil-toggle" style="display:none;margin:10px 14px 0;background:var(--surface);border-radius:14px;padding:14px;display:none;align-items:center;justify-content:space-between;gap:10px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink)">Modo actual: <span id="modo-actual-lbl">Prestador</span></div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">Tenés perfil de vecino y prestador</div>
+        </div>
+        <button id="modo-cambiar-btn" onclick="toggleModoRol()" style="background:var(--blue);color:white;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap">Cambiar a Vecino →</button>
+      </div>
+
       <!-- Acceso rápido Admin — visible sin scrollear -->
       <div data-solo-prestador="true" style="padding:14px 14px 0;display:flex;gap:8px;flex-wrap:wrap">
         <div data-feature="loyalty" onclick="goTo('s-loyalty')" style="flex:1;min-width:calc(50% - 4px);background:linear-gradient(135deg,#4A0080,#9B59B6);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:8px">
