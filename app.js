@@ -3308,7 +3308,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
-    // Sincronizar el toggle de disponibilidad con el estado real de la BD
+    // Sincronizar el toggle de disponibilidad y la foto de perfil desde prestadores
     if (usuarioActual.prestador_id) {
       PronetDB.obtener('prestadores', usuarioActual.prestador_id).then(p => {
         if (!p) return;
@@ -3320,6 +3320,16 @@ document.addEventListener('DOMContentLoaded', function() {
           ? 'Tu ubicación es visible en el mapa · Activo'
           : 'No aparecés en el mapa de búsqueda · Inactivo';
         if (icon) icon.style.background = p.activo !== false ? '#DCFCE7' : '#F3F4F6';
+        // Reflejar foto de perfil en el avatar de Mi Perfil
+        if (p.foto_url) {
+          const av = document.getElementById('perfil-avatar');
+          if (av) {
+            av.style.backgroundImage = 'url("' + p.foto_url + '")';
+            av.style.backgroundSize = 'cover';
+            av.style.backgroundPosition = 'center';
+            av.textContent = '';
+          }
+        }
       }).catch(() => {});
     }
 
