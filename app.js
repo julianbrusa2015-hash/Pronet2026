@@ -2079,11 +2079,15 @@ document.addEventListener('DOMContentLoaded', function() {
     showToast && showToast('⏳ Subiendo foto...');
     // Resize a 800px antes de subir
     const resized = await resizarImagen(file, PRONET_CONFIG.IMG_PORTFOLIO_PX);
-    const result = await PronetDB.subirFotoPortfolio(usuarioActual.prestador_id, resized).catch(() => null);
+    let result = null, errSubida = null;
+    try { result = await PronetDB.subirFotoPortfolio(usuarioActual.prestador_id, resized); }
+    catch (e) { errSubida = e; }
     if (result) {
       showToast && showToast('✅ Foto agregada');
       cargarPortfolioEdit(usuarioActual.prestador_id);
       cargarPortfolioPerfil(usuarioActual.prestador_id);
+    } else if (String(errSubida?.message || '').includes('limite_portfolio')) {
+      avisarLimitePlan('Llegaste al límite de fotos de portfolio');
     } else {
       showToast && showToast('❌ Error al subir la foto');
     }
@@ -6660,7 +6664,8 @@ document.addEventListener('DOMContentLoaded', function() {
       cargarEstadoPropuesta(pedidoActual, propObj);
     } catch(e) {
       const msg=(e&&e.message)||'';
-      if(msg.includes('duplicate')||msg.includes('23505')) showToast && showToast('⚠️ Ya tenés una propuesta en este pedido.');
+      if(msg.includes('limite_propuestas')) avisarLimitePlan('Alcanzaste tu límite de propuestas de este mes');
+      else if(msg.includes('duplicate')||msg.includes('23505')) showToast && showToast('⚠️ Ya tenés una propuesta en este pedido.');
       else if(msg.includes('row-level security')||msg.includes('policy')) showToast && showToast('⚠️ Este pedido ya no acepta propuestas.');
       else showToast && showToast('⚠️ No se pudo enviar la propuesta. Revisá tu conexión.');
     } finally { if(btn){btn.disabled=false;btn.textContent='📤 Enviar propuesta';} }

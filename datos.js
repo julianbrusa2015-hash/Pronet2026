@@ -55,6 +55,17 @@ const PronetDB = (() => {
     return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
   }
 
+  /** Distingue un rechazo deliberado del servidor (constraint, RLS, trigger de
+   *  negocio) de una falla de transporte. Sólo la segunda justifica el fallback
+   *  local: un dato que el servidor rechazó a propósito nunca va a poder
+   *  sincronizar, y guardarlo en el dispositivo simula un éxito que no ocurrió. */
+  function esRechazoServidor(error) {
+    const code = String(error?.code || '');
+    if (/^(23|42)/.test(code)) return true; // integridad (23xxx) / permisos (42501)
+    const m = String(error?.message || '').toLowerCase();
+    return m.includes('row-level security') || m.includes('violates') || m.includes('limite_');
+  }
+
   // ── API pública (misma firma en ambos modos) ───────────────────────
   return {
     /** true si está conectado a Supabase, false si guarda en el dispositivo */
@@ -79,6 +90,7 @@ const PronetDB = (() => {
           .insert(datos)     // id y creado los genera la base de datos
           .select()
           .single();
+        if (error && esRechazoServidor(error)) throw error;
         if (error) { console.warn('[PronetDB] crear', coleccion, error.message, '→ fallback local'); }
         if (error || !data) {
           // Fallback: guardar localmente si Supabase falla
@@ -532,7 +544,11 @@ const PronetDB = (() => {
       const { data: { publicUrl } } = sb.storage.from('portfolio').getPublicUrl(path);
       const { data, error } = await sb.from('portfolio_fotos')
         .insert({ prestador_id: prestadorId, url: publicUrl, descripcion }).select().maybeSingle();
-      if (error) { console.warn('[PronetDB] portfolio insert', error.message); return null; }
+      if (error) {
+        console.warn('[PronetDB] portfolio insert', error.message);
+        if (esRechazoServidor(error)) throw error; // ej: límite de plan
+        return null;
+      }
       return data;
     },
 
