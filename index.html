@@ -961,6 +961,11 @@
         😔 El vecino eligió a otro prestador para este trabajo.
       </div>
 
+      <!-- Link denuncia desde chat (solo vecinos, solo si FEATURES.denuncias) -->
+      <div id="chat-denuncia-link" data-feature="denuncias" style="display:none;padding:6px 16px 8px;text-align:center;flex-shrink:0">
+        <span onclick="goTo('s-denuncia')" style="font-size:11px;color:var(--ink3);cursor:pointer;text-decoration:underline">⚑ Hacer una denuncia sobre este prestador</span>
+      </div>
+
       <!-- Modal cancelación -->
       <div id="modal-cancelar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;align-items:flex-end;justify-content:center">
         <div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto">

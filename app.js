@@ -5012,10 +5012,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ocultar todos los banners primero
     ['chat-resena-banner','chat-confirmar-banner','chat-terminar-banner',
      'chat-vecino-cierre-banner','chat-cancelar-banner','chat-cerrado-banner',
-     'chat-rechazada-banner','chat-enviar-propuesta-banner'].forEach(id => {
+     'chat-rechazada-banner','chat-enviar-propuesta-banner','chat-denuncia-link'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
+    // Mostrar link de denuncia solo para vecinos con feature activa
+    const denLink = document.getElementById('chat-denuncia-link');
+    if (denLink && FEATURES.denuncias && !esPrestador()) denLink.style.display = '';
     const show = id => { const el = document.getElementById(id); if (el) el.style.display = 'flex'; };
     const showBlock = id => { const el = document.getElementById(id); if (el) el.style.display = 'block'; };
     switch (estado) {
