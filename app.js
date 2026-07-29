@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
     bolsaTrabajo:      ['s-nueva-propuesta','s-estado-propuesta','s-mis-propuestas'],
     catalogoPrecios:   ['s-catalogo','s-ficha-ref','s-catalogo-form'],
     denuncias:         ['s-denuncia','s-moderacion'],
-    loyalty:           ['s-loyalty'],
+    loyalty:           ['s-loyalty','s-loyalty-admin'],
     editarPerfilPro:   ['s-historial'],
     suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
@@ -176,10 +176,11 @@ document.addEventListener('DOMContentLoaded', function() {
     's-loyalty':            'nb-perfil',
     's-denuncia':         'nb-perfil',
     's-moderacion':       'nb-perfil',
+    's-loyalty-admin':    'nb-perfil',
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-mis-propuestas','s-resena'];
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -201,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     // Gating de pantallas admin: bloquear acceso a no-admins
-    const PANTALLAS_ADMIN = ['s-moderacion', 's-catalogo', 's-catalogo-form', 's-ficha-ref'];
+    const PANTALLAS_ADMIN = ['s-moderacion', 's-loyalty-admin', 's-catalogo', 's-catalogo-form', 's-ficha-ref'];
     if (PANTALLAS_ADMIN.includes(id) && !esAdmin()) {
       console.warn('[ADMIN] Pantalla "' + id + '" requiere rol admin.');
       showToast && showToast('🛡 Esta sección es solo para administradores');
@@ -262,7 +263,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (id === 's-buscar') { renderBusqueda('', filtroActivo); }
     // Si va a Chats, cargar lista de conversaciones
     if (id === 's-chats') { renderChats(); }
-    if (id === 's-moderacion') { renderModeracion(); renderCanjesPendientes(); renderBeneficiosAdmin(); }
+    if (id === 's-moderacion') { renderModeracion(); }
+    if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
     if (id === 's-catalogo') { renderCatalogo(); }
