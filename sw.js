@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v63'; // v63: límites de plan validados también en el servidor
+const CACHE_VERSION = 'pronet-v64'; // v64: fix modoRol persiste entre cuentas en prestador puro
 
 const SHELL = [
   './',

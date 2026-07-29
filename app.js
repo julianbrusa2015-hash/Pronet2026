@@ -7190,6 +7190,13 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         usuarioActual = u;
+        // modoRol persiste en localStorage entre sesiones y entre cuentas.
+        // Si el usuario que ingresa es un prestador puro (sin doble perfil),
+        // limpiar para que no herede un 'vecino' de una sesión anterior.
+        if (!tieneDoblePerfil()) {
+          modoRol = null;
+          localStorage.setItem('pronet-modo-rol', '');
+        }
         if (loginEl) loginEl.classList.add('hidden');
         reflejarUsuario();
         iniciarRealtime();
