@@ -843,7 +843,7 @@ const PronetDB = (() => {
       const nivel = total >= 10000 ? 'Élite' : total >= 5000 ? 'Oro' : total >= 1000 ? 'Plata' : 'Bronce';
 
       if (total > 0) {
-        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: total, nivel })
+        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: total, nivel }, { onConflict: 'usuario_id' })
           .catch(() => {});
       }
 
@@ -871,7 +871,7 @@ const PronetDB = (() => {
           .select('puntos').eq('usuario_id', uid).maybeSingle();
         const nuevo = (loy?.puntos || 0) + puntos;
         const nivel = nuevo >= 10000 ? 'Élite' : nuevo >= 5000 ? 'Oro' : nuevo >= 1000 ? 'Plata' : 'Bronce';
-        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevo, nivel });
+        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevo, nivel }, { onConflict: 'usuario_id' });
 
         return { ok: true, puntos: nuevo };
       } catch(e) {
@@ -1122,7 +1122,7 @@ const PronetDB = (() => {
         // Actualizar tabla loyalty
         const nuevosPuntos = ptsActuales - costo;
         const nivel = nuevosPuntos >= 10000 ? 'Élite' : nuevosPuntos >= 5000 ? 'Oro' : nuevosPuntos >= 1000 ? 'Plata' : 'Bronce';
-        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevosPuntos, nivel });
+        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevosPuntos, nivel }, { onConflict: 'usuario_id' });
 
         return { ok: true, puntos: nuevosPuntos };
       } catch(e) {
@@ -1145,7 +1145,7 @@ const PronetDB = (() => {
           const { error } = await sb.from('suscripciones').upsert({
             usuario_id: usuarioId, plan: valorBeneficio, estado: 'activo',
             periodo: 'mensual', vence_en: base.toISOString(), activado_en: new Date().toISOString(),
-          });
+          }, { onConflict: 'usuario_id' });
           if (error) throw error;
           return { ok: true, mensaje: 'Tu plan ' + valorBeneficio + ' fue activado por 1 mes.' };
         }

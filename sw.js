@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v55'; // v55: fix loyalty_historial sin prestador_id/usuario_id en canjes
+const CACHE_VERSION = 'pronet-v56'; // v56: fix upsert loyalty/suscripciones sin onConflict (creaba filas duplicadas)
 
 const SHELL = [
   './',
