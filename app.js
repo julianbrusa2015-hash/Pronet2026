@@ -782,6 +782,13 @@ document.addEventListener('DOMContentLoaded', function() {
         openChat(p.id || 'x');
       };
     }
+    // Link denuncia: solo para vecinos logueados, no para el propio prestador ni admin
+    const denunciaWrap = document.getElementById('prof-denuncia-wrap');
+    if (denunciaWrap) {
+      const puedenDenunciar = usuarioActual && !esPrestador() && !esAdmin() && FEATURES.denuncias;
+      denunciaWrap.style.display = puedenDenunciar ? '' : 'none';
+    }
+
     // Botón reseña: solo si el vecino tiene un trabajo completado con este prestador
     const btnResena = document.getElementById('prof-btn-resena');
     if (btnResena) {
