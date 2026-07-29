@@ -1647,7 +1647,10 @@ document.addEventListener('DOMContentLoaded', function() {
       if (estado === 'aprobado' && sol) {
         const tipoBen  = sol.loyalty_canjes?.tipo_beneficio || 'manual';
         const valorBen = sol.loyalty_canjes?.valor_beneficio || '';
-        const res = await PronetDB.aplicarBeneficio(tipoBen, valorBen, sol.usuario_id, sol.nombre_canje);
+        const res = await PronetDB.aplicarBeneficio(tipoBen, valorBen, sol.usuario_id, sol.nombre_canje, sol.prestador_id);
+        if (!res.ok) {
+          showToast && showToast('⚠️ Canje marcado aprobado, pero el beneficio no se pudo aplicar. Revisá manualmente.');
+        }
         await PronetDB.notificar({
           destino: 'usuario', usuario_id: sol.usuario_id, tipo: 'loyalty',
           titulo: '✅ Canje aprobado', cuerpo: res.mensaje || ('Tu canje "' + sol.nombre_canje + '" fue aprobado.'),

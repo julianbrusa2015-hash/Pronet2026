@@ -858,20 +858,22 @@ const PronetDB = (() => {
         if (!uid) return { ok: false };
 
         // Historial — usuario_id siempre, prestador_id cuando aplica
-        await sb.from('loyalty_historial').insert({
+        const { error: errHist } = await sb.from('loyalty_historial').insert({
           usuario_id: uid,
           prestador_id: prestadorId || null,
           puntos,
           tipo,
           descripcion,
-        }).catch(e => console.warn('[PronetDB] acreditarPuntos historial', e.message));
+        });
+        if (errHist) console.warn('[PronetDB] acreditarPuntos historial', errHist.message);
 
         // Actualizar balance consolidado
         const { data: loy } = await sb.from('loyalty')
           .select('puntos').eq('usuario_id', uid).maybeSingle();
         const nuevo = (loy?.puntos || 0) + puntos;
         const nivel = nuevo >= 10000 ? 'Élite' : nuevo >= 5000 ? 'Oro' : nuevo >= 1000 ? 'Plata' : 'Bronce';
-        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevo, nivel }, { onConflict: 'usuario_id' });
+        const { error: errLoy } = await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevo, nivel }, { onConflict: 'usuario_id' });
+        if (errLoy) { console.warn('[PronetDB] acreditarPuntos loyalty', errLoy.message); return { ok: false }; }
 
         return { ok: true, puntos: nuevo };
       } catch(e) {
@@ -1134,7 +1136,7 @@ const PronetDB = (() => {
     /** Aplica el beneficio de un canje aprobado según su tipo_beneficio.
      *  tipo_beneficio: 'plan_mes' (valor='plus'|'pro'|'elite') | 'puntos_extra' (valor='500') | 'manual'
      *  Devuelve { ok, mensaje } — mensaje es el texto a mostrar en la notificación al usuario. */
-    async aplicarBeneficio(tipoBeneficio, valorBeneficio, usuarioId, nombreCanje) {
+    async aplicarBeneficio(tipoBeneficio, valorBeneficio, usuarioId, nombreCanje, prestadorId) {
       try {
         if (tipoBeneficio === 'plan_mes') {
           const { data: actual } = await sb.from('suscripciones')
@@ -1152,13 +1154,10 @@ const PronetDB = (() => {
         if (tipoBeneficio === 'puntos_extra') {
           const n = parseInt(valorBeneficio, 10) || 0;
           if (n > 0) {
-            // Buscar prestador_id del usuario: el historial se filtra por uno u otro
-            // según el rol, así que el registro necesita ambos IDs para ser visible.
-            const { data: perfil } = await sb.from('perfiles')
-              .select('prestador_id').eq('id', usuarioId).maybeSingle();
-            await this.acreditarPuntos(n, 'canje', 'Bonus: ' + nombreCanje, {
-              usuarioId, prestadorId: perfil?.prestador_id || null,
+            const res = await this.acreditarPuntos(n, 'canje', 'Bonus: ' + nombreCanje, {
+              usuarioId, prestadorId: prestadorId || null,
             });
+            if (!res.ok) return { ok: false, mensaje: '' };
           }
           return { ok: true, mensaje: 'Recibiste ' + n.toLocaleString('es-AR') + ' puntos extra.' };
         }
