@@ -371,6 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function selectChip(el) {
     document.querySelectorAll('.r-chip').forEach(c => c.classList.remove('on'));
     el.classList.add('on');
+    actualizarMapaCobertura();
   }
 
   function togglePago(el) { el.classList.toggle('on'); }
@@ -4797,8 +4798,31 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function selZona(el) {
-    document.querySelectorAll('.zm-opt').forEach(z => z.classList.remove('on'));
+    const cls = el.classList.contains('zm-opt') ? '.zm-opt' : '.form-opt';
+    const container = el.closest('[role="group"]') || el.parentElement;
+    container.querySelectorAll(cls).forEach(z => z.classList.remove('on'));
     el.classList.add('on');
+    actualizarMapaCobertura();
+  }
+
+  function actualizarMapaCobertura() {
+    const iframe = document.getElementById('zona-mapa-iframe');
+    if (!iframe) return;
+    const lat = -34.3483, lon = -58.7968;
+    const zonaLbl = document.querySelector('#pub-3 .form-opt.on .opt-lbl')?.textContent || '';
+    if (zonaLbl === 'Toda la ciudad') {
+      iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=-59.1%2C-34.65%2C-58.45%2C-34.05&layer=mapnik&marker=${lat}%2C${lon}`;
+      return;
+    }
+    if (zonaLbl === 'A domicilio') {
+      iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=-58.95%2C-34.45%2C-58.65%2C-34.25&layer=mapnik&marker=${lat}%2C${lon}`;
+      return;
+    }
+    const radiusKm = parseInt(document.querySelector('#pub-3 .r-chip.on')?.textContent) || 8;
+    const dLat = radiusKm / 111;
+    const dLon = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
+    const bbox = `${(lon-dLon).toFixed(4)}%2C${(lat-dLat).toFixed(4)}%2C${(lon+dLon).toFixed(4)}%2C${(lat+dLat).toFixed(4)}`;
+    iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`;
   }
 
   function selPrecio(el) {

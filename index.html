@@ -445,7 +445,13 @@
             <div class="form-opt" onclick="selZona(this)"><div class="opt-icon">🚗</div><div class="opt-lbl">A domicilio</div></div>
           </div>
         </div>
-        <div class="zona-map-ph"><span>🗺️</span><p>Tu zona de cobertura en el mapa</p></div>
+        <div id="zona-mapa-wrap" class="zona-map-wrap">
+          <iframe id="zona-mapa-iframe"
+            src="https://www.openstreetmap.org/export/embed.html?bbox=-58.8841%2C-34.4203%2C-58.7095%2C-34.2763&amp;layer=mapnik&amp;marker=-34.3483%2C-58.7968"
+            class="zona-mapa-iframe"
+            loading="lazy"
+            title="Zona de cobertura"></iframe>
+        </div>
         <div class="form-group">
           <label id="lbl-grupo-5" class="form-label">Radio de cobertura</label>
           <div role="group" aria-labelledby="lbl-grupo-5" class="radius-chips">
