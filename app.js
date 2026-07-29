@@ -3448,6 +3448,11 @@ document.addEventListener('DOMContentLoaded', function() {
       badgePlan.textContent   = cfg.emoji + ' Plan ' + cfg.nombre;
       badgePlan.style.display = planActual !== 'base' ? 'inline-block' : 'none';
     }
+    // Tile y menú "Suscripción" en Mi Perfil
+    const subTile = document.getElementById('perfil-suscripcion-sub');
+    if (subTile) subTile.textContent = 'Plan ' + cfg.nombre + ' · Activo';
+    const subMenuSub = document.getElementById('perfil-suscripcion-menu-sub');
+    if (subMenuSub) subMenuSub.textContent = 'Plan ' + cfg.nombre + ' · MercadoPago';
     // Card plan en Mi Perfil — nombre y boost
     const planNombreEl = document.getElementById('perfil-plan-nombre');
     if (planNombreEl) {
@@ -4841,7 +4846,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (mesLabel) {
       const ahora = new Date();
       const mes = ahora.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
-      mesLabel.textContent = mes.charAt(0).toUpperCase() + mes.slice(1) + ' · ⭐ Plan Pro activo';
+      const cfgAn = getPlanConfig(planActual);
+      mesLabel.textContent = mes.charAt(0).toUpperCase() + mes.slice(1) + ' · ' + cfgAn.emoji + ' Plan ' + cfgAn.nombre + ' activo';
     }
 
     // Gráfico de barras diarias
