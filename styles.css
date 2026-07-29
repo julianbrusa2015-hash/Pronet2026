@@ -169,6 +169,60 @@
   .screen.active { display: flex; }
   .screen > * { flex-shrink: 0; max-width: 100%; box-sizing: border-box; }
 
+  /* ── Install card (Android A2HS) ── */
+  .install-card {
+    display: flex; align-items: center; gap: 10px;
+    margin: 12px 12px 0;
+    padding: 12px 14px;
+    background: var(--white);
+    border: 1.5px solid var(--blue-s);
+    border-left: 4px solid var(--blue);
+    border-radius: var(--r);
+    position: relative;
+    animation: fadeIn .3s ease;
+  }
+  .install-card-icon { font-size: 22px; flex-shrink: 0; }
+  .install-card-body { flex: 1; min-width: 0; }
+  .install-card-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .install-card-sub { font-size: 11px; color: var(--ink3); margin-top: 2px; line-height: 1.35; }
+  .install-card-btn {
+    background: var(--blue); color: white; border: none;
+    border-radius: 8px; padding: 7px 12px;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    flex-shrink: 0; font-family: inherit;
+  }
+  .install-card-close {
+    position: absolute; top: 7px; right: 8px;
+    background: none; border: none; color: var(--ink3);
+    font-size: 14px; cursor: pointer; padding: 2px 4px; line-height: 1;
+  }
+
+  /* ── iOS install hint ── */
+  .ios-install-hint {
+    position: fixed;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px) + 10px);
+    left: 50%; transform: translateX(-50%) translateY(16px);
+    width: min(92%, 340px);
+    background: #1C1C2E; color: white;
+    padding: 13px 16px; border-radius: 14px;
+    font-size: 12.5px; line-height: 1.5;
+    box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    display: flex; align-items: center; gap: 10px;
+    z-index: 9000;
+    opacity: 0; transition: opacity .3s, transform .3s;
+    pointer-events: none;
+  }
+  .ios-install-hint.visible {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+  .ios-hint-text { flex: 1; }
+  .ios-install-hint button {
+    background: rgba(255,255,255,.15); border: none; color: white;
+    border-radius: 6px; padding: 3px 8px; cursor: pointer;
+    font-size: 13px; flex-shrink: 0; font-family: inherit;
+  }
+
   /* ── Offline banner ── */
   .offline-banner {
     display: none;

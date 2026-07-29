@@ -6954,6 +6954,86 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // ── Instalación PWA ─────────────────────────────────────────────────
+  // Android: captura beforeinstallprompt y muestra card no intrusiva en home.
+  // iOS Safari: hint manual con instrucciones de "Agregar a pantalla de inicio".
+  (function iniciarInstalacion() {
+    if (window.navigator.standalone) return; // ya instalada
+
+    // --- Android A2HS ---
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (localStorage.getItem('pronet_install_descartado')) return;
+      // Primera visita: esperar 30s. Segunda visita en adelante: 5s.
+      const visitas = parseInt(localStorage.getItem('pronet_visitas') || '0') + 1;
+      localStorage.setItem('pronet_visitas', String(visitas));
+      setTimeout(() => mostrarInstallCard(deferredPrompt), visitas >= 2 ? 5000 : 30000);
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      document.getElementById('install-card')?.remove();
+      showToast && showToast('✅ ¡PRONET instalado! Buscalo en tu pantalla de inicio.');
+    });
+
+    // --- iOS Safari ---
+    const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const esSafariIOS = esIOS && !/crios|fxios|opios/i.test(navigator.userAgent);
+    if (esSafariIOS && !localStorage.getItem('pronet_ios_hint_visto')) {
+      setTimeout(mostrarIOSHint, 20000);
+    }
+  })();
+
+  function mostrarInstallCard(prompt) {
+    if (document.getElementById('install-card')) return;
+    const home = document.getElementById('s-home');
+    if (!home) return;
+    const card = document.createElement('div');
+    card.id = 'install-card';
+    card.className = 'install-card';
+    card.innerHTML =
+      '<div class="install-card-icon">📲</div>' +
+      '<div class="install-card-body">' +
+        '<div class="install-card-title">Instalá PRONET</div>' +
+        '<div class="install-card-sub">Acceso directo desde tu pantalla de inicio, sin abrir el navegador</div>' +
+      '</div>' +
+      '<button class="install-card-btn">Instalar</button>' +
+      '<button class="install-card-close" aria-label="Cerrar">✕</button>';
+    home.insertBefore(card, home.firstChild);
+    card.querySelector('.install-card-btn').addEventListener('click', async () => {
+      card.remove();
+      if (!prompt) return;
+      prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      if (outcome !== 'accepted') localStorage.setItem('pronet_install_descartado', 'true');
+    });
+    card.querySelector('.install-card-close').addEventListener('click', () => {
+      card.remove();
+      localStorage.setItem('pronet_install_descartado', 'true');
+    });
+  }
+
+  function mostrarIOSHint() {
+    if (document.getElementById('ios-install-hint')) return;
+    const hint = document.createElement('div');
+    hint.id = 'ios-install-hint';
+    hint.className = 'ios-install-hint';
+    hint.innerHTML =
+      '<span class="ios-hint-text">Para instalar PRONET: tocá <strong>⬆ Compartir</strong> → <strong>Agregar a pantalla de inicio</strong></span>' +
+      '<button aria-label="Cerrar">✕</button>';
+    document.body.appendChild(hint);
+    requestAnimationFrame(() => requestAnimationFrame(() => hint.classList.add('visible')));
+    const cerrar = () => {
+      hint.classList.remove('visible');
+      setTimeout(() => hint.remove(), 300);
+      localStorage.setItem('pronet_ios_hint_visto', 'true');
+    };
+    hint.querySelector('button').addEventListener('click', cerrar);
+    setTimeout(cerrar, 12000);
+  }
+
   // ── Monitor de conexión ─────────────────────────────────────────────
   // Banner discreto encima del nav cuando no hay red; toast al restaurarse.
   function iniciarMonitorConexion() {
