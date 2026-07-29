@@ -1104,14 +1104,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const filtros = cat && cat !== 'todos' ? { rubro: rubroDeCat(cat) } : {};
     if (zonaActual) filtros.zona = zonaParaFiltro();
     let prestadores = await PronetDB.listarPrestadores(filtros);
-    // Aplicar boost a prestadores Pro/Empresa y re-ordenar (multiplicadores desde config.js)
-    const _boostPro     = window.PRONET_CONFIG?.BOOST_PRO     || 1.4;
-    const _boostEmpresa = window.PRONET_CONFIG?.BOOST_EMPRESA || 1.6;
+    // Aplicar boost por plan y re-ordenar. El privilegio de ranking sale de
+    // `desempate` en PRONET_CONFIG.PLANES: 'primero' (Elite) > true (Pro) > sin boost.
+    const _boostPro    = window.PRONET_CONFIG?.BOOST_PRO     || 1.4;
+    const _boostPrimero = window.PRONET_CONFIG?.BOOST_EMPRESA || 1.6;
+    const _boostDePlan = (p) => {
+      // Sin plan propio no hereda nada: getPlanConfig() cae a planActual (el del
+      // usuario que mira), así que sólo lo consultamos si el prestador tiene plan.
+      const des = p.plan ? getPlanConfig(p.plan).desempate : false;
+      if (des === 'primero') return _boostPrimero;
+      if (des || p.premium)  return _boostPro;
+      return 1.0;
+    };
     prestadores = prestadores
-      .map(p => ({ ...p, _score: (p.rating || 0) * (
-        p.plan === 'empresa' ? _boostEmpresa :
-        (p.plan === 'pro' || p.premium) ? _boostPro : 1.0
-      ) }))
+      .map(p => ({ ...p, _score: (p.rating || 0) * _boostDePlan(p) }))
       .sort((a, b) => b._score - a._score);
     wrap.innerHTML = '';
     // Actualizar meta con conteo real
@@ -3874,7 +3880,7 @@ document.addEventListener('DOMContentLoaded', function() {
   async function mostrarBannerPrimerTrabajoPro() {
     const banner = document.getElementById('banner-primer-trabajo-pro');
     if (!banner || !esPrestador() || !PronetDB.esRemoto()) return;
-    if (planActual === 'pro' || planActual === 'empresa') { banner.style.display = 'none'; return; }
+    if (esPro()) { banner.style.display = 'none'; return; }
     const { data } = await window._sb
       .from('chats_trabajo')
       .select('id', { count: 'exact', head: true })
@@ -5099,8 +5105,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnConfirmar = document.querySelector('#checkout-overlay .btn-p');
     if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Activando…'; }
 
-    planActual    = currentCheckoutPlan;
-    periodoActual = currentBilling;
+    // Congelar el plan elegido: el upsert de abajo corre async y para entonces
+    // el usuario pudo haber abierto otro checkout.
+    const planElegido    = currentCheckoutPlan;
+    const periodoElegido = currentBilling;
+
+    planActual    = planElegido;
+    periodoActual = periodoElegido;
     reflejarPlan();
 
     document.getElementById('checkout-overlay').classList.remove('show');
@@ -5119,12 +5130,12 @@ document.addEventListener('DOMContentLoaded', function() {
       PronetDB.usuarioIdActual().then(uid => {
         if (!uid) return;
         const vence = new Date();
-        vence.setMonth(vence.getMonth() + (currentBilling === 'anual' ? 12 : 1));
+        vence.setMonth(vence.getMonth() + (periodoElegido === 'anual' ? 12 : 1));
         window._sb.from('suscripciones').upsert({
           usuario_id: uid,
-          plan: 'pro',
+          plan: planElegido,
           estado: 'activo',
-          periodo: currentBilling,
+          periodo: periodoElegido,
           activado_en: new Date().toISOString(),
           vence_en: vence.toISOString()
         }, { onConflict: 'usuario_id' }).then(({ error }) => {
@@ -7130,7 +7141,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBellCount();
         cargarSliderRangosDesdeDB();
         PronetDB.obtenerSuscripcion().then(s => {
-          planActual    = s.plan    || 'basico';
+          planActual    = s.plan    || 'base';
           periodoActual = s.periodo || 'mensual';
           reflejarPlan();
         }).catch(() => {});

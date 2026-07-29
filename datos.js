@@ -1169,17 +1169,17 @@ const PronetDB = (() => {
       }
     },
 
-    /** Devuelve la suscripción activa del usuario (o basico por defecto). */
+    /** Devuelve la suscripción activa del usuario (o base por defecto). */
     async obtenerSuscripcion() {
-      if (!remoto) return { plan: 'basico', estado: 'activo' };
+      if (!remoto) return { plan: 'base', estado: 'activo' };
       const uid = await this.usuarioIdActual();
-      if (!uid) return { plan: 'basico', estado: 'activo' };
+      if (!uid) return { plan: 'base', estado: 'activo' };
       const { data } = await sb.from('suscripciones')
         .select('plan, estado, periodo, vence_en, activado_en')
         .eq('usuario_id', uid).maybeSingle();
-      if (!data) return { plan: 'basico', estado: 'activo' };
+      if (!data) return { plan: 'base', estado: 'activo' };
       if (data.vence_en && new Date(data.vence_en) < new Date()) {
-        return { ...data, plan: 'basico', estado: 'vencido' };
+        return { ...data, plan: 'base', estado: 'vencido' };
       }
       return data;
     },
