@@ -789,17 +789,20 @@ document.addEventListener('DOMContentLoaded', function() {
       denunciaWrap.style.display = puedenDenunciar ? '' : 'none';
     }
 
-    // Botón reseña: solo si el vecino tiene un trabajo completado con este prestador
+    // Botón reseña: solo si hay trabajo completado sin reseña previa
     const btnResena = document.getElementById('prof-btn-resena');
     if (btnResena) {
       btnResena.style.display = 'none';
       if (usuarioActual && !esPrestador() && PronetDB.esRemoto()) {
         PronetDB.listarMisChats().then(chats => {
-          const tuvoTrabajo = chats.some(c =>
+          const chatPendiente = chats.find(c =>
             c.prestador_id === p.id &&
-            ['calificado','terminado_por_vecino','terminado_prestador'].includes(c.estado)
+            ['terminado_por_vecino','terminado_prestador'].includes(c.estado)
           );
-          if (tuvoTrabajo && btnResena) btnResena.style.display = '';
+          if (chatPendiente && btnResena) {
+            btnResena.style.display = '';
+            btnResena.onclick = () => { chatActualId = chatPendiente.id; abrirResena(); };
+          }
         }).catch(() => {});
       }
     }
