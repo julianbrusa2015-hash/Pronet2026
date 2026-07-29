@@ -3524,13 +3524,14 @@ document.addEventListener('DOMContentLoaded', function() {
           + '<span>' + actual.max.toLocaleString('es-AR') + ' pts</span>';
       }
       // Marcar nivel activo en el tab Niveles
-      ['bronce','plata','oro','elite'].forEach(n => {
-        const nc = document.getElementById('nc-' + n);
+      const nivelIdMap = { 'Bronce': 'nc-bronce', 'Plata': 'nc-plata', 'Oro': 'nc-oro', 'Élite': 'nc-elite' };
+      Object.entries(nivelIdMap).forEach(([nombre, id]) => {
+        const nc = document.getElementById(id);
         if (!nc) return;
-        const esActual = niv.toLowerCase() === (n === 'elite' ? 'élite' : n);
+        const esActual = nombre === niv;
         nc.classList.toggle('active', esActual);
         const nameEl = nc.querySelector('.nivel-name');
-        if (nameEl) nameEl.textContent = (n === 'elite' ? 'Élite' : n.charAt(0).toUpperCase() + n.slice(1)) + (esActual ? ' ← Vos' : '');
+        if (nameEl) nameEl.textContent = nombre + (esActual ? ' ← Vos' : '');
       });
 
       // Ordenar secciones ganar-pts según rol: vecinos ven su sección primero

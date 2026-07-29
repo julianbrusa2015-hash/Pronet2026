@@ -2186,7 +2186,7 @@
 
   .loyalty-hero {
     background: linear-gradient(160deg, #0D0F1A 0%, #1A1A2E 40%, #4A0080 100%);
-    padding: 20px 18px 32px; text-align: center; position: relative;
+    padding: calc(env(safe-area-inset-top) + 20px) 18px 32px; text-align: center; position: relative;
   }
   .loyalty-hero::before {
     content: '';
