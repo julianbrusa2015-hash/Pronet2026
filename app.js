@@ -1655,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }).catch(() => {});
       } else if (estado === 'rechazado' && sol) {
         // Devolver los puntos descontados al usuario
-        await PronetDB.acreditarPuntos(sol.puntos_descontados, 'canje', 'Reembolso: ' + sol.nombre_canje, { usuarioId: sol.usuario_id }).catch(() => {});
+        await PronetDB.acreditarPuntos(sol.puntos_descontados, 'canje', 'Reembolso: ' + sol.nombre_canje, { usuarioId: sol.usuario_id, prestadorId: sol.prestador_id || null }).catch(() => {});
         await PronetDB.notificar({
           destino: 'usuario', usuario_id: sol.usuario_id, tipo: 'loyalty',
           titulo: '❌ Canje rechazado', cuerpo: 'Tu canje "' + sol.nombre_canje + '" fue rechazado. Se te devolvieron los puntos.',

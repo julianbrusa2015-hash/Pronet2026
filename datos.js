@@ -1109,8 +1109,10 @@ const PronetDB = (() => {
           estado: 'pendiente',
         });
 
-        // Registrar en historial (negativo = canje)
+        // Registrar en historial (negativo = canje) — usuario_id Y prestador_id,
+        // porque listarLoyaltyHistorial filtra por uno u otro según el rol al consultar.
         await sb.from('loyalty_historial').insert({
+          usuario_id: uid,
           prestador_id: perfil?.prestador_id || null,
           puntos: -costo,
           tipo: 'canje',
@@ -1149,7 +1151,15 @@ const PronetDB = (() => {
         }
         if (tipoBeneficio === 'puntos_extra') {
           const n = parseInt(valorBeneficio, 10) || 0;
-          if (n > 0) await this.acreditarPuntos(n, 'canje', 'Bonus: ' + nombreCanje, { usuarioId });
+          if (n > 0) {
+            // Buscar prestador_id del usuario: el historial se filtra por uno u otro
+            // según el rol, así que el registro necesita ambos IDs para ser visible.
+            const { data: perfil } = await sb.from('perfiles')
+              .select('prestador_id').eq('id', usuarioId).maybeSingle();
+            await this.acreditarPuntos(n, 'canje', 'Bonus: ' + nombreCanje, {
+              usuarioId, prestadorId: perfil?.prestador_id || null,
+            });
+          }
           return { ok: true, mensaje: 'Recibiste ' + n.toLocaleString('es-AR') + ' puntos extra.' };
         }
         // manual: sin acción automática
