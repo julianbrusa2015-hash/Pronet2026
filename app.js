@@ -588,11 +588,22 @@ document.addEventListener('DOMContentLoaded', function() {
     el.classList.add('on');
   }
 
+  let evidenciaFile = null;
+
   function addEvidencia() {
+    const input = document.getElementById('ev-input');
+    if (input) input.click();
+  }
+
+  function onEvidenciaChange(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    evidenciaFile = file;
     const slot = document.getElementById('ev-slot');
     if (slot) {
+      const icono = file.type.includes('pdf') ? '📄' : '📷';
       slot.classList.add('filled');
-      slot.innerHTML = '<div style="font-size:28px;margin-bottom:8px">📷</div><div style="font-size:13px;font-weight:600;color:var(--green)">1 archivo adjunto</div><div style="font-size:11px;color:var(--ink3);margin-top:4px">foto_evidencia.jpg · Tocá para cambiar</div>';
+      slot.innerHTML = '<div style="font-size:28px;margin-bottom:8px">' + icono + '</div><div style="font-size:13px;font-weight:600;color:var(--green)">1 archivo adjunto</div><div style="font-size:11px;color:var(--ink3);margin-top:4px">' + escHTML(file.name) + ' · Tocá para cambiar</div>';
     }
   }
 
@@ -616,6 +627,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const btn = document.querySelector('#s-denuncia button[onclick="enviarDenuncia()"]');
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
 
+    // Subir evidencia si hay archivo seleccionado
+    let evidenciaUrl = null;
+    if (evidenciaFile) {
+      showToast && showToast('⏳ Subiendo evidencia...');
+      const res = await PronetDB.subirAdjuntoPropuesta(evidenciaFile).catch(() => null);
+      if (res) evidenciaUrl = res.url;
+    }
+
     try {
       const result = await PronetDB.crear('denuncias', {
         denunciante_id: usuarioActual.id,
@@ -624,6 +643,7 @@ document.addEventListener('DOMContentLoaded', function() {
         motivo,
         detalle,
         estado: 'pendiente',
+        ...(evidenciaUrl ? { evidencia_url: evidenciaUrl } : {}),
       });
       if (result) {
         const exito = document.getElementById('denuncia-exito');
@@ -632,6 +652,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.denuncia-tipo').forEach(d => d.classList.remove('on'));
         if (document.getElementById('f-conta-con-el-mayor-detalle-posible'))
           document.getElementById('f-conta-con-el-mayor-detalle-posible').value = '';
+        evidenciaFile = null;
+        const evSlot = document.getElementById('ev-slot');
+        if (evSlot) { evSlot.classList.remove('filled'); evSlot.innerHTML = '<div style="font-size:28px;margin-bottom:8px">📎</div><div style="font-size:13px;font-weight:600;color:var(--ink2)">Tocá para adjuntar</div><div style="font-size:11px;color:var(--ink3);margin-top:4px">Fotos, capturas de conversación, comprobante de pago</div>'; }
+        const evInput = document.getElementById('ev-input'); if (evInput) evInput.value = '';
       } else {
         showToast && showToast('❌ Error al enviar la denuncia. Intentá de nuevo.');
       }
