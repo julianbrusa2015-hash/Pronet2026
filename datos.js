@@ -902,6 +902,22 @@ const PronetDB = (() => {
       }
     },
 
+    /**
+     * Cuenta propuestas activas para un pedido usando RPC SECURITY DEFINER.
+     * Bypasa RLS para que el prestador vea la competencia real sin exponer datos.
+     */
+    async contarPropuestasPedido(pedidoId) {
+      if (remoto) {
+        try {
+          const { data, error } = await sb.rpc('contar_propuestas_pedido', { p_pedido_id: pedidoId });
+          if (!error && typeof data === 'number') return data;
+        } catch (e) { console.warn('[PronetDB] contarPropuestasPedido', e.message); }
+      }
+      // fallback local
+      const props = leerLocal('propuestas');
+      return props.filter(p => p.pedido_id === pedidoId && p.estado !== 'retirada').length;
+    },
+
     /** Sube un adjunto de propuesta al bucket y devuelve la URL pública. */
     async subirAdjuntoPropuesta(file) {
       if (!remoto) return null;

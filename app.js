@@ -1215,18 +1215,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!wrap) return;
     wrap.innerHTML = '<div style="padding:20px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando insights...</div>';
 
-    // Contar propuestas recibidas
+    // Contar propuestas recibidas (RPC SECURITY DEFINER → count real sin exponer datos ajenos)
     let nProps = 0;
-    let precioMin = null, precioMax = null;
     try {
-      const todas = await PronetDB.listar('propuestas');
-      const delPedido = todas.filter(pr => pr.pedido_id === pedido.id && pr.estado !== 'retirada');
-      nProps = delPedido.length;
-      const precios = delPedido.filter(pr => pr.precio && pr.precio > 0).map(pr => pr.precio);
-      if (precios.length > 0) {
-        precioMin = Math.min(...precios);
-        precioMax = Math.max(...precios);
-      }
+      nProps = await PronetDB.contarPropuestasPedido(pedido.id);
     } catch (e) {}
 
     // Ref PRONET desde catálogo
@@ -1261,14 +1253,6 @@ document.addEventListener('DOMContentLoaded', function() {
     html += '<div style="font-size:24px">📬</div>';
     html += '<div><div style="font-size:13px;font-weight:700;color:var(--ink)">' + nProps + ' propuesta' + (nProps !== 1 ? 's' : '') + ' recibida' + (nProps !== 1 ? 's' : '') + '</div>';
     html += '<div style="font-size:11px;color:var(--ink3)">' + (nProps === 0 ? 'Sé el primero en ofertar' : 'Mientras más rápido respondas, mejor tu posición') + '</div></div></div>';
-
-    // Rango de precios ofertados
-    if (precioMin && precioMax && nProps >= 2) {
-      html += '<div style="display:flex;align-items:center;gap:10px;padding:12px;background:#FEF3C7;border-radius:12px;margin-bottom:10px">';
-      html += '<div style="font-size:24px">💰</div>';
-      html += '<div><div style="font-size:13px;font-weight:700;color:var(--ink)">Rango ofertado: $' + precioMin.toLocaleString('es-AR') + ' – $' + precioMax.toLocaleString('es-AR') + '</div>';
-      html += '<div style="font-size:11px;color:var(--ink3)">Precios de las propuestas actuales</div></div></div>';
-    }
 
     // Ref PRONET
     if (refTxt) {
