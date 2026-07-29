@@ -6954,6 +6954,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // ── Monitor de conexión ─────────────────────────────────────────────
+  // Banner discreto encima del nav cuando no hay red; toast al restaurarse.
+  function iniciarMonitorConexion() {
+    const banner = document.createElement('div');
+    banner.id = 'offline-banner';
+    banner.className = 'offline-banner';
+    banner.textContent = '⚡ Sin conexión — los datos pueden no estar actualizados';
+    const nav = document.querySelector('.nav');
+    if (nav) nav.parentNode.insertBefore(banner, nav);
+
+    function actualizar() { banner.classList.toggle('visible', !navigator.onLine); }
+    window.addEventListener('offline', actualizar);
+    window.addEventListener('online', () => { actualizar(); showToast && showToast('✅ Conexión restaurada'); });
+    actualizar();
+  }
+  iniciarMonitorConexion();
+
   // Fix teclado iOS en PWA: ocultar nav mientras el teclado esta abierto en s-chat
   if (window.visualViewport) {
     const nav = document.querySelector('.nav');

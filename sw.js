@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v47'; // v47: pushsubscriptionchange vía postMessage a la página (sin /api propio) · v46: pushsubscriptionchange · v43: roles
+const CACHE_VERSION = 'pronet-v48'; // v48: fix pantalla móvil (breakpoint 600px, standalone full-screen) · offline banner · SW timeout 5s
 
 const SHELL = [
   './',
@@ -57,14 +57,22 @@ self.addEventListener('fetch', (event) => {
     const esEstatico = /\.(png|jpg|jpeg|svg|ico|webp|woff2?|ttf)$/i.test(archivo) || archivo === 'manifest.json';
 
     if (!esEstatico) {
-      // Network-first para todo el código
-      event.respondWith(
-        fetch(req).then((res) => {
+      // Network-first con timeout de 5s: si la red tarda, cae al caché en vez de esperar.
+      event.respondWith((async () => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        try {
+          const res = await fetch(req, { signal: controller.signal });
+          clearTimeout(timer);
           const copia = res.clone();
           caches.open(CACHE_VERSION).then((c) => c.put(req, copia));
           return res;
-        }).catch(() => caches.match(req))
-      );
+        } catch {
+          clearTimeout(timer);
+          const cached = await caches.match(req);
+          return cached || new Response('Sin conexión', { status: 503 });
+        }
+      })());
       return;
     }
     // Cache-first para estáticos (velocidad y offline)

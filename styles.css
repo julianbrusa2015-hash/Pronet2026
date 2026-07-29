@@ -44,8 +44,9 @@
   @keyframes fadeUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
 
   /* ── Mobile full-screen mode ── */
-  @media (max-width: 480px) {
-    html, body { background: #2B5BFF; }
+  /* 600px cubre todos los teléfonos Android modernos en portrait (Pixel, Galaxy, etc.) */
+  @media (max-width: 600px) {
+    html, body { background: var(--surface); }
     .phone {
       width: 100% !important;
       height: 100vh !important;
@@ -72,6 +73,15 @@
   .pub-footer  { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
   .chat-footer { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
   @media (display-mode: standalone) {
+    html, body { background: var(--surface); }
+    .phone {
+      width: 100% !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
     .status { display: none !important; }
     .notch  { display: none !important; }
   }
@@ -158,6 +168,20 @@
   .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
   .screen > * { flex-shrink: 0; max-width: 100%; box-sizing: border-box; }
+
+  /* ── Offline banner ── */
+  .offline-banner {
+    display: none;
+    background: #78350F;
+    color: #FEF3C7;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+    padding: 7px 16px;
+    flex-shrink: 0;
+    letter-spacing: .01em;
+  }
+  .offline-banner.visible { display: block; }
 
   /* ── Bottom nav ── */
   .nav {
