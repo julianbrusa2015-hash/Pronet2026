@@ -787,6 +787,15 @@ document.addEventListener('DOMContentLoaded', function() {
       tagsEl.innerHTML = tags.map(t => '<div class="prof-tag">' + t + '</div>').join('')
         + (p.verificado ? '<div class="b-verified"><svg width="10" height="11" viewBox="0 0 18 20" fill="none"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Verificado</div>' : '');
     }
+    // Zona de cobertura dinámica
+    const zonaTxt = document.getElementById('prof-zona-txt');
+    if (zonaTxt) {
+      const partes = [];
+      if (p.zona) partes.push(p.zona);
+      if (p.radio_cobertura) partes.push('<span style="color:var(--blue)">Radio: ' + escHTML(p.radio_cobertura) + '</span>');
+      zonaTxt.innerHTML = partes.length ? partes.join('<br>') : 'No especificada';
+    }
+
     // Chips de pago dinámicos
     const pagosEl = document.getElementById('prof-pagos');
     if (pagosEl) {
@@ -4375,6 +4384,7 @@ document.addEventListener('DOMContentLoaded', function() {
       especialidades,
       subrubro: especialidades[0] || null,
       zona: direccion || usuarioActual.zona || 'Escobar',
+      radio_cobertura: radio || null,
       medios_pago: mediosPago,
       precio_min: precioMin,
       precio_max: precioMax,
