@@ -2079,7 +2079,8 @@
   .empty-actions { display:flex; flex-direction:column; gap:10px; width:100%; }
 
   /* ── Editar perfil ── */
-  .edit-header { background:white; padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; position:sticky; top:env(safe-area-inset-top, 0px); z-index:9; }
+  #s-edit-perfil { overflow: hidden; }
+  .edit-header { background:white; padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-shrink:0; }
   .edit-header h2 { font-size:16px; font-weight:700; color:var(--ink); flex:1; }
   .edit-save { background:var(--blue); color:white; border:none; border-radius:10px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; }
 
