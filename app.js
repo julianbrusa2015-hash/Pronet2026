@@ -3544,16 +3544,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Placeholder de grilla: oculto siempre (ya no necesario con grid)
     const placeholder = document.getElementById('tile-placeholder-grid');
     if (placeholder) placeholder.style.display = 'none';
-    // Nav inferior: Buscar y Cerca solo para clientes
-    // (para prestadores se ocultan en activarHomePrestador)
-    if (!esPrestador()) {
-      const nbBuscar = document.getElementById('nb-buscar');
-      const nbMapa   = document.getElementById('nb-mapa');
+    // Nav inferior y botón publicar: Buscar/Cerca/Publicar solo para clientes
+    const nbBuscar = document.getElementById('nb-buscar');
+    const nbMapa   = document.getElementById('nb-mapa');
+    const btnPub   = document.getElementById('btn-publicar-pedido');
+    if (esPrestador()) {
+      if (nbBuscar) nbBuscar.style.display = 'none';
+      if (nbMapa)   nbMapa.style.display   = 'none';
+      if (btnPub)   btnPub.style.display   = 'none';
+    } else {
       if (nbBuscar) nbBuscar.style.display = '';
       if (nbMapa)   nbMapa.style.display   = '';
-      // Restaurar botón publicar pedido para clientes
-      const btnPub = document.getElementById('btn-publicar-pedido');
-      if (btnPub) btnPub.style.display = '';
+      if (btnPub)   btnPub.style.display   = '';
     }
     if (!usuarioActual) return;
     const nombre = usuarioActual.nombre || 'Usuario';
