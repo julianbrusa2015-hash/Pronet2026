@@ -3186,6 +3186,14 @@ document.addEventListener('DOMContentLoaded', function() {
   function toggleModoRol() {
     modoRol = modoRol === 'vecino' ? null : 'vecino';
     localStorage.setItem('pronet-modo-rol', modoRol || '');
+    // Actualizar nav inferior inmediatamente según el nuevo modo
+    const nbBuscar = document.getElementById('nb-buscar');
+    const nbMapa   = document.getElementById('nb-mapa');
+    const btnPub   = document.getElementById('btn-publicar-pedido');
+    const esPresta = esPrestador();
+    if (nbBuscar) nbBuscar.style.display = esPresta ? 'none' : '';
+    if (nbMapa)   nbMapa.style.display   = esPresta ? 'none' : '';
+    if (btnPub)   btnPub.style.display   = esPresta ? 'none' : '';
     reflejarUsuario();
     goTo('s-home');
   }
