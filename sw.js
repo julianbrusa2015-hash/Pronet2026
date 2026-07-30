@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v75'; // v75: notificaciones por RPC con validacion de relacion
+const CACHE_VERSION = 'pronet-v76'; // v76: CTA de propuesta respeta el toggle de doble perfil
 
 const SHELL = [
   './',

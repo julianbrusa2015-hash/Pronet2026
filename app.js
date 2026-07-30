@@ -1260,7 +1260,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     const cta=document.getElementById('pd-cta-prestador');
     if(cta){
-      const esPrest=usuarioActual&&usuarioActual.tipo==='prestador'&&usuarioActual.prestador_id;
+      // esPrestador() respeta el toggle de doble perfil. Antes esto exigía
+      // tipo==='prestador' literal, así que un doble perfil en modo prestador
+      // veía los Insights pero no tenía botón para ofertar.
+      // Y nunca en un pedido propio: un prestador no oferta en lo que publicó.
+      const esPrest=usuarioActual&&esPrestador()&&usuarioActual.prestador_id&&!soyDuenia2;
       const publicado=(p.estado||'Publicado')==='Publicado';
       cta.style.display=(esPrest&&publicado)?'block':'none';
       if(esPrest&&publicado) marcarSiYaOferte(p);
