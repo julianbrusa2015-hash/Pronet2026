@@ -243,7 +243,14 @@ const PronetDB = (() => {
         }
 
         // 2. Disparar el push (best-effort — si falla, la campanita ya fue guardada)
-        const PUSH_EDGE_FN = 'enviar-push';
+        // OJO: este es el SLUG de la URL, no el nombre visible en el dashboard.
+        // En Supabase la función figura como "enviar-push" pero su URL es
+        // .../functions/v1/bright-service — el slug quedó del nombre original y
+        // no se puede renombrar. Apuntar a 'enviar-push' daba 404 en el
+        // preflight, que el browser reporta como error de CORS.
+        // Para unificarlo hay que crear una función nueva con el slug correcto
+        // (ver PENDIENTES.md), no alcanza con renombrar la existente.
+        const PUSH_EDGE_FN = 'bright-service';
         const { data, error } = await sb.functions.invoke(PUSH_EDGE_FN, { body: opciones });
         if (error) { console.warn('[PronetDB] notificar push', error.message); }
 
