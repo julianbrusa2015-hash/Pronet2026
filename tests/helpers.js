@@ -100,7 +100,9 @@ async function sesionRestaurada(page) {
       // Falla con mensaje en vez de colgar 30s sin explicación.
       throw new Error('app.js desplegado sin sesionLista(): actualizá el deploy');
     }
-    return api.sesionLista();
+    // goTo se define en el IIFE de app.js: si no está, la página todavía está
+    // navegando/recargando y cualquier evaluate fallaría con contexto destruido.
+    return api.sesionLista() && typeof window.goTo === 'function';
   }, { timeout: 30000 });
   await page.waitForTimeout(300);
 }
@@ -124,7 +126,16 @@ async function abrir(page) {
  *  pantalla haya quedado activa y se reintenta si no. */
 async function irA(page, pantalla) {
   for (let intento = 0; intento < 4; intento++) {
-    await page.evaluate((p) => window.goTo(p), pantalla);
+    try {
+      // Esperar que goTo esté disponible: puede no estarlo si el contexto
+      // de ejecución acaba de ser destruido por una navegación del SPA.
+      await page.waitForFunction(() => typeof window.goTo === 'function', { timeout: 3000 });
+      await page.evaluate((p) => window.goTo(p), pantalla);
+    } catch {
+      // Contexto destruido o goTo aún no definido: reintentar.
+      await page.waitForTimeout(800);
+      continue;
+    }
     const llego = await page.waitForFunction(
       (p) => document.getElementById(p)?.classList.contains('active'),
       pantalla, { timeout: 3000 }

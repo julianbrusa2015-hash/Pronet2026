@@ -142,6 +142,8 @@ test.describe('C10 · Moderación — no accesible para prestador', () => {
 
   test('goTo("s-moderacion") para prestador no activa la pantalla', async ({ page }) => {
     await abrir(page);
+    // Asegurar que goTo esté disponible antes de llamarlo
+    await page.waitForFunction(() => typeof window.goTo === 'function', { timeout: 5000 });
     await page.evaluate(() => window.goTo('s-moderacion'));
     await page.waitForTimeout(500);
     await expect(page.locator('#s-moderacion')).not.toHaveClass(/active/);
