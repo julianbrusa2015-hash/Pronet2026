@@ -7,18 +7,37 @@ Los tests corren con Playwright contra `https://pronetprueba.netlify.app` (produ
 
 ---
 
-## Cuentas de prueba necesarias
+## Cuentas — inventario real (2026-07-29)
 
-Varios circuitos necesitan cuentas dedicadas. Sin esto, los tests quedan en skip.
+Contraseña de las cuentas de test: `Test1234!`
 
-| Cuenta | Email | Rol | Estado |
-|--------|-------|-----|--------|
-| Vecino | `vecino_test@pronet.test` | vecino | ⬜ verificar |
-| Prestador | `prestador_test@pronet.test` | prestador, **con rubro asignado** | 🟡 existe sin rubro |
-| Doble perfil | `doble_test@pronet.test` | vecino + prestador_id | ⬜ crear |
-| Admin | — | admin | ⬜ definir (¿cuenta separada?) |
+### Las que importan
 
-Contraseña convenida: `Test1234!`
+| Cuenta | tipo | Ficha | Para qué sirve |
+|--------|------|-------|----------------|
+| `admin@pronet.com.ar` | admin | — | C10 moderación, aprobar canjes, config de app. **Único con `roles=['admin']`** |
+| `vecino_test@pronet.test` | cliente | — | C1, C2, C5, C6, C7. **La usa la suite en 4 archivos — no borrar** |
+| `julianbrusa2015@gmail.com` | cliente | — | Segundo vecino **sin relación** con los prestadores: el único con el que se puede probar que `notificar_usuario()` **rechaza** por falta de vínculo |
+| `prestador_test@pronet.test` | prestador | 🔴 falta | C4 propuestas y límites. **La usa la suite — no borrar** |
+| `prestador@gmail.com` (Prestador Puertos) | prestador | ✓ General | Segundo prestador: propuestas que compiten, ranking, badge. Tiene 1.350 pts e historial de suscripción |
+| `doble2@pronettext.com` (Prestador y Vecino) | vecino | ✓ Plomería | C12 doble perfil — el toggle |
+
+### El resto (existen, sin rol asignado en el plan)
+
+`vecinopuertos@gmail.com` (dice "Admin PRONET" pero `roles=[]`, **no es admin**), `servicios_001@gmail.com`, `carla.test@test.com`, `servicios_1@gmail.com`, `carla2@test.com`, `doble@pronettext.com` (segundo doble perfil, Plomería).
+
+Se evaluó limpiarlas y se decidió **no borrar nada**: el borrado cascadea a pedidos, chats, propuestas, reseñas y loyalty, y las fichas de `prestadores` quedarían huérfanas apareciendo en el directorio público (la FK va `perfiles.prestador_id → prestadores`, no al revés).
+
+### Dos cosas a arreglar antes de automatizar C4/C5
+
+1. **4 de 5 prestadores no tienen ficha** (`prestador_id` en `null`): Carla Prestadora, Prestador Test, Servicios 1, Vecino 2. Sin ficha no pueden ofertar — el CTA del detalle exige `prestador_id`. Causa: falta la policy de INSERT en `prestadores` y el cliente descartaba el error. Fix en `supabase-ficha-prestador-rpc.sql`.
+2. **Los dos prestadores deben compartir rubro** para que las propuestas compitan. Hoy Prestador Puertos es `General`, que no matchea ninguna categoría del feed.
+
+### Inconsistencia de datos detectada
+
+La columna `tipo` usa **`'cliente'` y `'vecino'` como sinónimos** — hay cuentas con cada valor. Hoy no rompe porque todos los chequeos son `tipo === 'prestador'` o `!==`, así que ambos caen del mismo lado por accidente. Cualquier código nuevo que pregunte `tipo === 'vecino'` va a ignorar a la mitad de los usuarios. Falta elegir uno, migrar el otro y poner un CHECK.
+
+También `roles` está desincronizado de `tipo` en varias filas (ej. `servicios_1` es `tipo='prestador'` con `roles=['cliente']`) — dos fuentes de verdad para el rol.
 
 ---
 
