@@ -17,7 +17,13 @@ Los 5 casos probados y el `DROP POLICY` + `REVOKE INSERT` confirmados:
 
 El INSERT directo a `notificaciones` está revocado. Solo los RPC `SECURITY DEFINER` (`notificar_usuario`, `notificar_rubro`) pueden escribir, y toda notificación queda atribuida con `emisor_id`.
 
-### 2. Rotar el PIN de admin — sin confirmar
+### 2. ✅ Fix: toast de "trabajo terminado" se repetía en cada mensaje — CERRADO (2026-07-30)
+
+El listener realtime de `chats_trabajo` reaccionaba a cualquier `UPDATE` de la fila (incluido el que hace cada mensaje nuevo al guardar `hora_ultimo`), sin comparar el estado contra el anterior. Un chat ya terminado repetía el toast y la notificación en cada mensaje posterior.
+
+Corregido con `payload.old.estado` + `REPLICA IDENTITY FULL` en `chats_trabajo` (sin eso `payload.old` solo trae la primary key). Verificado en producción: mensaje y notificación real llegan sin el toast falso repetido.
+
+### 3. Rotar el PIN de admin — sin confirmar
 
 Estuvo legible sin sesión. El valor `1234` hay que darlo por quemado aunque ya no se filtre.
 
