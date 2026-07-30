@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v71'; // v71: flag configCargada para specs; lectura de config_app con lista blanca
+const CACHE_VERSION = 'pronet-v72'; // v72: puntos por resena acreditados por trigger, no por el cliente
 
 const SHELL = [
   './',

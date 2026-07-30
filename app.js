@@ -6053,11 +6053,10 @@ document.addEventListener('DOMContentLoaded', function() {
           url: '/#s-miperfil',
         }).catch(() => {});
 
-        // Loyalty: prestador gana 100 pts por reseña recibida
-        PronetDB.acreditarPuntos(100, 'resena', 'Reseña recibida', {
-          prestadorId: prestadorActual.id,
-          usuarioId: destinatarioId,
-        }).catch(() => {});
+        // Loyalty: los puntos por reseña (prestador +100, vecino +50, y el
+        // bonus de primer trabajo +400) los acredita el trigger
+        // trg_acreditar_por_resena en Supabase. No se acredita desde acá:
+        // el cliente no puede escribir el saldo sin volverlo falsificable.
 
         // Detectar primer trabajo: si es el primero, +400 pts extra y push especial
         if (PronetDB.esRemoto()) {
@@ -6068,10 +6067,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .eq('estado', 'calificado');
           const esPrimero = (trabajosAnteriores?.length ?? 0) <= 1;
           if (esPrimero) {
-            PronetDB.acreditarPuntos(400, 'primer_trabajo', 'Primer trabajo cerrado', {
-              prestadorId: prestadorActual.id,
-              usuarioId: destinatarioId,
-            }).catch(() => {});
+            // Los +400 los acredita trg_acreditar_por_resena; acá solo se avisa.
             PronetDB.notificar({
               destino: 'usuario',
               usuario_id: destinatarioId,
@@ -6094,12 +6090,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
-    // Loyalty: vecino gana 50 pts por dejar una reseña
-    if (usuarioActual) {
-      PronetDB.acreditarPuntos(50, 'resena', 'Dejaste una reseña', {
-        usuarioId: usuarioActual.id,
-      }).catch(() => {});
-    }
+    // Los +50 al vecino los acredita trg_acreditar_por_resena en Supabase.
 
     // Cerrar la pantalla de reseña después de 2 segundos
     setTimeout(() => cerrarResena(), 2000);
