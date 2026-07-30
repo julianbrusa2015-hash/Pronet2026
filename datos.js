@@ -1010,35 +1010,24 @@ const PronetDB = (() => {
     /** Registra una vista al perfil de un prestador. */
     async registrarVista(prestadorId, origen = 'busqueda') {
       if (!remoto) return;
-      try {
-        const uid = await this.usuarioIdActual();
-        let zona = null;
-        if (uid) {
-          const { data: perfil } = await sb.from('perfiles').select('zona').eq('id', uid).maybeSingle();
-          zona = perfil?.zona || null;
-        }
-        await sb.from('perfil_vistas').insert({
-          prestador_id: prestadorId,
-          vecino_id: uid || null,
-          origen,
-          zona,
-          fecha: new Date().toISOString().split('T')[0],
-        });
-      } catch(e) { console.warn('[PronetDB] registrarVista', e.message); }
+      // RPC valida el prestador, bloquea vistas propias y deduplica una por día
+      await sb.rpc('fn_registrar_vista', { p_prestador_id: prestadorId, p_origen: origen })
+        .catch(e => console.warn('[PronetDB] registrarVista', e.message));
     },
 
     /** Registra un contacto (click en botón Contactar) con un prestador. */
     async registrarContacto(prestadorId, origen = 'busqueda') {
       if (!remoto) return;
+      let zona = null;
       try {
         const uid = await this.usuarioIdActual();
-        await sb.from('perfil_contactos').insert({
-          prestador_id: prestadorId,
-          vecino_id: uid || null,
-          origen,
-          fecha: new Date().toISOString().split('T')[0],
-        });
-      } catch(e) { console.warn('[PronetDB] registrarContacto', e.message); }
+        if (uid) {
+          const { data: perfil } = await sb.from('perfiles').select('zona').eq('id', uid).maybeSingle();
+          zona = perfil?.zona || null;
+        }
+      } catch { /* zona queda null */ }
+      await sb.rpc('fn_registrar_contacto', { p_prestador_id: prestadorId, p_origen: origen, p_zona: zona })
+        .catch(e => console.warn('[PronetDB] registrarContacto', e.message));
     },
 
     /** Obtiene analítica completa del prestador logueado para un período dado. */
