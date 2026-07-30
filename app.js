@@ -3641,15 +3641,11 @@ document.addEventListener('DOMContentLoaded', function() {
     planesPagosActivos,
     limitePlan,
     badgePlanPrestador,
-    planActual:  () => planActual,
-    configApp:   () => ({ ...configApp }),
-    // Los specs deben esperar esto: _planesAPI existe al parsear el script,
-    // pero la config se carga async y reflejarPlan() corre después.
-    configCargada: () => configCargada,
-    // Señal distinta y posterior: la config se carga ANTES de resolver la
-    // sesión. Un spec que navegue apenas configCargada() da true puede pegarle
-    // a goTo() con usuarioActual todavía en null y comerse el gate de invitado.
-    sesionLista: () => !!usuarioActual,
+    planActual:       () => planActual,
+    esFundador:       () => esFundadorActual,
+    configApp:        () => ({ ...configApp }),
+    configCargada:    () => configCargada,
+    sesionLista:      () => !!usuarioActual,
   };
 
   /** Aviso de límite alcanzado, con el nombre del plan actual. */
