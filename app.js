@@ -3268,9 +3268,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // SESIÓN Y GATING (Opción C: invitado + registro en puntos de conversión)
   // ══════════════════════════════════════════════════════════════════
   let usuarioActual = null; // null = invitado
-  let planActual    = 'base'; // 'base' | 'plus' | 'pro' | 'elite'
-  let periodoActual = 'anual'; // 'mensual' | 'anual'
-  let venceActual   = null;   // ISO string o null
+  let planActual         = 'base'; // 'base' | 'plus' | 'pro' | 'elite'
+  let periodoActual      = 'anual'; // 'mensual' | 'anual'
+  let venceActual        = null;   // ISO string o null
+  let esFundadorActual   = false;  // true si el prestador tiene grandfathering activo
 
   // Acciones que requieren cuenta y su mensaje
   const ACCIONES_PROTEGIDAS = {
@@ -3475,8 +3476,11 @@ document.addEventListener('DOMContentLoaded', function() {
    *  el número no es arbitrario, es el mismo que después se vende. Los planes
    *  superiores nunca se degradan. Misma regla que plan_para_limites() en SQL. */
   function planParaLimites(plan) {
-    if (planesPagosActivos()) return plan;
-    return plan === 'base' ? 'plus' : plan;
+    // Con pagos desactivados: etapa fundadora global → Base recibe límites de Plus.
+    if (!planesPagosActivos()) return plan === 'base' ? 'plus' : plan;
+    // Con pagos activos: solo los fundadores marcados conservan límites de Plus.
+    if (plan === 'base' && esFundadorActual) return 'plus';
+    return plan;
   }
 
   // Jerarquía de tiers de analítica. `export` incluye todo lo de `completas`,
@@ -3737,15 +3741,18 @@ document.addEventListener('DOMContentLoaded', function() {
         planNombreEl.textContent = 'Plan ' + cfg.nombre + ' ' + (periodoActual === 'anual' ? 'Anual' : 'Mensual') + ' · ' + precio + ' ARS';
       }
     }
-    // Fecha de renovación en la card de plan
+    // Fecha de renovación / badge fundador en la card de plan
     const planRenewEl = document.getElementById('perfil-plan-renew');
     if (planRenewEl) {
-      if (planActual === 'base' || !venceActual) {
-        planRenewEl.style.display = 'none';
-      } else {
+      if (planActual !== 'base' && venceActual) {
         const d = new Date(venceActual);
         planRenewEl.textContent = 'Renueva ' + d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
         planRenewEl.style.display = '';
+      } else if (planActual === 'base' && esFundadorActual) {
+        planRenewEl.textContent = '⭐ Fundador · límites de Plus';
+        planRenewEl.style.display = '';
+      } else {
+        planRenewEl.style.display = 'none';
       }
     }
     // El tier de analítica depende del plan: recalcularlo cuando el plan cambia
@@ -7498,9 +7505,10 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBellCount();
         cargarSliderRangosDesdeDB();
         PronetDB.obtenerSuscripcion().then(s => {
-          planActual    = s.plan     || 'base';
-          periodoActual = s.periodo  || 'mensual';
-          venceActual   = s.vence_en || null;
+          planActual       = s.plan              || 'base';
+          periodoActual    = s.periodo           || 'mensual';
+          venceActual      = s.vence_en          || null;
+          esFundadorActual = s.es_fundador_activo || false;
           reflejarPlan();
         }).catch(() => {});
         if (u.zona) { zonaActual = u.zona; actualizarZonaLabel(zonaActual); }

@@ -1207,19 +1207,32 @@ const PronetDB = (() => {
     // que sea atómica. Antes eran dos pasos desde el cliente y un doble click
     // aplicaba el beneficio dos veces.
 
-    /** Devuelve la suscripción activa del usuario (o base por defecto). */
+    /** Devuelve la suscripción activa del usuario (o base por defecto).
+     *  Incluye `es_fundador_activo` para que el cliente aplique los límites
+     *  correctos sin depender del valor codificado en config.js. */
     async obtenerSuscripcion() {
-      if (!remoto) return { plan: 'base', estado: 'activo' };
+      if (!remoto) return { plan: 'base', estado: 'activo', es_fundador_activo: false };
       const uid = await this.usuarioIdActual();
-      if (!uid) return { plan: 'base', estado: 'activo' };
+      if (!uid) return { plan: 'base', estado: 'activo', es_fundador_activo: false };
       const { data } = await sb.from('suscripciones')
         .select('plan, estado, periodo, vence_en, activado_en')
         .eq('usuario_id', uid).maybeSingle();
-      if (!data) return { plan: 'base', estado: 'activo' };
+      // Chequear estado de fundador (solo relevante para prestadores)
+      let es_fundador_activo = false;
+      try {
+        const { data: pf } = await sb.from('perfiles').select('prestador_id').eq('id', uid).maybeSingle();
+        if (pf?.prestador_id) {
+          const { data: pr } = await sb.from('prestadores')
+            .select('es_fundador, limites_fundador_hasta').eq('id', pf.prestador_id).maybeSingle();
+          es_fundador_activo = !!(pr?.es_fundador &&
+            (pr.limites_fundador_hasta === null || new Date(pr.limites_fundador_hasta) > new Date()));
+        }
+      } catch { /* es_fundador_activo queda false */ }
+      if (!data) return { plan: 'base', estado: 'activo', es_fundador_activo };
       if (data.vence_en && new Date(data.vence_en) < new Date()) {
-        return { ...data, plan: 'base', estado: 'vencido' };
+        return { ...data, plan: 'base', estado: 'vencido', es_fundador_activo };
       }
-      return data;
+      return { ...data, es_fundador_activo };
     },
 
     /** Cuenta las denuncias pendientes (solo admin ve todas por RLS). */
