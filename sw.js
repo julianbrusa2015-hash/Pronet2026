@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v72'; // v72: puntos por resena acreditados por trigger, no por el cliente
+const CACHE_VERSION = 'pronet-v73'; // v73: canjes por RPC, el cliente ya no escribe loyalty
 
 const SHELL = [
   './',

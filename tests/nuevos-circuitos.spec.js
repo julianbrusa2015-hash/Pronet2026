@@ -255,19 +255,30 @@ test.describe('F.1 · Feed prestador filtrado por rubro', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// D-03: Loyalty — acreditarPuntos disponible
+// D-03: Loyalty — la acreditación vive en el servidor
 // ═══════════════════════════════════════════════════════════════════
 test.describe('D-03 · Loyalty acumulación — API disponible', () => {
 
-  test('PronetDB.acreditarPuntos existe y es función', async ({ page }) => {
+  test('el cliente NO expone acreditación de puntos', async ({ page }) => {
     await page.goto('/');
     await esperarDOM(page);
-    // PronetDB se expone en window (window.PronetDB = PronetDB al final de datos.js)
-    const existe = await page.evaluate(() =>
-      typeof window.PronetDB !== 'undefined' &&
-      typeof window.PronetDB.acreditarPuntos === 'function'
-    );
-    expect(existe).toBe(true);
+    // Contrato invertido a propósito. Antes se verificaba que
+    // acreditarPuntos() existiera; ahora se verifica que NO exista: un saldo
+    // escrito desde el navegador es falsificable, así que los puntos los
+    // acredita el trigger trg_acreditar_por_resena y el RPC resolver_canje().
+    const r = await page.evaluate(() => ({
+      db:        typeof window.PronetDB,
+      acreditar: typeof window.PronetDB?.acreditarPuntos,
+      aplicar:   typeof window.PronetDB?.aplicarBeneficio,
+      canjear:   typeof window.PronetDB?.canjearPuntos,
+      resolver:  typeof window.PronetDB?.resolverCanje,
+    }));
+    expect(r.db).toBe('object');
+    expect(r.acreditar).toBe('undefined');
+    expect(r.aplicar).toBe('undefined');
+    // Los envoltorios de RPC sí deben estar.
+    expect(r.canjear).toBe('function');
+    expect(r.resolver).toBe('function');
   });
 
   test('abrirSoporteWhatsapp y cerrarWaPopup expuestos en window', async ({ page }) => {

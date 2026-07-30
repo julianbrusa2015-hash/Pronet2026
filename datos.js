@@ -896,45 +896,18 @@ const PronetDB = (() => {
       const total = (hist || []).reduce((s, h) => s + h.puntos, 0);
       const nivel = total >= 10000 ? 'Élite' : total >= 5000 ? 'Oro' : total >= 1000 ? 'Plata' : 'Bronce';
 
-      if (total > 0) {
-        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: total, nivel }, { onConflict: 'usuario_id' })
-          .catch(() => {});
-      }
-
+      // No se persiste el total recalculado: el cliente ya no escribe `loyalty`
+      // (ver supabase-canjes-rpc.sql). Esto es solo un fallback de lectura para
+      // que la pantalla muestre el número correcto si la fila consolidada
+      // quedara desincronizada. Reconciliarla es tarea del servidor.
       return { puntos: total, nivel };
     },
 
-    /** Acredita puntos a un usuario (vecino o prestador). Uso interno post-evento. */
-    async acreditarPuntos(puntos, tipo, descripcion, { prestadorId = null, usuarioId = null } = {}) {
-      if (!remoto || puntos <= 0) return { ok: false };
-      try {
-        const uid = usuarioId || await this.usuarioIdActual();
-        if (!uid) return { ok: false };
-
-        // Historial — usuario_id siempre, prestador_id cuando aplica
-        const { error: errHist } = await sb.from('loyalty_historial').insert({
-          usuario_id: uid,
-          prestador_id: prestadorId || null,
-          puntos,
-          tipo,
-          descripcion,
-        });
-        if (errHist) console.warn('[PronetDB] acreditarPuntos historial', errHist.message);
-
-        // Actualizar balance consolidado
-        const { data: loy } = await sb.from('loyalty')
-          .select('puntos').eq('usuario_id', uid).maybeSingle();
-        const nuevo = (loy?.puntos || 0) + puntos;
-        const nivel = nuevo >= 10000 ? 'Élite' : nuevo >= 5000 ? 'Oro' : nuevo >= 1000 ? 'Plata' : 'Bronce';
-        const { error: errLoy } = await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevo, nivel }, { onConflict: 'usuario_id' });
-        if (errLoy) { console.warn('[PronetDB] acreditarPuntos loyalty', errLoy.message); return { ok: false }; }
-
-        return { ok: true, puntos: nuevo };
-      } catch(e) {
-        console.warn('[PronetDB] acreditarPuntos', e.message);
-        return { ok: false };
-      }
-    },
+    // acreditarPuntos() se eliminó: el cliente ya no acredita puntos.
+    // Los puntos por reseña los da el trigger trg_acreditar_por_resena y los
+    // de canje el RPC resolver_canje(), ambos SECURITY DEFINER. Un saldo
+    // escrito desde el navegador es falsificable por definición, y RLS no
+    // puede impedirlo porque filtra filas, no valida valores.
 
     /**
      * Cuenta propuestas activas para un pedido usando RPC SECURITY DEFINER.
@@ -1141,87 +1114,41 @@ const PronetDB = (() => {
     },
 
     /** Descuenta puntos de loyalty por un canje y registra la solicitud pendiente. */
-    async canjearPuntos(costo, nombre, canjeId) {
+    /** Solicita un canje. El costo lo determina el servidor a partir del
+     *  canje_id: no se manda por parámetro, porque un costo controlado por el
+     *  cliente se podía mandar en 0 y obtener el beneficio gratis. */
+    async canjearPuntos(canjeId) {
       if (!remoto) return { ok: false, error: 'modo local' };
       try {
-        const uid = await this.usuarioIdActual();
-        if (!uid) return { ok: false, error: 'sin sesión' };
-        const { data: perfil } = await sb.from('perfiles')
-          .select('prestador_id').eq('id', uid).maybeSingle();
-
-        // Verificar puntos disponibles antes de descontar
-        const { data: loy } = await sb.from('loyalty')
-          .select('puntos').eq('usuario_id', uid).maybeSingle();
-        const ptsActuales = loy?.puntos || 0;
-        if (ptsActuales < costo) return { ok: false, error: 'puntos insuficientes' };
-
-        // Registrar solicitud pendiente (admin la aprueba manualmente)
-        await sb.from('loyalty_solicitudes').insert({
-          usuario_id: uid,
-          prestador_id: perfil?.prestador_id || null,
-          canje_id: canjeId || null,
-          nombre_canje: nombre,
-          puntos_descontados: costo,
-          estado: 'pendiente',
-        });
-
-        // Registrar en historial (negativo = canje) — usuario_id Y prestador_id,
-        // porque listarLoyaltyHistorial filtra por uno u otro según el rol al consultar.
-        await sb.from('loyalty_historial').insert({
-          usuario_id: uid,
-          prestador_id: perfil?.prestador_id || null,
-          puntos: -costo,
-          tipo: 'canje',
-          descripcion: 'Canje: ' + nombre,
-        });
-
-        // Actualizar tabla loyalty
-        const nuevosPuntos = ptsActuales - costo;
-        const nivel = nuevosPuntos >= 10000 ? 'Élite' : nuevosPuntos >= 5000 ? 'Oro' : nuevosPuntos >= 1000 ? 'Plata' : 'Bronce';
-        await sb.from('loyalty').upsert({ usuario_id: uid, puntos: nuevosPuntos, nivel }, { onConflict: 'usuario_id' });
-
-        return { ok: true, puntos: nuevosPuntos };
+        const { data, error } = await sb.rpc('canjear_puntos', { p_canje_id: canjeId });
+        if (error) { console.warn('[PronetDB] canjearPuntos', error.message); return { ok: false, error: error.message }; }
+        return data || { ok: false, error: 'sin respuesta' };
       } catch(e) {
         console.warn('[PronetDB] canjearPuntos', e.message);
         return { ok: false, error: e.message };
       }
     },
 
-    /** Aplica el beneficio de un canje aprobado según su tipo_beneficio.
-     *  tipo_beneficio: 'plan_mes' (valor='plus'|'pro'|'elite') | 'puntos_extra' (valor='500') | 'manual'
-     *  Devuelve { ok, mensaje } — mensaje es el texto a mostrar en la notificación al usuario. */
-    async aplicarBeneficio(tipoBeneficio, valorBeneficio, usuarioId, nombreCanje, prestadorId) {
+    /** Aprueba o rechaza un canje (solo admin, validado en el RPC).
+     *  Aplica el beneficio o devuelve los puntos, de forma idempotente. */
+    async resolverCanje(solicitudId, estado) {
+      if (!remoto) return { ok: false, error: 'modo local' };
       try {
-        if (tipoBeneficio === 'plan_mes') {
-          const { data: actual } = await sb.from('suscripciones')
-            .select('vence_en').eq('usuario_id', usuarioId).maybeSingle();
-          const base = actual?.vence_en && new Date(actual.vence_en) > new Date()
-            ? new Date(actual.vence_en) : new Date();
-          base.setMonth(base.getMonth() + 1);
-          const { error } = await sb.from('suscripciones').upsert({
-            usuario_id: usuarioId, plan: valorBeneficio, estado: 'activo',
-            periodo: 'mensual', vence_en: base.toISOString(), activado_en: new Date().toISOString(),
-          }, { onConflict: 'usuario_id' });
-          if (error) throw error;
-          return { ok: true, mensaje: 'Tu plan ' + valorBeneficio + ' fue activado por 1 mes.' };
-        }
-        if (tipoBeneficio === 'puntos_extra') {
-          const n = parseInt(valorBeneficio, 10) || 0;
-          if (n > 0) {
-            const res = await this.acreditarPuntos(n, 'canje', 'Bonus: ' + nombreCanje, {
-              usuarioId, prestadorId: prestadorId || null,
-            });
-            if (!res.ok) return { ok: false, mensaje: '' };
-          }
-          return { ok: true, mensaje: 'Recibiste ' + n.toLocaleString('es-AR') + ' puntos extra.' };
-        }
-        // manual: sin acción automática
-        return { ok: true, mensaje: 'Tu canje "' + nombreCanje + '" fue aprobado. Nos contactaremos para coordinar la entrega.' };
+        const { data, error } = await sb.rpc('resolver_canje', {
+          p_solicitud_id: solicitudId, p_estado: estado,
+        });
+        if (error) { console.warn('[PronetDB] resolverCanje', error.message); return { ok: false, error: error.message }; }
+        return data || { ok: false, error: 'sin respuesta' };
       } catch(e) {
-        console.warn('[PronetDB] aplicarBeneficio', e.message);
-        return { ok: false, mensaje: '' };
+        console.warn('[PronetDB] resolverCanje', e.message);
+        return { ok: false, error: e.message };
       }
     },
+
+    // aplicarBeneficio() se eliminó: la aplicación del beneficio ahora vive
+    // dentro del RPC resolver_canje(), junto con la transición de estado, para
+    // que sea atómica. Antes eran dos pasos desde el cliente y un doble click
+    // aplicaba el beneficio dos veces.
 
     /** Devuelve la suscripción activa del usuario (o base por defecto). */
     async obtenerSuscripcion() {

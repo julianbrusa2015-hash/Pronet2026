@@ -399,11 +399,13 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.disabled = true;
     btn.textContent = '⏳ Canjeando...';
 
-    const res = await PronetDB.canjearPuntos(costo, nombre, canjeId).catch(() => ({ ok: false }));
+    // El costo NO se manda: lo lee el servidor del canje. `costo` acá es solo
+    // para el chequeo optimista de arriba y el fallback del saldo.
+    const res = await PronetDB.canjearPuntos(canjeId).catch(() => ({ ok: false }));
     if (!res.ok) {
       btn.disabled = false;
       btn.textContent = 'Canjear';
-      showToast && showToast('⚠️ No se pudo canjear. Revisá tu conexión.');
+      showToast && showToast('⚠️ ' + (res.error || 'No se pudo canjear. Revisá tu conexión.'));
       return;
     }
 
@@ -1645,32 +1647,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function accionCanje(id, estado) {
     try {
-      const { data: sol, error: errSol } = await window._sb.from('loyalty_solicitudes')
-        .select('*, loyalty_canjes!loyalty_solicitudes_canje_id_fkey(tipo_beneficio, valor_beneficio)').eq('id', id).maybeSingle();
-      if (errSol) throw errSol;
+      // Necesitamos el destinatario para la notificación; el resto (validar
+      // admin, transicionar el estado, aplicar el beneficio o devolver los
+      // puntos) lo hace resolver_canje() en el servidor, de forma atómica.
+      const { data: sol } = await window._sb.from('loyalty_solicitudes')
+        .select('usuario_id, nombre_canje').eq('id', id).maybeSingle();
 
-      const { error } = await window._sb.from('loyalty_solicitudes')
-        .update({ estado, resuelto: new Date().toISOString() }).eq('id', id);
-      if (error) throw error;
+      const res = await PronetDB.resolverCanje(id, estado);
+      if (!res.ok) {
+        showToast && showToast('⚠️ ' + (res.error || 'No se pudo actualizar el canje'));
+        renderCanjesPendientes();
+        return;
+      }
 
-      if (estado === 'aprobado' && sol) {
-        const tipoBen  = sol.loyalty_canjes?.tipo_beneficio || 'manual';
-        const valorBen = sol.loyalty_canjes?.valor_beneficio || '';
-        const res = await PronetDB.aplicarBeneficio(tipoBen, valorBen, sol.usuario_id, sol.nombre_canje, sol.prestador_id);
-        if (!res.ok) {
-          showToast && showToast('⚠️ Canje marcado aprobado, pero el beneficio no se pudo aplicar. Revisá manualmente.');
-        }
-        await PronetDB.notificar({
+      if (sol) {
+        const aprobado = estado === 'aprobado';
+        PronetDB.notificar({
           destino: 'usuario', usuario_id: sol.usuario_id, tipo: 'loyalty',
-          titulo: '✅ Canje aprobado', cuerpo: res.mensaje || ('Tu canje "' + sol.nombre_canje + '" fue aprobado.'),
-          url: '/#s-loyalty',
-        }).catch(() => {});
-      } else if (estado === 'rechazado' && sol) {
-        // Devolver los puntos descontados al usuario
-        await PronetDB.acreditarPuntos(sol.puntos_descontados, 'canje', 'Reembolso: ' + sol.nombre_canje, { usuarioId: sol.usuario_id, prestadorId: sol.prestador_id || null }).catch(() => {});
-        await PronetDB.notificar({
-          destino: 'usuario', usuario_id: sol.usuario_id, tipo: 'loyalty',
-          titulo: '❌ Canje rechazado', cuerpo: 'Tu canje "' + sol.nombre_canje + '" fue rechazado. Se te devolvieron los puntos.',
+          titulo: aprobado ? '✅ Canje aprobado' : '❌ Canje rechazado',
+          cuerpo: res.mensaje || ('Tu canje "' + sol.nombre_canje + '" fue ' + estado + '.'),
           url: '/#s-loyalty',
         }).catch(() => {});
       }
