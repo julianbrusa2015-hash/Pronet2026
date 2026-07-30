@@ -215,13 +215,12 @@ test.describe('F.1 · Feed prestador filtrado por rubro', () => {
     let loginOk = false;
     try { await loginPrestador(page); loginOk = true; } catch (e) { console.log('[F.1] login falló:', e.message.slice(0, 80)); }
     if (!loginOk) { test.skip(); return; }
-    // Verificar que catActiva no es 'todos' si el prestador tiene rubro
-    const { catActiva, rubro } = await page.evaluate(() => ({
-      catActiva: window.catActiva,
-      rubro: window.usuarioActual?.rubro || null,
-    }));
-    if (!rubro) {
-      console.log('[F.1] prestador_test no tiene rubro — test no aplica');
+    // El rubro vive en `prestadores`, no en usuarioActual: la app lo lee al
+    // iniciar y lo vuelca en catActiva si matchea una categoría conocida.
+    // Skipear solo si catActiva quedó en 'todos' (sin rubro o rubro sin match).
+    const catActiva = await page.evaluate(() => window.catActiva);
+    if (catActiva === 'todos') {
+      console.log('[F.1] prestador_test no tiene rubro o no matchea categoría — test no aplica');
       test.skip();
       return;
     }
@@ -231,7 +230,7 @@ test.describe('F.1 · Feed prestador filtrado por rubro', () => {
     const chipActivo = await page.evaluate((cat) => {
       const chip = document.getElementById('cat-' + cat);
       return chip ? chip.classList.contains('on') : false;
-    }, catActiva);
+    }, catActiva);  // catActiva ya es string
     expect(chipActivo).toBe(true);
   });
 
