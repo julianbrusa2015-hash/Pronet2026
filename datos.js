@@ -585,6 +585,15 @@ const PronetDB = (() => {
       const { data, error } = await sb.from('portfolio_fotos')
         .insert({ prestador_id: prestadorId, url: publicUrl, descripcion }).select().maybeSingle();
       if (error) {
+        // El archivo ya subió a Storage antes de saber si el INSERT iba a
+        // funcionar (ej: el trigger de límite de plan lo rechaza). Sin este
+        // borrado queda huérfano en el bucket para siempre — nadie más lo
+        // referencia ni lo limpia.
+        // El catch es best-effort: si el bucket no tiene policy de DELETE
+        // para authenticated, esto falla en silencio y el huérfano persiste
+        // igual — no hay forma de confirmarlo desde el cliente sin haber
+        // subido un archivo real primero.
+        await sb.storage.from('portfolio').remove([path]).catch(() => {});
         console.warn('[PronetDB] portfolio insert', error.message);
         if (esRechazoServidor(error)) throw error; // ej: límite de plan
         return null;
