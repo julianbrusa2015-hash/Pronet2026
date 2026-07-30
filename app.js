@@ -7426,6 +7426,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // ver los planes pagos ocultos si están desactivados. Si falla la lectura,
     // configApp queda vacío y planesPagosActivos() da false — el default seguro.
     configApp = await (PronetDB?.obtenerConfigApp?.() || Promise.resolve({})).catch(() => ({}));
+
+    // Sincronizar los límites numéricos de cada plan desde la DB: evita drift
+    // entre config.js (cliente) y planes_limites (fuente de verdad del trigger).
+    const limitesDB = await PronetDB.listarPlanesLimites().catch(() => []);
+    if (limitesDB.length && window.PRONET_CONFIG?.PLANES) {
+      limitesDB.forEach(row => {
+        const p = window.PRONET_CONFIG.PLANES.find(p => p.id === row.plan);
+        if (p) { p.propuestas_mes = row.propuestas_mes; p.fotos_portfolio = row.fotos_portfolio; }
+      });
+    }
+
     configCargada = true;
     reflejarPlan();
 

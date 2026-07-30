@@ -537,6 +537,16 @@ const PronetDB = (() => {
       return out;
     },
 
+    /** Devuelve los límites numéricos de cada plan tal como los ve el servidor
+     *  (tabla planes_limites, fuente de verdad para los triggers). */
+    async listarPlanesLimites() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('planes_limites')
+        .select('plan, propuestas_mes, fotos_portfolio');
+      if (error) { console.warn('[PronetDB] listarPlanesLimites', error.message); return []; }
+      return data || [];
+    },
+
     /** Guarda un valor de configuración (solo admin, por RLS). */
     async guardarConfigApp(clave, valor) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
@@ -604,8 +614,15 @@ const PronetDB = (() => {
     /** Elimina una foto del portfolio. */
     async eliminarFotoPortfolio(fotoId) {
       if (!remoto || !fotoId) return false;
+      const { data: foto } = await sb.from('portfolio_fotos')
+        .select('url').eq('id', fotoId).maybeSingle();
       const { error } = await sb.from('portfolio_fotos').delete().eq('id', fotoId);
-      return !error;
+      if (error) return false;
+      if (foto?.url) {
+        const m = foto.url.match(/\/storage\/v1\/object\/public\/portfolio\/(.+)$/);
+        if (m) await sb.storage.from('portfolio').remove([m[1]]).catch(() => {});
+      }
+      return true;
     },
 
     // ── FOTOS DE TRABAJO ─────────────────────────────────────────────────
@@ -1249,6 +1266,7 @@ const PronetDB = (() => {
     async actualizar(coleccion, id, cambios) {
       if (remoto) {
         const { data, error } = await sb.from(coleccion).update(cambios).eq('id', id).select().single();
+        if (error && esRechazoServidor(error)) throw error;
         if (error) { console.warn('[PronetDB] actualizar', coleccion, error.message); return null; }
         return data;
       }

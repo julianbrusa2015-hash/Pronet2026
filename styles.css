@@ -2209,7 +2209,7 @@
   .loyalty-screen { background: var(--surface); }
 
   .loyalty-hero {
-    background: linear-gradient(160deg, #0D0F1A 0%, #1A1A2E 40%, #4A0080 100%);
+    background: linear-gradient(160deg, #0D0F1A 0%, #0F1A3A 40%, var(--blue-d) 100%);
     padding: calc(env(safe-area-inset-top) + 20px) 18px 32px; text-align: center; position: relative;
   }
   .loyalty-hero::before {
@@ -2272,7 +2272,7 @@
   .acc-body { flex:1; }
   .acc-name { font-size:13px; font-weight:600; color:var(--ink); }
   .acc-sub  { font-size:11px; color:var(--ink3); margin-top:2px; }
-  .acc-pts  { font-size:14px; font-weight:800; color:#9B59B6; flex-shrink:0; white-space:nowrap; }
+  .acc-pts  { font-size:14px; font-weight:800; color:var(--blue); flex-shrink:0; white-space:nowrap; }
 
   /* Canje card */
   .canje-card {
@@ -2284,9 +2284,9 @@
   .canje-body { flex:1; }
   .canje-name { font-size:13px; font-weight:700; color:var(--ink); }
   .canje-sub  { font-size:11px; color:var(--ink3); margin-top:2px; }
-  .canje-costo { font-size:11px; font-weight:700; color:#9B59B6; margin-top:4px; }
+  .canje-costo { font-size:11px; font-weight:700; color:var(--blue); margin-top:4px; }
   .canje-btn {
-    background:linear-gradient(135deg,#9B59B6,#4A0080); color:white;
+    background:linear-gradient(135deg,var(--blue),var(--blue-d)); color:white;
     border:none; border-radius:10px; padding:8px 14px;
     font-size:12px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
     flex-shrink:0; transition:opacity .15s;
@@ -2301,7 +2301,7 @@
     box-shadow:0 2px 6px rgba(0,0,0,.04); border:2px solid transparent;
     text-align:center;
   }
-  .nivel-card.active { border-color:#9B59B6; background:linear-gradient(135deg,#F9F5FF,#F0E6FF); }
+  .nivel-card.active { border-color:var(--blue); background:var(--blue-s); }
   .nivel-icon { font-size:28px; margin-bottom:6px; }
   .nivel-name { font-size:13px; font-weight:700; color:var(--ink); }
   .nivel-range { font-size:10px; color:var(--ink3); margin-top:2px; }
