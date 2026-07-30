@@ -16,9 +16,20 @@ module.exports = defineConfig({
     locale: 'es-AR',
   },
   projects: [
+    // Se loguea una vez por rol y guarda la sesión en tests/.auth/*.json.
+    // Los specs que declaran storageState la reusan en vez de autenticarse
+    // en cada test.
+    // Mismo navegador que el proyecto de tests: sin esto usa el Chromium por
+    // defecto, que en esta máquina no está instalado (spawn UNKNOWN).
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.js/,
+      use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    },
     {
       name: 'msedge',
       use: { ...devices['Desktop Edge'], channel: 'msedge' },
+      dependencies: ['setup'],
     },
   ],
 });
