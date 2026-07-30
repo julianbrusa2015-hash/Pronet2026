@@ -13,13 +13,28 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
 
+// Allow-Methods y Max-Age son correctos de declarar, pero NO eran la causa del
+// error de CORS: POST es un método CORS-safelisted, así que el preflight es
+// válido aunque falte Allow-Methods. La causa real hay que buscarla en el
+// estado del preflight OPTIONS (ver más abajo).
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  // El preflight tiene que responder 200 CON headers CORS y sin exigir auth:
+  // el OPTIONS que manda el browser NO lleva Authorization.
+  //
+  // OJO — si el proyecto tiene `verify_jwt` activo para esta función, este
+  // handler nunca llega a ejecutarse: el gateway de Supabase rechaza el
+  // OPTIONS con 401 antes, y esa respuesta no lleva headers CORS, así que el
+  // browser lo reporta como error de CORS aunque el problema sea de auth.
+  // Esta función ya valida el JWT por su cuenta (más abajo), así que la
+  // verificación del gateway es redundante y hay que desactivarla.
+  if (req.method === "OPTIONS") return new Response("ok", { status: 200, headers: cors });
 
   try {
     // El que invoca debe estar logueado (anti-spam básico)
