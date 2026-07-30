@@ -6,34 +6,16 @@ Estado al cierre del **2026-07-29**. Deploy en producción: **SW v76** (`be68670
 
 ## 🔴 Retomar primero
 
-### 1. Parte 4 — el phishing por notificaciones sigue abierto
+### 1. ✅ Parte 4 — CERRADA (2026-07-30)
 
-Los RPC están creados y el cliente los usa, pero **falta la etapa 2**: mientras las tres policies permisivas existan, el INSERT directo sigue habilitado y el ataque funciona.
+Los 5 casos probados y el `DROP POLICY` + `REVOKE INSERT` confirmados:
 
-El ataque, para tener presente qué se está cerrando:
-```js
-await window._sb.from('notificaciones').insert({
-  usuario_id: '<víctima>', titulo: '⚠️ Problema con tu cobro',
-  url: 'https://sitio-del-atacante.com' })
-```
-Se ve en la campanita igual que un aviso real del sistema. Apuntar es trivial: `perfiles_publicos` da todos los ids.
-
-**Probado 3 de 5:**
 - ✅ Mensaje en chat · ✅ Propuesta enviada · ✅ Trabajo terminado
+- ✅ Broadcast — 4 notificaciones, una por electricista del rubro, mismo `emisor_id` y mismo `creado` (un solo INSERT masivo del RPC)
+- ✅ El caso que debía fallar — Carla intentando notificar a un usuario sin relación devolvió `{ok: false, error: "sin relación con el destinatario"}`
+- ✅ INSERT directo verificado como bloqueado: `403` al intentar insertar sin pasar por el RPC
 
-**Faltan 2:**
-- ⬜ **Broadcast** — como vecino publicar un pedido de Electricistas. Esperar **4 notificaciones**, una por electricista. Es el único RPC que inserta varias filas.
-- ⬜ **El que debe FALLAR** — desde Carla, apuntar a `Vecino Test` o `servicios_001`. **No a Julian Brusa**: Carla ofertó en su pedido, así que ya tiene relación legítima.
-  ```js
-  await window._sb.rpc('notificar_usuario', {
-    p_usuario_id: '<id no relacionado>', p_tipo: 'general',
-    p_titulo: 'Intento', p_url: 'https://malo.com' })
-  // esperado: {ok: false, error: "sin relación con el destinatario"}
-  ```
-
-Los primeros cuatro confirman que no se rompió nada. **Solo el quinto prueba que el fix sirve.**
-
-**Al cerrarlos:** descomentar el bloque final de `supabase-notificaciones-rpc.sql` (drop de las 3 policies + `revoke insert`). Las policies se combinan con OR: hay que borrar **las tres**.
+El INSERT directo a `notificaciones` está revocado. Solo los RPC `SECURITY DEFINER` (`notificar_usuario`, `notificar_rubro`) pueden escribir, y toda notificación queda atribuida con `emisor_id`.
 
 ### 2. Rotar el PIN de admin — sin confirmar
 
