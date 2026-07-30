@@ -1,0 +1,17 @@
+-- ═══ PRONET · Replica identity para realtime de chats_trabajo ═══
+-- Ejecutar en Supabase → SQL Editor. Idempotente.
+--
+-- El listener de realtime en app.js (PronetDB.suscribir('chats_trabajo', ...))
+-- ahora compara payload.new.estado contra payload.old.estado para no repetir
+-- el toast de "trabajo terminado" / "cancelado" en cada UPDATE posterior a la
+-- fila (ej: cada mensaje nuevo actualiza hora_ultimo y re-disparaba el aviso).
+--
+-- Por default, Postgres solo replica la primary key en el "old row" de un
+-- UPDATE (REPLICA IDENTITY DEFAULT). Eso significa que payload.old solo trae
+-- `id`, y `payload.old.estado` sería siempre undefined — la comparación
+-- "funcionaría" por casualidad (undefined !== cualquier estado), pero sin
+-- proteger nada de verdad si el resto del payload.old cambia de forma.
+--
+-- REPLICA IDENTITY FULL hace que Postgres mande la fila completa como "old"
+-- en cada UPDATE, para que la comparación sea real.
+alter table public.chats_trabajo replica identity full;

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v76'; // v76: CTA de propuesta respeta el toggle de doble perfil
+const CACHE_VERSION = 'pronet-v77'; // v77: fix toast "trabajo terminado/cancelado" se repetia en cada mensaje
 
 const SHELL = [
   './',

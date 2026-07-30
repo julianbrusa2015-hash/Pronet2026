@@ -7230,10 +7230,17 @@ document.addEventListener('DOMContentLoaded', function() {
       if (payload.eventType !== 'UPDATE') return;
 
       const estado = chat.estado;
+      const estadoAnterior = payload.old?.estado;
+      // Cualquier UPDATE a la fila dispara este evento, no solo un cambio de
+      // estado — por ejemplo, cada mensaje nuevo actualiza hora_ultimo. Sin
+      // esta guarda, el toast y la notificación de "trabajo terminado" o
+      // "cancelado" se repetían en cada mensaje posterior, porque el chat
+      // seguía en ese estado aunque no acababa de transicionar a él.
+      const recienCambio = estado !== estadoAnterior;
       const canceladoPorMi = chat.cancelado_por === usuarioActual.id;
 
       // Cancelación → notificar a quien NO canceló
-      if (estado === 'cancelado' && !canceladoPorMi) {
+      if (estado === 'cancelado' && recienCambio && !canceladoPorMi) {
         const quien = soyVecino ? 'El prestador' : 'El vecino';
         const titulo = '❌ ' + quien + ' canceló el trabajo';
         const cuerpo = chat.motivo_cancelacion || '';
@@ -7248,7 +7255,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       // Prestador marcó terminado → notificar al vecino
-      if (estado === 'terminado_prestador' && soyVecino) {
+      if (estado === 'terminado_prestador' && recienCambio && soyVecino) {
         const titulo = '✅ El prestador marcó el trabajo como terminado';
         showToast(titulo + ' — Confirmá para calificar', () => goTo('s-chats'), true);
         agregarNotifCampanita(titulo, () => goTo('s-chats'));
