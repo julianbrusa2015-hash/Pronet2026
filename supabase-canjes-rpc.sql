@@ -36,7 +36,7 @@ begin
   end if;
 
   -- El costo y el nombre salen de la base, nunca del cliente.
-  select id, nombre, costo, activo, tipo into v_canje
+  select id, nombre, costo_puntos, activo, tipo into v_canje
     from loyalty_canjes where id = p_canje_id;
   if v_canje.id is null then
     return jsonb_build_object('ok', false, 'error', 'canje inexistente');
@@ -53,7 +53,7 @@ begin
   end if;
 
   select coalesce(puntos, 0) into v_saldo from loyalty where usuario_id = v_uid;
-  if coalesce(v_saldo, 0) < v_canje.costo then
+  if coalesce(v_saldo, 0) < v_canje.costo_puntos then
     return jsonb_build_object('ok', false, 'error', 'puntos insuficientes');
   end if;
 
@@ -68,9 +68,9 @@ begin
   insert into loyalty_solicitudes
     (usuario_id, prestador_id, canje_id, nombre_canje, puntos_descontados, estado)
   values
-    (v_uid, v_prestador_id, p_canje_id, v_canje.nombre, v_canje.costo, 'pendiente');
+    (v_uid, v_prestador_id, p_canje_id, v_canje.nombre, v_canje.costo_puntos, 'pendiente');
 
-  v_nuevo := acreditar_puntos(v_uid, -v_canje.costo, 'canje',
+  v_nuevo := acreditar_puntos(v_uid, -v_canje.costo_puntos, 'canje',
                               'Canje: ' || v_canje.nombre, v_prestador_id);
 
   return jsonb_build_object('ok', true, 'puntos', v_nuevo);
