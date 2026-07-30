@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v83'; // v83: apunta al slug real de la Edge Function (bright-service)
+const CACHE_VERSION = 'pronet-v84'; // v84: expone sesionLista() para los specs
 
 const SHELL = [
   './',
