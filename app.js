@@ -4059,14 +4059,20 @@ document.addEventListener('DOMContentLoaded', function() {
   async function mostrarBannerPrimerTrabajoPro() {
     const banner = document.getElementById('banner-primer-trabajo-pro');
     if (!banner || !esPrestador() || !PronetDB.esRemoto()) return;
+    // Sin ficha no hay nada que contar. esPrestador() puede ser true con
+    // prestador_id en null, y en ese caso .eq('prestador_id', null) genera
+    // `prestador_id=eq.` — malformado — y PostgREST devuelve 400.
+    if (!usuarioActual?.prestador_id) { banner.style.display = 'none'; return; }
     if (esPro()) { banner.style.display = 'none'; return; }
-    const { data } = await window._sb
+    // Con head:true no viene cuerpo: el total llega en `count`, no en `data`.
+    // Antes se leía data.length, que siempre era 0, así que el banner nunca
+    // se mostraba.
+    const { count } = await window._sb
       .from('chats_trabajo')
       .select('id', { count: 'exact', head: true })
       .eq('prestador_id', usuarioActual.prestador_id)
       .eq('estado', 'calificado');
-    const count = data?.length ?? 0;
-    banner.style.display = count >= 1 ? '' : 'none';
+    banner.style.display = (count ?? 0) >= 1 ? '' : 'none';
   }
 
   // ── Rankings del prestador (dinámico) ──────────────────────────────
@@ -6099,12 +6105,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Detectar primer trabajo: si es el primero, +400 pts extra y push especial
         if (PronetDB.esRemoto()) {
-          const { data: trabajosAnteriores } = await window._sb
-            .from('chats_trabajo')
+          // Se cuenta sobre `resenas`, la misma fuente que usa el trigger
+          // trg_acreditar_por_resena para dar los +400, así el aviso y los
+          // puntos no pueden discrepar. `resenas` tiene unique(chat_id), así
+          // que el conteo no se duplica.
+          // Antes esto miraba chats_trabajo con head:true y leía data.length,
+          // que siempre era null → esPrimero daba SIEMPRE true y el aviso de
+          // "primer trabajo" salía en cada trabajo cerrado.
+          const { count } = await window._sb
+            .from('resenas')
             .select('id', { count: 'exact', head: true })
-            .eq('prestador_id', prestadorActual.id)
-            .eq('estado', 'calificado');
-          const esPrimero = (trabajosAnteriores?.length ?? 0) <= 1;
+            .eq('prestador_id', prestadorActual.id);
+          const esPrimero = (count ?? 0) === 1;
           if (esPrimero) {
             // Los +400 los acredita trg_acreditar_por_resena; acá solo se avisa.
             PronetDB.notificar({
