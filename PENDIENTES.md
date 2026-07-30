@@ -23,20 +23,17 @@ El listener realtime de `chats_trabajo` reaccionaba a cualquier `UPDATE` de la f
 
 Corregido con `payload.old.estado` + `REPLICA IDENTITY FULL` en `chats_trabajo` (sin eso `payload.old` solo trae la primary key). Verificado en producción: mensaje y notificación real llegan sin el toast falso repetido.
 
-### 3. Rotar el PIN de admin — sin confirmar
-
-Estuvo legible sin sesión. El valor `1234` hay que darlo por quemado aunque ya no se filtre.
-
-```sql
-UPDATE config_app SET valor = '<pin nuevo de 6 dígitos>' WHERE clave = 'admin_pin';
-```
+### 3. ✅ PIN de admin rotado (2026-07-30)
 
 ---
 
 ## 🟡 Seguridad restante
 
-### 3. Parte 5 — analítica forjable
-`perfil_vistas` y `perfil_contactos` aceptan INSERT de **`anon`** con `with_check (true)`. Sin login se pueden inflar las vistas de un perfil propio o ensuciar el de un competidor. El "N vistas este mes" no es un dato confiable hoy.
+### 3. ✅ Parte 5 — suplantación cerrada (2026-07-30), inflación aceptada como riesgo bajo
+
+`perfil_vistas`/`perfil_contactos` tenían `with_check(true)`, así que `vecino_id` viajaba sin validar: un usuario logueado podía insertar `vecino_id` de otro y hacer figurar que esa persona vio/contactó a un prestador. Corregido con `vecino_id is null or vecino_id = auth.uid()` en `supabase-analitica-antisuplantacion.sql`.
+
+**Alcance acotado a propósito:** no se agregó rate-limit contra spam de invitados anónimos. Hoy vistas/contactos no afectan ranking, badges ni plata — solo el dashboard del propio prestador — así que construir infraestructura para sesiones sin identidad estable sería desproporcionado. Revisar si esto cambia si esas métricas empiezan a decidir algo con peso real.
 
 ### 4. Auto-inflación de puntos — cerrada, pero verificar
 El `revoke` ya se aplicó. Para confirmar que sigue cerrado, esto debe fallar desde la consola:
