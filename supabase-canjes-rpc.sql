@@ -17,6 +17,22 @@
 --      beneficio dos veces. Acá el UPDATE exige estado='pendiente' y si no
 --      cambió ninguna fila se corta sin aplicar nada.
 
+-- ── Chequeo de dependencia ──────────────────────────────────────────────
+-- Los dos RPC llaman a acreditar_puntos(), que se crea en la Parte 2. Si se
+-- corre este archivo primero, el revoke del final deja el saldo inescribible
+-- sin nada que lo reemplace: los puntos quedan congelados en los dos caminos.
+do $$
+begin
+  if not exists (
+    select 1 from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'acreditar_puntos'
+  ) then
+    raise exception
+      'Falta acreditar_puntos(): corré primero supabase-loyalty-server-side.sql (Parte 2), después este archivo.';
+  end if;
+end $$;
+
 -- ── RPC 1: el usuario solicita un canje ─────────────────────────────────
 create or replace function public.canjear_puntos(p_canje_id uuid)
 returns jsonb
