@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v81'; // v81: fix 400 en loop y aviso de primer trabajo que salia siempre
+const CACHE_VERSION = 'pronet-v82'; // v82: fix RLS de perfiles cortaba notificaciones y nombres de vecinos
 
 const SHELL = [
   './',

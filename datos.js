@@ -439,7 +439,14 @@ const PronetDB = (() => {
     /** Obtiene el usuario_id del prestador de un chat (para push de mensajes). */
     async usuarioIdDePrestador(prestadorId) {
       if (!remoto) return null;
-      const { data } = await sb.from('perfiles').select('id').eq('prestador_id', prestadorId).maybeSingle();
+      // Vía perfiles_publicos: RLS en `perfiles` solo deja leer la propia fila,
+      // así que consultarla por el prestador_id de OTRO devolvía 200 con
+      // resultado vacío. El null resultante hacía que el llamador saltara la
+      // notificación en silencio — el destinatario nunca se enteraba del
+      // mensaje nuevo. Mismo patrón que el bug B-06.
+      const { data, error } = await sb.from('perfiles_publicos')
+        .select('id').eq('prestador_id', prestadorId).maybeSingle();
+      if (error) { console.warn('[PronetDB] usuarioIdDePrestador', error.message); return null; }
       return data?.id || null;
     },
 
@@ -664,7 +671,9 @@ const PronetDB = (() => {
       const usuarioIds = [...new Set((data||[]).map(p => p.pedidos?.usuario_id).filter(Boolean))];
       let nombresMap = {};
       if (usuarioIds.length > 0) {
-        const { data: perfiles } = await sb.from('perfiles').select('id, nombre').in('id', usuarioIds);
+        // perfiles_publicos: `perfiles` tiene RLS de lectura propia, así que
+        // pedir las filas de otros usuarios devolvía vacío sin error.
+        const { data: perfiles } = await sb.from('perfiles_publicos').select('id, nombre').in('id', usuarioIds);
         (perfiles||[]).forEach(p => { nombresMap[p.id] = p.nombre; });
       }
       return (data||[]).map(p => {
@@ -863,9 +872,11 @@ const PronetDB = (() => {
         .eq('id', chatId)
         .maybeSingle();
       if (error) { console.warn('[PronetDB] obtenerChat', error.message); return null; }
-      // Traer el nombre del vecino desde perfiles (no hay FK directa a perfiles)
+      // Nombre del vecino (no hay FK directa a perfiles). Vía perfiles_publicos:
+      // desde la sesión del prestador, `perfiles` no deja leer la fila del
+      // vecino y el nombre quedaba siempre en el fallback 'Vecino'.
       if (data?.vecino_id) {
-        const { data: perfilVecino } = await sb.from('perfiles').select('nombre').eq('id', data.vecino_id).maybeSingle();
+        const { data: perfilVecino } = await sb.from('perfiles_publicos').select('nombre').eq('id', data.vecino_id).maybeSingle();
         data.vecino_nombre = perfilVecino?.nombre || 'Vecino';
       }
       return data;

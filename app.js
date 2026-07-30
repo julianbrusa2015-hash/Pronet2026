@@ -1179,7 +1179,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window._sb) {
       const uids = [...new Set(pedidos.map(p => p.usuario_id).filter(Boolean))];
       if (uids.length > 0) {
-        const { data: prfs } = await window._sb.from('perfiles').select('id, nombre').in('id', uids);
+        // perfiles_publicos, no perfiles: RLS de lectura propia hacía que el
+        // prestador no viera el nombre de quien publicó cada pedido (B-06).
+        const { data: prfs } = await window._sb.from('perfiles_publicos').select('id, nombre').in('id', uids);
         const nombresMap = {};
         (prfs || []).forEach(pr => { nombresMap[pr.id] = pr.nombre; });
         pedidos = pedidos.map(p => ({ ...p, vecino_nombre: nombresMap[p.usuario_id] || null }));
