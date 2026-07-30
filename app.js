@@ -2717,7 +2717,10 @@ document.addEventListener('DOMContentLoaded', function() {
     bolsaTrabajo:       { label: 'Bolsa de trabajo',    grupo: 'Nivel 1' },
     tutorialOnboarding: { label: 'Tutorial onboarding', grupo: 'Nivel 1' },
     badgeVerificado:    { label: 'Badge verificado',    grupo: 'Nivel 2' },
-    suscripcionPro:     { label: 'Planes y suscripción', grupo: 'Nivel 2' },
+    // Distinto de planes_pagos_activos (config_app, editable desde Moderación):
+    // esto solo decide si la SECCIÓN existe en el build/demo, no si se puede
+    // comprar. Si cualquiera de los dos está apagado, Suscripción se oculta.
+    suscripcionPro:     { label: 'Sección Suscripción (demo)', grupo: 'Nivel 2' },
     catalogoPrecios:    { label: 'Catálogo de precios', grupo: 'Nivel 2' },
     editarPerfilPro:    { label: 'Editar perfil pro',   grupo: 'Nivel 2' },
     denuncias:          { label: 'Denuncias',           grupo: 'Nivel 2' },
