@@ -3508,12 +3508,74 @@ document.addEventListener('DOMContentLoaded', function() {
       aviso.style.display = bloqueadas > 0 ? '' : 'none';
       const txt = document.getElementById('an-upsell-txt');
       if (txt) {
-        txt.textContent = actual === 0
-          ? 'Tu plan no incluye analítica. Con Plus ves tus vistas y tu reputación.'
-          : `Hay ${bloqueadas} ${bloqueadas === 1 ? 'sección' : 'secciones'} más en el plan Pro: ranking, embudo de contacto y origen de las visitas.`;
+        // El mensaje nombra el plan que desbloquea lo que le falta a ESTE
+        // usuario: a un Pro no le sirve que le ofrezcan lo que ya tiene.
+        txt.textContent =
+          actual === 0 ? 'Tu plan no incluye analítica. Con Plus ves tus vistas al perfil y tu reputación del mes.'
+        : actual === 1 ? 'Con Pro sumás ranking por zona, embudo de contacto y de dónde vienen tus visitas.'
+        :                'Con Elite podés descargar tu historial de trabajos en CSV, con montos y calificaciones.';
       }
     }
   }
+
+  /** Escapa un valor para CSV: comillas dobles duplicadas y el campo entre
+   *  comillas si contiene separador, comillas o saltos de línea. */
+  function csvCampo(v) {
+    const s = v == null ? '' : String(v);
+    return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  /** Exporta el historial de trabajos del prestador a CSV.
+   *  Sirve para contabilidad y para mostrar trayectoria, que es lo que un
+   *  prestador necesita de verdad — no las métricas de visitas. */
+  async function exportarHistorialCSV() {
+    if (tierEstadisticas() !== 'export') {
+      showToast && showToast('⚠️ La exportación está disponible en el plan Elite.');
+      return;
+    }
+    const btn = document.getElementById('an-export-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
+    try {
+      const items = await PronetDB.listarHistorialPrestador().catch(() => []);
+      if (!items.length) {
+        showToast && showToast('Todavía no tenés trabajos para exportar.');
+        return;
+      }
+      const cols = ['Fecha', 'Trabajo', 'Rubro', 'Zona', 'Cliente', 'Modalidad', 'Monto', 'Monto máximo', 'Estrellas', 'Comentario'];
+      // Separador ';' y BOM: Excel en es-AR usa ';' y sin BOM rompe los acentos.
+      const filas = items.map(t => [
+        t.creado ? new Date(t.creado).toLocaleDateString('es-AR') : '',
+        t.titulo, t.rubro, t.zona, t.vecino_nombre,
+        t.modalidad || 'fijo',
+        t.precio || 0,
+        t.modalidad === 'rango' ? (t.precio_max || 0) : '',
+        t.resena?.estrellas ?? '',
+        t.resena?.comentario ?? '',
+      ].map(csvCampo).join(';'));
+
+      const total = items.reduce((s, t) => s + (t.precio || 0), 0);
+      filas.push('');
+      filas.push([csvCampo('TOTAL'), '', '', '', '', '', total].join(';'));
+
+      const csv = '﻿' + [cols.join(';'), ...filas].join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pronet-trabajos-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast && showToast(`✅ ${items.length} trabajo${items.length === 1 ? '' : 's'} exportado${items.length === 1 ? '' : 's'}.`);
+    } catch (e) {
+      console.warn('[exportarHistorialCSV]', e.message);
+      showToast && showToast('⚠️ No se pudo generar el archivo.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '⬇️ Descargar historial (CSV)'; }
+    }
+  }
+  window.exportarHistorialCSV = exportarHistorialCSV;
 
   /** Límite del plan activo para un recurso. null = ilimitado. */
   function limitePlan(campo) {
