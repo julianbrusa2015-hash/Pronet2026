@@ -20,6 +20,11 @@ update public.prestadores set plan = 'base'  where plan is null;
 alter table public.prestadores add constraint prestadores_plan_check
   check (plan = any (array['base'::text, 'plus'::text, 'pro'::text, 'elite'::text]));
 
+-- El DEFAULT también apuntaba al esquema viejo ('basico'). Sin esto, cualquier
+-- INSERT que no especifique `plan` nace con un valor que el CHECK de arriba
+-- rechaza — y el error aparece recién al crear una ficha nueva, mucho después.
+alter table public.prestadores alter column plan set default 'base';
+
 -- ── 2. Backfill desde las suscripciones activas ─────────────────────────
 update public.prestadores pr
    set plan = s.plan

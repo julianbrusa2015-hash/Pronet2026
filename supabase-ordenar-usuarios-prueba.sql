@@ -14,6 +14,16 @@
 --
 -- Solo completa lo que está en NULL: no pisa datos ya cargados.
 
+-- ── 0. Arreglar el default de `plan` ───────────────────────────────────
+-- supabase-sync-plan-prestador.sql migró los valores viejos y agregó el CHECK
+-- con los IDs nuevos (base/plus/pro/elite), pero no tocó el DEFAULT de la
+-- columna, que seguía en 'basico'. Resultado: cualquier INSERT nuevo nacía con
+-- un valor que el propio CHECK rechaza.
+alter table public.prestadores alter column plan set default 'base';
+
+update public.prestadores set plan = 'base'
+ where plan is null or plan not in ('base','plus','pro','elite');
+
 -- ── 1. Crear las fichas que faltan ──────────────────────────────────────
 do $$
 declare
@@ -25,10 +35,11 @@ begin
     select id, nombre, zona from perfiles
      where tipo = 'prestador' and prestador_id is null
   loop
-    insert into prestadores (nombre, zona, rubro, activo)
+    -- `plan` explícito: no confiar en el default de la columna.
+    insert into prestadores (nombre, zona, rubro, activo, plan)
          values (coalesce(r.nombre, 'Prestador'),
                  coalesce(r.zona, 'Escobar'),
-                 'General', true)
+                 'General', true, 'base')
       returning id into v_nuevo;
     update perfiles set prestador_id = v_nuevo where id = r.id;
     v_total := v_total + 1;
