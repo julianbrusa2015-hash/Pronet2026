@@ -18,8 +18,8 @@ Contraseña de las cuentas de test: `Test1234!`
 | `admin@pronet.com.ar` | admin | — | C10 moderación, aprobar canjes, config de app. **Único con `roles=['admin']`** |
 | `vecino_test@pronet.test` | cliente | — | C1, C2, C5, C6, C7. **La usa la suite en 4 archivos — no borrar** |
 | `julianbrusa2015@gmail.com` | cliente | — | Segundo vecino **sin relación** con los prestadores: el único con el que se puede probar que `notificar_usuario()` **rechaza** por falta de vínculo |
-| `prestador_test@pronet.test` | prestador | 🔴 falta | C4 propuestas y límites. **La usa la suite — no borrar** |
-| `prestador@gmail.com` (Prestador Puertos) | prestador | ✓ General | Segundo prestador: propuestas que compiten, ranking, badge. Tiene 1.350 pts e historial de suscripción |
+| `prestador_test@pronet.test` | prestador | ✓ Electricistas | C4 propuestas y límites. **La usa la suite — no borrar** |
+| `prestador@gmail.com` (Prestador Puertos) | prestador | ✓ Electricistas | Segundo prestador: propuestas que compiten, ranking, badge. Tiene 1.350 pts e historial de suscripción |
 | `doble2@pronettext.com` (Prestador y Vecino) | vecino | ✓ Plomería | C12 doble perfil — el toggle |
 
 ### El resto (existen, sin rol asignado en el plan)
@@ -28,10 +28,17 @@ Contraseña de las cuentas de test: `Test1234!`
 
 Se evaluó limpiarlas y se decidió **no borrar nada**: el borrado cascadea a pedidos, chats, propuestas, reseñas y loyalty, y las fichas de `prestadores` quedarían huérfanas apareciendo en el directorio público (la FK va `perfiles.prestador_id → prestadores`, no al revés).
 
-### Dos cosas a arreglar antes de automatizar C4/C5
+### Estado del setup — ✅ resuelto 2026-07-29
 
-1. **4 de 5 prestadores no tienen ficha** (`prestador_id` en `null`): Carla Prestadora, Prestador Test, Servicios 1, Vecino 2. Sin ficha no pueden ofertar — el CTA del detalle exige `prestador_id`. Causa: falta la policy de INSERT en `prestadores` y el cliente descartaba el error. Fix en `supabase-ficha-prestador-rpc.sql`.
-2. **Los dos prestadores deben compartir rubro** para que las propuestas compitan. Hoy Prestador Puertos es `General`, que no matchea ninguna categoría del feed.
+`supabase-ordenar-usuarios-prueba.sql` dejó las cuentas operativas: creó las 4 fichas que faltaban, sacó el rubro `General`, y completó precio, descripción, medios de pago, iniciales y coordenadas (sin `lat`/`lng` los prestadores no aparecían en el mapa ni tenían distancia real).
+
+Rubros: **Electricistas** — Prestador Puertos, Prestador Test, Servicios 1, Vecino 2 · **Plomería** — Carla Prestadora, y las dos cuentas de doble perfil.
+
+Cuatro prestadores en el mismo rubro sirve para probar ranking y boost, que necesitan varios para que haya orden que verificar.
+
+**Causa raíz de las fichas faltantes**, por si reaparece: `usuarioActual()` intenta auto-crear la fila en `prestadores`, pero no hay policy de INSERT y RLS la rechaza con 403. Y el cliente descartaba el `error` del insert, así que fallaba en silencio. El RPC de `supabase-ficha-prestador-rpc.sql` lo cierra para las cuentas nuevas.
+
+**Trampa relacionada:** el `DEFAULT` de `prestadores.plan` quedó en `'basico'` cuando se migró a los 4 planes nuevos, desalineado con su propio CHECK. No se disparó hasta el primer INSERT que no especificaba la columna, horas después de la migración.
 
 ### Inconsistencia de datos detectada
 
