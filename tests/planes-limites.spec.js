@@ -16,12 +16,17 @@ async function abrirApp(page) {
     !document.querySelector('#anti-flash-login'),
     { timeout: 20000 }
   );
-  // La superficie de test se expone al final de app.js
-  await page.waitForFunction(() => !!window._planesAPI, { timeout: 20000 });
+  // _planesAPI existe al parsear el script, pero la config se carga async y
+  // reflejarPlan() corre después. Esperar la API sola es una carrera: el DOM
+  // todavía no refleja el interruptor.
+  await page.waitForFunction(
+    () => !!window._planesAPI && window._planesAPI.configCargada(),
+    { timeout: 20000 }
+  );
 }
 
 test.describe('C9 · Catálogo de planes', () => {
-  test.beforeEach(abrirApp);
+  test.beforeEach(async ({ page }) => { await abrirApp(page); });
 
   test('los 4 planes existen con sus IDs y precios', async ({ page }) => {
     const planes = await page.evaluate(() => window.PRONET_CONFIG.PLANES);
@@ -51,7 +56,7 @@ test.describe('C9 · Catálogo de planes', () => {
 });
 
 test.describe('C4 · Resolución de límites por plan', () => {
-  test.beforeEach(abrirApp);
+  test.beforeEach(async ({ page }) => { await abrirApp(page); });
 
   test('los planes superiores nunca se degradan', async ({ page }) => {
     // Invariante que vale con el interruptor en cualquier estado: el
@@ -97,7 +102,7 @@ test.describe('C4 · Resolución de límites por plan', () => {
 });
 
 test.describe('C9 · Badge de plan en búsqueda', () => {
-  test.beforeEach(abrirApp);
+  test.beforeEach(async ({ page }) => { await abrirApp(page); });
 
   test('sólo los planes con badge_busqueda muestran badge', async ({ page }) => {
     const r = await page.evaluate(() => ({
@@ -124,7 +129,7 @@ test.describe('C9 · Badge de plan en búsqueda', () => {
 });
 
 test.describe('C9 · Interruptor de planes pagos', () => {
-  test.beforeEach(abrirApp);
+  test.beforeEach(async ({ page }) => { await abrirApp(page); });
 
   test('la UI de suscripción coincide con el estado del interruptor', async ({ page }) => {
     const r = await page.evaluate(() => {

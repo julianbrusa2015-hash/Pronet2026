@@ -3419,8 +3419,9 @@ document.addEventListener('DOMContentLoaded', function() {
     return `<span class="badge ${clase}">${cfg.emoji} ${escHTML(cfg.badge_label)}</span>`;
   }
 
-  // Config global de la app (tabla config_app). Se carga al restaurar sesión.
+  // Config global de la app (tabla config_app). Se carga al iniciar.
   let configApp = {};
+  let configCargada = false;
 
   /** ¿Los planes pagos están habilitados? Lo controla el admin. */
   function planesPagosActivos() {
@@ -3497,6 +3498,9 @@ document.addEventListener('DOMContentLoaded', function() {
     badgePlanPrestador,
     planActual:  () => planActual,
     configApp:   () => ({ ...configApp }),
+    // Los specs deben esperar esto: _planesAPI existe al parsear el script,
+    // pero la config se carga async y reflejarPlan() corre después.
+    configCargada: () => configCargada,
   };
 
   /** Aviso de límite alcanzado, con el nombre del plan actual. */
@@ -7268,6 +7272,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ver los planes pagos ocultos si están desactivados. Si falla la lectura,
     // configApp queda vacío y planesPagosActivos() da false — el default seguro.
     configApp = await (PronetDB?.obtenerConfigApp?.() || Promise.resolve({})).catch(() => ({}));
+    configCargada = true;
     reflejarPlan();
 
     if (typeof PronetDB === 'undefined' || !PronetDB.usuarioActual) {

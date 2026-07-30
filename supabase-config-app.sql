@@ -25,14 +25,26 @@ on conflict (clave) do nothing;  -- no pisar el valor si ya fue configurado
 
 alter table public.config_app enable row level security;
 
--- Lectura pública, incluidos invitados sin sesión: la app necesita saber si
--- los planes pagos están activos ANTES de que el usuario se loguee, para no
--- mostrarle planes que no puede comprar. No hay nada sensible acá.
+-- Lectura pública SOLO de las claves no sensibles, con lista blanca explícita.
+-- La app necesita saber si los planes pagos están activos antes de que el
+-- usuario se loguee, para no mostrarle planes que no puede comprar.
+--
+-- CUIDADO: esta tabla también guarda secretos (admin_pin, rate limits). Una
+-- policy `using (true)` los expone a cualquiera sin sesión. Al agregar una
+-- clave nueva, decidí explícitamente si va en la lista blanca.
 drop policy if exists "config_lectura" on public.config_app;
-create policy "config_lectura"
+drop policy if exists "config_lectura_publica" on public.config_app;
+create policy "config_lectura_publica"
   on public.config_app for select
   to anon, authenticated
-  using (true);
+  using (clave in ('planes_pagos_activos'));
+
+-- El admin sí puede leer todo (necesita ver el PIN y los rate limits).
+drop policy if exists "config_lectura_admin" on public.config_app;
+create policy "config_lectura_admin"
+  on public.config_app for select
+  to authenticated
+  using (es_admin());
 
 -- Solo admin la modifica.
 drop policy if exists "config_admin_escribe" on public.config_app;
