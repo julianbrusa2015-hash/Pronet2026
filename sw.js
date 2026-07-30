@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v79'; // v79: el upgrade a prestador ya no destruye el perfil de vecino
+const CACHE_VERSION = 'pronet-v80'; // v80: fix barra de estado tapaba el header de 8 pantallas (boton Guardar inalcanzable)
 
 const SHELL = [
   './',

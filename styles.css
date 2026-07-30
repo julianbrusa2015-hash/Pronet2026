@@ -57,6 +57,9 @@
     }
     .status { display: none !important; }
     .notch { display: none !important; }
+    /* Sin barra de estado simulada, las pantallas huérfanas no necesitan
+       el offset de 44px (ver `.phone > .screen` más abajo). */
+    .phone > .screen { top: 0; }
   }
   /* Safe-area: env() devuelve 0 en browser y ~59px en PWA iOS con
      black-translucent+viewport-fit=cover. Se declara sin @supports para que
@@ -168,6 +171,17 @@
   .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
   .screen > * { flex-shrink: 0; max-width: 100%; box-sizing: border-box; }
+
+  /* 8 pantallas quedaron en el HTML como hermanas de .screens en vez de hijas
+     (s-edit-perfil, s-moderacion, s-loyalty-admin, s-loyalty, s-denuncia,
+     s-historial, s-tyc, s-estado-propuesta). Al ser position:absolute, su
+     contenedor de referencia pasa a ser .phone y no .screens, así que arrancan
+     en el tope del teléfono: por debajo de la barra de estado simulada (44px,
+     z-index:30), que les tapaba el header — en s-edit-perfil eso escondía el
+     botón Guardar y no se podía guardar el perfil.
+     Se corrige acá y no moviendo el HTML porque son 8 bloques grandes
+     intercalados con overlays que sí van fuera de .screens. */
+  .phone > .screen { top: 44px; }
 
   /* ── Install card (Android A2HS) ── */
   .install-card {
