@@ -650,7 +650,11 @@ const PronetDB = (() => {
       if (signErr || !signedData?.signedUrl) { console.warn('[PronetDB] subirFotoTrabajo signed', signErr?.message); return null; }
       const { data, error } = await sb.from('trabajo_fotos')
         .insert({ chat_id: chatId, subido_por: uid, url: signedData.signedUrl, storage_path: path, descripcion }).select().maybeSingle();
-      if (error) { console.warn('[PronetDB] trabajo_fotos insert', error.message); return null; }
+      if (error) {
+        await sb.storage.from('trabajos').remove([path]).catch(() => {});
+        console.warn('[PronetDB] trabajo_fotos insert', error.message);
+        return null;
+      }
       return data;
     },
 

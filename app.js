@@ -3270,6 +3270,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let usuarioActual = null; // null = invitado
   let planActual    = 'base'; // 'base' | 'plus' | 'pro' | 'elite'
   let periodoActual = 'anual'; // 'mensual' | 'anual'
+  let venceActual   = null;   // ISO string o null
 
   // Acciones que requieren cuenta y su mensaje
   const ACCIONES_PROTEGIDAS = {
@@ -3734,6 +3735,17 @@ document.addEventListener('DOMContentLoaded', function() {
           ? '$' + (cfg.precio_anual || 0).toLocaleString('es-AR')
           : '$' + (cfg.precio_mes  || 0).toLocaleString('es-AR');
         planNombreEl.textContent = 'Plan ' + cfg.nombre + ' ' + (periodoActual === 'anual' ? 'Anual' : 'Mensual') + ' · ' + precio + ' ARS';
+      }
+    }
+    // Fecha de renovación en la card de plan
+    const planRenewEl = document.getElementById('perfil-plan-renew');
+    if (planRenewEl) {
+      if (planActual === 'base' || !venceActual) {
+        planRenewEl.style.display = 'none';
+      } else {
+        const d = new Date(venceActual);
+        planRenewEl.textContent = 'Renueva ' + d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+        planRenewEl.style.display = '';
       }
     }
     // El tier de analítica depende del plan: recalcularlo cuando el plan cambia
@@ -7486,8 +7498,9 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBellCount();
         cargarSliderRangosDesdeDB();
         PronetDB.obtenerSuscripcion().then(s => {
-          planActual    = s.plan    || 'base';
-          periodoActual = s.periodo || 'mensual';
+          planActual    = s.plan     || 'base';
+          periodoActual = s.periodo  || 'mensual';
+          venceActual   = s.vence_en || null;
           reflejarPlan();
         }).catch(() => {});
         if (u.zona) { zonaActual = u.zona; actualizarZonaLabel(zonaActual); }
