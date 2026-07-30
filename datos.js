@@ -947,6 +947,22 @@ const PronetDB = (() => {
       } catch(e) { console.warn('[PronetDB] subirAdjuntoPropuesta', e.message); return null; }
     },
 
+    /** Crea la ficha de prestador del usuario logueado, si no la tiene.
+     *  Es la acción de "quiero ofrecer mis servicios": NO cambia `tipo`, así
+     *  que un vecino que la llama queda con doble perfil en vez de perder su
+     *  vista de vecino. Idempotente: una ficha por usuario. */
+    async asegurarFichaPrestador() {
+      if (!remoto) return { ok: false, error: 'modo local' };
+      try {
+        const { data, error } = await sb.rpc('asegurar_ficha_prestador');
+        if (error) { console.warn('[PronetDB] asegurarFichaPrestador', error.message); return { ok: false, error: error.message }; }
+        return data || { ok: false, error: 'sin respuesta' };
+      } catch(e) {
+        console.warn('[PronetDB] asegurarFichaPrestador', e.message);
+        return { ok: false, error: e.message };
+      }
+    },
+
     /** Registra una vista al perfil de un prestador. */
     async registrarVista(prestadorId, origen = 'busqueda') {
       if (!remoto) return;
@@ -1400,20 +1416,13 @@ const PronetDB = (() => {
       if (!user) return null;
       // Traer el perfil vinculado
       const { data: perfil } = await sb.from('perfiles').select('*').eq('id', user.id).maybeSingle();
-      // Si es prestador sin fila en prestadores (bug de registro), crearla ahora
+      // Autorreparación: prestador sin fila en `prestadores` (bug de registro).
+      // Antes esto insertaba directo en `prestadores`, pero no hay policy de
+      // INSERT ahí: RLS lo rechazaba con 403 y el error se descartaba, así que
+      // fallaba en silencio y 4 de 5 prestadores quedaron sin ficha.
       if (perfil && perfil.tipo === 'prestador' && !perfil.prestador_id) {
-        try {
-          const { data: nuevoPrestador } = await sb.from('prestadores').insert({
-            nombre: perfil.nombre || user.email,
-            zona:   perfil.zona  || 'Escobar',
-            rubro:  'General',
-            activo: true,
-          }).select('id').single();
-          if (nuevoPrestador?.id) {
-            await sb.from('perfiles').update({ prestador_id: nuevoPrestador.id }).eq('id', user.id);
-            perfil.prestador_id = nuevoPrestador.id;
-          }
-        } catch(e) { console.warn('[PronetDB] auto-crear prestador', e.message); }
+        const r = await this.asegurarFichaPrestador();
+        if (r.ok && r.prestador_id) perfil.prestador_id = r.prestador_id;
       }
       return { id: user.id, email: user.email, ...(perfil || {}) };
     },

@@ -3318,16 +3318,21 @@ document.addEventListener('DOMContentLoaded', function() {
       mostrarFormRegistro();
       return;
     }
-    // Vecino logueado sin perfil prestador → upgrade de cuenta
+    // Vecino logueado sin perfil prestador → sumar el rol de prestador.
+    // NO se toca `tipo`: antes esto hacía update({tipo:'prestador'}) y como
+    // tieneDoblePerfil() exige tipo!=='prestador', el vecino perdía su vista
+    // de vecino para siempre — no podía volver a publicar pedidos ni le
+    // aparecía el toggle. El rol de prestador lo habilita `prestador_id`,
+    // que es lo que esPrestador() mira, así que queda con doble perfil.
     if (!window._sb) { showToast('Sin conexión'); return; }
-    const { error } = await window._sb.from('perfiles')
-      .update({ tipo: 'prestador' })
-      .eq('id', usuarioActual.id);
-    if (error) { showToast('No se pudo activar el perfil de prestador'); return; }
-    // usuarioActual() auto-crea el registro en prestadores si falta
+    const res = await PronetDB.asegurarFichaPrestador();
+    if (!res.ok) {
+      showToast('No se pudo activar el perfil de prestador' + (res.error ? ': ' + res.error : ''));
+      return;
+    }
     usuarioActual = await PronetDB.usuarioActual();
     reflejarUsuario();
-    showToast('Perfil de prestador activado. Completá tus datos.');
+    showToast('Perfil de prestador activado. Podés alternar entre vecino y prestador desde Mi Perfil.');
     goTo('s-edit-perfil');
   }
 
