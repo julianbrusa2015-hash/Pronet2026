@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v74'; // v74: filtro de canjes resueltos en el panel admin
+const CACHE_VERSION = 'pronet-v75'; // v75: notificaciones por RPC con validacion de relacion
 
 const SHELL = [
   './',

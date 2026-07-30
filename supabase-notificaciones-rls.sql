@@ -1,0 +1,11 @@
+-- ═══ OBSOLETO — NO EJECUTAR ═══
+--
+-- Este archivo creaba la policy `WITH CHECK (true)` para INSERT en
+-- `notificaciones`, que permitía a cualquier usuario logueado escribir en el
+-- buzón de cualquier otro con título, cuerpo y URL arbitrarios — un vector de
+-- phishing dentro de la UI confiable de la app.
+--
+-- Se conserva vacío a propósito: el archivo estaba sin trackear en git y
+-- correrlo recreaba la vulnerabilidad.
+--
+-- Reemplazado por: supabase-notificaciones-rpc.sql

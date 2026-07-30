@@ -6104,14 +6104,11 @@ document.addEventListener('DOMContentLoaded', function() {
               url: '/#s-loyalty',
             }).catch(() => {});
             // Marcar para que el prestador vea el modal al abrir la app
-            try {
-              await window._sb.from('notificaciones').insert({
-                usuario_id: destinatarioId,
-                tipo: 'celebracion_primer_trabajo',
-                titulo: 'primer_trabajo',
-                leida: false,
-              });
-            } catch(e) {}
+            PronetDB.insertarNotificacion({
+              usuario_id: destinatarioId,
+              tipo: 'celebracion_primer_trabajo',
+              titulo: 'primer_trabajo',
+            }).catch(() => {});
           }
         }
       }

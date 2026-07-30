@@ -213,33 +213,33 @@ const PronetDB = (() => {
     async notificar(opciones) {
       if (!remoto) return { ok: false, error: 'Push requiere modo remoto' };
       try {
-        // 1. Persistir en notificaciones (campanita in-app) — siempre, independiente del push
+        // 1. Persistir en notificaciones (campanita in-app) — siempre, independiente
+        //    del push. Vía RPC: el servidor valida que exista una relación real
+        //    con el destinatario. Antes era un INSERT directo sin validar, así que
+        //    cualquiera podía escribir en el buzón de cualquiera.
         if (opciones.destino === 'usuario' && opciones.usuario_id) {
-          try {
-            await sb.from('notificaciones').insert({
-              usuario_id: opciones.usuario_id,
-              tipo: opciones.tipo || 'general',
-              titulo: opciones.titulo,
-              cuerpo: opciones.cuerpo || null,
-              url: opciones.url || null,
-            });
-          } catch(e) { console.warn('[PronetDB] notificar insert', e.message); }
+          const { data: r, error } = await sb.rpc('notificar_usuario', {
+            p_usuario_id: opciones.usuario_id,
+            p_tipo:       opciones.tipo || 'general',
+            p_titulo:     opciones.titulo,
+            p_cuerpo:     opciones.cuerpo || null,
+            p_url:        opciones.url || null,
+          });
+          if (error)      console.warn('[PronetDB] notificar_usuario', error.message);
+          else if (!r?.ok) console.warn('[PronetDB] notificar_usuario', r?.error);
         } else if (opciones.destino === 'prestadores_rubro' && opciones.rubro) {
-          try {
-            const { data: subs } = await sb.from('push_suscripciones')
-              .select('usuario_id').eq('rubro', opciones.rubro);
-            if (subs?.length) {
-              await sb.from('notificaciones').insert(
-                subs.map(s => ({
-                  usuario_id: s.usuario_id,
-                  tipo: opciones.tipo || 'general',
-                  titulo: opciones.titulo,
-                  cuerpo: opciones.cuerpo || null,
-                  url: opciones.url || null,
-                }))
-              );
-            }
-          } catch(e) { console.warn('[PronetDB] notificar insert rubro', e.message); }
+          // Los destinatarios los resuelve el RPC desde `prestadores` (rubro +
+          // activo). Antes salían de push_suscripciones, así que la campanita
+          // solo le llegaba a quien tuviera push habilitado.
+          const { data: r, error } = await sb.rpc('notificar_rubro', {
+            p_rubro:  opciones.rubro,
+            p_tipo:   opciones.tipo || 'general',
+            p_titulo: opciones.titulo,
+            p_cuerpo: opciones.cuerpo || null,
+            p_url:    opciones.url || null,
+          });
+          if (error)      console.warn('[PronetDB] notificar_rubro', error.message);
+          else if (!r?.ok) console.warn('[PronetDB] notificar_rubro', r?.error);
         }
 
         // 2. Disparar el push (best-effort — si falla, la campanita ya fue guardada)
@@ -294,13 +294,17 @@ const PronetDB = (() => {
     async insertarNotificacion(opciones) {
       if (!remoto) return;
       try {
-        await sb.from('notificaciones').insert({
-          usuario_id: opciones.usuario_id,
-          tipo: opciones.tipo || 'general',
-          titulo: opciones.titulo,
-          cuerpo: opciones.cuerpo || null,
-          url: opciones.url || null,
+        // Vía RPC, igual que notificar(): el INSERT directo no validaba el
+        // destinatario y permitía escribir en el buzón de cualquier usuario.
+        const { data: r, error } = await sb.rpc('notificar_usuario', {
+          p_usuario_id: opciones.usuario_id,
+          p_tipo:       opciones.tipo || 'general',
+          p_titulo:     opciones.titulo,
+          p_cuerpo:     opciones.cuerpo || null,
+          p_url:        opciones.url || null,
         });
+        if (error)       console.warn('[PronetDB] insertarNotificacion', error.message);
+        else if (!r?.ok) console.warn('[PronetDB] insertarNotificacion', r?.error);
       } catch(e) { console.warn('[PronetDB] insertarNotificacion', e.message); }
     },
 
