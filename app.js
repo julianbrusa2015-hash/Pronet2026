@@ -7437,6 +7437,20 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 
+    // Sincronizar límites operacionales desde config_app → PRONET_CONFIG
+    const mapaCfgOp = {
+      propuesta_expiracion_hs:  'PROPUESTA_EXPIRACION_HS',
+      inactividad_cierre_dias:  'INACTIVIDAD_CIERRE_DIAS',
+      pedido_fotos_max:         'PEDIDO_FOTOS_MAX',
+      adjunto_max_mb:           'ADJUNTO_MAX_MB',
+    };
+    if (window.PRONET_CONFIG) {
+      Object.entries(mapaCfgOp).forEach(([clave, key]) => {
+        const v = parseFloat(configApp[clave]);
+        if (!isNaN(v)) window.PRONET_CONFIG[key] = v;
+      });
+    }
+
     configCargada = true;
     reflejarPlan();
 
