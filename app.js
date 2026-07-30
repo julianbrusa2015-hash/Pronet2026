@@ -1598,19 +1598,39 @@ document.addEventListener('DOMContentLoaded', function() {
     renderModeracion(filtro);
   }
 
+  let filtroCanjes = 'pendiente';
+
+  function filtrarCanjes(filtro, chip) {
+    filtroCanjes = filtro;
+    document.querySelectorAll('#canjes-filtros .chip').forEach(c => c.classList.remove('on'));
+    if (chip) chip.classList.add('on');
+    renderCanjesPendientes();
+  }
+  window.filtrarCanjes = filtrarCanjes;
+
   async function renderCanjesPendientes() {
     const el = document.getElementById('mod-canjes-lista');
     if (!el) return;
     el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     try {
-      const { data, error } = await window._sb.from('loyalty_solicitudes')
-        .select('*')
-        .eq('estado', 'pendiente')
-        .order('creado', { ascending: false });
+      let q = window._sb.from('loyalty_solicitudes').select('*');
+      if (filtroCanjes !== 'todos') q = q.eq('estado', filtroCanjes);
+      // Los resueltos se ordenan por fecha de resolución (lo último que resolví
+      // arriba). En 'pendiente' y 'todos' se usa `creado`, porque los pendientes
+      // no tienen `resuelto` y quedarían al final justo los que hay que atender.
+      const esResueltos = filtroCanjes === 'aprobado' || filtroCanjes === 'rechazado';
+      const { data, error } = await q.order(esResueltos ? 'resuelto' : 'creado',
+        { ascending: false, nullsFirst: false });
       if (error) throw error;
       const items = data || [];
       if (!items.length) {
-        el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">Sin canjes pendientes ✓</div>';
+        const vacio = {
+          pendiente: 'Sin canjes pendientes ✓',
+          aprobado:  'Todavía no aprobaste ningún canje.',
+          rechazado: 'No rechazaste ningún canje.',
+          todos:     'No hay solicitudes de canje.',
+        }[filtroCanjes];
+        el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">' + vacio + '</div>';
         return;
       }
 
@@ -1623,20 +1643,32 @@ document.addEventListener('DOMContentLoaded', function() {
         (perfilesData || []).forEach(p => { nombresPorId[p.id] = p.nombre; });
       }
 
+      const SELLO = {
+        aprobado:  { txt: '✓ Aprobado',  bg: '#DCFCE7', color: '#047857' },
+        rechazado: { txt: '✗ Rechazado', bg: '#FEE2E2', color: '#BE123C' },
+      };
+
       el.innerHTML = items.map(s => {
         const nombre = nombresPorId[s.usuario_id] || 'Usuario';
-        const hace = tiempoRelativo(s.creado);
-        return `<div class="mod-card" style="margin-bottom:10px">
+        const pendiente = s.estado === 'pendiente';
+        const hace = tiempoRelativo(pendiente ? s.creado : (s.resuelto || s.creado));
+        const sello = SELLO[s.estado];
+        const pie = pendiente
+          ? `<div class="mod-actions">
+               <button class="mod-btn mod-btn-ok"      onclick="accionCanje('${s.id}','aprobado')">✓ Aprobar</button>
+               <button class="mod-btn mod-btn-suspend" onclick="accionCanje('${s.id}','rechazado')">✗ Rechazar</button>
+             </div>`
+          : (sello
+              ? `<div style="display:inline-block;background:${sello.bg};color:${sello.color};border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700">${sello.txt}</div>`
+              : '');
+        return `<div class="mod-card" style="margin-bottom:10px${pendiente ? '' : ';opacity:.75'}">
           <div class="mod-head">
             <div style="font-size:16px">💜</div>
             <div class="mod-tipo">${escHTML(s.nombre_canje)}</div>
             <div class="mod-time">${escHTML(hace)}</div>
           </div>
           <div style="font-size:12px;color:var(--ink2);margin-bottom:10px">${escHTML(nombre)} · ${s.puntos_descontados.toLocaleString('es-AR')} pts</div>
-          <div class="mod-actions">
-            <button class="mod-btn mod-btn-ok"     onclick="accionCanje('${s.id}','aprobado')">✓ Aprobar</button>
-            <button class="mod-btn mod-btn-suspend" onclick="accionCanje('${s.id}','rechazado')">✗ Rechazar</button>
-          </div>
+          ${pie}
         </div>`;
       }).join('');
     } catch(e) {

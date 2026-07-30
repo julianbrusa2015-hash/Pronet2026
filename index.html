@@ -3654,11 +3654,17 @@
       <div style="font-size:12px;color:rgba(255,255,255,.65)">Canjes y catálogo de beneficios · Solo equipo PRONET</div>
     </div>
 
-    <!-- Canjes pendientes de aprobación -->
+    <!-- Solicitudes de canje -->
     <div style="padding:24px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">
-      💜 Canjes pendientes
+      💜 Solicitudes de canje
     </div>
-    <div id="mod-canjes-lista" style="padding:0 0 12px">
+    <div class="filter-row" id="canjes-filtros" style="background:white;border-bottom:1px solid var(--border);padding:8px 14px">
+      <div class="chip on" onclick="filtrarCanjes('pendiente',this)">🕐 Pendientes</div>
+      <div class="chip" onclick="filtrarCanjes('aprobado',this)">✓ Aprobados</div>
+      <div class="chip" onclick="filtrarCanjes('rechazado',this)">✗ Rechazados</div>
+      <div class="chip" onclick="filtrarCanjes('todos',this)">Todos</div>
+    </div>
+    <div id="mod-canjes-lista" style="padding:12px 0">
       <div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>
     </div>
 

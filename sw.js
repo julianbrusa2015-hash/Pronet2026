@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v73'; // v73: canjes por RPC, el cliente ya no escribe loyalty
+const CACHE_VERSION = 'pronet-v74'; // v74: filtro de canjes resueltos en el panel admin
 
 const SHELL = [
   './',
