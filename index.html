@@ -1112,7 +1112,7 @@
       </div>
 
       <!-- Gráfico de vistas diarias -->
-      <div class="an-section">
+      <div class="an-section" data-tier="basicas">
         <h3>Vistas al perfil por día</h3>
         <div class="chart-card">
           <div class="chart-legend">
@@ -1127,7 +1127,7 @@
       </div>
 
       <!-- Ranking por zona -->
-      <div class="an-section">
+      <div class="an-section" data-tier="completas">
         <h3>Posición en el ranking por zona</h3>
         <div class="chart-card">
           <div class="rank-timeline" id="rank-timeline">
@@ -1140,7 +1140,7 @@
       </div>
 
       <!-- Embudo de conversión -->
-      <div class="an-section">
+      <div class="an-section" data-tier="completas">
         <h3>Embudo de contacto</h3>
         <div class="chart-card">
           <div class="funnel">
@@ -1180,7 +1180,7 @@
       </div>
 
       <!-- Origen de vistas -->
-      <div class="an-section">
+      <div class="an-section" data-tier="completas">
         <h3>¿Cómo te encontraron?</h3>
         <div class="chart-card">
           <div class="zona-rows">
@@ -1209,7 +1209,7 @@
       </div>
 
       <!-- Métricas de reputación -->
-      <div class="an-section">
+      <div class="an-section" data-tier="basicas">
         <h3>Reputación del mes</h3>
         <div class="chart-card">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -1239,7 +1239,7 @@
       </div>
 
       <!-- Tips personalizados -->
-      <div class="an-section">
+      <div class="an-section" data-tier="completas">
         <h3>💡 Oportunidades detectadas</h3>
         <div class="tip-card">
           <div class="tip-icon">📸</div>
@@ -1266,6 +1266,13 @@
           </div>
         </div>
         <div style="height:16px"></div>
+      </div>
+
+      <!-- Aviso de secciones bloqueadas por plan (lo puebla aplicarTierEstadisticas) -->
+      <div id="an-upsell" style="display:none;margin:0 14px 16px;background:linear-gradient(135deg,#EEF2FF,#E0E7FF);border:1.5px solid #C7D2FE;border-radius:14px;padding:16px">
+        <div style="font-size:13px;font-weight:700;color:#3730A3;margin-bottom:6px">📊 Más analítica en planes superiores</div>
+        <div id="an-upsell-txt" style="font-size:12px;color:#4338CA;line-height:1.5;margin-bottom:12px"></div>
+        <button onclick="goTo('s-subs')" style="background:var(--blue);color:white;border:none;border-radius:10px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">Ver planes →</button>
       </div>
 
     </div><!-- /analytics -->
@@ -1348,7 +1355,7 @@
             <div class="pc-feat"><span class="fi">✓</span><span>Chat con clientes</span></div>
             <div class="pc-feat"><span class="fi">✓</span><span>Soporte por WhatsApp</span></div>
             <div class="pc-feat"><span class="fi">✓</span><span>Badge <strong>Plus</strong> en perfil</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas básicas <em style="color:var(--ink3)">(próx.)</em></span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas básicas</span></div>
           </div>
           <button class="pc-cta primary" id="subs-btn-plus" onclick="abrirCheckout('plus')">Activar Plan Plus →</button>
         </div>
@@ -1375,7 +1382,7 @@
             <div class="pc-feat"><span class="fi">✓</span><span><strong>20 fotos</strong> de portfolio</span></div>
             <div class="pc-feat"><span class="fi">✓</span><span>Badge <strong>⭐ Pro</strong> + desempate en ranking</span></div>
             <div class="pc-feat"><span class="fi">✓</span><span>Chat + WhatsApp soporte</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas completas <em style="color:var(--ink3)">(próx.)</em></span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas completas</span></div>
           </div>
           <button class="pc-cta primary" id="subs-btn-pro" onclick="abrirCheckout('pro')">Activar Plan Pro →</button>
         </div>
@@ -1402,7 +1409,7 @@
             <div class="pc-feat"><span class="fi">✓</span><span><strong>Fotos ilimitadas</strong> de portfolio</span></div>
             <div class="pc-feat"><span class="fi">✓</span><span>Badge <strong>💎 Elite</strong> + primero en ranking</span></div>
             <div class="pc-feat"><span class="fi">✓</span><span>Chat + WhatsApp soporte</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas + exportar <em style="color:var(--ink3)">(próx.)</em></span></div>
+            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas completas + exportar <em style="color:var(--ink3)">(export próx.)</em></span></div>
           </div>
           <button class="pc-cta primary" id="subs-btn-elite" onclick="abrirCheckout('elite')" style="background:linear-gradient(135deg,#92400E,#D97706);border:none">Activar Plan Elite →</button>
         </div>

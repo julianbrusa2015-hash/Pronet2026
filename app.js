@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (id === 's-catalogo') { renderCatalogo(); }
     if (id === 's-historial') { renderHistorial(); }
     if (id === 's-notif') { renderNotificaciones(); }
-    if (id === 's-analytics') { renderAnalytica(analiticaPeriodo || '30d'); }
+    if (id === 's-analytics') { aplicarTierEstadisticas(); renderAnalytica(analiticaPeriodo || '30d'); }
     // Si va a Ranking, cargar el ranking dinámico
     if (id === 's-ranking') { renderRanking(rankCatActiva); }
     // Si va a Denuncia, poblar con el prestador actual
@@ -3478,6 +3478,43 @@ document.addEventListener('DOMContentLoaded', function() {
     return plan === 'base' ? 'plus' : plan;
   }
 
+  // Jerarquía de tiers de analítica. `export` incluye todo lo de `completas`,
+  // que a su vez incluye lo de `basicas`.
+  const TIERS_STATS = { false: 0, basicas: 1, completas: 2, export: 3 };
+
+  /** Tier de estadísticas que le corresponde al usuario.
+   *  Usa planParaLimites() para respetar la etapa fundadora: con los pagos
+   *  desactivados, Base recibe el tier de Plus igual que los límites. */
+  function tierEstadisticas() {
+    return getPlanConfig(planParaLimites(planActual)).estadisticas || false;
+  }
+
+  /** Muestra u oculta cada sección de analítica según el tier del plan.
+   *  Las bloqueadas no se esconden en silencio: se reemplazan por un aviso
+   *  que dice qué plan las incluye, porque una sección que desaparece sin
+   *  explicación se lee como un bug. */
+  function aplicarTierEstadisticas() {
+    const actual = TIERS_STATS[tierEstadisticas()] ?? 0;
+    document.querySelectorAll('#s-analytics .an-section[data-tier]').forEach(sec => {
+      const requerido = TIERS_STATS[sec.dataset.tier] ?? 0;
+      const permitido = actual >= requerido;
+      sec.style.display = permitido ? '' : 'none';
+    });
+    // Aviso único al final, en vez de uno por sección bloqueada.
+    const aviso = document.getElementById('an-upsell');
+    if (aviso) {
+      const bloqueadas = [...document.querySelectorAll('#s-analytics .an-section[data-tier]')]
+        .filter(s => s.style.display === 'none').length;
+      aviso.style.display = bloqueadas > 0 ? '' : 'none';
+      const txt = document.getElementById('an-upsell-txt');
+      if (txt) {
+        txt.textContent = actual === 0
+          ? 'Tu plan no incluye analítica. Con Plus ves tus vistas y tu reputación.'
+          : `Hay ${bloqueadas} ${bloqueadas === 1 ? 'sección' : 'secciones'} más en el plan Pro: ranking, embudo de contacto y origen de las visitas.`;
+      }
+    }
+  }
+
   /** Límite del plan activo para un recurso. null = ilimitado. */
   function limitePlan(campo) {
     const v = getPlanConfig(planParaLimites(planActual))[campo];
@@ -3637,6 +3674,9 @@ document.addEventListener('DOMContentLoaded', function() {
         planNombreEl.textContent = 'Plan ' + cfg.nombre + ' ' + (periodoActual === 'anual' ? 'Anual' : 'Mensual') + ' · ' + precio + ' ARS';
       }
     }
+    // El tier de analítica depende del plan: recalcularlo cuando el plan cambia
+    // (activación, vencimiento, o el interruptor de planes pagos).
+    aplicarTierEstadisticas();
     const boostTextoEl = document.getElementById('perfil-boost-texto');
     if (boostTextoEl) {
       boostTextoEl.textContent = cfg.loyalty_boost > 1 ? 'boost ×' + cfg.loyalty_boost : 'sin boost';

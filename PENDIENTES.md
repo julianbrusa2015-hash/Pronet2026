@@ -83,7 +83,7 @@ Los límites viven duplicados: `PRONET_CONFIG.PLANES` (cliente) y la tabla `plan
 
 - **Estadísticas por tier** — Básicas (Plus) / Completas (Pro) / Export (Elite) definidas; la UI muestra "(próx.)" en todo.
 - **"62% · Visibilidad del mes"** — número fijo en el HTML de la tarjeta de plan en Mi Perfil.
-- **Validación de formularios** — cero `<form>`, cero `required`/`pattern` en todo `index.html`. El registro no valida formato de email.
+- ~~**Validación de formularios**~~ — **La nota era stale** (venía del análisis del 2026-07-26, antes de varias rondas de fixes). Verificado el 2026-07-30: login, registro (email con regex, contraseña 8+, nombre y apellido), nuevo pedido y nueva propuesta (precio > 0, rango min < max, plazo) **ya validan**, vía `required` + `reportarInvalidos()` que usa `reportValidity()` nativo. Único hueco real: Editar perfil no tiene `required` y el teléfono no valida formato — impacto bajo, porque ese teléfono se guarda pero no se usa para contactar a nadie.
 - **Login con Apple** — provider no habilitado en Supabase.
 - **Login biométrico** — `showBiometric()` existe pero solo revalida sesión, no usa WebAuthn. Botón oculto.
 - **Catálogo con precio dinámico** — calcular min/max/promedio desde propuestas reales cuando haya 5+.
