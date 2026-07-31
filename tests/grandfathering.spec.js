@@ -8,9 +8,10 @@
 //   - planParaLimites(): con pagos activos y fundador → devuelve 'plus'
 //   - Límite efectivo: un fundador Base ve 10 propuestas/mes, no 3
 //   - Badge en Mi Perfil: texto "Fundador" visible para prestador Base fundador
+//   - Trigger DB: fn_test_limite_fundador() inserta 10, verifica que la 11 es bloqueada
 //
 // Corre contra: https://pronetprueba.netlify.app
-// Solo lectura — no modifica datos de producción.
+// El test de trigger usa fn_test_limite_fundador() — inserta y limpia sus propios datos.
 
 const { test, expect } = require('@playwright/test');
 const path = require('path');
@@ -144,5 +145,46 @@ test.describe('GF-1 · Grandfathering — badge en Mi Perfil', () => {
       expect(texto).toMatch(/fundador/i);
     }
     // Si el plan es pago, el badge puede no estar — test no aplica
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GF-1 · Trigger de DB — límite real de propuestas
+// ══════════════════════════════════════════════════════════════════════════════
+test.describe('GF-1 · Trigger — propuesta 11 bloqueada en DB', () => {
+  test.use({ storageState: sesionPrestador });
+
+  test('fn_test_limite_fundador: insertar 10, verificar que la 11 es bloqueada', async ({ page }) => {
+    // Este test llama a fn_test_limite_fundador() en Supabase, que:
+    //  1. Inserta propuestas de test hasta llegar a 10 para el prestador
+    //  2. Intenta la propuesta 11 y captura si el trigger la bloquea
+    //  3. Limpia todos los datos de test (DELETE WHERE mensaje LIKE 'TEST_GF_%')
+    // La función es idempotente: limpia residuos de runs anteriores al arrancar.
+    await abrir(page);
+
+    const resultado = await page.evaluate(async () => {
+      const { data, error } = await window._sb.rpc('fn_test_limite_fundador', {
+        p_prestador_id: (await window._sb.from('perfiles')
+          .select('prestador_id')
+          .eq('id', (await window._sb.auth.getUser()).data.user?.id)
+          .maybeSingle()).data?.prestador_id,
+      });
+      return { data, error: error?.message };
+    });
+
+    if (resultado.error) {
+      throw new Error('RPC falló: ' + resultado.error);
+    }
+
+    if (resultado.data?.skip) {
+      console.log('[GF trigger] skip:', resultado.data.reason);
+      test.skip();
+      return;
+    }
+
+    expect(resultado.data?.pass, resultado.data?.error ?? 'trigger no bloqueó').toBe(true);
+    console.log(
+      `[GF trigger] PASS — existentes_prev=${resultado.data.existentes_prev}, insertadas_test=${resultado.data.insertadas_test}`
+    );
   });
 });
