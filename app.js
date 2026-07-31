@@ -1306,6 +1306,31 @@ document.addEventListener('DOMContentLoaded', function() {
     goTo('s-detalle-pedido');
   }
 
+  /** Card compacta de precio referencial del catálogo, con tap-to-toggle sobre
+   *  el precio para desplegar el alcance (incluye/no incluye) — no ocupa
+   *  espacio hasta que el usuario lo pide. `id` debe ser único en la pantalla. */
+  function refPronetCardHTML(id, refTxt, incluye, noIncluye, subtitulo) {
+    const detalleId = id + '-detalle';
+    const tieneDetalle = (incluye && incluye.length) || (noIncluye && noIncluye.length);
+    let detalleHtml = '';
+    if (incluye && incluye.length) detalleHtml += '<div><span style="font-weight:600">✅ Incluye:</span> ' + incluye.map(escHTML).join(' · ') + '</div>';
+    if (noIncluye && noIncluye.length) detalleHtml += '<div style="margin-top:4px"><span style="font-weight:600">❌ No incluye:</span> ' + noIncluye.map(escHTML).join(' · ') + '</div>';
+    let html = '<div' + (tieneDetalle ? ' onclick="toggleRefPronet(\'' + detalleId + '\')" style="cursor:pointer' : ' style="') + 'display:flex;align-items:center;gap:10px;padding:12px;background:#F0FDF4;border-radius:' + (tieneDetalle ? '12px 12px 0 0' : '12px') + ';margin-bottom:' + (tieneDetalle ? '0' : '10px') + '">';
+    html += '<div style="font-size:24px">📈</div>';
+    html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink)">Ref. PRONET: ' + refTxt + (tieneDetalle ? ' <span style="color:var(--blue)">ⓘ</span>' : '') + '</div>';
+    html += '<div style="font-size:11px;color:var(--ink3)">' + escHTML(subtitulo) + '</div></div></div>';
+    if (tieneDetalle) {
+      html += '<div id="' + detalleId + '" style="display:none;padding:10px 12px;background:#F0FDF4;border-radius:0 0 12px 12px;margin-bottom:10px;font-size:11px;color:var(--ink2);line-height:1.5">' + detalleHtml + '</div>';
+    }
+    return html;
+  }
+
+  function toggleRefPronet(id) {
+    const box = document.getElementById(id);
+    if (box) box.style.display = box.style.display === 'none' ? '' : 'none';
+  }
+  window.toggleRefPronet = toggleRefPronet;
+
   // Genera propuestas sugeridas a partir de prestadores reales del rubro del pedido
   async function renderInsightsPedido(pedido) {
     const wrap = document.getElementById('pd-propuestas');
@@ -1321,6 +1346,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ref PRONET desde catálogo — solo si el rubro tiene ficha activa real, no el fallback
     let refTxt = null;
     let refIncluye = [];
+    let refNoIncluye = [];
     try {
       const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
       const rango = tieneCatalogo ? SLIDER_RANGOS[pedido.rubro] : null;
@@ -1328,6 +1354,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (tieneCatalogo) {
         const ficha = await PronetDB.obtenerFichaPorRubro(pedido.rubro);
         if (Array.isArray(ficha?.incluye)) refIncluye = ficha.incluye;
+        if (Array.isArray(ficha?.no_incluye)) refNoIncluye = ficha.no_incluye;
       }
     } catch (e) {}
 
@@ -1359,17 +1386,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Ref PRONET
     if (refTxt) {
-      html += '<div style="padding:12px;background:#F0FDF4;border-radius:12px;margin-bottom:10px">';
-      html += '<div style="display:flex;align-items:center;gap:10px">';
-      html += '<div style="font-size:24px">📈</div>';
-      html += '<div><div style="font-size:13px;font-weight:700;color:var(--ink)">Ref. PRONET: ' + refTxt + '</div>';
-      html += '<div style="font-size:11px;color:var(--ink3)">Rango de precios del mercado para este rubro</div></div></div>';
-      if (refIncluye.length) {
-        html += '<div style="font-size:11px;color:var(--ink2);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06)">';
-        html += '<span style="font-weight:600">✅ Incluye:</span> ' + refIncluye.map(escHTML).join(' · ');
-        html += '</div>';
-      }
-      html += '</div>';
+      html += refPronetCardHTML('ref-insights', refTxt, refIncluye, refNoIncluye, 'Rango de precios del mercado para este rubro');
     }
 
     // Tiempo y expiración
@@ -6675,17 +6692,19 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Carga el precio referencial del catálogo para un rubro dado
-  // y lo muestra en el bloque ref-inline del formulario de propuesta
+  // y lo muestra en el bloque ref-inline del formulario de propuesta.
+  // Tap sobre el precio (no un botón aparte) despliega el alcance — mismo
+  // patrón que refPronetCardHTML() en el detalle de pedido.
   async function cargarRefPrecio(rubro) {
     const refEl      = document.getElementById('np-ref-inline');
     const refNota    = document.getElementById('np-ref-nota');
-    const detalleBtn = document.getElementById('np-ref-detalle-btn');
     const detalleBox = document.getElementById('np-ref-detalle-box');
     if (!refEl) return;
     const ocultarTodo = () => {
       refEl.style.display = 'none';
+      refEl.onclick = null;
+      refEl.style.cursor = '';
       if (refNota) refNota.style.display = 'none';
-      if (detalleBtn) detalleBtn.style.display = 'none';
       if (detalleBox) { detalleBox.style.display = 'none'; detalleBox.innerHTML = ''; }
     };
     if (!FEATURES.catalogoPrecios) { ocultarTodo(); return; }
@@ -6698,45 +6717,38 @@ document.addEventListener('DOMContentLoaded', function() {
       if (typeof configurarLimitesSlider === 'function') {
         configurarLimitesSlider(minTotal, maxTotal, rubro);
       }
+      // Tooltip de alcance: qué incluye/no incluye, para poder comparar precios entre propuestas.
+      const incluye = Array.isArray(ficha.incluye) ? ficha.incluye : [];
+      const noIncluye = Array.isArray(ficha.no_incluye) ? ficha.no_incluye : [];
+      const tieneDetalle = incluye.length || noIncluye.length;
       refEl.textContent = '💡 Precio ref. PRONET para ' + rubro + ': $'
         + minTotal.toLocaleString('es-AR') + '–$'
-        + maxTotal.toLocaleString('es-AR') + ' / ' + unidad;
+        + maxTotal.toLocaleString('es-AR') + ' / ' + unidad + (tieneDetalle ? ' ⓘ' : '');
       refEl.style.display = '';
       if (refNota) {
         refNota.textContent = '⚠️ Referencial basado en precios habituales del rubro. Puede variar según complejidad.';
         refNota.style.display = '';
       }
-      // Tooltip de alcance: qué incluye/no incluye, para poder comparar precios entre propuestas.
-      const incluye = Array.isArray(ficha.incluye) ? ficha.incluye : [];
-      const noIncluye = Array.isArray(ficha.no_incluye) ? ficha.no_incluye : [];
-      if (detalleBtn && detalleBox) {
-        if (incluye.length || noIncluye.length) {
+      if (detalleBox) {
+        if (tieneDetalle) {
           let html = '';
-          if (incluye.length) html += '<div style="font-weight:600;color:var(--ink);margin-bottom:2px">✅ Incluye</div>' + incluye.map(i => '<div>• ' + escHTML(i) + '</div>').join('') ;
+          if (incluye.length) html += '<div style="font-weight:600;color:var(--ink);margin-bottom:2px">✅ Incluye</div>' + incluye.map(i => '<div>• ' + escHTML(i) + '</div>').join('');
           if (noIncluye.length) html += '<div style="font-weight:600;color:var(--ink);margin:6px 0 2px">❌ No incluye</div>' + noIncluye.map(i => '<div>• ' + escHTML(i) + '</div>').join('');
           detalleBox.innerHTML = html;
-          detalleBtn.style.display = '';
           detalleBox.style.display = 'none';
-          detalleBtn.textContent = 'ⓘ Ver qué incluye';
+          refEl.style.cursor = 'pointer';
+          refEl.onclick = () => { detalleBox.style.display = detalleBox.style.display === 'none' ? '' : 'none'; };
         } else {
-          detalleBtn.style.display = 'none';
           detalleBox.style.display = 'none';
+          detalleBox.innerHTML = '';
+          refEl.onclick = null;
+          refEl.style.cursor = '';
         }
       }
     } catch(e) {
       ocultarTodo();
     }
   }
-
-  function toggleRefDetalle() {
-    const box = document.getElementById('np-ref-detalle-box');
-    const btn = document.getElementById('np-ref-detalle-btn');
-    if (!box) return;
-    const abierto = box.style.display !== 'none';
-    box.style.display = abierto ? 'none' : '';
-    if (btn) btn.textContent = abierto ? 'ⓘ Ver qué incluye' : 'ⓘ Ocultar detalle';
-  }
-  window.toggleRefDetalle = toggleRefDetalle;
 
   async function abrirNuevaPropuesta() {
     let p=pedidoActual; if(!p) return;
@@ -7277,19 +7289,10 @@ document.addEventListener('DOMContentLoaded', function() {
           const minTotal = ficha.precio_ref_min;
           const maxTotal = ficha.precio_ref_max || ficha.precio_ref_min;
           const incluye = Array.isArray(ficha.incluye) ? ficha.incluye : [];
+          const noIncluye = Array.isArray(ficha.no_incluye) ? ficha.no_incluye : [];
+          const refTxt = '$' + minTotal.toLocaleString('es-AR') + ' – $' + maxTotal.toLocaleString('es-AR');
           const refCard = document.createElement('div');
-          refCard.style.cssText = 'padding:12px;background:#F0FDF4;border-radius:12px;margin-bottom:10px';
-          let refHtml = '<div style="display:flex;align-items:center;gap:10px">';
-          refHtml += '<div style="font-size:24px">📈</div>';
-          refHtml += '<div><div style="font-size:13px;font-weight:700;color:var(--ink)">Ref. PRONET: $'
-            + minTotal.toLocaleString('es-AR') + ' – $' + maxTotal.toLocaleString('es-AR') + '</div>';
-          refHtml += '<div style="font-size:11px;color:var(--ink3)">Usalo para comparar propuestas de alcance similar</div></div></div>';
-          if (incluye.length) {
-            refHtml += '<div style="font-size:11px;color:var(--ink2);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06)">';
-            refHtml += '<span style="font-weight:600">✅ Incluye:</span> ' + incluye.map(escHTML).join(' · ');
-            refHtml += '</div>';
-          }
-          refCard.innerHTML = refHtml;
+          refCard.innerHTML = refPronetCardHTML('ref-props', refTxt, incluye, noIncluye, 'Usalo para comparar propuestas de alcance similar');
           wrap.appendChild(refCard);
         }
       }
