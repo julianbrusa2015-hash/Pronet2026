@@ -618,27 +618,33 @@
         <button id="modo-cambiar-btn" onclick="toggleModoRol()" style="background:var(--blue);color:white;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap">Cambiar a Vecino →</button>
       </div>
 
+      <!-- Acceso rápido — Points y Analítica, mismo estilo sutil que el resto del menú -->
+      <div data-solo-prestador="true" class="menu-list" style="margin:14px 14px 0">
+        <div class="menu-item" data-feature="loyalty" onclick="goTo('s-loyalty')">
+          <div class="m-icon" style="background:var(--blue-s);color:var(--blue)">⭐</div>
+          <div class="m-txt">
+            <div class="m-title">PRONET Points</div>
+            <div class="m-sub" id="mp-points-tile">Cargando...</div>
+          </div>
+          <div class="m-chev">›</div>
+        </div>
+        <div class="menu-item" data-feature="analyticsAvanzado" onclick="goTo('s-analytics')">
+          <div class="m-icon" style="background:#EEF2FF;color:#2B5BFF">📊</div>
+          <div class="m-txt">
+            <div class="m-title">Analítica</div>
+            <div class="m-sub" id="perfil-vistas-mes">— vistas este mes</div>
+          </div>
+          <div class="m-chev">›</div>
+        </div>
+      </div>
+
       <!-- Acceso rápido Admin — visible sin scrollear -->
       <div data-solo-prestador="true" style="padding:14px 14px 0;display:flex;gap:8px;flex-wrap:wrap">
-        <div data-feature="loyalty" onclick="goTo('s-loyalty')" style="flex:1;min-width:calc(50% - 4px);background:linear-gradient(135deg,var(--blue-d),var(--blue));border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:8px">
-          <span style="font-size:20px">⭐</span>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:white">PRONET Points</div>
-            <div id="mp-points-tile" style="font-size:10px;color:rgba(255,255,255,.7);margin-top:1px">Cargando...</div>
-          </div>
-        </div>
         <div id="tile-catalogo-admin" data-admin-only="true" data-feature="catalogoPrecios" onclick="goTo('s-catalogo')" style="flex:1;min-width:calc(50% - 4px);background:linear-gradient(135deg,#5B21B6,#7C3AED);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:8px">
           <span style="font-size:20px">📚</span>
           <div>
             <div style="font-size:12px;font-weight:700;color:white">Catálogo Admin</div>
             <div style="font-size:10px;color:rgba(255,255,255,.7);margin-top:1px">Precios referenciales</div>
-          </div>
-        </div>
-        <div data-feature="analyticsAvanzado" onclick="goTo('s-analytics')" style="flex:1;min-width:calc(50% - 4px);background:linear-gradient(135deg,#1A3ACC,#2B5BFF);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:8px">
-          <span style="font-size:20px">📊</span>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:white">Analítica</div>
-            <div id="perfil-vistas-mes" style="font-size:10px;color:rgba(255,255,255,.7);margin-top:1px">— vistas este mes</div>
           </div>
         </div>
         <div data-feature="suscripcionPro" onclick="goTo('s-subs')" style="flex:1;min-width:calc(50% - 4px);background:linear-gradient(135deg,#065F46,#10B981);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:8px">
