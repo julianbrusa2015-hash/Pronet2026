@@ -5505,47 +5505,52 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    // Modo test (Checkout MP apagado): activa sin cobrar.
+    // Antes esto hacía un upsert directo a `suscripciones` desde el cliente.
+    // La auditoría de seguridad del 2026-07-31 cerró esa escritura: la policy
+    // permitía que cualquiera se autoactivara Elite gratis desde la consola.
+    // Ahora va por activar_plan_admin(), que valida es_admin() server-side —
+    // para un usuario común falla y se avisa en vez de mentir con la UI.
     const btnConfirmar = document.querySelector('#checkout-overlay .btn-p');
     if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Activando…'; }
 
-    // Congelar el plan elegido: el upsert de abajo corre async y para entonces
-    // el usuario pudo haber abierto otro checkout.
+    // Congelar el plan elegido: el RPC es async y para entonces el usuario
+    // pudo haber abierto otro checkout.
     const planElegido    = currentCheckoutPlan;
     const periodoElegido = currentBilling;
 
+    const uid = await PronetDB.usuarioIdActual().catch(() => null);
+    const res = uid
+      ? await PronetDB.rpc('activar_plan_admin', {
+          p_usuario_id: uid,
+          p_plan:       planElegido,
+          p_periodo:    periodoElegido,
+        })
+      : { ok: false, error: 'SIN_SESION' };
+
+    if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Confirmar pago seguro 🔒'; }
+
+    if (!res.ok) {
+      showToast && showToast(res.error === 'SOLO_ADMIN'
+        ? '🧪 Modo test: solo un admin puede activar un plan sin pagar. Activá "Checkout MercadoPago" para el flujo real.'
+        : '⚠️ No se pudo activar el plan. ' + (res.error || ''));
+      return;
+    }
+
     planActual    = planElegido;
     periodoActual = periodoElegido;
+    venceActual   = res.vence_en || null;
     reflejarPlan();
 
     document.getElementById('checkout-overlay').classList.remove('show');
     const cfg = getPlanConfig(planActual);
     setTimeout(() => {
-      if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Confirmar pago seguro 🔒'; }
       const titleEl = document.getElementById('subs-success-title');
       const subEl   = document.getElementById('subs-success-sub');
       if (titleEl) titleEl.textContent = '¡Plan ' + cfg.nombre + ' activado!';
       if (subEl)   subEl.textContent   = 'Tu loyalty boost ×' + cfg.loyalty_boost + ' ya está activo.';
       document.getElementById('subs-success').classList.add('show');
     }, 300);
-
-    // Persistir en Supabase en background
-    if (window._sb) {
-      PronetDB.usuarioIdActual().then(uid => {
-        if (!uid) return;
-        const vence = new Date();
-        vence.setMonth(vence.getMonth() + (periodoElegido === 'anual' ? 12 : 1));
-        window._sb.from('suscripciones').upsert({
-          usuario_id: uid,
-          plan: planElegido,
-          estado: 'activo',
-          periodo: periodoElegido,
-          activado_en: new Date().toISOString(),
-          vence_en: vence.toISOString()
-        }, { onConflict: 'usuario_id' }).then(({ error }) => {
-          if (error) console.warn('[subs] Error al guardar suscripción:', error.message);
-        });
-      });
-    }
   }
 
   function cerrarSubsSuccess() {
