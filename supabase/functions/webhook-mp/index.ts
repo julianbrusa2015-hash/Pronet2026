@@ -4,16 +4,20 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-async function verificarFirmaMP(req: Request, paymentId: string): Promise<boolean> {
+// Resultado: 'ok' | 'sin_firma' | 'invalida'
+async function verificarFirmaMP(req: Request, paymentId: string): Promise<'ok' | 'sin_firma' | 'invalida'> {
   const secret = Deno.env.get('MP_WEBHOOK_SECRET');
   if (!secret) {
     console.error('[webhook-mp] MP_WEBHOOK_SECRET no configurado');
-    return false;
+    return 'invalida';
   }
 
   const xSignature = req.headers.get('x-signature');
+  // Sin header: test de conectividad del panel de MP o solicitud sin firmar.
+  // No rechazamos (evita falso 401 en el simulador), pero tampoco procesamos.
+  if (!xSignature) return 'sin_firma';
+
   const xRequestId = req.headers.get('x-request-id') ?? '';
-  if (!xSignature) return false;
 
   // x-signature = "ts=<timestamp>,v1=<hmac>"
   const parts = Object.fromEntries(
@@ -21,7 +25,7 @@ async function verificarFirmaMP(req: Request, paymentId: string): Promise<boolea
   );
   const ts = parts['ts'];
   const v1 = parts['v1'];
-  if (!ts || !v1) return false;
+  if (!ts || !v1) return 'invalida';
 
   const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts}`;
   const keyBytes = new TextEncoder().encode(secret);
@@ -33,7 +37,7 @@ async function verificarFirmaMP(req: Request, paymentId: string): Promise<boolea
   const computed = Array.from(new Uint8Array(sig))
     .map(b => b.toString(16).padStart(2, '0')).join('');
 
-  return computed === v1;
+  return computed === v1 ? 'ok' : 'invalida';
 }
 
 Deno.serve(async (req) => {
@@ -50,10 +54,15 @@ Deno.serve(async (req) => {
     // Verificar que la notificación viene realmente de MercadoPago.
     // Complementa la idempotencia: la firma prueba el origen; la idempotencia
     // evita que una notificación válida se aplique más de una vez.
-    const firmaValida = await verificarFirmaMP(req, paymentId);
-    if (!firmaValida) {
-      console.warn('[webhook-mp] firma x-signature inválida o ausente', paymentId);
+    const firma = await verificarFirmaMP(req, paymentId);
+    if (firma === 'invalida') {
+      console.warn('[webhook-mp] firma x-signature inválida', paymentId);
       return new Response('unauthorized', { status: 401 });
+    }
+    if (firma === 'sin_firma') {
+      // Sin header: test de conectividad del panel de MP. Responder 200 sin procesar.
+      console.log('[webhook-mp] sin firma — test de conectividad ignorado', paymentId);
+      return new Response('ok', { status: 200 });
     }
 
     const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN');
