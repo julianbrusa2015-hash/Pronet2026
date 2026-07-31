@@ -49,7 +49,8 @@ Deno.serve(async (req) => {
     if (!precioPlan) {
       return json({ error: 'Plan inválido' }, 400);
     }
-    if (periodo !== 'mensual' && periodo !== 'anual') {
+    // El frontend manda 'mes' (ver switchBilling en app.js), no 'mensual'.
+    if (periodo !== 'mes' && periodo !== 'anual') {
       return json({ error: 'Periodo inválido' }, 400);
     }
 
