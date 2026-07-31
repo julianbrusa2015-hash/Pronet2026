@@ -5,6 +5,8 @@ Los tests corren con Playwright contra `https://pronetprueba.netlify.app` (produ
 
 **Estado:** ✅ implementado · 🟡 parcial · ⬜ pendiente
 
+**Actualizado 2026-08-01.** Resumen ejecutivo: **8 de 13 circuitos con cobertura** (antes 2). Quedan sin automatizar: C6 (cierre de trabajo), C7 (reseña), C8 (loyalty/canjes), C11 (notificaciones), C13 (PWA offline). El archivo de specs creció de 2 a 7: `circuito-principal.spec.js`, `ciclo-negocio.spec.js`, `acceso-y-roles.spec.js`, `busqueda-y-analitica.spec.js`, `planes-limites.spec.js`, `grandfathering.spec.js`, `nuevos-circuitos.spec.js` (+ `helpers.js` compartido y `auth.setup.js` con sesión persistida por rol).
+
 ---
 
 ## Cuentas — inventario real (2026-07-29)
@@ -50,44 +52,49 @@ También `roles` está desincronizado de `tipo` en varias filas (ej. `servicios_
 
 ## Circuitos
 
-### C1 · Acceso y sesión ⬜
+### C1 · Acceso y sesión ✅
 **Cubre:** registro, confirmación de email, login, login Google, modo invitado, cierre de sesión.
 
-**Prueba:** entrar como invitado → verificar que las pantallas protegidas muestran el gate de registro → loguearse → verificar que el gate desaparece y aparece el perfil.
+**Prueba:** `acceso-y-roles.spec.js` (describe "C1"). Invitado ve el gate en pantallas protegidas con mensaje explicativo, home navegable sin cuenta, con sesión el gate desaparece y sobrevive a un reload. También `circuito-principal.spec.js` (validaciones de formulario, login exitoso).
 
 **Por qué importa:** es la puerta de todo; si se rompe, ningún otro circuito es alcanzable.
 
 ---
 
-### C2 · Publicación de pedido (vecino) ⬜
+### C2 · Publicación de pedido (vecino) ✅
 **Cubre:** wizard de 3 pasos, validación de campos, fotos, slider de presupuesto, publicación.
 
-**Prueba:** login vecino → publicar pedido con título/rubro/zona/presupuesto → verificar que aparece en "Mis pedidos" y en el feed de un prestador del mismo rubro.
+**Prueba:** `ciclo-negocio.spec.js`, test A ("Vecino publica un pedido"). Completa los 3 pasos con rubro Electricistas, verifica el mensaje de éxito y confirma que el INSERT llegó a Supabase (no solo localStorage) antes de dar el test por bueno.
 
-**Ojo:** deja datos en producción. Necesita limpieza al final o un rubro/zona reservado para tests.
+**Ojo:** escribe en producción con título `Test E2E – … <timestamp>`. `global-setup.js` borra los pedidos con ese prefijo antes de cada corrida — no hace falta limpieza manual, pero si se corre offline o el DELETE falla, se van acumulando.
 
 ---
 
-### C3 · Descubrimiento (vecino) ⬜
+### C3 · Descubrimiento (vecino) ✅
 **Cubre:** búsqueda de prestadores, filtros por rubro/zona, ranking, ficha de prestador, mapa.
 
-**Prueba:** buscar por rubro → verificar que todos los resultados son de ese rubro → abrir una ficha → verificar nombre, rating y reseñas.
+**Prueba:** `busqueda-y-analitica.spec.js` (describe "C3"). Carga de `s-buscar`, chips de filtro (Todos/Premium) alternan selección, `#search-results` se popula o muestra empty state, el meta de resultados refleja el filtro activo, texto sin resultados muestra el mensaje correcto, clicar una card navega a `s-prof`.
+
+**Pendiente:** mapa (pines, distancias) sin cobertura directa — ver C13/features.
 
 ---
 
 ### C4 · Propuesta y límites de plan (prestador) ✅
 **Cubre:** feed de pedidos disponibles, envío de propuesta, **límite de propuestas por plan**, edición de propuesta.
 
-**Prueba:** ver `planes-limites.spec.js`. Verifica la resolución de límites por plan sin depender de datos, más la coherencia entre config y UI.
+**Prueba:**
+- `ciclo-negocio.spec.js`, test B — envío real de una propuesta de punta a punta (feed filtrado por rubro, detalle de pedido, formulario de propuesta, confirmación).
+- `planes-limites.spec.js` (describe "C4") — resolución de límites por plan sin depender de datos (fundadores, prelanzamiento, coherencia config↔servidor).
+- `planes-limites.spec.js` (describe "D-04") — **el corte real en la propuesta que excede el cupo, verificado contra el trigger de la DB** (`fn_test_limite_propuestas`, generaliza el límite al plan vigente del prestador, no solo al caso fundador). Cerrado y verificado en producción 2026-08-01.
 
-**Pendiente:** el corte real en la 4ª propuesta (necesita cuenta con cupo controlado).
+**Pendiente:** edición de una propuesta existente (no debería consumir cupo — regla ya implementada, sin test dedicado).
 
 ---
 
-### C5 · Elección y apertura de chat ⬜
+### C5 · Elección y apertura de chat ✅
 **Cubre:** comparación de propuestas, elección del prestador, creación del chat de trabajo.
 
-**Prueba:** con un pedido que tenga propuestas, elegir una → verificar que se crea el chat en estado `activo` y que las demás propuestas quedan `no_elegida`.
+**Prueba:** `ciclo-negocio.spec.js`, test C ("Vecino elige la propuesta del prestador"). Serie con A y B — depende del pedido y la propuesta creados en los tests anteriores (`test.describe.serial`, sin retries porque mutan estado en Supabase).
 
 ---
 
@@ -114,21 +121,24 @@ También `roles` está desincronizado de `tipo` en varias filas (ej. `servicios_
 
 ---
 
-### C9 · Suscripción y planes ✅ (parcial)
-**Cubre:** ver planes, activar, persistencia, sincronización con `prestadores.plan`, vencimiento, badge en búsqueda, interruptor de planes pagos.
+### C9 · Suscripción y planes ✅
+**Cubre:** ver planes, activar, persistencia, sincronización con `prestadores.plan`, vencimiento, badge en búsqueda, interruptor de planes pagos, grandfathering de fundadores.
 
-**Prueba:** ver `planes-limites.spec.js`.
+**Prueba:**
+- `planes-limites.spec.js` (describes "C9") — catálogo de 4 planes, precio anual = 10 meses, `getPlanConfig` no rompe con IDs viejos, badge por plan, coherencia interruptor↔UI.
+- `planes-limites.spec.js` (describe "D-01"/"D-01b") — `crearPreferenciaMP()` devuelve `init_point` real de MercadoPago para un plan pago y rechaza `base` (precio $0); `PRONET_CONFIG.PLANES` sincronizado en vivo contra `planes_limites` (cierra la duplicación de precios, D1, 2026-08-01).
+- `grandfathering.spec.js` — contrato de API (`es_fundador_activo`), límites de fundador (Base recibe los de Plus), badge "Fundador" en Mi Perfil, y el trigger real de DB (`fn_test_limite_fundador`, inserta 10 propuestas y verifica que la 11ª es bloqueada).
 
-**Pendiente de automatizar:** activación real de un plan (escribe en producción) y el cron de vencimiento (corre a las 00:00).
+**Pendiente de automatizar:** completar un pago real end-to-end en sandbox (se prueba manualmente, ver memoria MP-1) y el cron de vencimiento (corre a las 00:00 BA).
 
 ---
 
-### C10 · Moderación (admin) ⬜
+### C10 · Moderación (admin) 🟡
 **Cubre:** denuncias, canjes pendientes, ABM de beneficios, configuración de la app.
 
-**Prueba:** login admin → verificar que el panel carga las tres secciones → verificar que un no-admin recibe el bloqueo al navegar a `s-moderacion`.
+**Prueba:** `busqueda-y-analitica.spec.js` (describe "C10") — el gating está cubierto: `goTo('s-moderacion')` no activa la pantalla ni para vecino ni para prestador, `version-tap` no abre el modal de PIN para no-admins, otras pantallas admin (`s-loyalty-admin`, `s-catalogo`) tampoco son alcanzables.
 
-**El gating de no-admin se puede testear ya**, sin cuenta de admin.
+**Pendiente:** el panel en sí (las tres secciones, aprobar canjes, ABM) sin cobertura — necesita sesión de admin real, no automatizada todavía.
 
 ---
 
@@ -139,12 +149,12 @@ También `roles` está desincronizado de `tipo` en varias filas (ej. `servicios_
 
 ---
 
-### C12 · Doble perfil y roles ⬜
+### C12 · Doble perfil y roles ✅
 **Cubre:** toggle vecino↔prestador, qué ve cada rol, que un prestador puro no pueda publicar pedidos.
 
-**Prueba:** con la cuenta de doble perfil, alternar modo → verificar que el nav inferior y el botón "Publicar pedido" cambian. Con la cuenta de prestador puro, verificar que el toggle **no** aparece y que no hay botón de publicar.
+**Prueba:** `acceso-y-roles.spec.js` (describe "C12"). Prestador puro: sin toggle, sin botón de publicar, nav sin Buscar/Cerca, y **no hereda `modoRol` de una sesión anterior** (test dedicado a la regresión v64). Vecino: ve publicar y nav completo, sin toggle si no tiene ficha, ve el CTA para ofrecer servicios. Doble perfil (si `TEST_DOBLE_EMAIL` está configurada): toggle visible, alterna el modo mostrado, y en modo vecino puede publicar pero en modo prestador no.
 
-**Regresión conocida:** `modoRol` persistía en localStorage entre cuentas (corregido v64), y el botón de publicar quedaba visible al entrar directo a `s-pedidos` (corregido v65). Ambos merecen test.
+**Regresiones que ya tienen test:** `modoRol` persistiendo en localStorage entre cuentas (v64) y el botón de publicar visible al entrar directo a `s-pedidos` (v65) — ambas cerradas y cubiertas.
 
 ---
 
@@ -153,19 +163,37 @@ También `roles` está desincronizado de `tipo` en varias filas (ej. `servicios_
 
 **Prueba:** cargar la app → verificar que el SW registra → simular offline → verificar que aparece el banner y que la app sigue navegable desde caché.
 
+**Nota (2026-08-01):** cobra más relevancia con la migración a Capacitor decidida (ver `roadmap-stores` en memoria) — Capacitor no usa el Service Worker del mismo modo, así que antes de migrar conviene tener claro qué de este circuito sigue aplicando en la app empaquetada y qué se resuelve distinto (notificaciones push nativas reemplazan `@capacitor/push-notifications` al Web Push actual).
+
+---
+
+## Features adicionales cubiertas (fuera de la numeración de circuitos)
+
+`nuevos-circuitos.spec.js` prueba funcionalidades puntuales que no mapean 1 a 1 a los 13 circuitos de negocio:
+
+- **E-02 · Widget de soporte WhatsApp** — FAB visible para invitado, popup con link a `wa.me`, cierre por botón X y por toggle, fila visible en Mi Perfil para vecino logueado.
+- **D-01 · Modo invitado — pedidos gateados** — nav Pedidos muestra el gate para invitado en vez de la pantalla, tabs ocultos cuando se fuerza el render.
+- **B-08 · CTA "Quiero ofrecer mis servicios"** — visible para invitado con texto de registro.
+- **F.1 · Feed de prestador pre-filtrado por rubro** — `catActiva` se resuelve al rubro del perfil al entrar como prestador, feed no muestra vista de vecino.
+- **D-03 · Loyalty — contrato invertido a propósito** — verifica que `PronetDB.acreditarPuntos`/`aplicarBeneficio` **no** existan en el cliente (la acreditación es 100% server-side), que los RPC de canje sí estén expuestos, y que el widget de WhatsApp esté en `window`.
+
+`busqueda-y-analitica.spec.js` también prueba el **contrato de API de Portfolio** (`listarPortfolio`/`subirFotoPortfolio`/`eliminarFotoPortfolio` expuestas, `eliminarFotoPortfolio(null)` no lanza excepción) y **C4/C9 · Analítica por tier de plan** (secciones visibles coherentes con el tier, aviso de upsell, export CSV solo Elite).
+
 ---
 
 ## Criterio de prioridad
 
-Si hay que elegir por dónde empezar, el orden por riesgo × frecuencia:
+Actualizado 2026-08-01 — con 8/13 circuitos cubiertos, el orden por riesgo × frecuencia de lo que falta:
 
-1. **C1** — si se rompe, no hay app
-2. **C12** — ya tuvo dos regresiones reales en una sola sesión
-3. **C4/C9** — recién construidos, mucha superficie nueva
-4. **C2, C5, C6** — el flujo central del marketplace, pero escriben datos en producción
-5. El resto
+1. **C6** — ejecución y cierre del trabajo: el corazón del ciclo de vida de un pedido, sin cobertura
+2. **C7** — reseña y reputación: dispara acreditación de puntos, ya identificado como fuente de bugs de RLS (ver auditoría 2026-07-29)
+3. **C11** — notificaciones: tuvo el bug de "CORS" (en realidad slug/RLS mal diagnosticado) y sigue con el slug desalineado (`enviar-push` en dashboard vs `bright-service` real)
+4. **C8** — loyalty/canjes: probado a mano y funciona, pero necesita sesión de admin para automatizar
+5. **C13** — PWA/offline: baja frecuencia de cambio, pero gana relevancia con la migración a Capacitor
 
 ## Deuda de infraestructura
 
-- Los tests corren contra **producción**. Los circuitos que escriben datos (C2, C5, C6, C7) van a ensuciar la base. Antes de automatizarlos conviene definir un entorno de staging o convenir un rubro/zona reservado para tests y limpiarlo al final.
-- No hay `storageState` por rol reutilizable; cada spec vuelve a loguearse. Con más suites eso se va a notar.
+- Los tests corren contra **producción**. C2 y C5 ya escriben datos reales (pedidos/propuestas con prefijo `Test E2E`); `global-setup.js` los limpia antes de cada corrida. C6 y C7, cuando se automaticen, van a necesitar el mismo patrón. Sigue sin existir un entorno de staging — se optó por limpiar en vez de aislar.
+- ~~No hay `storageState` por rol reutilizable~~ — ✅ resuelto. `auth.setup.js` loguea una vez por rol (vecino/prestador/doble) y guarda la sesión en `tests/.auth/*.json`; los specs nuevos la reusan vía `test.use({ storageState: ... })` en vez de loguearse en cada test. Bajó el tiempo de suite de ~4 minutos (11 logins seguidos contra producción) a corridas de segundos por spec.
+- **Flakiness detectada 2026-08-01:** el login de `vecino_test`/`prestador_test` en `auth.setup.js` viene fallando por timeout (60s) en el primer intento en varias corridas recientes, y pasa recién al reintento automático. Investigación abierta como tarea aparte — no se descartó si es rate limiting de Supabase Auth por la cantidad de corridas del día o lentitud real del endpoint.
+- Los specs viejos (`circuito-principal.spec.js`, `ciclo-negocio.spec.js`, `nuevos-circuitos.spec.js`) tienen su propia copia de los helpers de sesión (login, esperarDOM, etc.) en vez de usar `tests/helpers.js` — a propósito, para no tocar suites que ya pasaban. Los specs nuevos sí usan el módulo compartido.

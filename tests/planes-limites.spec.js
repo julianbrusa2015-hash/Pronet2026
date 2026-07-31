@@ -224,8 +224,15 @@ test.describe('D-04 · Límite de propuestas — trigger real en DB', () => {
 // un precio en planes_limites y restaurarSesion() no lo sincroniza, esto se
 // entera aunque el valor fijo de arriba ("C9 · Catálogo de planes") ya haya
 // quedado desactualizado también y no lo note.
+//
+// Requiere sesión autenticada: la policy de planes_limites es
+// "for select to authenticated" — un invitado recibe 0 filas por RLS, no por
+// una falla del sync. Para invitados, restaurarSesion() no puede sincronizar
+// nada y PRONET_CONFIG.PLANES se queda con el fallback hardcodeado de
+// config.js (limitación preexistente, no algo que haya cambiado hoy).
 test.describe('D-01b · Sync precio_mes/precio_anual desde planes_limites', () => {
-  test.beforeEach(async ({ page }) => { await abrirApp(page); });
+  test.use({ storageState: sesionPrestador });
+  test.beforeEach(async ({ page }) => { await abrir(page); });
 
   test('PRONET_CONFIG.PLANES coincide con planes_limites para los 4 planes', async ({ page }) => {
     const { planes, filas } = await page.evaluate(async () => ({
