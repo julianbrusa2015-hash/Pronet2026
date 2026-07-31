@@ -1296,7 +1296,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fotosWrap.innerHTML = `
           <div style="font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:8px">📷 Fotos del problema</div>
           <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
-            ${fotos.map(url => `<img src="${url}" style="width:90px;height:90px;object-fit:cover;border-radius:10px;flex-shrink:0;cursor:pointer" onclick="window.open('${url}','_blank')">`).join('')}
+            ${fotos.map(url => `<img src="${escHTML(url)}" style="width:90px;height:90px;object-fit:cover;border-radius:10px;flex-shrink:0;cursor:pointer" onclick="abrirFotoModal(this.src)">`).join('')}
           </div>`;
       } else {
         fotosWrap.style.display = 'none';
@@ -2106,7 +2106,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     grid.innerHTML = fotos.map(f =>
-      `<div style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;cursor:pointer" onclick="abrirFotoModal('${escHTML(f.url)}')">
+      `<div style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;cursor:pointer" onclick="abrirFotoModal(this.querySelector('img').src)">
         <img src="${escHTML(f.url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" alt="${escHTML(f.descripcion||'Foto de trabajo')}">
       </div>`
     ).join('');
@@ -2191,7 +2191,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     lista.innerHTML = fotos.map(f =>
-      `<div style="flex-shrink:0;width:72px;height:72px;border-radius:8px;overflow:hidden;cursor:pointer;position:relative" onclick="abrirFotoModal('${escHTML(f.url)}')">
+      `<div style="flex-shrink:0;width:72px;height:72px;border-radius:8px;overflow:hidden;cursor:pointer;position:relative" onclick="abrirFotoModal(this.querySelector('img').src)">
         <img src="${escHTML(f.url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
       </div>`
     ).join('');
@@ -2228,6 +2228,9 @@ document.addEventListener('DOMContentLoaded', function() {
       <button style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;border-radius:50%;width:36px;height:36px;color:white;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>`;
     document.body.appendChild(overlay);
   }
+  // Se llama desde onclick inline (portfolio, fotos de pedido, adjuntos de
+  // propuesta), que solo ve el scope global — sin esto tira ReferenceError.
+  window.abrirFotoModal = abrirFotoModal;
 
   // Helper: redimensionar imagen antes de subir
   function resizarImagen(file, maxPx) {
