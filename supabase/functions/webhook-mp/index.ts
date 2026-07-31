@@ -1,15 +1,40 @@
 // Edge Function: webhook-mp
-// Recibe la notificación de pago de MercadoPago, verifica el estado real
-// contra la API de MP (nunca confía en el payload de la notificación en sí,
-// que puede ser falsificado) y activa la suscripción si el pago está aprobado.
-//
-// TODO producción: verificar la firma x-signature del webhook (requiere
-// la Secret Key de webhooks que se obtiene al registrar la URL en el panel
-// de MP → Tu aplicación → Webhooks). Sin eso, cualquiera que adivine la URL
-// podría llamarla — el fetch a la API de MP para confirmar el pago real
-// mitiga el riesgo por ahora, pero no reemplaza la verificación de firma.
+// Recibe la notificación de pago de MercadoPago, verifica la firma x-signature
+// y el estado real del pago contra la API de MP (nunca confía en el payload).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+async function verificarFirmaMP(req: Request, paymentId: string): Promise<boolean> {
+  const secret = Deno.env.get('MP_WEBHOOK_SECRET');
+  if (!secret) {
+    console.error('[webhook-mp] MP_WEBHOOK_SECRET no configurado');
+    return false;
+  }
+
+  const xSignature = req.headers.get('x-signature');
+  const xRequestId = req.headers.get('x-request-id') ?? '';
+  if (!xSignature) return false;
+
+  // x-signature = "ts=<timestamp>,v1=<hmac>"
+  const parts = Object.fromEntries(
+    xSignature.split(',').map(p => p.split('=') as [string, string])
+  );
+  const ts = parts['ts'];
+  const v1 = parts['v1'];
+  if (!ts || !v1) return false;
+
+  const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts}`;
+  const keyBytes = new TextEncoder().encode(secret);
+  const msgBytes = new TextEncoder().encode(manifest);
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgBytes);
+  const computed = Array.from(new Uint8Array(sig))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+
+  return computed === v1;
+}
 
 Deno.serve(async (req) => {
   try {
@@ -20,6 +45,15 @@ Deno.serve(async (req) => {
     // Solo nos interesan notificaciones de pago; MP también manda otras (merchant_order, etc.)
     if (topic !== 'payment' || !paymentId) {
       return new Response('ignored', { status: 200 });
+    }
+
+    // Verificar que la notificación viene realmente de MercadoPago.
+    // Complementa la idempotencia: la firma prueba el origen; la idempotencia
+    // evita que una notificación válida se aplique más de una vez.
+    const firmaValida = await verificarFirmaMP(req, paymentId);
+    if (!firmaValida) {
+      console.warn('[webhook-mp] firma x-signature inválida o ausente', paymentId);
+      return new Response('unauthorized', { status: 401 });
     }
 
     const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN');
