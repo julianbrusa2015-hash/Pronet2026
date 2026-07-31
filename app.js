@@ -5485,11 +5485,20 @@ document.addEventListener('DOMContentLoaded', function() {
     el.classList.add('on');
   }
 
-  function confirmarPago() {
-    // Con MP activo: redirigir a la Edge Function que crea la preferencia.
-    // Por ahora es un placeholder — se completa cuando tengamos credenciales MP.
+  async function confirmarPago() {
+    // Con MP activo: crear la preferencia real y redirigir a MercadoPago.
+    // El plan recién se activa cuando llega el webhook con el pago aprobado —
+    // acá no tocamos suscripciones ni el estado local.
     if (mpCheckoutActivo()) {
-      showToast && showToast('🚧 Integración MP en progreso. Activá modo test para probar.');
+      const btnMp = document.querySelector('#checkout-overlay .btn-p');
+      if (btnMp) { btnMp.disabled = true; btnMp.textContent = 'Redirigiendo a MercadoPago…'; }
+      const res = await PronetDB.crearPreferenciaMP(currentCheckoutPlan, currentBilling);
+      if (btnMp) { btnMp.disabled = false; btnMp.textContent = 'Confirmar pago seguro 🔒'; }
+      if (!res.ok) {
+        showToast && showToast('⚠️ No se pudo iniciar el pago. ' + (res.error || ''));
+        return;
+      }
+      window.location.href = res.init_point;
       return;
     }
 

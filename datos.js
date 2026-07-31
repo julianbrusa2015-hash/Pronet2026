@@ -557,6 +557,19 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
+    /** Crea una preferencia de pago en MercadoPago vía Edge Function y
+     *  devuelve la URL de checkout. El precio se resuelve server-side —
+     *  acá solo mandamos qué plan/periodo quiere el usuario. */
+    async crearPreferenciaMP(plan, periodo) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      try {
+        const { data, error } = await sb.functions.invoke('crear-preferencia', { body: { plan, periodo } });
+        if (error) { console.warn('[PronetDB] crearPreferenciaMP', error.message); return { ok: false, error: error.message }; }
+        if (!data?.init_point) return { ok: false, error: 'Respuesta inválida de MercadoPago' };
+        return { ok: true, init_point: data.init_point };
+      } catch (e) { return { ok: false, error: String(e) }; }
+    },
+
     /** Propuestas que el prestador creó en el mes calendario actual.
      *  Ante error devuelve 0 (falla abierta): un límite de plan no debe
      *  bloquear al usuario por una caída transitoria de red. */
