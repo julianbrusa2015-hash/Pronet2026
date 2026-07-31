@@ -2,20 +2,18 @@
 // Recibe { plan, periodo } de un usuario autenticado, crea una preferencia
 // de pago en MercadoPago (Checkout Pro) y devuelve la URL de checkout.
 //
-// El precio se resuelve SIEMPRE server-side (PRECIOS abajo) — nunca se confía
-// en un monto que mande el cliente, para que no se pueda manipular el pago.
+// El precio se resuelve SIEMPRE server-side, leyendo la tabla planes_limites
+// — nunca se confía en un monto que mande el cliente, para que no se pueda
+// manipular el pago.
 //
-// IMPORTANT: PRECIOS debe mantenerse sincronizado a mano con
-// window.PRONET_CONFIG.PLANES en config.js. Es deuda técnica conocida
-// (ver memoria "Sync planes_limites ↔ config.js").
+// planes_limites es también la tabla que usan los triggers de límite de
+// propuestas/fotos (supabase-limites-plan.sql): es la fuente única de verdad
+// de plan tanto para límites como para precio. window.PRONET_CONFIG.PLANES
+// (config.js) trae valores hardcodeados solo como fallback offline/inicial;
+// restaurarSesion() en app.js los pisa con los de esta misma tabla al
+// arrancar la app, así que ambos lados quedan sincronizados en runtime.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const PRECIOS: Record<string, { mes: number; anual: number; nombre: string }> = {
-  plus:  { mes: 4990,  anual: 49900,  nombre: 'Plus' },
-  pro:   { mes: 9990,  anual: 99900,  nombre: 'Pro' },
-  elite: { mes: 19990, anual: 199900, nombre: 'Elite' },
-};
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -45,16 +43,26 @@ Deno.serve(async (req) => {
     }
 
     const { plan, periodo } = await req.json();
-    const precioPlan = PRECIOS[plan];
-    if (!precioPlan) {
-      return json({ error: 'Plan inválido' }, 400);
-    }
     // El frontend manda 'mes' (ver switchBilling en app.js), no 'mensual'.
     if (periodo !== 'mes' && periodo !== 'anual') {
       return json({ error: 'Periodo inválido' }, 400);
     }
 
-    const monto = periodo === 'anual' ? precioPlan.anual : precioPlan.mes;
+    const { data: precioPlan, error: precioError } = await supabase
+      .from('planes_limites')
+      .select('nombre, precio_mes, precio_anual')
+      .eq('plan', plan)
+      .maybeSingle();
+    if (precioError || !precioPlan) {
+      return json({ error: 'Plan inválido' }, 400);
+    }
+
+    const monto = periodo === 'anual' ? precioPlan.precio_anual : precioPlan.precio_mes;
+    // Base vale $0 en la tabla — no es un plan comprable. Sin este chequeo,
+    // pedir plan='base' generaría una preferencia de MP por $0.
+    if (!monto || monto <= 0) {
+      return json({ error: 'Plan inválido' }, 400);
+    }
     const titulo = 'Plan ' + precioPlan.nombre + ' PRONET · ' + (periodo === 'anual' ? 'Anual' : 'Mensual');
 
     const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN');

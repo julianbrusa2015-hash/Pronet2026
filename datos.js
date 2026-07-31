@@ -542,7 +542,7 @@ const PronetDB = (() => {
     async listarPlanesLimites() {
       if (!remoto) return [];
       const { data, error } = await sb.from('planes_limites')
-        .select('plan, propuestas_mes, fotos_portfolio');
+        .select('plan, nombre, precio_mes, precio_anual, propuestas_mes, fotos_portfolio');
       if (error) { console.warn('[PronetDB] listarPlanesLimites', error.message); return []; }
       return data || [];
     },

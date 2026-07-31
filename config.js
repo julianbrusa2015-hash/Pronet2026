@@ -79,6 +79,13 @@ Object.assign(window.PRONET_CONFIG, {
 
   // Planes de suscripción (4 tiers: Base · Plus · Pro · Elite)
   // Precios en ARS. Anual = 10 meses (2 meses gratis).
+  //
+  // Estos valores son el FALLBACK offline/inicial. En restaurarSesion()
+  // (app.js) se pisan con precio_mes/precio_anual/propuestas_mes/
+  // fotos_portfolio reales de la tabla planes_limites en Supabase — la misma
+  // que usa el trigger de límites y crear-preferencia para el cobro real. Si
+  // cambia un precio, la fuente de verdad es la tabla; actualizar acá es solo
+  // para que el fallback no quede muy desactualizado si la sync falla.
   PLANES: [
     {
       id: 'base', nombre: 'Base', emoji: '🆓',

@@ -7595,13 +7595,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // configApp queda vacío y planesPagosActivos() da false — el default seguro.
     configApp = await (PronetDB?.obtenerConfigApp?.() || Promise.resolve({})).catch(() => ({}));
 
-    // Sincronizar los límites numéricos de cada plan desde la DB: evita drift
-    // entre config.js (cliente) y planes_limites (fuente de verdad del trigger).
+    // Sincronizar límites y precios de cada plan desde la DB: evita drift
+    // entre config.js (cliente) y planes_limites (fuente de verdad del
+    // trigger de límites Y de crear-preferencia, que resuelve el precio real
+    // del cobro). precio_mes/precio_anual quedan sin tocar si la fila no los
+    // tiene (fallback a lo que ya trae config.js) — nunca se pisa con null.
     const limitesDB = await PronetDB.listarPlanesLimites().catch(() => []);
     if (limitesDB.length && window.PRONET_CONFIG?.PLANES) {
       limitesDB.forEach(row => {
         const p = window.PRONET_CONFIG.PLANES.find(p => p.id === row.plan);
-        if (p) { p.propuestas_mes = row.propuestas_mes; p.fotos_portfolio = row.fotos_portfolio; }
+        if (!p) return;
+        p.propuestas_mes  = row.propuestas_mes;
+        p.fotos_portfolio = row.fotos_portfolio;
+        if (row.precio_mes   != null) p.precio_mes   = row.precio_mes;
+        if (row.precio_anual != null) p.precio_anual = row.precio_anual;
       });
     }
 

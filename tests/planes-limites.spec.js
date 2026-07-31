@@ -8,6 +8,10 @@
 // entre la config y la UI, no un valor fijo — así no se rompen cuando el
 // admin prende los pagos.
 const { test, expect } = require('@playwright/test');
+const path = require('path');
+const { abrir } = require('./helpers');
+
+const sesionPrestador = path.join(__dirname, '.auth', 'prestador.json');
 
 async function abrirApp(page) {
   await page.goto('/');
@@ -155,5 +159,104 @@ test.describe('C9 · Interruptor de planes pagos', () => {
     });
     // Sin MercadoPago, un plan pago visible se podría activar gratis.
     if (!r.on) expect(r.visibles).toEqual([]);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// D-04 · Trigger de DB — el límite de propuestas del plan vigente bloquea
+// ══════════════════════════════════════════════════════════════════════════════
+// Nunca se había verificado en producción que trg_limite_propuestas corte la
+// propuesta que excede el cupo. fn_test_limite_fundador (grandfathering.spec.js)
+// sólo prueba el caso fundador con 10 hardcodeado; esta llama a la versión
+// genérica (fn_test_limite_propuestas, en supabase-test-limite-propuestas.sql)
+// que lee el límite real de plan_de_prestador() + planes_limites, así que
+// vale para cualquier plan que tenga prestador_test en el momento de correr.
+test.describe('D-04 · Límite de propuestas — trigger real en DB', () => {
+  test.use({ storageState: sesionPrestador });
+
+  test('fn_test_limite_propuestas: la propuesta que excede el cupo del plan vigente es bloqueada', async ({ page }) => {
+    await abrir(page);
+
+    const resultado = await page.evaluate(async () => {
+      const { data, error } = await window._sb.rpc('fn_test_limite_propuestas', {
+        p_prestador_id: (await window._sb.from('perfiles')
+          .select('prestador_id')
+          .eq('id', (await window._sb.auth.getUser()).data.user?.id)
+          .maybeSingle()).data?.prestador_id,
+      });
+      return { data, error: error?.message };
+    });
+
+    if (resultado.error) {
+      // Si la función no existe todavía (SQL sin aplicar), avisar en vez de
+      // fallar en seco — más rápido de diagnosticar en el log del test.
+      throw new Error(
+        'RPC falló: ' + resultado.error +
+        ' — ¿se corrió supabase-test-limite-propuestas.sql en Supabase?'
+      );
+    }
+
+    if (resultado.data?.skip) {
+      console.log('[D-04] skip:', resultado.data.reason);
+      test.skip();
+      return;
+    }
+
+    expect(resultado.data?.pass, resultado.data?.error ?? 'trigger no bloqueó').toBe(true);
+    console.log(
+      `[D-04] PASS — plan=${resultado.data.plan}, límite=${resultado.data.limite}, ` +
+      `existentes_prev=${resultado.data.existentes_prev}, insertadas_test=${resultado.data.insertadas_test}`
+    );
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// D-01 · Edge Function crear-preferencia — precios leídos de planes_limites
+// ══════════════════════════════════════════════════════════════════════════════
+// No completa ningún pago: sólo pide la preferencia a MercadoPago y verifica
+// que la Edge Function haya podido resolver el precio contra la tabla (ya no
+// contra la constante PRECIOS hardcodeada, eliminada en D1) y que MP la haya
+// aceptado. Confirma que el deploy salió bien sin gastar un pago de sandbox.
+// ══════════════════════════════════════════════════════════════════════════════
+// D-01b · Sync de precios — PRONET_CONFIG.PLANES refleja planes_limites
+// ══════════════════════════════════════════════════════════════════════════════
+// Compara contra la tabla en vivo, no contra números fijos: si alguien cambia
+// un precio en planes_limites y restaurarSesion() no lo sincroniza, esto se
+// entera aunque el valor fijo de arriba ("C9 · Catálogo de planes") ya haya
+// quedado desactualizado también y no lo note.
+test.describe('D-01b · Sync precio_mes/precio_anual desde planes_limites', () => {
+  test.beforeEach(async ({ page }) => { await abrirApp(page); });
+
+  test('PRONET_CONFIG.PLANES coincide con planes_limites para los 4 planes', async ({ page }) => {
+    const { planes, filas } = await page.evaluate(async () => ({
+      planes: window.PRONET_CONFIG.PLANES,
+      filas:  await window.PronetDB.listarPlanesLimites(),
+    }));
+    expect(filas.length, 'listarPlanesLimites() no devolvió filas').toBeGreaterThan(0);
+
+    const porId = Object.fromEntries(planes.map(p => [p.id, p]));
+    for (const fila of filas) {
+      const p = porId[fila.plan];
+      expect(p, `plan "${fila.plan}" de la DB no existe en PRONET_CONFIG.PLANES`).toBeTruthy();
+      expect(p.precio_mes,   `precio_mes desincronizado para "${fila.plan}"`).toBe(fila.precio_mes);
+      expect(p.precio_anual, `precio_anual desincronizado para "${fila.plan}"`).toBe(fila.precio_anual);
+    }
+  });
+});
+
+test.describe('D-01 · crear-preferencia lee precios de planes_limites', () => {
+  test.use({ storageState: sesionPrestador });
+
+  test('plan pago (plus/mes) devuelve un init_point real de MercadoPago', async ({ page }) => {
+    await abrir(page);
+    const res = await page.evaluate(() => window.PronetDB.crearPreferenciaMP('plus', 'mes'));
+    expect(res.ok, res.error).toBe(true);
+    expect(res.init_point).toMatch(/mercadopago\.com/);
+  });
+
+  test('plan "base" es rechazado (precio $0, no es comprable)', async ({ page }) => {
+    await abrir(page);
+    const res = await page.evaluate(() => window.PronetDB.crearPreferenciaMP('base', 'mes'));
+    expect(res.ok).toBe(false);
   });
 });
