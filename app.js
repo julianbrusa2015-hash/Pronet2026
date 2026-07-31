@@ -7267,6 +7267,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const peso={elegida:0,pendiente:1,rechazada:2};
     props.sort((a,b)=>(peso[a.estado]-peso[b.estado])||(a.precio-b.precio));
     wrap.innerHTML='';
+
+    // Ref PRONET: ayuda a comparar propuestas de alcance distinto — solo si hay ficha activa real.
+    try {
+      const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
+      if (tieneCatalogo) {
+        const ficha = await PronetDB.obtenerFichaPorRubro(pedido.rubro);
+        if (ficha?.precio_ref_min) {
+          const minTotal = ficha.precio_ref_min;
+          const maxTotal = ficha.precio_ref_max || ficha.precio_ref_min;
+          const incluye = Array.isArray(ficha.incluye) ? ficha.incluye : [];
+          const refCard = document.createElement('div');
+          refCard.style.cssText = 'padding:12px;background:#F0FDF4;border-radius:12px;margin-bottom:10px';
+          let refHtml = '<div style="display:flex;align-items:center;gap:10px">';
+          refHtml += '<div style="font-size:24px">📈</div>';
+          refHtml += '<div><div style="font-size:13px;font-weight:700;color:var(--ink)">Ref. PRONET: $'
+            + minTotal.toLocaleString('es-AR') + ' – $' + maxTotal.toLocaleString('es-AR') + '</div>';
+          refHtml += '<div style="font-size:11px;color:var(--ink3)">Usalo para comparar propuestas de alcance similar</div></div></div>';
+          if (incluye.length) {
+            refHtml += '<div style="font-size:11px;color:var(--ink2);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06)">';
+            refHtml += '<span style="font-weight:600">✅ Incluye:</span> ' + incluye.map(escHTML).join(' · ');
+            refHtml += '</div>';
+          }
+          refCard.innerHTML = refHtml;
+          wrap.appendChild(refCard);
+        }
+      }
+    } catch (e) {}
+
     props.forEach(pr=>{
       const p2=porId[pr.prestador_id]||{};
       const card=document.createElement('div');
