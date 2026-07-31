@@ -57,6 +57,34 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    // Idempotencia: registrar el pago ANTES de activar. El PK de
+    // pagos_procesados actúa de candado — si este payment_id ya se aplicó,
+    // la unique violation corta acá y no se toca `suscripciones`.
+    //
+    // Esto se hace recién ahora (y no antes del chequeo de 'approved') a
+    // propósito: un pago puede notificarse primero como 'pending' y después
+    // como 'approved' con el MISMO id. Si lo registráramos en la primera
+    // notificación, la segunda se descartaría como duplicada y el plan
+    // nunca se activaría.
+    const { error: errPago } = await supabase.from('pagos_procesados').insert({
+      payment_id: String(pago.id),
+      usuario_id: usuarioId,
+      plan,
+      periodo,
+      monto: pago.transaction_amount ?? null,
+    });
+
+    if (errPago) {
+      if (errPago.code === '23505') {
+        // Ya procesado: replay malicioso o reintento legítimo de MP (que
+        // reenvía la misma notificación hasta recibir un 200). En ambos
+        // casos la respuesta correcta es 200 sin volver a activar.
+        return new Response('ok (ya procesado)', { status: 200 });
+      }
+      console.error('[webhook-mp] error registrando pago', errPago.message);
+      return new Response('error', { status: 500 });
+    }
+
     const vence = new Date();
     vence.setMonth(vence.getMonth() + (periodo === 'anual' ? 12 : 1));
 
@@ -70,6 +98,9 @@ Deno.serve(async (req) => {
     }, { onConflict: 'usuario_id' });
 
     if (error) {
+      // Soltar el candado: si no soltáramos, el reintento de MP se
+      // descartaría como duplicado y quedaría un pago cobrado sin plan.
+      await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
       console.error('[webhook-mp] error activando suscripción', error.message);
       return new Response('error', { status: 500 });
     }
