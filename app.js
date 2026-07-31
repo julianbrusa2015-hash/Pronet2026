@@ -1318,10 +1318,11 @@ document.addEventListener('DOMContentLoaded', function() {
       nProps = await PronetDB.contarPropuestasPedido(pedido.id);
     } catch (e) {}
 
-    // Ref PRONET desde catálogo
+    // Ref PRONET desde catálogo — solo si el rubro tiene ficha activa real, no el fallback
     let refTxt = null;
     try {
-      const rango = SLIDER_RANGOS && pedido.rubro ? SLIDER_RANGOS[pedido.rubro] : null;
+      const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
+      const rango = tieneCatalogo ? SLIDER_RANGOS[pedido.rubro] : null;
       if (rango) refTxt = '$' + rango.min.toLocaleString('es-AR') + ' – $' + rango.max.toLocaleString('es-AR');
     } catch (e) {}
 
@@ -2042,6 +2043,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (result) {
         showToast && showToast('✅ Servicio guardado');
         SLIDER_RANGOS[rubro] = { min: precioMin||30000, max: precioMax||500000 };
+        if (datos.activo) RUBROS_CON_CATALOGO.add(rubro); else RUBROS_CON_CATALOGO.delete(rubro);
         goTo('s-catalogo');
       } else {
         showToast && showToast('❌ Error al guardar. Verificá los permisos.');
@@ -2315,9 +2317,18 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   async function cargarSliderRangosDesdeDB() {
+    // Con el catálogo apagado, no se marca ningún rubro como "con catálogo real" —
+    // el fallback de config.js sigue fijando límites del slider, pero ninguna
+    // pantalla muestra "Ref. PRONET" sin este flag.
+    if (!FEATURES.catalogoPrecios) return;
     try {
       const fichas = await PronetDB.listarCatalogo(true);
-      fichas.forEach(f => { if (f.rubro && f.precio_ref_min && f.precio_ref_max) SLIDER_RANGOS[f.rubro] = { min: f.precio_ref_min, max: f.precio_ref_max }; });
+      fichas.forEach(f => {
+        if (f.rubro && f.precio_ref_min && f.precio_ref_max) {
+          SLIDER_RANGOS[f.rubro] = { min: f.precio_ref_min, max: f.precio_ref_max };
+          RUBROS_CON_CATALOGO.add(f.rubro);
+        }
+      });
     } catch(e) { console.warn('[cargarSliderRangosDesdeDB]', e); }
   }
 
@@ -6657,6 +6668,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const refEl   = document.getElementById('np-ref-inline');
     const refNota = document.getElementById('np-ref-nota');
     if (!refEl) return;
+    if (!FEATURES.catalogoPrecios) {
+      refEl.style.display = 'none';
+      if (refNota) refNota.style.display = 'none';
+      return;
+    }
     try {
       const ficha = await PronetDB.obtenerFichaPorRubro(rubro);
       if (!ficha?.precio_ref_min) {
@@ -6749,6 +6765,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Límites de slider por rubro (min_abs, max_abs, paso de escala)
   const SLIDER_RANGOS = PRONET_CONFIG.SLIDER_RANGOS;
+  // Rubros con ficha activa real en catalogo_servicios (no el fallback de config.js).
+  // Solo estos muestran "Ref. PRONET" — evita marketear un precio que nadie cargó.
+  let RUBROS_CON_CATALOGO = new Set();
   let npRubroActual = '_default';
 
   // Calcula los límites del slider según el rubro y el referencial del catálogo
@@ -6852,15 +6871,20 @@ document.addEventListener('DOMContentLoaded', function() {
       range.style.width = (((vMax - vMin) / 100) * anchoWrap) + 'px';
     }
 
-    // Banda referencial (zona verde azulada del catálogo)
+    // Banda referencial (zona verde azulada del catálogo) — solo con ficha activa real
     const band = document.getElementById('np-slider-ref-band');
-    if (band && npRefMax > npRefMin) {
+    const bandaVisible = band && npRefMax > npRefMin
+      && FEATURES.catalogoPrecios && RUBROS_CON_CATALOGO.has(npRubroActual);
+    if (bandaVisible) {
       const base = SLIDER_RANGOS[npRubroActual] || SLIDER_RANGOS['_default'];
       const refPosMin = ((base.min - npRefMin) / (npRefMax - npRefMin)) * 100;
       const refPosMax = ((base.max - npRefMin) / (npRefMax - npRefMin)) * 100;
       band.style.left = (12 + (Math.max(0,refPosMin) / 100) * anchoWrap) + 'px';
       band.style.width = (((Math.min(100,refPosMax) - Math.max(0,refPosMin)) / 100) * anchoWrap) + 'px';
+      band.style.display = '';
       band.title = 'Zona habitual: $' + base.min.toLocaleString('es-AR') + '–$' + base.max.toLocaleString('es-AR');
+    } else if (band) {
+      band.style.display = 'none';
     }
 
     // Tooltips
@@ -6994,10 +7018,11 @@ document.addEventListener('DOMContentLoaded', function() {
       precioTxt = '$' + propuesta.precio.toLocaleString('es-AR') + ' ' + (MOD_MAP[mod] || '');
     }
 
-    // — Ref PRONET desde catálogo —
+    // — Ref PRONET desde catálogo — solo si el rubro tiene ficha activa real —
     let refTxt = null;
     try {
-      const rango = SLIDER_RANGOS && pedido.rubro ? SLIDER_RANGOS[pedido.rubro] : null;
+      const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
+      const rango = tieneCatalogo ? SLIDER_RANGOS[pedido.rubro] : null;
       if (rango) refTxt = '$' + rango.min.toLocaleString('es-AR') + '–$' + rango.max.toLocaleString('es-AR');
     } catch (e) {}
 
