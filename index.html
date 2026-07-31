@@ -405,7 +405,7 @@
         <div class="step-label">Paso 2 de 5 · Datos del servicio</div>
         <div class="form-group">
           <label for="pub-titulo" class="form-label">Título del servicio</label>
-          <input id="pub-titulo" name="pub-titulo" class="ob-input" placeholder="Ej: Electricista matriculado · Escobar">
+          <input id="pub-titulo" name="pub-titulo" class="ob-input" placeholder="Ej: Electricista matriculado · Escobar" required minlength="5">
         </div>
         <div class="form-group">
           <label id="lbl-grupo-2" class="form-label">Especialidades</label>
@@ -2202,7 +2202,7 @@
 
         <div class="form-group">
           <label for="np-mensaje" class="form-label">Mensaje para el cliente</label>
-          <textarea name="np-mensaje" class="ob-input" rows="4" style="resize:none;line-height:1.5" id="np-mensaje" placeholder="Explicá brevemente por qué sos la mejor opción para este trabajo..."></textarea>
+          <textarea name="np-mensaje" class="ob-input" rows="4" style="resize:none;line-height:1.5" id="np-mensaje" placeholder="Explicá brevemente por qué sos la mejor opción para este trabajo..." required minlength="10"></textarea>
           <div style="font-size:11px;color:var(--ink3);text-align:right;margin-top:4px">Un buen mensaje aumenta tus chances de ser elegido</div>
         </div>
 
@@ -3862,8 +3862,8 @@
       <!-- Campos -->
       <div style="padding:20px 18px 0">
         <div class="ob-input-row">
-          <div class="ob-field"><label for="edit-nombre" class="ob-label">Nombre</label><input class="ob-input" id="edit-nombre" name="given-name" autocomplete="given-name" value=""></div>
-          <div class="ob-field"><label for="edit-apellido" class="ob-label">Apellido</label><input class="ob-input" id="edit-apellido" name="family-name" autocomplete="family-name" value=""></div>
+          <div class="ob-field"><label for="edit-nombre" class="ob-label">Nombre</label><input class="ob-input" id="edit-nombre" name="given-name" autocomplete="given-name" value="" required></div>
+          <div class="ob-field"><label for="edit-apellido" class="ob-label">Apellido</label><input class="ob-input" id="edit-apellido" name="family-name" autocomplete="family-name" value="" required></div>
         </div>
         <div class="ob-field" style="margin-top:12px">
           <label for="edit-tel" class="ob-label">Teléfono (WhatsApp)</label>
@@ -4003,7 +4003,7 @@
       </div>
 
       <label for="edit-ped-titulo" style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Título</label>
-      <input name="edit-ped-titulo" id="edit-ped-titulo" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:12px;box-sizing:border-box;font-family:'Inter',sans-serif">
+      <input name="edit-ped-titulo" id="edit-ped-titulo" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:12px;box-sizing:border-box;font-family:'Inter',sans-serif" required minlength="5">
 
       <label for="edit-ped-desc" style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Descripción</label>
       <textarea name="edit-ped-desc" id="edit-ped-desc" rows="3" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:12px;box-sizing:border-box;font-family:'Inter',sans-serif;resize:none"></textarea>
