@@ -5000,7 +5000,8 @@ document.addEventListener('DOMContentLoaded', function() {
       top.addEventListener('click', () => abrirDetallePedido(p.usuario_id ? p : { ...p, usuario_id: usuarioActual?.id }));
       top.appendChild(ico);top.appendChild(info);top.appendChild(badge);card.appendChild(top);
       const nProps=conteoProps[p.id]||0;
-      if(nProps>0){const pb=document.createElement('button');pb.textContent='📬 '+nProps+' propuesta'+(nProps!==1?'s':'')+' recibida'+(nProps!==1?'s':'')+' — Ver y comparar →';pb.style.cssText='width:100%;margin-top:10px;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-s);border:1.5px solid #C7D5FF;border-radius:10px;padding:9px;cursor:pointer;font-family:inherit';pb.addEventListener('click',(e)=>{e.stopPropagation();abrirDetallePedido(p.usuario_id ? p : { ...p, usuario_id: usuarioActual?.id });});card.appendChild(pb);}
+      const pedidoAbierto=!['cerrado','calificado','terminado','cancelado'].includes(p.estado);
+      if(nProps>0&&pedidoAbierto){const pb=document.createElement('button');pb.textContent='📬 '+nProps+' propuesta'+(nProps!==1?'s':'')+' recibida'+(nProps!==1?'s':'')+' — Ver y comparar →';pb.style.cssText='width:100%;margin-top:10px;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-s);border:1.5px solid #C7D5FF;border-radius:10px;padding:9px;cursor:pointer;font-family:inherit';pb.addEventListener('click',(e)=>{e.stopPropagation();abrirDetallePedido(p.usuario_id ? p : { ...p, usuario_id: usuarioActual?.id });});card.appendChild(pb);}
 
       // Botones: Editar + Eliminar
       const botones = document.createElement('div');
