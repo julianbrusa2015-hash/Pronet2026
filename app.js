@@ -4827,7 +4827,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tipo: 'pedido',
         titulo: '🔔 Nuevo pedido en tu rubro',
         cuerpo: (pedido.titulo || 'Un vecino necesita tu servicio') + ' · ' + (pedido.zona || ''),
-        url: '/#pedidos',
+        url: '/#s-pedidos',
       }).catch((e) => { console.warn('[Push] notificar pedido:', e); });
     }
     renderPedidosGuardados();
