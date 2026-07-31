@@ -19,21 +19,29 @@ async function verificarFirmaMP(req: Request, paymentId: string): Promise<'ok' |
 
   const xRequestId = req.headers.get('x-request-id') ?? '';
 
-  // x-signature = "ts=<timestamp>,v1=<hmac>"
-  const parts = Object.fromEntries(
-    xSignature.split(',').map(p => p.split('=') as [string, string])
-  );
+  // x-signature = "ts=<timestamp>,v1=<hmac>" — MP intercala espacios después
+  // de la coma, así que hay que limpiar clave y valor de cada parte.
+  const parts: Record<string, string> = {};
+  for (const p of xSignature.split(',')) {
+    const i = p.indexOf('=');
+    if (i > 0) parts[p.slice(0, i).trim()] = p.slice(i + 1).trim();
+  }
   const ts = parts['ts'];
   const v1 = parts['v1'];
   if (!ts || !v1) return 'invalida';
 
-  const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts}`;
-  const keyBytes = new TextEncoder().encode(secret);
-  const msgBytes = new TextEncoder().encode(manifest);
+  // Template documentado por MP — el punto y coma FINAL es obligatorio y su
+  // omisión fue justamente lo que hacía fallar la verificación (2026-07-31).
+  // Los ids alfanuméricos van en minúscula según la doc de MP.
+  const manifest = `id:${paymentId.toLowerCase()};request-id:${xRequestId};ts:${ts};`;
+
   const cryptoKey = await crypto.subtle.importKey(
-    'raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    'raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
-  const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgBytes);
+  const sig = await crypto.subtle.sign(
+    'HMAC', cryptoKey, new TextEncoder().encode(manifest)
+  );
   const computed = Array.from(new Uint8Array(sig))
     .map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -77,6 +85,13 @@ Deno.serve(async (req) => {
       headers: { Authorization: 'Bearer ' + mpAccessToken },
     });
     if (!mpRes.ok) {
+      // 404: el pago no existe (id del simulador del panel, o id forjado).
+      // Nunca va a existir, así que 200 para que MP no reintente indefinidamente.
+      if (mpRes.status === 404) {
+        console.log('[webhook-mp] pago inexistente, ignorado', paymentId);
+        return new Response('ok', { status: 200 });
+      }
+      // Errores transitorios (5xx, rate limit): 502 para que MP reintente.
       console.error('[webhook-mp] error consultando pago', mpRes.status);
       return new Response('error', { status: 502 });
     }
