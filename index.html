@@ -3650,7 +3650,23 @@
         </div>
         <div style="font-size:11px;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
           Con los planes <strong>desactivados</strong>, solo existe Base y recibe los límites de Plus (10 propuestas/mes, 10 fotos). Al activarlos, Base baja a 3 y los planes pagos se vuelven visibles.
-          <br><strong style="color:#BE123C">No actives esto hasta que MercadoPago esté integrado</strong> — hoy el checkout no cobra.
+        </div>
+      </div>
+
+      <!-- Checkout MercadoPago -->
+      <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">Checkout MercadoPago</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:2px" id="cfg-mp-estado">Cargando...</div>
+          </div>
+          <label class="toggle-sw" style="flex-shrink:0">
+            <input type="checkbox" id="cfg-mp-checkout" onchange="toggleMpCheckout(this)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <strong>Desactivado (modo test)</strong>: el botón "Confirmar pago" activa el plan sin cobrar — útil para probar flujos. <strong>Activado</strong>: redirige a MercadoPago real. Solo activar cuando las credenciales MP estén configuradas.
         </div>
       </div>
     </div>

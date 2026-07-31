@@ -3471,6 +3471,11 @@ document.addEventListener('DOMContentLoaded', function() {
     return configApp.planes_pagos_activos === 'true';
   }
 
+  /** ¿El checkout redirige a MercadoPago? Si es false, activa el plan gratis (modo test). */
+  function mpCheckoutActivo() {
+    return configApp.mp_checkout_activo === 'true';
+  }
+
   /** Plan cuyos límites aplican realmente.
    *  En prelanzamiento (pagos desactivados) Base recibe los límites de Plus:
    *  el número no es arbitrario, es el mismo que después se vende. Los planes
@@ -3599,7 +3604,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return { ok: usadas < limite, usadas, limite };
   }
 
-  /** Pinta el estado del interruptor de planes pagos en el panel admin. */
+  /** Pinta el estado de los interruptores de config en el panel admin. */
   function renderConfigAdmin() {
     const chk = document.getElementById('cfg-planes-pagos');
     const est = document.getElementById('cfg-planes-estado');
@@ -3610,6 +3615,17 @@ document.addEventListener('DOMContentLoaded', function() {
         ? 'Activados · los usuarios pueden contratar Plus, Pro y Elite'
         : 'Desactivados · etapa fundadora, solo Base con límites de Plus';
       est.style.color = on ? 'var(--green)' : 'var(--ink3)';
+    }
+
+    const chkMp = document.getElementById('cfg-mp-checkout');
+    const estMp = document.getElementById('cfg-mp-estado');
+    const mpOn  = mpCheckoutActivo();
+    if (chkMp) chkMp.checked = mpOn;
+    if (estMp) {
+      estMp.textContent = mpOn
+        ? 'Activo · el botón de pago redirige a MercadoPago'
+        : 'Modo test · el pago se simula sin cobrar';
+      estMp.style.color = mpOn ? 'var(--green)' : 'var(--ink3)';
     }
   }
 
@@ -3632,6 +3648,25 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   window.togglePlanesPagos = togglePlanesPagos;
+
+  async function toggleMpCheckout(el) {
+    const nuevo = !!el.checked;
+    el.disabled = true;
+    const res = await PronetDB.guardarConfigApp('mp_checkout_activo', nuevo ? 'true' : 'false');
+    el.disabled = false;
+    if (!res.ok) {
+      el.checked = !nuevo;
+      showToast && showToast('⚠️ No se pudo guardar. ' + (res.error || ''));
+      return;
+    }
+    configApp.mp_checkout_activo = nuevo ? 'true' : 'false';
+    renderConfigAdmin();
+    showToast && showToast(nuevo
+      ? '💳 Checkout MP activo. El botón de pago ahora redirige a MercadoPago.'
+      : '🧪 Modo test activado. Los pagos se simulan sin cobrar.');
+  }
+
+  window.toggleMpCheckout = toggleMpCheckout;
 
   // Superficie de test: funciones puras del sistema de planes, para que los
   // specs de Playwright puedan verificarlas sin depender del estado de la DB.
@@ -5411,6 +5446,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function confirmarPago() {
+    // Con MP activo: redirigir a la Edge Function que crea la preferencia.
+    // Por ahora es un placeholder — se completa cuando tengamos credenciales MP.
+    if (mpCheckoutActivo()) {
+      showToast && showToast('🚧 Integración MP en progreso. Activá modo test para probar.');
+      return;
+    }
+
     const btnConfirmar = document.querySelector('#checkout-overlay .btn-p');
     if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Activando…'; }
 
