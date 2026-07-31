@@ -95,8 +95,8 @@ begin
     end if;
   end if;
 
-  -- Vecino: +50 por dejar la reseña
-  perform acreditar_puntos(new.vecino_id, 50, 'resena', 'Dejaste una reseña', null);
+  -- Vecino: +50 por dejar la reseña (se asocia al prestador reseñado)
+  perform acreditar_puntos(new.vecino_id, 50, 'resena', 'Dejaste una reseña', new.prestador_id);
 
   return new;
 end;
