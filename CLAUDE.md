@@ -37,3 +37,13 @@ Netlify en pronetprueba.netlify.app
 - `PronetDB.listar()`, `PronetDB.listarSimple()`, `PronetDB.obtener()` son los métodos de acceso a datos
 - `FEATURES.{flag}` controla qué funcionalidades están activas por nivel (N1/N2/N3)
 - Nunca usar `innerHTML` para contenido de usuario — siempre `escHTML()` para sanitizar
+
+## Política de `git push` a `main` (decidida 2026-08-01)
+
+`git push origin main` dispara un deploy automático a producción en Netlify (pronetprueba.netlify.app), una app que ya procesa pagos reales con MercadoPago.
+
+**Autorización:** hacer `git push origin main` directamente, sin pedir confirmación previa en el chat, sin excepciones por tipo de archivo (incluye cambios en Edge Functions, `.sql`, auth, o lógica de cobro).
+
+**Aviso posterior obligatorio:** después de cada push, informar en el mismo mensaje qué se subió y que el deploy quedó disparado — no es una confirmación previa, es un aviso de lo que ya se ejecutó.
+
+Esta autorización cubre únicamente `git push origin main` normal. Operaciones destructivas o difíciles de revertir (`push --force`, `git reset --hard`, borrar ramas, reescribir historial) siguen requiriendo confirmación explícita como siempre.
