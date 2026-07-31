@@ -6,7 +6,9 @@
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "sync-www": "node scripts/sync-www.js",
+    "cap:sync": "npm run sync-www && cap sync"
   },
   "repository": {
     "type": "git",
@@ -21,6 +23,8 @@
   },
   "homepage": "https://github.com/julianbrusa2015-hash/Pronet2026#readme",
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "@playwright/test": "^1.62.0"
   }
 }

@@ -5,3 +5,7 @@ playwright-report/
 tests/.auth/
 .env.local
 supabase/.temp/
+
+# Capacitor: www/ es una copia generada del código de la raíz (ver
+# scripts/sync-www.js), no una fuente propia — no versionar.
+www/
