@@ -7045,7 +7045,7 @@ document.addEventListener('DOMContentLoaded', function() {
           tipo: 'propuesta',
           titulo: idExistente ? '✏️ Propuesta actualizada' : '📨 ¡Nueva propuesta!',
           cuerpo: (usuarioActual.nombre||'Un prestador')+' ofertó '+precioTxt+' en "'+(pedidoActual.titulo||'tu pedido')+'"',
-          url: '/#propuestas',
+          url: '/#s-pedidos',
         }).catch(()=>{});
       }
       showToast && showToast(idExistente?'✅ Propuesta actualizada.':'✅ ¡Propuesta enviada! Te avisamos cuando el vecino la vea.');
