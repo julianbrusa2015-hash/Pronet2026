@@ -7000,7 +7000,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if(precio_min >= precio_max){showToast && showToast('⚠️ El precio mínimo debe ser menor al máximo.');return;}
       precio = precio_min; // el "precio base" es el mínimo, para compatibilidad con orden y filtros
     } else if (modalidad === 'convenir') {
-      precio = 0; // se define después
+      precio = null;
     }
     const mensaje=(document.getElementById('np-mensaje')?.value||'').trim();
     if(!plazoNP){showToast && showToast('⚠️ Elegí tu disponibilidad para este trabajo.');return;}
