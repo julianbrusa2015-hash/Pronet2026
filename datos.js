@@ -494,10 +494,10 @@ const PronetDB = (() => {
       return data;
     },
 
-    /** Obtiene un servicio del catálogo por rubro (para el slider). */
+    /** Obtiene un servicio del catálogo por rubro (para el slider y el tooltip de alcance). */
     async obtenerFichaPorRubro(rubro) {
       if (!remoto || !rubro) return null;
-      const { data, error } = await sb.from('catalogo_servicios').select('precio_ref_min,precio_ref_max,precio_unidad').eq('rubro', rubro).eq('activo', true).maybeSingle();
+      const { data, error } = await sb.from('catalogo_servicios').select('precio_ref_min,precio_ref_max,precio_unidad,incluye,no_incluye').eq('rubro', rubro).eq('activo', true).maybeSingle();
       if (error) { console.warn('[PronetDB] obtenerFichaPorRubro', error.message); return null; }
       return data;
     },

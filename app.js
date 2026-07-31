@@ -1320,10 +1320,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Ref PRONET desde catálogo — solo si el rubro tiene ficha activa real, no el fallback
     let refTxt = null;
+    let refIncluye = [];
     try {
       const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
       const rango = tieneCatalogo ? SLIDER_RANGOS[pedido.rubro] : null;
       if (rango) refTxt = '$' + rango.min.toLocaleString('es-AR') + ' – $' + rango.max.toLocaleString('es-AR');
+      if (tieneCatalogo) {
+        const ficha = await PronetDB.obtenerFichaPorRubro(pedido.rubro);
+        if (Array.isArray(ficha?.incluye)) refIncluye = ficha.incluye;
+      }
     } catch (e) {}
 
     // Tiempo desde publicación
@@ -1354,10 +1359,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Ref PRONET
     if (refTxt) {
-      html += '<div style="display:flex;align-items:center;gap:10px;padding:12px;background:#F0FDF4;border-radius:12px;margin-bottom:10px">';
+      html += '<div style="padding:12px;background:#F0FDF4;border-radius:12px;margin-bottom:10px">';
+      html += '<div style="display:flex;align-items:center;gap:10px">';
       html += '<div style="font-size:24px">📈</div>';
       html += '<div><div style="font-size:13px;font-weight:700;color:var(--ink)">Ref. PRONET: ' + refTxt + '</div>';
       html += '<div style="font-size:11px;color:var(--ink3)">Rango de precios del mercado para este rubro</div></div></div>';
+      if (refIncluye.length) {
+        html += '<div style="font-size:11px;color:var(--ink2);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06)">';
+        html += '<span style="font-weight:600">✅ Incluye:</span> ' + refIncluye.map(escHTML).join(' · ');
+        html += '</div>';
+      }
+      html += '</div>';
     }
 
     // Tiempo y expiración
@@ -6665,21 +6677,21 @@ document.addEventListener('DOMContentLoaded', function() {
   // Carga el precio referencial del catálogo para un rubro dado
   // y lo muestra en el bloque ref-inline del formulario de propuesta
   async function cargarRefPrecio(rubro) {
-    const refEl   = document.getElementById('np-ref-inline');
-    const refNota = document.getElementById('np-ref-nota');
+    const refEl      = document.getElementById('np-ref-inline');
+    const refNota    = document.getElementById('np-ref-nota');
+    const detalleBtn = document.getElementById('np-ref-detalle-btn');
+    const detalleBox = document.getElementById('np-ref-detalle-box');
     if (!refEl) return;
-    if (!FEATURES.catalogoPrecios) {
+    const ocultarTodo = () => {
       refEl.style.display = 'none';
       if (refNota) refNota.style.display = 'none';
-      return;
-    }
+      if (detalleBtn) detalleBtn.style.display = 'none';
+      if (detalleBox) { detalleBox.style.display = 'none'; detalleBox.innerHTML = ''; }
+    };
+    if (!FEATURES.catalogoPrecios) { ocultarTodo(); return; }
     try {
       const ficha = await PronetDB.obtenerFichaPorRubro(rubro);
-      if (!ficha?.precio_ref_min) {
-        refEl.style.display = 'none';
-        if (refNota) refNota.style.display = 'none';
-        return;
-      }
+      if (!ficha?.precio_ref_min) { ocultarTodo(); return; }
       const minTotal = ficha.precio_ref_min;
       const maxTotal = ficha.precio_ref_max || ficha.precio_ref_min;
       const unidad   = ficha.precio_unidad || 'visita';
@@ -6694,11 +6706,37 @@ document.addEventListener('DOMContentLoaded', function() {
         refNota.textContent = '⚠️ Referencial basado en precios habituales del rubro. Puede variar según complejidad.';
         refNota.style.display = '';
       }
+      // Tooltip de alcance: qué incluye/no incluye, para poder comparar precios entre propuestas.
+      const incluye = Array.isArray(ficha.incluye) ? ficha.incluye : [];
+      const noIncluye = Array.isArray(ficha.no_incluye) ? ficha.no_incluye : [];
+      if (detalleBtn && detalleBox) {
+        if (incluye.length || noIncluye.length) {
+          let html = '';
+          if (incluye.length) html += '<div style="font-weight:600;color:var(--ink);margin-bottom:2px">✅ Incluye</div>' + incluye.map(i => '<div>• ' + escHTML(i) + '</div>').join('') ;
+          if (noIncluye.length) html += '<div style="font-weight:600;color:var(--ink);margin:6px 0 2px">❌ No incluye</div>' + noIncluye.map(i => '<div>• ' + escHTML(i) + '</div>').join('');
+          detalleBox.innerHTML = html;
+          detalleBtn.style.display = '';
+          detalleBox.style.display = 'none';
+          detalleBtn.textContent = 'ⓘ Ver qué incluye';
+        } else {
+          detalleBtn.style.display = 'none';
+          detalleBox.style.display = 'none';
+        }
+      }
     } catch(e) {
-      refEl.style.display = 'none';
-      if (refNota) refNota.style.display = 'none';
+      ocultarTodo();
     }
   }
+
+  function toggleRefDetalle() {
+    const box = document.getElementById('np-ref-detalle-box');
+    const btn = document.getElementById('np-ref-detalle-btn');
+    if (!box) return;
+    const abierto = box.style.display !== 'none';
+    box.style.display = abierto ? 'none' : '';
+    if (btn) btn.textContent = abierto ? 'ⓘ Ver qué incluye' : 'ⓘ Ocultar detalle';
+  }
+  window.toggleRefDetalle = toggleRefDetalle;
 
   async function abrirNuevaPropuesta() {
     let p=pedidoActual; if(!p) return;
