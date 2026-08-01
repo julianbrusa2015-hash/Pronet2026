@@ -1630,6 +1630,13 @@ const PronetDB = (() => {
         const r = await this.asegurarFichaPrestador();
         if (r.ok && r.prestador_id) perfil.prestador_id = r.prestador_id;
       }
+      // Lazy expiry: si el plan ProMarket venció, lo apagamos en el momento
+      if (perfil && perfil.es_pro_marketplace && perfil.pro_marketplace_hasta) {
+        if (new Date(perfil.pro_marketplace_hasta) < new Date()) {
+          await sb.from('perfiles').update({ es_pro_marketplace: false }).eq('id', user.id);
+          perfil.es_pro_marketplace = false;
+        }
+      }
       return { id: user.id, email: user.email, ...(perfil || {}) };
     },
 
