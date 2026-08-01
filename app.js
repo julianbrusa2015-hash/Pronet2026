@@ -113,6 +113,31 @@ document.addEventListener('focusin', (e) => {
   });
 });
 
+// Bloque 1d: bloquear pull-to-refresh nativo de iOS en PWA
+// overscroll-behavior:none no es suficiente en standalone; iOS igual
+// dispara el PTR del sistema cuando scrollTop===0 y el gesto es hacia abajo.
+(function () {
+  let startY = 0;
+  let startX = 0;
+  document.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    const dy = e.touches[0].clientY - startY;
+    const dx = Math.abs(e.touches[0].clientX - startX);
+    // Ignorar swipes principalmente horizontales (carruseles, filtros)
+    if (dx > Math.abs(dy)) return;
+    // Solo bloquear si el gesto es hacia abajo Y el scroll está en el tope
+    if (dy <= 0) return;
+    const screen = document.querySelector('.screen.active');
+    if (screen && screen.scrollTop === 0) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+})();
+
 // Bloque 2: lógica principal de la aplicación
 // ══════════════════════════════════════════════════════════════════
   // SISTEMA DE FEATURE FLAGS — controla qué funcionalidades están activas

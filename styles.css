@@ -170,7 +170,7 @@
     justify-content: flex-start;
     scrollbar-width: none;
     background: #F4F5FA;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
   }
   .screen::-webkit-scrollbar { display: none; }
