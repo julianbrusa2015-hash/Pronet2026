@@ -189,7 +189,7 @@ document.addEventListener('focusin', (e) => {
     editarPerfilPro:   ['s-historial'],
     suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
-    mercadoPlaza:      ['s-mercado', 's-pub-mercado'],
+    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado'],
   };
 
   function isScreenEnabled(id) {
@@ -230,6 +230,7 @@ document.addEventListener('focusin', (e) => {
     's-ranking':          'nb-mercado',
     's-mercado':          'nb-mercado',
     's-pub-mercado':      'nb-mercado',
+    's-chat-mercado':     'nb-mercado',
     's-chat':             'nb-buscar',
     's-chats':            'nb-buscar',
     's-prof':             'nb-buscar',
@@ -255,7 +256,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado'];
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -300,7 +301,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-publicar') { pubNext(1); }
     // Si va a Nuevo Pedido, siempre arrancar en paso 1
     if (id === 's-nuevo-pedido') { npNext(1); }
-    // Si va a Mercado, renderizar el feed (mock)
+    // Si va a Mercado, renderizar el feed
     if (id === 's-mercado') { renderMercado(); }
     // Si va a Pedidos, refrescar la lista desde la base de datos
     if (id === 's-pedidos') {
@@ -3245,7 +3246,7 @@ document.addEventListener('focusin', (e) => {
             <div class="mkt-post-price">${p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar'}</div>
           </div>
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
-          <button class="btn-p" onclick="mktConsultar('${escHTML(p.id)}','${escHTML(nombre)}')">💬 Consultar</button>
+          <button class="btn-p" onclick="mktConsultar('${escHTML(p.id)}','${escHTML(nombre)}','${escHTML(p.autor_id)}')">💬 Consultar</button>
         </div>
       </div>`;
   }
@@ -3281,11 +3282,97 @@ document.addEventListener('focusin', (e) => {
     renderMercado(true);
   }
 
-  function mktConsultar(pubId, autorNombre) {
-    // Fase 3: abrirá chats_mercado. Por ahora muestra un aviso.
-    showToast && showToast('💬 Chat de consulta — próximamente en Fase 3');
+  async function mktConsultar(pubId, autorNombre, autorId) {
+    if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Consultar', sub: 'Necesitás una cuenta para enviar mensajes.' }); return; }
+    if (usuarioActual.id === autorId) { showToast && showToast('No podés consultar tu propia publicación'); return; }
+    // Set up header immediately
+    const avEl = document.getElementById('cmk-av');
+    const nameEl = document.getElementById('cmk-name');
+    const subEl = document.getElementById('cmk-sub');
+    if (nameEl) nameEl.textContent = autorNombre || 'Vendedor';
+    if (avEl) {
+      const ini = (autorNombre || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+      avEl.textContent = ini;
+      avEl.style.background = '#EEF2FF'; avEl.style.color = '#2B5BFF';
+    }
+    if (subEl) subEl.textContent = 'ProMarket';
+    goTo('s-chat-mercado');
+    const body = document.getElementById('cmk-body');
+    if (body) body.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Abriendo chat...</div>';
+    const res = await PronetDB.abrirChatMercado(pubId);
+    if (!res.ok) {
+      if (body) body.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⚠️ ' + escHTML(res.error) + '</div>';
+      return;
+    }
+    chatMercadoActualId = res.chat_id;
+    await cargarMensajesMercado();
+    if (chatMercadoSuscripcion) chatMercadoSuscripcion();
+    chatMercadoSuscripcion = PronetDB.suscribir('mensajes_mercado', (payload) => {
+      if (payload.new && payload.new.chat_id === chatMercadoActualId) {
+        if (payload.new.autor_id !== usuarioActual.id) {
+          agregarBurbujaMercado(payload.new.texto, payload.new.creado, false, payload.new.id);
+          PronetDB.marcarLeidosMercado(chatMercadoActualId);
+        }
+      }
+    });
+    PronetDB.marcarLeidosMercado(chatMercadoActualId);
   }
   window.mktConsultar = mktConsultar;
+
+  async function cargarMensajesMercado() {
+    if (!chatMercadoActualId) return;
+    const body = document.getElementById('cmk-body');
+    const mensajes = await PronetDB.listarMensajesMercado(chatMercadoActualId);
+    body.innerHTML = '';
+    if (!mensajes.length) {
+      body.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">👋 ¡Primer mensaje! Preguntá lo que quieras.</div>';
+      return;
+    }
+    mensajes.forEach(m => {
+      agregarBurbujaMercado(m.texto, m.creado, m.autor_id === usuarioActual.id, m.id);
+    });
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function agregarBurbujaMercado(texto, creado, esPropio, msgId) {
+    const body = document.getElementById('cmk-body');
+    if (!body) return;
+    if (msgId && body.querySelector('[data-msg-id="' + msgId + '"]')) return;
+    const placeholder = body.querySelector('div[style*="text-align:center"]');
+    if (placeholder) placeholder.remove();
+    const hora = new Date(creado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
+    const div = document.createElement('div');
+    div.className = 'msg ' + (esPropio ? 'out' : 'in');
+    if (msgId) div.dataset.msgId = msgId;
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = texto;
+    const timeEl = document.createElement('div');
+    timeEl.className = 'msg-time';
+    timeEl.textContent = hora;
+    div.appendChild(bubble);
+    div.appendChild(timeEl);
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  async function enviarMsgMercado() {
+    const inp = document.getElementById('cmk-msg');
+    const txt = (inp.value || '').trim();
+    if (!txt || !chatMercadoActualId) return;
+    inp.value = '';
+    agregarBurbujaMercado(txt, new Date().toISOString(), true, null);
+    const res = await PronetDB.enviarMensajeMercado(chatMercadoActualId, txt);
+    if (!res.ok) { showToast && showToast('⚠️ No se pudo enviar: ' + res.error); }
+  }
+  window.enviarMsgMercado = enviarMsgMercado;
+
+  function cerrarChatMercado() {
+    if (chatMercadoSuscripcion) { chatMercadoSuscripcion(); chatMercadoSuscripcion = null; }
+    chatMercadoActualId = null;
+    goTo('s-mercado');
+  }
+  window.cerrarChatMercado = cerrarChatMercado;
 
   // ── Pantalla publicar en ProMarket ────────────────────────────────
   let pmFotoArchivo = null;
@@ -6724,6 +6811,8 @@ document.addEventListener('focusin', (e) => {
   let chatActualId = null;
   let chatSuscripcion = null;
   let chatOrigen = 's-pedidos';
+  let chatMercadoActualId = null;
+  let chatMercadoSuscripcion = null;
 
   function volverDesdeChat() {
     if (chatSuscripcion) { chatSuscripcion(); chatSuscripcion = null; }

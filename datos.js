@@ -597,6 +597,56 @@ const PronetDB = (() => {
       return { ok: true, url: data.publicUrl };
     },
 
+    /** Abre (o recupera) el chat de consulta entre quien consulta y el autor de la publicación. */
+    async abrirChatMercado(publicacionId) {
+      if (!remoto) return { ok: false, error: 'El chat requiere modo remoto' };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
+      const { data: pub, error: pubErr } = await sb.from('publicaciones')
+        .select('autor_id').eq('id', publicacionId).single();
+      if (pubErr || !pub) return { ok: false, error: 'Publicación no encontrada' };
+      const { data, error } = await sb.from('chats_mercado')
+        .upsert({ publicacion_id: publicacionId, autor_id: pub.autor_id, consultante_id: uid },
+                 { onConflict: 'publicacion_id,consultante_id', ignoreDuplicates: false })
+        .select('id').single();
+      if (error) { console.warn('[PronetDB] abrirChatMercado', error.message); return { ok: false, error: error.message }; }
+      return { ok: true, chat_id: data.id };
+    },
+
+    /** Lista los mensajes de un chat de mercado. */
+    async listarMensajesMercado(chatId) {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('mensajes_mercado')
+        .select('*').eq('chat_id', chatId).order('creado', { ascending: true });
+      if (error) { console.warn('[PronetDB] listarMensajesMercado', error.message); return []; }
+      return data || [];
+    },
+
+    /** Envía un mensaje en un chat de mercado. */
+    async enviarMensajeMercado(chatId, texto) {
+      if (!remoto) return { ok: false, error: 'El chat requiere modo remoto' };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
+      const { data, error } = await sb.from('mensajes_mercado')
+        .insert({ chat_id: chatId, autor_id: uid, texto: texto.trim() })
+        .select().single();
+      if (error) { console.warn('[PronetDB] enviarMensajeMercado', error.message); return { ok: false, error: error.message }; }
+      await sb.from('chats_mercado').update({
+        ultimo_mensaje: texto.trim().slice(0, 100),
+        hora_ultimo: new Date().toISOString(),
+      }).eq('id', chatId);
+      return { ok: true, mensaje: data };
+    },
+
+    /** Marca como leídos los mensajes de un chat de mercado que no son del usuario. */
+    async marcarLeidosMercado(chatId) {
+      if (!remoto) return;
+      const uid = await this.usuarioIdActual();
+      if (!uid) return;
+      await sb.from('mensajes_mercado')
+        .update({ leido: true }).eq('chat_id', chatId).eq('leido', false).neq('autor_id', uid);
+    },
+
     /** Guarda un valor de configuración (solo admin, por RLS). */
     async guardarConfigApp(clave, valor) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };

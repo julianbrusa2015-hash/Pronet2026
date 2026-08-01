@@ -338,6 +338,34 @@
 
     </div><!-- /pub-mercado -->
 
+    <!-- ══ CHAT CONSULTA PROMARKET ══════════════════════════════════════ -->
+    <div class="screen" id="s-chat-mercado" style="padding-bottom:0">
+
+      <div class="chat-header">
+        <button style="background:none;border:none;cursor:pointer;padding:4px;display:flex" onclick="cerrarChatMercado()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="chat-av" id="cmk-av" style="background:#EEF2FF;color:#2B5BFF">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="chat-name" id="cmk-name">Cargando...</div>
+          <div class="chat-status" id="cmk-sub" style="font-size:11px;color:var(--ink3)"></div>
+        </div>
+      </div>
+
+      <div class="chat-body" id="cmk-body">
+        <div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando mensajes...</div>
+      </div>
+
+      <div class="chat-footer" id="cmk-footer">
+        <input name="cmk-msg" autocomplete="off" class="chat-input" placeholder="Escribí tu consulta..."
+          id="cmk-msg" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMsgMercado();}">
+        <button class="chat-send" onclick="enviarMsgMercado()" aria-label="Enviar mensaje">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="white"/></svg>
+        </button>
+      </div>
+
+    </div><!-- /chat-mercado -->
+
 
     <!-- ══ RANKING ════════════════════════════════════════════════════ -->
     <div class="screen" id="s-ranking">
