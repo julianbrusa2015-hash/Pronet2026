@@ -311,6 +311,8 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-mercado') {
       const inp = document.getElementById('mkt-buscador');
       if (inp && !mktBusqueda) inp.value = '';
+      const sel = document.getElementById('mkt-zona-select');
+      if (sel) sel.value = mktZonaActiva || '';
       renderMercado();
     }
     // Si va a Pedidos, refrescar la lista desde la base de datos
@@ -3213,6 +3215,7 @@ document.addEventListener('focusin', (e) => {
 
   let mktFiltroActivo  = 'todos';
   let mktBusqueda      = '';
+  let mktZonaActiva    = null;
   let mktDebounceTimer = null;
   let mktOffset        = 0;
   let mktCargando      = false;
@@ -3273,7 +3276,7 @@ document.addEventListener('focusin', (e) => {
       cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     }
     mktCargando = true;
-    const posts = await PronetDB.listarPublicaciones({ categoria: mktFiltroActivo, busqueda: mktBusqueda, offset: mktOffset }).catch(() => []);
+    const posts = await PronetDB.listarPublicaciones({ categoria: mktFiltroActivo, busqueda: mktBusqueda, zona: mktZonaActiva, offset: mktOffset }).catch(() => []);
     mktCargando = false;
     if (reset) cont.innerHTML = '';
     if (!posts.length && mktOffset === 0) {
@@ -3303,6 +3306,12 @@ document.addEventListener('focusin', (e) => {
     }, 400);
   }
   window.mktBuscar = mktBuscar;
+
+  function mktFiltrarZona(valor) {
+    mktZonaActiva = valor || null;
+    renderMercado(true);
+  }
+  window.mktFiltrarZona = mktFiltrarZona;
 
   async function mktConsultar(pubId, autorNombre, autorId) {
     if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Consultar', sub: 'Necesitás una cuenta para enviar mensajes.' }); return; }
