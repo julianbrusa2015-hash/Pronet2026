@@ -189,7 +189,7 @@ document.addEventListener('focusin', (e) => {
     editarPerfilPro:   ['s-historial'],
     suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
-    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado', 's-mis-publicaciones', 's-mis-consultas-mkt'],
+    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado', 's-mis-publicaciones', 's-mis-consultas-mkt', 's-mis-consultas-enviadas'],
   };
 
   function isScreenEnabled(id) {
@@ -232,7 +232,8 @@ document.addEventListener('focusin', (e) => {
     's-pub-mercado':      'nb-mercado',
     's-chat-mercado':       'nb-mercado',
     's-mis-publicaciones':  'nb-perfil',
-    's-mis-consultas-mkt':  'nb-perfil',
+    's-mis-consultas-mkt':       'nb-perfil',
+    's-mis-consultas-enviadas':  'nb-perfil',
     's-chat':             'nb-buscar',
     's-chats':            'nb-buscar',
     's-prof':             'nb-buscar',
@@ -258,7 +259,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt'];
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -305,6 +306,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-nuevo-pedido') { npNext(1); }
     if (id === 's-mis-publicaciones') { renderMisPublicaciones(); }
     if (id === 's-mis-consultas-mkt') { renderMisConsultasMkt(); }
+    if (id === 's-mis-consultas-enviadas') { renderMisConsultasEnviadas(); }
     // Si va a Mercado, renderizar el feed (sin resetear búsqueda si vuelve desde chat)
     if (id === 's-mercado') {
       const inp = document.getElementById('mkt-buscador');
@@ -3407,9 +3409,9 @@ document.addEventListener('focusin', (e) => {
   }
   window.cerrarChatMercado = cerrarChatMercado;
 
-  // Abre un hilo de chat existente desde la lista de consultas recibidas (vista autor)
-  async function mktAbrirHilo(chatId, contraparteId, contraNombre, pubTitulo) {
-    chatMercadoOrigen = 's-mis-consultas-mkt';
+  // Abre un hilo de chat existente. origen controla a dónde vuelve el back.
+  async function mktAbrirHilo(chatId, contraparteId, contraNombre, pubTitulo, origen) {
+    chatMercadoOrigen = origen || 's-mis-consultas-mkt';
     chatMercadoContraparteId = contraparteId;
     const avEl = document.getElementById('cmk-av');
     const nameEl = document.getElementById('cmk-name');
@@ -3438,6 +3440,11 @@ document.addEventListener('focusin', (e) => {
     PronetDB.marcarLeidosMercado(chatMercadoActualId);
   }
   window.mktAbrirHilo = mktAbrirHilo;
+
+  function mktAbrirHiloEnviado(chatId, contraparteId, contraNombre, pubTitulo) {
+    return mktAbrirHilo(chatId, contraparteId, contraNombre, pubTitulo, 's-mis-consultas-enviadas');
+  }
+  window.mktAbrirHiloEnviado = mktAbrirHiloEnviado;
 
   // ── Mis publicaciones ProMarket ──────────────────────────────────────
   let mktMisPubs = [];
@@ -3532,6 +3539,45 @@ document.addEventListener('focusin', (e) => {
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;color:var(--ink)">${nombre}</div>
           ${pubTitulo ? `<div style="font-size:11px;color:var(--blue);font-weight:600;margin-bottom:2px">${pubTitulo}</div>` : ''}
+          <div style="font-size:12px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ultimo}</div>
+        </div>
+        ${hora ? `<div style="font-size:11px;color:var(--ink3);flex-shrink:0">${hora}</div>` : ''}
+      </div>`;
+  }
+
+  // ── Mis consultas enviadas ProMarket (vista consultante) ─────────────
+
+  async function renderMisConsultasEnviadas() {
+    const lista = document.getElementById('mis-consultas-env-lista');
+    if (!lista) return;
+    lista.innerHTML = '<div style="padding:32px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
+    const consultas = await PronetDB.listarMisConsultasEnviadas().catch(() => []);
+    if (!consultas.length) {
+      lista.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--ink3)">Todavía no consultaste ninguna publicación.<br><span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="goTo(\'s-mercado\')">Ver el feed</span></div>';
+      return;
+    }
+    lista.innerHTML = consultas.map(misConsultaEnviadaCardHTML).join('');
+  }
+
+  function misConsultaEnviadaCardHTML(c) {
+    const autorNombre = escHTML(c.autor.nombre || 'Vendedor');
+    const ini = (c.autor.nombre || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const pubTitulo = escHTML((c.publicaciones && c.publicaciones.titulo) || '');
+    const pubFoto = c.publicaciones && c.publicaciones.foto_url;
+    const ultimo = escHTML(c.ultimo_mensaje || '—');
+    const hora = c.hora_ultimo ? new Date(c.hora_ultimo).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const chatId = escHTML(c.id);
+    const contraId = escHTML(c.autor_id);
+    const avatar = pubFoto
+      ? `<img src="${escHTML(pubFoto)}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0" alt="">`
+      : `<div style="width:44px;height:44px;border-radius:10px;background:#EEF2FF;color:#2B5BFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0">${ini}</div>`;
+    return `
+      <div onclick="mktAbrirHiloEnviado('${chatId}','${contraId}','${autorNombre}','${pubTitulo}')"
+           style="display:flex;gap:12px;align-items:center;padding:12px;background:white;border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer">
+        ${avatar}
+        <div style="flex:1;min-width:0">
+          ${pubTitulo ? `<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pubTitulo}</div>` : ''}
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:3px">${autorNombre}</div>
           <div style="font-size:12px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ultimo}</div>
         </div>
         ${hora ? `<div style="font-size:11px;color:var(--ink3);flex-shrink:0">${hora}</div>` : ''}
@@ -4678,6 +4724,8 @@ document.addEventListener('focusin', (e) => {
     if (menuMisPubs) menuMisPubs.style.display = (FEATURES.mercadoPlaza && usuarioActual?.es_pro_marketplace) ? '' : 'none';
     const menuMisConsultas = document.getElementById('menu-mis-consultas-mkt');
     if (menuMisConsultas) menuMisConsultas.style.display = (FEATURES.mercadoPlaza && usuarioActual?.es_pro_marketplace) ? '' : 'none';
+    const menuMisConsultasEnv = document.getElementById('menu-mis-consultas-env');
+    if (menuMisConsultasEnv) menuMisConsultasEnv.style.display = (FEATURES.mercadoPlaza && usuarioActual) ? '' : 'none';
   }
 
   // ── Mensajes no leídos (dinámico) ──────────────────────────────────

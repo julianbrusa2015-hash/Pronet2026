@@ -414,6 +414,25 @@
     </div><!-- /mis-consultas-mkt -->
 
 
+    <!-- ══ MIS CONSULTAS ENVIADAS (vista consultante) ════════════════════ -->
+    <div class="screen" id="s-mis-consultas-enviadas">
+
+      <div class="appbar">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="back-btn" onclick="goTo('s-miperfil')" aria-label="Volver">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </div>
+          <div style="font-family:'Sora',sans-serif;font-size:17px;font-weight:700;color:var(--ink)">Mis consultas</div>
+        </div>
+      </div>
+
+      <div style="overflow-y:auto;padding:12px 14px 100px" id="mis-consultas-env-lista">
+        <div style="padding:32px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>
+      </div>
+
+    </div><!-- /mis-consultas-enviadas -->
+
+
     <!-- ══ RANKING ════════════════════════════════════════════════════ -->
     <div class="screen" id="s-ranking">
 
@@ -958,6 +977,14 @@
           <div class="m-txt">
             <div class="m-title">Consultas recibidas</div>
             <div class="m-sub" id="mp-mis-consultas-sub">Mensajes de interesados</div>
+          </div>
+          <div class="m-chev">›</div>
+        </div>
+        <div id="menu-mis-consultas-env" class="menu-item" data-feature="mercadoPlaza" style="display:none" onclick="goTo('s-mis-consultas-enviadas')">
+          <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🔍</div>
+          <div class="m-txt">
+            <div class="m-title">Mis consultas</div>
+            <div class="m-sub">Publicaciones que consultaste</div>
           </div>
           <div class="m-chev">›</div>
         </div>

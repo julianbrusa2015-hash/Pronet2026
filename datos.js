@@ -580,6 +580,23 @@ const PronetDB = (() => {
       return { ok: true, id: data.id };
     },
 
+    /** Lista todos los hilos de chat iniciados por el usuario como consultante. */
+    async listarMisConsultasEnviadas() {
+      if (!remoto) return [];
+      const uid = await this.usuarioIdActual();
+      if (!uid) return [];
+      const { data: chats, error } = await sb.from('chats_mercado')
+        .select('id, ultimo_mensaje, hora_ultimo, publicacion_id, autor_id, publicaciones(titulo, foto_url)')
+        .eq('consultante_id', uid)
+        .order('hora_ultimo', { ascending: false, nullsFirst: false });
+      if (error) { console.warn('[PronetDB] listarMisConsultasEnviadas', error.message); return []; }
+      if (!chats || !chats.length) return [];
+      const ids = [...new Set(chats.map(c => c.autor_id))];
+      const { data: perfiles } = await sb.from('perfiles').select('id, nombre').in('id', ids);
+      const pm = Object.fromEntries((perfiles || []).map(p => [p.id, p]));
+      return chats.map(c => ({ ...c, autor: pm[c.autor_id] || {} }));
+    },
+
     /** Edita campos de una publicación propia. foto_url=undefined la deja sin cambios. */
     async editarPublicacion(id, { categoria, titulo, descripcion, precio, foto_url }) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
