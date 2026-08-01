@@ -551,7 +551,7 @@ const PronetDB = (() => {
 
     /** Lista publicaciones activas, opcionalmente filtradas por categoría.
      *  Orden cronológico inverso, paginado de 10 en 10. */
-    async listarPublicaciones({ categoria = null, offset = 0 } = {}) {
+    async listarPublicaciones({ categoria = null, busqueda = null, offset = 0 } = {}) {
       if (!remoto) return [];
       let q = sb.from('publicaciones')
         .select(`id, autor_id, categoria, titulo, descripcion, precio, foto_url, zona, creado,
@@ -560,6 +560,10 @@ const PronetDB = (() => {
         .order('creado', { ascending: false })
         .range(offset, offset + 9);
       if (categoria && categoria !== 'todos') q = q.eq('categoria', categoria);
+      if (busqueda && busqueda.trim()) {
+        const term = `%${busqueda.trim()}%`;
+        q = q.or(`titulo.ilike.${term},descripcion.ilike.${term}`);
+      }
       const { data, error } = await q;
       if (error) { console.warn('[PronetDB] listarPublicaciones', error.message); return []; }
       return data || [];

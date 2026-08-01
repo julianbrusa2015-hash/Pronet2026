@@ -264,6 +264,15 @@
         <div class="chip" onclick="filtrarMercado(this,'anuncios')">📢 Anuncios</div>
       </div>
 
+      <div style="padding:0 14px 10px">
+        <div style="position:relative">
+          <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);pointer-events:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="mkt-buscador" class="ob-input" type="search" placeholder="Buscá empanadas, tortas, plantas..."
+            style="padding-left:34px;margin-bottom:0;font-size:13px"
+            oninput="mktBuscar(this.value)">
+        </div>
+      </div>
+
       <div class="mkt-empty-zona">📍 Publicaciones de vecinos en Escobar</div>
 
       <!-- Feed -->

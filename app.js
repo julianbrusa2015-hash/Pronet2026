@@ -301,8 +301,12 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-publicar') { pubNext(1); }
     // Si va a Nuevo Pedido, siempre arrancar en paso 1
     if (id === 's-nuevo-pedido') { npNext(1); }
-    // Si va a Mercado, renderizar el feed
-    if (id === 's-mercado') { renderMercado(); }
+    // Si va a Mercado, renderizar el feed (sin resetear búsqueda si vuelve desde chat)
+    if (id === 's-mercado') {
+      const inp = document.getElementById('mkt-buscador');
+      if (inp && !mktBusqueda) inp.value = '';
+      renderMercado();
+    }
     // Si va a Pedidos, refrescar la lista desde la base de datos
     if (id === 's-pedidos') {
       // Tabs siempre ocultos — el rol lo define el login, no una selección manual
@@ -3202,6 +3206,8 @@ document.addEventListener('focusin', (e) => {
   };
 
   let mktFiltroActivo  = 'todos';
+  let mktBusqueda      = '';
+  let mktDebounceTimer = null;
   let mktOffset        = 0;
   let mktCargando      = false;
   let mktHayMas        = true;
@@ -3260,7 +3266,7 @@ document.addEventListener('focusin', (e) => {
       cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     }
     mktCargando = true;
-    const posts = await PronetDB.listarPublicaciones({ categoria: mktFiltroActivo, offset: mktOffset }).catch(() => []);
+    const posts = await PronetDB.listarPublicaciones({ categoria: mktFiltroActivo, busqueda: mktBusqueda, offset: mktOffset }).catch(() => []);
     mktCargando = false;
     if (reset) cont.innerHTML = '';
     if (!posts.length && mktOffset === 0) {
@@ -3281,6 +3287,15 @@ document.addEventListener('focusin', (e) => {
     mktFiltroActivo = categoria;
     renderMercado(true);
   }
+
+  function mktBuscar(valor) {
+    clearTimeout(mktDebounceTimer);
+    mktDebounceTimer = setTimeout(() => {
+      mktBusqueda = valor || '';
+      renderMercado(true);
+    }, 400);
+  }
+  window.mktBuscar = mktBuscar;
 
   async function mktConsultar(pubId, autorNombre, autorId) {
     if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Consultar', sub: 'Necesitás una cuenta para enviar mensajes.' }); return; }
