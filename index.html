@@ -205,6 +205,10 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
         </div>
         <input class="search-input" placeholder="Buscar por nombre o rubro..." value="" id="search-main" name="search" autocomplete="off">
+        <button onclick="goTo('s-mapa')" aria-label="Ver en mapa" style="flex-shrink:0;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--ink2)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Mapa
+        </button>
       </div>
 
       <div class="filter-row">
@@ -237,6 +241,37 @@
       </div>
 
     </div><!-- /buscar -->
+
+
+    <!-- ══ MERCADO (wireframe, mock — sin conectar a datos reales) ══════ -->
+    <div class="screen" id="s-mercado">
+
+      <div class="appbar">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="back-btn" onclick="goTo('s-home')" aria-label="Volver">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </div>
+          <div class="logo" style="font-size:17px">ProMarket</div>
+        </div>
+        <div class="avatar-sm" id="mkt-avatar" onclick="goTo('s-miperfil')">JL</div>
+      </div>
+
+      <div class="filter-row">
+        <div class="chip on" onclick="filtrarMercado(this,'todos')">Todos</div>
+        <div class="chip" onclick="filtrarMercado(this,'gastronomia')">🍕 Gastronomía</div>
+        <div class="chip" onclick="filtrarMercado(this,'productos')">🛍️ Productos</div>
+        <div class="chip" onclick="filtrarMercado(this,'comercios')">🏪 Comercios</div>
+        <div class="chip" onclick="filtrarMercado(this,'anuncios')">📢 Anuncios</div>
+      </div>
+
+      <div class="mkt-empty-zona">📍 Publicaciones de vecinos en Escobar</div>
+
+      <!-- Feed -->
+      <div id="mkt-feed"></div>
+
+      <div class="mkt-fab" onclick="showToast ? showToast('📝 Publicar — wireframe, todavía no conectado') : alert('Publicar (wireframe)')" aria-label="Publicar en el Mercado" title="Publicar">+</div>
+
+    </div><!-- /mercado -->
 
 
     <!-- ══ RANKING ════════════════════════════════════════════════════ -->
@@ -3687,6 +3722,23 @@
           <strong>Desactivado (modo test)</strong>: el botón "Confirmar pago" activa el plan sin cobrar — útil para probar flujos. <strong>Activado</strong>: redirige a MercadoPago real. Solo activar cuando las credenciales MP estén configuradas.
         </div>
       </div>
+
+      <!-- ProMarket -->
+      <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">ProMarket</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:2px" id="cfg-promarket-estado">Cargando...</div>
+          </div>
+          <label class="toggle-sw" style="flex-shrink:0">
+            <input type="checkbox" id="cfg-promarket" onchange="togglePromarket(this)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          Muestra u oculta el tab <strong>ProMarket</strong> para todos los usuarios. Desactivado: el tab no aparece y la pantalla queda inaccesible. Activar solo cuando las tablas de Supabase y el bucket de Storage estén creados.
+        </div>
+      </div>
     </div>
 
   </div><!-- /moderacion -->
@@ -4002,9 +4054,9 @@
       </div>
       <span style="margin-top:2px">Pedidos</span>
     </button>
-    <button class="nav-btn" id="nb-mapa" onclick="goTo('s-mapa')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      <span>Cerca</span>
+    <button class="nav-btn" id="nb-mercado" onclick="goTo('s-mercado')" data-feature="mercadoPlaza">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>
+      <span>ProMarket</span>
     </button>
     <button class="nav-btn" id="nb-perfil" onclick="goTo('s-miperfil')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>

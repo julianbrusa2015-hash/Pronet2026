@@ -170,6 +170,9 @@ document.addEventListener('focusin', (e) => {
     loyalty:         true,   // PRONET Points
     analyticsAvanzado: true, // Analítica detallada
 
+    // ── Nivel 4 · Exploración (no lanzado) ──
+    mercadoPlaza: true, // Wireframe del feed "Mercado/Plaza" — mock, sin conectar a datos reales todavía
+
     // ── Config de demo ──
     mostrarSelectorDemo: false,
     panelConfiguracion:  true, // Botón ⚙️ de niveles — visible solo para admins (ver esAdmin() gate)
@@ -186,6 +189,7 @@ document.addEventListener('focusin', (e) => {
     editarPerfilPro:   ['s-historial'],
     suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
+    mercadoPlaza:      ['s-mercado'],
   };
 
   function isScreenEnabled(id) {
@@ -221,9 +225,10 @@ document.addEventListener('focusin', (e) => {
     's-home':             'nb-home',
     's-buscar':           'nb-buscar',
     's-publicar':         'nb-pub',
-    's-mapa':             'nb-mapa',
+    's-mapa':             'nb-mercado',
     's-miperfil':         'nb-perfil',
-    's-ranking':          'nb-mapa',
+    's-ranking':          'nb-mercado',
+    's-mercado':          'nb-mercado',
     's-chat':             'nb-buscar',
     's-chats':            'nb-buscar',
     's-prof':             'nb-buscar',
@@ -249,7 +254,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena'];
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -294,6 +299,8 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-publicar') { pubNext(1); }
     // Si va a Nuevo Pedido, siempre arrancar en paso 1
     if (id === 's-nuevo-pedido') { npNext(1); }
+    // Si va a Mercado, renderizar el feed (mock)
+    if (id === 's-mercado') { renderMercado(); }
     // Si va a Pedidos, refrescar la lista desde la base de datos
     if (id === 's-pedidos') {
       // Tabs siempre ocultos — el rol lo define el login, no una selección manual
@@ -638,7 +645,7 @@ document.addEventListener('focusin', (e) => {
     // Nav inferior: ocultar Buscar y Cerca (son para clientes buscando prestadores)
     // El prestador busca pedidos, no otros prestadores
     const nbBuscar = document.getElementById('nb-buscar');
-    const nbMapa   = document.getElementById('nb-mapa');
+    const nbMapa   = document.getElementById('nb-mercado');
     if (nbBuscar) nbBuscar.style.display = 'none';
     if (nbMapa)   nbMapa.style.display   = 'none';
     // Ocultar botón "Publicar pedido" — los prestadores ofertan, no publican pedidos
@@ -3184,6 +3191,47 @@ document.addEventListener('focusin', (e) => {
     renderBusqueda(inp ? inp.value : '', filtro);
   }
 
+  // ── Mercado/Plaza — wireframe (mock, sin datos reales aún) ──
+  const MKT_POSTS_MOCK = [
+    { autor:'María García',   iniciales:'MG', avBg:'#FFF1F2', avColor:'#E11D48', tiempo:'hace 2h',   categoria:'gastronomia', catLabel:'🍕 Gastronomía', emoji:'🍰', fotoBg:'linear-gradient(135deg,#FFE4E9,#FFD1DA)', titulo:'Torta de chocolate 3kg', precio:8500, desc:'Pedidos con 48hs de anticipación. Rellena a elección: dulce de leche, frutilla o mousse.' },
+    { autor:'Roberto Silva',  iniciales:'RS', avBg:'#F0FDF4', avColor:'#16A34A', tiempo:'ayer',      categoria:'productos',   catLabel:'🛍️ Productos',   emoji:'🪴', fotoBg:'linear-gradient(135deg,#DCFCE7,#BBF7D0)', titulo:'Plantas suculentas', precio:1200, desc:'Variedad de 20 especies. Ideal para interior. Entrego en Puertos del Lago.' },
+    { autor:'Almacén Don Pepe', iniciales:'DP', avBg:'#EFF6FF', avColor:'#1D4ED8', tiempo:'hace 3 días', categoria:'comercios', catLabel:'🏪 Comercios', emoji:'🛒', fotoBg:'linear-gradient(135deg,#DBEAFE,#BFDBFE)', titulo:'Almacén de barrio — envíos gratis', precio:null, desc:'Fiambres, verdulería y despensa. Pedidos por WhatsApp, entrega en el día.' },
+    { autor:'Lucía Fernández', iniciales:'LF', avBg:'#FFF7ED', avColor:'#EA580C', tiempo:'hace 5h',   categoria:'anuncios',    catLabel:'📢 Anuncios',    emoji:'🏠', fotoBg:'linear-gradient(135deg,#FFEDD5,#FED7AA)', titulo:'Alquilo cochera cubierta', precio:15000, desc:'Zona Puertos del Lago, disponible desde el 1° del mes que viene.' },
+  ];
+  let mktFiltroActivo = 'todos';
+
+  function renderMercado() {
+    const cont = document.getElementById('mkt-feed');
+    if (!cont) return;
+    const posts = MKT_POSTS_MOCK.filter(p => mktFiltroActivo === 'todos' || p.categoria === mktFiltroActivo);
+    cont.innerHTML = posts.map(p => `
+      <div class="mkt-post">
+        <div class="mkt-post-head">
+          <div class="c-av" style="width:38px;height:38px;font-size:14px;background:${p.avBg};color:${p.avColor}">${p.iniciales}</div>
+          <div class="c-info">
+            <div class="c-name">${escHTML(p.autor)}</div>
+            <div class="c-role">${p.tiempo} · ${p.catLabel}</div>
+          </div>
+        </div>
+        <div class="mkt-post-photo" style="background:${p.fotoBg}">${p.emoji}</div>
+        <div class="mkt-post-body">
+          <div class="mkt-post-title-row">
+            <div class="mkt-post-title">${escHTML(p.titulo)}</div>
+            <div class="mkt-post-price">${p.precio ? '$' + p.precio.toLocaleString('es-AR') : 'Consultar'}</div>
+          </div>
+          <div class="c-desc">${escHTML(p.desc)}</div>
+          <button class="btn-p">💬 Consultar</button>
+        </div>
+      </div>`).join('') || '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Sin publicaciones en esta categoría todavía.</div>';
+  }
+
+  function filtrarMercado(chip, categoria) {
+    document.querySelectorAll('#s-mercado .filter-row .chip').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
+    mktFiltroActivo = categoria;
+    renderMercado();
+  }
+
   function getLabelFiltro(f) {
     const labels = { todos:'ordenados por ranking zonal', premium:'solo Premium', top:'calificación +4.5', cercano:'menos de 5 km', urgencias:'con urgencias 24h', economico:'menor precio primero' };
     return labels[f] || 'ranking zonal';
@@ -3542,7 +3590,7 @@ document.addEventListener('focusin', (e) => {
     localStorage.setItem('pronet-modo-rol', modoRol || '');
     // Actualizar nav inferior inmediatamente según el nuevo modo
     const nbBuscar = document.getElementById('nb-buscar');
-    const nbMapa   = document.getElementById('nb-mapa');
+    const nbMapa   = document.getElementById('nb-mercado');
     const btnPub   = document.getElementById('btn-publicar-pedido');
     const esPresta = esPrestador();
     if (nbBuscar) nbBuscar.style.display = esPresta ? 'none' : '';
@@ -3586,6 +3634,11 @@ document.addEventListener('focusin', (e) => {
   /** ¿El checkout redirige a MercadoPago? Si es false, activa el plan gratis (modo test). */
   function mpCheckoutActivo() {
     return configApp.mp_checkout_activo === 'true';
+  }
+
+  /** ¿El tab ProMarket está habilitado? Lo controla el admin. */
+  function promarketActivo() {
+    return configApp.promarket_activo === 'true';
   }
 
   /** Plan cuyos límites aplican realmente.
@@ -3739,6 +3792,17 @@ document.addEventListener('focusin', (e) => {
         : 'Modo test · el pago se simula sin cobrar';
       estMp.style.color = mpOn ? 'var(--green)' : 'var(--ink3)';
     }
+
+    const chkPm = document.getElementById('cfg-promarket');
+    const estPm = document.getElementById('cfg-promarket-estado');
+    const pmOn  = promarketActivo();
+    if (chkPm) chkPm.checked = pmOn;
+    if (estPm) {
+      estPm.textContent = pmOn
+        ? 'Activo · el tab ProMarket es visible para todos'
+        : 'Desactivado · el tab ProMarket está oculto';
+      estPm.style.color = pmOn ? 'var(--green)' : 'var(--ink3)';
+    }
   }
 
   async function togglePlanesPagos(el) {
@@ -3779,6 +3843,28 @@ document.addEventListener('focusin', (e) => {
   }
 
   window.toggleMpCheckout = toggleMpCheckout;
+
+  async function togglePromarket(el) {
+    const nuevo = !!el.checked;
+    el.disabled = true;
+    const res = await PronetDB.guardarConfigApp('promarket_activo', nuevo ? 'true' : 'false');
+    el.disabled = false;
+    if (!res.ok) {
+      el.checked = !nuevo;
+      showToast && showToast('⚠️ No se pudo guardar. ' + (res.error || ''));
+      return;
+    }
+    configApp.promarket_activo = nuevo ? 'true' : 'false';
+    // Mostrar u ocultar el tab y la pantalla según el nuevo estado
+    const tab = document.getElementById('nb-mercado');
+    if (tab) tab.style.display = nuevo ? '' : 'none';
+    renderConfigAdmin();
+    showToast && showToast(nuevo
+      ? '🛍️ ProMarket activado. El tab ya es visible para todos.'
+      : '🔒 ProMarket desactivado. El tab quedó oculto.');
+  }
+
+  window.togglePromarket = togglePromarket;
 
   // Superficie de test: funciones puras del sistema de planes, para que los
   // specs de Playwright puedan verificarlas sin depender del estado de la DB.
@@ -3950,7 +4036,7 @@ document.addEventListener('focusin', (e) => {
     if (placeholder) placeholder.style.display = 'none';
     // Nav inferior y botón publicar: Buscar/Cerca/Publicar solo para clientes
     const nbBuscar = document.getElementById('nb-buscar');
-    const nbMapa   = document.getElementById('nb-mapa');
+    const nbMapa   = document.getElementById('nb-mercado');
     const btnPub   = document.getElementById('btn-publicar-pedido');
     if (esPrestador()) {
       if (nbBuscar) nbBuscar.style.display = 'none';
@@ -7695,6 +7781,12 @@ document.addEventListener('focusin', (e) => {
         if (!isNaN(v)) window.PRONET_CONFIG[key] = v;
       });
     }
+
+    // ProMarket: sincronizar el flag de feature con config_app
+    // Si el admin lo desactivó, FEATURES.mercadoPlaza se baja para que
+    // aplicarFeatureFlags() oculte el tab y bloquee goTo('s-mercado').
+    FEATURES.mercadoPlaza = configApp.promarket_activo !== 'false';
+    aplicarFeatureFlags();
 
     configCargada = true;
     reflejarPlan();
