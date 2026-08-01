@@ -69,6 +69,35 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof aplicarFeatureFlags === 'function') aplicarFeatureFlags();
   });
 
+// Bloque 1b: handler de teclado virtual (visualViewport API)
+// Cuando el teclado abre en iOS/Android PWA, el viewport se achica.
+// Ajustamos el padding-bottom de la pantalla activa para que el contenido
+// no quede tapado por el teclado.
+if (window.visualViewport) {
+  let teclado = false;
+  window.visualViewport.addEventListener('resize', () => {
+    const vv = window.visualViewport;
+    const offset = window.innerHeight - vv.height - vv.offsetTop;
+    const activa = document.querySelector('.screen.active');
+    if (!activa) return;
+    if (offset > 80) {
+      // Teclado abierto: compensar con padding-bottom
+      if (!teclado) { teclado = true; activa.dataset.padOrig = activa.style.paddingBottom || ''; }
+      activa.style.paddingBottom = offset + 'px';
+      // Scroll al elemento enfocado para que quede visible
+      const focused = document.activeElement;
+      if (focused && focused !== document.body) focused.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    } else {
+      // Teclado cerrado: restaurar
+      if (teclado) {
+        teclado = false;
+        activa.style.paddingBottom = activa.dataset.padOrig || '';
+        delete activa.dataset.padOrig;
+      }
+    }
+  });
+}
+
 // Bloque 2: lógica principal de la aplicación
 // ══════════════════════════════════════════════════════════════════
   // SISTEMA DE FEATURE FLAGS — controla qué funcionalidades están activas
