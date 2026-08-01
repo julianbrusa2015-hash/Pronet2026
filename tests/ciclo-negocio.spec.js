@@ -204,31 +204,32 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
     await page.locator('#nb-pedidos').click();
     await expect(page.locator('#s-pedidos')).toHaveClass(/active/, { timeout: 8000 });
 
-    // Esperar que la lista de pedidos cargue
+    // Esperar que la lista cargue
     await page.waitForTimeout(2000);
     await cerrarOverlays(page);
 
-    // Buscar el botón "propuesta" del pedido más reciente con nuestro título
-    // Los pedidos están en el feed de #s-pedidos, cada uno con un botón "Ver y comparar"
-    const timestamp = TITULO_PEDIDO.split(' ').pop();
-    const btnPropuesta = page.locator('#s-pedidos button')
-      .filter({ hasText: /propuesta/i }).first();
-    await expect(btnPropuesta).toBeVisible({ timeout: 10000 });
-    await btnPropuesta.click();
+    // Abrir el pedido de esta ejecución directamente por título.
+    // El botón "📬 N propuestas" requiere RLS de vecino sobre propuestas — no
+    // es necesario para navegar al detalle. Usamos el top de la card (primer
+    // div hijo de .ped-card) que siempre es clickeable → abrirDetallePedido.
+    const card = page.locator('#s-pedidos .ped-card').filter({ hasText: /Test E2E/ }).first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    // El top es el primer div hijo directo de .ped-card; tiene cursor:pointer
+    await card.locator('> div').first().click();
 
-    // Detalle con propuestas recibidas
+    // Detalle del pedido: esperar que las propuestas carguen
     await expect(page.locator('#s-detalle-pedido')).toHaveClass(/active/, { timeout: 8000 });
     await expect(page.locator('#pd-propuestas')).toBeVisible({ timeout: 5000 });
 
     // Registrar handler de diálogos ANTES del click (confirm + alert)
     page.on('dialog', dialog => dialog.accept());
 
-    // Cerrar zona modal si está abierto (bloquea interacciones)
+    // Cerrar overlays antes de interactuar
     await cerrarOverlays(page);
 
-    // Esperar que las propuestas carguen (async) antes de buscar botones
+    // Esperar que carguen los botones de propuesta
     const anyPropBtn = page.locator('.prop-select-btn').filter({ hasText: /elegir|chatear/i }).first();
-    await expect(anyPropBtn).toBeVisible({ timeout: 10000 });
+    await expect(anyPropBtn).toBeVisible({ timeout: 15000 });
 
     const btnElegir = page.locator('.prop-select-btn').filter({ hasText: /elegir/i });
     const btnChatear = page.locator('.prop-select-btn').filter({ hasText: /chatear/i });

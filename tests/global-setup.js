@@ -5,6 +5,8 @@ const SUPABASE_URL      = 'https://zgmwtyxtygnjfakeriiz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnbXd0eXh0eWduamZha2VyaWl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2NDkzMDUsImV4cCI6MjA5OTIyNTMwNX0.CKv9L3py6fbidKhBfNe6ZVNtS_U7gyMshLLLSS257Ac';
 const VECINO_EMAIL      = 'vecino_test@pronet.test';
 const VECINO_PW         = 'Test1234!';
+const PRESTADOR_EMAIL   = 'prestador_test@pronet.test';
+const PRESTADOR_PW      = '12345678';
 
 async function supabaseAuth(email, pw) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -75,5 +77,20 @@ module.exports = async function globalSetup() {
     console.warn(`  DELETE FROM public.rate_limits WHERE user_id = '${userId}' AND accion = 'crear_pedido';`);
     console.warn('[setup] O agregá esta política en Supabase → Authentication → Policies → rate_limits:');
     console.warn('  DELETE: auth.uid() = user_id');
+  }
+
+  // ── Autenticar como prestador_test y limpiar su rate limit de propuestas ──
+  const { token: tokenPrestador } = await supabaseAuth(PRESTADOR_EMAIL, PRESTADOR_PW);
+  if (!tokenPrestador) {
+    console.warn('[setup] No se pudo autenticar como prestador_test — tests de propuestas pueden fallar por rate limit');
+    return;
+  }
+  const prestadorUserId = await getUserId(tokenPrestador);
+  const s3 = await supabaseDelete(tokenPrestador, 'rate_limits', `user_id=eq.${prestadorUserId}&accion=eq.enviar_propuesta`);
+  const rlPrestador = await supabaseGet(tokenPrestador, 'rate_limits', `user_id=eq.${prestadorUserId}&accion=eq.enviar_propuesta`);
+  console.log(`[setup] DELETE rate_limits (prestador, enviar_propuesta): status ${s3} → quedan ${rlPrestador.length} entradas`);
+  if (rlPrestador.length > 0) {
+    console.warn('[setup] rate_limits de enviar_propuesta NO se limpió para prestador_test.');
+    console.warn(`  DELETE FROM public.rate_limits WHERE user_id = '${prestadorUserId}' AND accion = 'enviar_propuesta';`);
   }
 };
