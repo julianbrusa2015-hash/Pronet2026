@@ -1537,11 +1537,18 @@
   /* ── Pedidos / Bolsa de trabajo ── */
   .pedidos-screen { background: var(--surface); }
 
+  /* Pedidos: header fijo arriba, resto scrollea abajo (mismo patrón que s-estado-propuesta) */
+  #s-pedidos { overflow: hidden; padding-bottom: 0; }
+  #s-pedidos .ped-scroll-body {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
   .ped-header {
     background: white; padding: 14px 18px;
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9;
   }
   .ped-header h2 { font-size: 17px; font-weight: 700; color: var(--ink); }
   .ped-new-btn {
