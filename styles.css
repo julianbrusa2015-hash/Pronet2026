@@ -1166,6 +1166,16 @@
   #s-nuevo-pedido > div { min-height: 100%; display: flex; flex-direction: column; }
   #s-nuevo-pedido > div > .pub-footer { margin-top: auto; }
 
+  /* Detalle pedido: sin espacio gris bajo el footer */
+  #s-detalle-pedido { padding-bottom: 0; }
+
+  /* Estado propuesta: header fijo arriba, resto scrollea abajo */
+  #s-estado-propuesta { overflow: hidden; }
+  #s-estado-propuesta .ep-scroll-body {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+  }
+
   /* Chat: solo chat-body scrollea — la pantalla entera no debe moverse */
   #s-chat { overflow: hidden; padding-bottom: 0; }
   #s-chat .chat-body { overscroll-behavior-y: contain; }
