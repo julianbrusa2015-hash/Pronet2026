@@ -1,9 +1,6 @@
 [build]
-  command = "npm install --include=dev && npm run build"
+  command = "npm install --production=false && node scripts/build.js"
   publish = "."
-
-[build.environment]
-  NODE_ENV = "production"
 
 # Comprimir imágenes automáticamente (el CSS ya lo minificamos nosotros)
 [build.processing.images]

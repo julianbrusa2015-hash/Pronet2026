@@ -10,5 +10,6 @@ supabase/.temp/
 # scripts/sync-www.js), no una fuente propia — no versionar.
 www/
 
-# CSS minificado — generado en build, no versionar
+# Generados en build o locales — no versionar
 styles.min.css
+config-secrets.js

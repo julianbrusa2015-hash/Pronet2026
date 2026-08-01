@@ -16,14 +16,16 @@
 // políticas RLS de las tablas, no el secreto de esta clave. NUNCA pongas
 // acá la clave "service_role".
 
+// Los valores sensibles van en config-secrets.js (gitignored, generado en build).
+// Para desarrollo local: copiá config-secrets.example.js → config-secrets.js y completá los valores.
 window.PRONET_CONFIG = {
-  SUPABASE_URL: "https://zgmwtyxtygnjfakeriiz.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnbXd0eXh0eWduamZha2VyaWl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2NDkzMDUsImV4cCI6MjA5OTIyNTMwNX0.CKv9L3py6fbidKhBfNe6ZVNtS_U7gyMshLLLSS257Ac",
+  SUPABASE_URL: '',
+  SUPABASE_ANON_KEY: '',
 };
 
 // ── FASE 3: Notificaciones push ──
 // Clave PÚBLICA de VAPID (la privada va como secret en Supabase, NUNCA acá).
-window.PRONET_CONFIG.VAPID_PUBLIC_KEY = "BFvzCuNl7hsD6NmAhL63KqPPr1mMVTFiophRSDhhDujMYEnGVx3NsLnPZDgVG0Xg_jPJocWE-aDxRnVK_Yfq8Vo";
+window.PRONET_CONFIG.VAPID_PUBLIC_KEY = ''; // va en config-secrets.js
 
 // ── Constantes de negocio ──
 // Editables sin tocar app.js; cambian la lógica en prod con solo un redeploy.
@@ -59,7 +61,7 @@ window.PRONET_CONFIG.LOYALTY_NIVELES = [
 //   console.cloud.google.com → nuevo proyecto → APIs & Services →
 //   Habilitar: Maps JavaScript API + Geocoding API →
 //   Credentials → Create API Key → restringir a tu dominio (pronetprueba.netlify.app)
-window.PRONET_CONFIG.MAPS_KEY = 'AIzaSyCkSY-QijgqiSuanlgp5EpjxxCkfoOFSMY';   // ← pegá tu key acá
+window.PRONET_CONFIG.MAPS_KEY = ''; // va en config-secrets.js
 
 Object.assign(window.PRONET_CONFIG, {
   // Propuestas
