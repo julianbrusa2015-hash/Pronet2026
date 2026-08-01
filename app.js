@@ -3397,6 +3397,10 @@ document.addEventListener('focusin', (e) => {
       mostrarGate && mostrarGate({ titulo: 'Publicar en ProMarket', sub: 'Necesitás una cuenta para publicar.' });
       return;
     }
+    if (!usuarioActual.es_pro_marketplace) {
+      abrirModalProMarketSub();
+      return;
+    }
     // Limpiar el form antes de abrir
     pmFotoArchivo = null;
     const prev = document.getElementById('pm-foto-preview');
@@ -3414,6 +3418,29 @@ document.addEventListener('focusin', (e) => {
     goTo('s-pub-mercado');
   }
   window.abrirPublicarMercado = abrirPublicarMercado;
+
+  function abrirModalProMarketSub() {
+    const m = document.getElementById('modal-promarket-sub');
+    if (m) { m.style.display = 'flex'; }
+  }
+  function cerrarModalProMarketSub() {
+    const m = document.getElementById('modal-promarket-sub');
+    if (m) m.style.display = 'none';
+  }
+  window.cerrarModalProMarketSub = cerrarModalProMarketSub;
+
+  async function contratarProMarket() {
+    const btn = document.getElementById('btn-contratar-promarket');
+    if (btn) { btn.disabled = true; btn.textContent = 'Redirigiendo a MercadoPago…'; }
+    const res = await PronetDB.crearPreferenciaMP('promarket', 'mes');
+    if (!res.ok) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Suscribirme — pago seguro 🔒'; }
+      showToast && showToast('⚠️ No se pudo iniciar el pago. ' + (res.error || ''));
+      return;
+    }
+    window.location.href = res.init_point;
+  }
+  window.contratarProMarket = contratarProMarket;
 
   function pmSelCat(chip) {
     document.querySelectorAll('#pm-cat-row .chip').forEach(c => c.classList.remove('on'));
@@ -8110,6 +8137,28 @@ document.addEventListener('focusin', (e) => {
       const loginEl = document.getElementById('login-screen');
       if (loginEl) loginEl.classList.remove('hidden');
       renderHomeFeed('todos');
+    }
+  })();
+
+  // Handler de vuelta desde MercadoPago
+  (function manejarRetornoMP() {
+    const params = new URLSearchParams(location.search);
+    const mp = params.get('mp');
+    if (!mp) return;
+    history.replaceState(null, '', location.pathname); // limpiar ?mp= de la URL
+    if (mp === 'success') {
+      // restaurarSesion() ya corrió y cargó el perfil; si es_pro_marketplace
+      // es true el webhook ya procesó el pago. Si no, puede estar demorado.
+      const activo = usuarioActual?.es_pro_marketplace;
+      showToast && showToast(
+        activo
+          ? '¡Ya sos Pro Market! Tocá + para publicar en el feed.'
+          : '✅ Pago recibido — tu acceso ProMarket se activará en segundos.',
+        6000
+      );
+      if (activo) setTimeout(() => goTo('s-mercado'), 600);
+    } else if (mp === 'failure') {
+      showToast && showToast('⚠️ El pago no se completó. Podés intentarlo de nuevo.', 5000);
     }
   })();
 

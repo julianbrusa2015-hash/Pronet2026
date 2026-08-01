@@ -146,6 +146,20 @@ Deno.serve(async (req) => {
     const vence = new Date();
     vence.setMonth(vence.getMonth() + (periodo === 'anual' ? 12 : 1));
 
+    // ProMarket: actualiza perfiles en vez de suscripciones
+    if (plan === 'promarket') {
+      const { error: errPM } = await supabase.from('perfiles').update({
+        es_pro_marketplace: true,
+        pro_marketplace_hasta: vence.toISOString(),
+      }).eq('id', usuarioId);
+      if (errPM) {
+        await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[webhook-mp] error activando ProMarket', errPM.message);
+        return new Response('error', { status: 500 });
+      }
+      return new Response('ok', { status: 200 });
+    }
+
     const { error } = await supabase.from('suscripciones').upsert({
       usuario_id: usuarioId,
       plan,
