@@ -87,6 +87,8 @@
     }
     .status { display: none !important; }
     .notch  { display: none !important; }
+    /* Pantallas huérfanas: en PWA no hay barra de estado simulada */
+    .phone > .screen { top: 0; }
   }
   /* FIX: el @import de Google Fonts estaba acá, en posición inválida (debe preceder
      a toda regla CSS), por lo que los navegadores lo ignoraban y las fuentes Inter/Sora
@@ -122,13 +124,14 @@
     --r:        16px;
   }
 
-  html { height: 100%; }
+  html { height: 100%; overscroll-behavior: none; }
   body {
     background: #12152A;
     font-family: 'Inter', sans-serif;
     display: flex;
     min-height: 100vh;
     min-height: 100dvh;
+    overscroll-behavior: none;
     /* FIX responsive: el centrado ahora lo hace margin:auto en .phone (seguro, no recorta) */
   }
 
@@ -167,6 +170,8 @@
     justify-content: flex-start;
     scrollbar-width: none;
     background: #F4F5FA;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
   .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
@@ -1139,7 +1144,7 @@
   .r-chip.on { background: var(--blue); color: white; border-color: var(--blue); }
 
   .pub-footer {
-    position: sticky; bottom: 0; background: white;
+    position: -webkit-sticky; position: sticky; bottom: 0; background: white;
     border-top: 1px solid var(--border); padding: 12px 18px 24px;
   }
 
