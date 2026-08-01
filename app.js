@@ -189,7 +189,7 @@ document.addEventListener('focusin', (e) => {
     editarPerfilPro:   ['s-historial'],
     suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
-    mercadoPlaza:      ['s-mercado'],
+    mercadoPlaza:      ['s-mercado', 's-pub-mercado'],
   };
 
   function isScreenEnabled(id) {
@@ -229,6 +229,7 @@ document.addEventListener('focusin', (e) => {
     's-miperfil':         'nb-perfil',
     's-ranking':          'nb-mercado',
     's-mercado':          'nb-mercado',
+    's-pub-mercado':      'nb-mercado',
     's-chat':             'nb-buscar',
     's-chats':            'nb-buscar',
     's-prof':             'nb-buscar',
@@ -254,7 +255,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado'];
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -3191,46 +3192,191 @@ document.addEventListener('focusin', (e) => {
     renderBusqueda(inp ? inp.value : '', filtro);
   }
 
-  // ── Mercado/Plaza — wireframe (mock, sin datos reales aún) ──
-  const MKT_POSTS_MOCK = [
-    { autor:'María García',   iniciales:'MG', avBg:'#FFF1F2', avColor:'#E11D48', tiempo:'hace 2h',   categoria:'gastronomia', catLabel:'🍕 Gastronomía', emoji:'🍰', fotoBg:'linear-gradient(135deg,#FFE4E9,#FFD1DA)', titulo:'Torta de chocolate 3kg', precio:8500, desc:'Pedidos con 48hs de anticipación. Rellena a elección: dulce de leche, frutilla o mousse.' },
-    { autor:'Roberto Silva',  iniciales:'RS', avBg:'#F0FDF4', avColor:'#16A34A', tiempo:'ayer',      categoria:'productos',   catLabel:'🛍️ Productos',   emoji:'🪴', fotoBg:'linear-gradient(135deg,#DCFCE7,#BBF7D0)', titulo:'Plantas suculentas', precio:1200, desc:'Variedad de 20 especies. Ideal para interior. Entrego en Puertos del Lago.' },
-    { autor:'Almacén Don Pepe', iniciales:'DP', avBg:'#EFF6FF', avColor:'#1D4ED8', tiempo:'hace 3 días', categoria:'comercios', catLabel:'🏪 Comercios', emoji:'🛒', fotoBg:'linear-gradient(135deg,#DBEAFE,#BFDBFE)', titulo:'Almacén de barrio — envíos gratis', precio:null, desc:'Fiambres, verdulería y despensa. Pedidos por WhatsApp, entrega en el día.' },
-    { autor:'Lucía Fernández', iniciales:'LF', avBg:'#FFF7ED', avColor:'#EA580C', tiempo:'hace 5h',   categoria:'anuncios',    catLabel:'📢 Anuncios',    emoji:'🏠', fotoBg:'linear-gradient(135deg,#FFEDD5,#FED7AA)', titulo:'Alquilo cochera cubierta', precio:15000, desc:'Zona Puertos del Lago, disponible desde el 1° del mes que viene.' },
-  ];
-  let mktFiltroActivo = 'todos';
+  // ── ProMarket — feed real ──────────────────────────────────────────
+  const MKT_CAT_LABELS = {
+    gastronomia: '🍕 Gastronomía',
+    productos:   '🛍️ Productos',
+    comercios:   '🏪 Comercios',
+    anuncios:    '📢 Anuncios',
+  };
 
-  function renderMercado() {
-    const cont = document.getElementById('mkt-feed');
-    if (!cont) return;
-    const posts = MKT_POSTS_MOCK.filter(p => mktFiltroActivo === 'todos' || p.categoria === mktFiltroActivo);
-    cont.innerHTML = posts.map(p => `
+  let mktFiltroActivo  = 'todos';
+  let mktOffset        = 0;
+  let mktCargando      = false;
+  let mktHayMas        = true;
+
+  function mktIniciales(nombre) {
+    if (!nombre) return '?';
+    return nombre.trim().split(' ').slice(0,2).map(w => w[0].toUpperCase()).join('');
+  }
+
+  function mktTiempoRelativo(fechaStr) {
+    const diff = Date.now() - new Date(fechaStr).getTime();
+    const min  = Math.floor(diff / 60000);
+    if (min < 60)  return `hace ${min || 1} min`;
+    const hs = Math.floor(min / 60);
+    if (hs < 24)   return `hace ${hs}h`;
+    const dias = Math.floor(hs / 24);
+    if (dias === 1) return 'ayer';
+    return `hace ${dias} días`;
+  }
+
+  function mktCardHTML(p) {
+    const nombre   = p.perfiles?.nombre || 'Vecino';
+    const iniciales = mktIniciales(nombre);
+    const catLabel = MKT_CAT_LABELS[p.categoria] || p.categoria;
+    const tiempo   = mktTiempoRelativo(p.creado);
+    const foto     = p.foto_url
+      ? `<img src="${escHTML(p.foto_url)}" alt="${escHTML(p.titulo)}" style="width:100%;aspect-ratio:4/5;object-fit:cover;display:block">`
+      : `<div class="mkt-post-photo" style="background:var(--surface);font-size:48px">🛍️</div>`;
+    return `
       <div class="mkt-post">
         <div class="mkt-post-head">
-          <div class="c-av" style="width:38px;height:38px;font-size:14px;background:${p.avBg};color:${p.avColor}">${p.iniciales}</div>
+          <div class="c-av" style="width:38px;height:38px;font-size:14px;background:var(--blue-s);color:var(--blue)">${escHTML(iniciales)}</div>
           <div class="c-info">
-            <div class="c-name">${escHTML(p.autor)}</div>
-            <div class="c-role">${p.tiempo} · ${p.catLabel}</div>
+            <div class="c-name">${escHTML(nombre)}</div>
+            <div class="c-role">${escHTML(tiempo)} · ${escHTML(catLabel)}</div>
           </div>
         </div>
-        <div class="mkt-post-photo" style="background:${p.fotoBg}">${p.emoji}</div>
+        ${foto}
         <div class="mkt-post-body">
           <div class="mkt-post-title-row">
             <div class="mkt-post-title">${escHTML(p.titulo)}</div>
-            <div class="mkt-post-price">${p.precio ? '$' + p.precio.toLocaleString('es-AR') : 'Consultar'}</div>
+            <div class="mkt-post-price">${p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar'}</div>
           </div>
-          <div class="c-desc">${escHTML(p.desc)}</div>
-          <button class="btn-p">💬 Consultar</button>
+          ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
+          <button class="btn-p" onclick="mktConsultar('${escHTML(p.id)}','${escHTML(nombre)}')">💬 Consultar</button>
         </div>
-      </div>`).join('') || '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Sin publicaciones en esta categoría todavía.</div>';
+      </div>`;
+  }
+
+  async function renderMercado(reset = true) {
+    const cont = document.getElementById('mkt-feed');
+    if (!cont || mktCargando) return;
+    if (reset) {
+      mktOffset  = 0;
+      mktHayMas  = true;
+      cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
+    }
+    mktCargando = true;
+    const posts = await PronetDB.listarPublicaciones({ categoria: mktFiltroActivo, offset: mktOffset }).catch(() => []);
+    mktCargando = false;
+    if (reset) cont.innerHTML = '';
+    if (!posts.length && mktOffset === 0) {
+      cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay publicaciones en esta categoría.<br><span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="abrirPublicarMercado()">¡Publicá el primero!</span></div>';
+      mktHayMas = false;
+      return;
+    }
+    cont.insertAdjacentHTML('beforeend', posts.map(mktCardHTML).join(''));
+    mktOffset  += posts.length;
+    mktHayMas   = posts.length === 10;
+    const verMas = document.getElementById('mkt-ver-mas');
+    if (verMas) verMas.style.display = mktHayMas ? 'block' : 'none';
   }
 
   function filtrarMercado(chip, categoria) {
     document.querySelectorAll('#s-mercado .filter-row .chip').forEach(c => c.classList.remove('on'));
     chip.classList.add('on');
     mktFiltroActivo = categoria;
-    renderMercado();
+    renderMercado(true);
   }
+
+  function mktConsultar(pubId, autorNombre) {
+    // Fase 3: abrirá chats_mercado. Por ahora muestra un aviso.
+    showToast && showToast('💬 Chat de consulta — próximamente en Fase 3');
+  }
+  window.mktConsultar = mktConsultar;
+
+  // ── Pantalla publicar en ProMarket ────────────────────────────────
+  let pmFotoArchivo = null;
+
+  function abrirPublicarMercado() {
+    if (!usuarioActual) {
+      mostrarGate && mostrarGate({ titulo: 'Publicar en ProMarket', sub: 'Necesitás una cuenta para publicar.' });
+      return;
+    }
+    // Limpiar el form antes de abrir
+    pmFotoArchivo = null;
+    const prev = document.getElementById('pm-foto-preview');
+    if (prev) {
+      prev.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">Tocá para agregar foto</div>
+        <div style="font-size:11px;color:var(--ink3)">Formato 4:5 · máx 5 MB</div>`;
+    }
+    const inp = document.getElementById('pm-foto-input');
+    if (inp) inp.value = '';
+    ['pm-titulo','pm-desc','pm-precio'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    document.querySelectorAll('#pm-cat-row .chip').forEach((c,i) => c.classList.toggle('on', i===0));
+    goTo('s-pub-mercado');
+  }
+  window.abrirPublicarMercado = abrirPublicarMercado;
+
+  function pmSelCat(chip) {
+    document.querySelectorAll('#pm-cat-row .chip').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
+  }
+  window.pmSelCat = pmSelCat;
+
+  function pmPrevisualizarFoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast && showToast('⚠️ La foto no puede superar 5 MB');
+      input.value = '';
+      return;
+    }
+    pmFotoArchivo = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('pm-foto-preview');
+      if (prev) prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;display:block">`;
+    };
+    reader.readAsDataURL(file);
+  }
+  window.pmPrevisualizarFoto = pmPrevisualizarFoto;
+
+  async function pmPublicar() {
+    const btn    = document.getElementById('pm-submit-btn');
+    const titulo = document.getElementById('pm-titulo')?.value.trim();
+    const desc   = document.getElementById('pm-desc')?.value.trim();
+    const precio = document.getElementById('pm-precio')?.value;
+    const catEl  = document.querySelector('#pm-cat-row .chip.on');
+    const categoria = catEl?.dataset.cat || 'productos';
+
+    if (!titulo) { showToast && showToast('⚠️ Escribí un título para tu publicación'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Publicando...';
+
+    let foto_url = null;
+    if (pmFotoArchivo) {
+      const res = await PronetDB.subirFotoMercado(pmFotoArchivo, usuarioActual.id);
+      if (!res.ok) {
+        showToast && showToast('⚠️ No se pudo subir la foto: ' + res.error);
+        btn.disabled = false;
+        btn.textContent = 'Publicar';
+        return;
+      }
+      foto_url = res.url;
+    }
+
+    const zona = usuarioActual.zona || null;
+    const res  = await PronetDB.crearPublicacion({ categoria, titulo, descripcion: desc || null,
+                                                   precio: precio ? Number(precio) : null,
+                                                   foto_url, zona });
+    btn.disabled = false;
+    btn.textContent = 'Publicar';
+
+    if (!res.ok) {
+      showToast && showToast('⚠️ No se pudo publicar: ' + res.error);
+      return;
+    }
+    showToast && showToast('✅ ¡Publicación creada!');
+    goTo('s-mercado');
+  }
+  window.pmPublicar = pmPublicar;
 
   function getLabelFiltro(f) {
     const labels = { todos:'ordenados por ranking zonal', premium:'solo Premium', top:'calificación +4.5', cercano:'menos de 5 km', urgencias:'con urgencias 24h', economico:'menor precio primero' };

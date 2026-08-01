@@ -269,9 +269,74 @@
       <!-- Feed -->
       <div id="mkt-feed"></div>
 
-      <div class="mkt-fab" onclick="showToast ? showToast('📝 Publicar — wireframe, todavía no conectado') : alert('Publicar (wireframe)')" aria-label="Publicar en el Mercado" title="Publicar">+</div>
+      <!-- Ver más -->
+      <div id="mkt-ver-mas" style="display:none;padding:8px 14px 24px">
+        <button onclick="renderMercado(false)" style="width:100%;background:var(--surface);color:var(--blue);border:1.5px solid var(--blue);border-radius:14px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Ver más publicaciones</button>
+      </div>
+
+      <div class="mkt-fab" onclick="abrirPublicarMercado()" aria-label="Publicar en ProMarket" title="Publicar">+</div>
 
     </div><!-- /mercado -->
+
+
+    <!-- ══ PUBLICAR EN PROMARKET ════════════════════════════════════════ -->
+    <div class="screen" id="s-pub-mercado">
+
+      <div class="appbar">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="back-btn" onclick="goTo('s-mercado')" aria-label="Volver">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </div>
+          <div style="font-family:'Sora',sans-serif;font-size:17px;font-weight:700;color:var(--ink)">Nueva publicación</div>
+        </div>
+      </div>
+
+      <div style="overflow-y:auto;padding:16px 14px 100px">
+
+        <!-- Foto -->
+        <div id="pm-foto-preview" onclick="document.getElementById('pm-foto-input').click()"
+          style="width:100%;aspect-ratio:4/5;border-radius:14px;border:2px dashed var(--border);
+                 background:var(--surface);display:flex;flex-direction:column;align-items:center;
+                 justify-content:center;gap:8px;cursor:pointer;overflow:hidden;margin-bottom:18px">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div style="font-size:13px;font-weight:600;color:var(--blue)">Tocá para agregar foto</div>
+          <div style="font-size:11px;color:var(--ink3)">Formato 4:5 · máx 5 MB</div>
+        </div>
+        <input type="file" id="pm-foto-input" accept="image/*" style="display:none" onchange="pmPrevisualizarFoto(this)">
+
+        <!-- Categoría -->
+        <label class="ob-label">Categoría</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="pm-cat-row">
+          <div class="chip on" data-cat="gastronomia" onclick="pmSelCat(this)">🍕 Gastronomía</div>
+          <div class="chip" data-cat="productos"   onclick="pmSelCat(this)">🛍️ Productos</div>
+          <div class="chip" data-cat="comercios"   onclick="pmSelCat(this)">🏪 Comercios</div>
+          <div class="chip" data-cat="anuncios"    onclick="pmSelCat(this)">📢 Anuncios</div>
+        </div>
+
+        <!-- Título -->
+        <label class="ob-label" for="pm-titulo">Título</label>
+        <input class="ob-input" id="pm-titulo" name="pm-titulo" type="text"
+          placeholder="Ej: Tortas personalizadas, Plantas suculentas..." maxlength="120" style="margin-bottom:16px">
+
+        <!-- Descripción -->
+        <label class="ob-label" for="pm-desc">Descripción <span style="font-weight:400;color:var(--ink3)">(opcional)</span></label>
+        <textarea class="ob-input" id="pm-desc" name="pm-desc" rows="3"
+          placeholder="Contá más sobre lo que ofrecés, disponibilidad, zona de entrega..."
+          maxlength="1000" style="resize:none;margin-bottom:16px"></textarea>
+
+        <!-- Precio -->
+        <label class="ob-label" for="pm-precio">Precio <span style="font-weight:400;color:var(--ink3)">(dejá vacío para "Consultar")</span></label>
+        <input class="ob-input" id="pm-precio" name="pm-precio" type="number" min="0"
+          placeholder="Ej: 8500" style="margin-bottom:24px">
+
+      </div>
+
+      <!-- Footer fijo -->
+      <div class="ob-footer" style="padding:12px 14px">
+        <button class="btn-p" id="pm-submit-btn" onclick="pmPublicar()">Publicar</button>
+      </div>
+
+    </div><!-- /pub-mercado -->
 
 
     <!-- ══ RANKING ════════════════════════════════════════════════════ -->

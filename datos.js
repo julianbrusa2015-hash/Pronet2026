@@ -547,6 +547,56 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    // ── ProMarket ─────────────────────────────────────────────────────
+
+    /** Lista publicaciones activas, opcionalmente filtradas por categoría.
+     *  Orden cronológico inverso, paginado de 10 en 10. */
+    async listarPublicaciones({ categoria = null, offset = 0 } = {}) {
+      if (!remoto) return [];
+      let q = sb.from('publicaciones')
+        .select(`id, autor_id, categoria, titulo, descripcion, precio, foto_url, zona, creado,
+                 perfiles:autor_id (nombre, zona)`)
+        .eq('activa', true)
+        .order('creado', { ascending: false })
+        .range(offset, offset + 9);
+      if (categoria && categoria !== 'todos') q = q.eq('categoria', categoria);
+      const { data, error } = await q;
+      if (error) { console.warn('[PronetDB] listarPublicaciones', error.message); return []; }
+      return data || [];
+    },
+
+    /** Crea una publicación nueva. El autor_id lo pone RLS (auth.uid()). */
+    async crearPublicacion({ categoria, titulo, descripcion, precio, foto_url, zona }) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.from('publicaciones')
+        .insert({ categoria, titulo, descripcion: descripcion || null,
+                  precio: precio || null, foto_url: foto_url || null, zona: zona || null })
+        .select('id').single();
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, id: data.id };
+    },
+
+    /** Desactiva (soft-delete) una publicación propia. */
+    async desactivarPublicacion(id) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { error } = await sb.from('publicaciones')
+        .update({ activa: false }).eq('id', id);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+
+    /** Sube una foto al bucket mercado y devuelve la URL pública. */
+    async subirFotoMercado(archivo, usuarioId) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const ext  = archivo.name.split('.').pop().toLowerCase();
+      const path = `${usuarioId}/${Date.now()}.${ext}`;
+      const { error } = await sb.storage.from('mercado').upload(path, archivo,
+        { cacheControl: '3600', upsert: false });
+      if (error) return { ok: false, error: error.message };
+      const { data } = sb.storage.from('mercado').getPublicUrl(path);
+      return { ok: true, url: data.publicUrl };
+    },
+
     /** Guarda un valor de configuración (solo admin, por RLS). */
     async guardarConfigApp(clave, valor) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
