@@ -580,6 +580,27 @@ const PronetDB = (() => {
       return { ok: true, id: data.id };
     },
 
+    /** Lista todas las publicaciones propias (activas e inactivas). */
+    async listarMisPublicaciones() {
+      if (!remoto) return [];
+      const uid = await this.usuarioIdActual();
+      if (!uid) return [];
+      const { data, error } = await sb.from('publicaciones')
+        .select('id, categoria, titulo, descripcion, precio, foto_url, activa, creado')
+        .eq('autor_id', uid)
+        .order('creado', { ascending: false });
+      if (error) { console.warn('[PronetDB] listarMisPublicaciones', error.message); return []; }
+      return data || [];
+    },
+
+    /** Reactiva una publicación propia desactivada. */
+    async reactivarPublicacion(id) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { error } = await sb.from('publicaciones').update({ activa: true }).eq('id', id);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+
     /** Desactiva (soft-delete) una publicación propia. */
     async desactivarPublicacion(id) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };

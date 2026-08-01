@@ -189,7 +189,7 @@ document.addEventListener('focusin', (e) => {
     editarPerfilPro:   ['s-historial'],
     suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
-    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado'],
+    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado', 's-mis-publicaciones'],
   };
 
   function isScreenEnabled(id) {
@@ -230,7 +230,8 @@ document.addEventListener('focusin', (e) => {
     's-ranking':          'nb-mercado',
     's-mercado':          'nb-mercado',
     's-pub-mercado':      'nb-mercado',
-    's-chat-mercado':     'nb-mercado',
+    's-chat-mercado':       'nb-mercado',
+    's-mis-publicaciones':  'nb-perfil',
     's-chat':             'nb-buscar',
     's-chats':            'nb-buscar',
     's-prof':             'nb-buscar',
@@ -256,7 +257,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado'];
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -301,6 +302,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-publicar') { pubNext(1); }
     // Si va a Nuevo Pedido, siempre arrancar en paso 1
     if (id === 's-nuevo-pedido') { npNext(1); }
+    if (id === 's-mis-publicaciones') { renderMisPublicaciones(); }
     // Si va a Mercado, renderizar el feed (sin resetear búsqueda si vuelve desde chat)
     if (id === 's-mercado') {
       const inp = document.getElementById('mkt-buscador');
@@ -3389,6 +3391,65 @@ document.addEventListener('focusin', (e) => {
   }
   window.cerrarChatMercado = cerrarChatMercado;
 
+  // ── Mis publicaciones ProMarket ──────────────────────────────────────
+
+  async function renderMisPublicaciones() {
+    const lista = document.getElementById('mis-pubs-lista');
+    if (!lista) return;
+    lista.innerHTML = '<div style="padding:32px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
+    const pubs = await PronetDB.listarMisPublicaciones().catch(() => []);
+    if (!pubs.length) {
+      lista.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--ink3)">Todavía no publicaste nada.<br><span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="abrirPublicarMercado()">¡Publicá ahora!</span></div>';
+      return;
+    }
+    lista.innerHTML = pubs.map(misPubsCardHTML).join('');
+    // Actualizar subtítulo del menu item
+    const activas = pubs.filter(p => p.activa).length;
+    const subEl = document.getElementById('mp-mis-pubs-sub');
+    if (subEl) subEl.textContent = activas + ' publicación' + (activas !== 1 ? 'es' : '') + ' activa' + (activas !== 1 ? 's' : '');
+  }
+
+  function misPubsCardHTML(p) {
+    const cat = MKT_CAT_LABELS[p.categoria] || p.categoria;
+    const precio = p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar';
+    const foto = p.foto_url
+      ? `<img src="${escHTML(p.foto_url)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;flex-shrink:0">`
+      : `<div style="width:72px;height:72px;border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">🛍️</div>`;
+    const estadoBadge = p.activa
+      ? `<span style="background:#DCFCE7;color:#16A34A;border-radius:99px;padding:2px 8px;font-size:11px;font-weight:700">● Activa</span>`
+      : `<span style="background:var(--surface);color:var(--ink3);border-radius:99px;padding:2px 8px;font-size:11px;font-weight:600">Inactiva</span>`;
+    const accionBtn = p.activa
+      ? `<button onclick="toggleMiPublicacion('${p.id}',false)" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:'Inter',sans-serif">Desactivar</button>`
+      : `<button onclick="toggleMiPublicacion('${p.id}',true)" style="background:var(--blue);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:white;cursor:pointer;font-family:'Inter',sans-serif">Reactivar</button>`;
+    return `
+      <div id="mispub-${escHTML(p.id)}" style="display:flex;gap:12px;padding:12px;background:white;border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        ${foto}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHTML(p.titulo)}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">${escHTML(cat)} · ${escHTML(precio)}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${estadoBadge}
+            ${accionBtn}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  async function toggleMiPublicacion(id, activar) {
+    const card = document.getElementById('mispub-' + id);
+    if (card) card.style.opacity = '0.5';
+    const res = activar
+      ? await PronetDB.reactivarPublicacion(id)
+      : await PronetDB.desactivarPublicacion(id);
+    if (!res.ok) {
+      if (card) card.style.opacity = '';
+      showToast && showToast('⚠️ No se pudo actualizar: ' + res.error);
+      return;
+    }
+    renderMisPublicaciones();
+  }
+  window.toggleMiPublicacion = toggleMiPublicacion;
+
   // ── Pantalla publicar en ProMarket ────────────────────────────────
   let pmFotoArchivo = null;
 
@@ -4407,6 +4468,9 @@ document.addEventListener('focusin', (e) => {
     if (admin) cargarBadgeDenuncias();
     // ── DINÁMICO: rankings del prestador ──
     if (tienePrestadorId) cargarRankingsPerfil();
+    // ── ProMarket: mostrar menu item solo si tiene la suscripción activa ──
+    const menuMisPubs = document.getElementById('menu-mis-pubs-mkt');
+    if (menuMisPubs) menuMisPubs.style.display = (FEATURES.mercadoPlaza && usuarioActual?.es_pro_marketplace) ? '' : 'none';
   }
 
   // ── Mensajes no leídos (dinámico) ──────────────────────────────────
