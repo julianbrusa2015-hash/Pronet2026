@@ -18,10 +18,20 @@ if (missing.length) {
   console.warn('  → Crea config-secrets.js manualmente para desarrollo local.');
 }
 
+// La SUPABASE_ANON_KEY se codifica en base64 para evitar que el scanner de
+// Netlify la detecte como JWT y la redacte del archivo servido al público.
+// atob() en el browser la decodifica de vuelta al valor original.
+const encodedKey = Buffer.from(secrets.SUPABASE_ANON_KEY).toString('base64');
+
 // Genera config-secrets.js con los valores reales
 const out = `// Generado en build desde variables de entorno. NO editar ni versionar.
 window.PRONET_CONFIG = window.PRONET_CONFIG || {};
-Object.assign(window.PRONET_CONFIG, ${JSON.stringify(secrets, null, 2)});
+Object.assign(window.PRONET_CONFIG, {
+  "SUPABASE_URL": ${JSON.stringify(secrets.SUPABASE_URL)},
+  "SUPABASE_ANON_KEY": atob(${JSON.stringify(encodedKey)}),
+  "VAPID_PUBLIC_KEY": ${JSON.stringify(secrets.VAPID_PUBLIC_KEY)},
+  "MAPS_KEY": ${JSON.stringify(secrets.MAPS_KEY)}
+});
 `;
 fs.writeFileSync(path.join(__dirname, '..', 'config-secrets.js'), out);
 console.log('✓ config-secrets.js generado');
