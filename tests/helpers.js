@@ -7,7 +7,7 @@
 
 const CUENTAS = {
   vecino:    { email: process.env.TEST_VECINO_EMAIL    || 'vecino_test@pronet.test',    pw: process.env.TEST_VECINO_PW    || 'Test1234!' },
-  prestador: { email: process.env.TEST_PRESTADOR_EMAIL || 'prestador_test@pronet.test', pw: process.env.TEST_PRESTADOR_PW  || 'Test1234!' },
+  prestador: { email: process.env.TEST_PRESTADOR_EMAIL || 'prestador_test@pronet.test', pw: process.env.TEST_PRESTADOR_PW  || '12345678' },
   // Sin default: los tests de doble perfil se saltean si no está configurada,
   // en vez de fallar por una cuenta que puede no existir en cada entorno.
   doble:     { email: process.env.TEST_DOBLE_EMAIL     || null,                          pw: process.env.TEST_DOBLE_PW     || 'Test1234!' },

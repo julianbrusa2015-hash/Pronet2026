@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 
 // ─── Credenciales ────────────────────────────────────────────────────────────
 const VECINO    = { email: 'vecino_test@pronet.test',    pw: 'Test1234!' };
-const PRESTADOR = { email: 'prestador_test@pronet.test', pw: 'Test1234!' };
+const PRESTADOR = { email: 'prestador_test@pronet.test', pw: '12345678' };
 
 // Título único por ejecución para encontrar el pedido entre runs
 const TITULO_PEDIDO = `Test E2E – Revisión eléctrica ${Date.now()}`;

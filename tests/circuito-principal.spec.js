@@ -77,16 +77,25 @@ test.describe('PRONET — Circuito principal', () => {
   test('2. Login: rechaza campos vacíos y email inválido', async ({ page }) => {
     await esperarLoginScreen(page);
 
-    // Intentar login con campos vacíos
+    // Campos vacíos: loginWith() usa reportValidity() que dispara la validación
+    // nativa del browser (tooltip "Rellene este campo"). El submit queda bloqueado
+    // — login-screen sigue visible, #login-error no aparece para estos casos.
     await page.locator('button.btn-p[onclick*="loginWith"]').click();
-    await expect(page.locator('#login-error')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('#login-error')).toContainText(/completá|email|contraseña/i);
+    await expect(page.locator('#login-screen')).not.toHaveClass(/hidden/);
 
-    // Email mal formateado
+    // Email con formato inválido: también bloqueado por la validación nativa de type="email".
     await page.locator('#login-email').fill('noesvalido');
-    await page.locator('#login-pw').fill('algo');
+    await page.locator('#login-pw').fill('Test1234!');
     await page.locator('button.btn-p[onclick*="loginWith"]').click();
-    await expect(page.locator('#login-error')).toContainText(/formato/i);
+    await expect(page.locator('#login-screen')).not.toHaveClass(/hidden/);
+
+    // Credenciales con formato correcto pero incorrectas: pasan la validación nativa,
+    // Supabase rechaza → loginWith() llama mostrarErrorLogin() → #login-error visible.
+    await page.locator('#login-email').fill('no-existe@pronet.test');
+    await page.locator('#login-pw').fill('ContraIncorrecta1!');
+    await page.locator('button.btn-p[onclick*="loginWith"]').click();
+    await expect(page.locator('#login-error')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#login-error')).toContainText(/incorrectos/i);
   });
 
   // ── 3. Recupero de contraseña ────────────────────────────────────────────
@@ -163,18 +172,20 @@ test.describe('PRONET — Circuito principal', () => {
     await page.locator('.login-register span').click();
     await expect(page.locator('#registro-modal')).toBeVisible({ timeout: 5000 });
 
-    // Solo nombre sin apellido
+    // Nombre sin apellido: #reg-nombre tiene pattern=".*\s+.*" → reportValidity()
+    // dispara validación nativa del browser. El submit queda bloqueado — modal sigue abierto.
     await page.locator('#reg-nombre').fill('Juan');
     await page.locator('#reg-email').fill('test@test.com');
     await page.locator('#reg-pw').fill('Test1234!');
     await page.locator('#reg-submit').click();
-    await expect(page.locator('#reg-error')).toContainText(/apellido/i);
+    await expect(page.locator('#registro-modal')).toBeVisible();
 
-    // Contraseña corta
+    // Contraseña corta: bloqueada por minlength="8" via reportValidity().
+    // El modal también sigue abierto.
     await page.locator('#reg-nombre').fill('Juan Pérez');
     await page.locator('#reg-pw').fill('123');
     await page.locator('#reg-submit').click();
-    await expect(page.locator('#reg-error')).toContainText(/8/i);
+    await expect(page.locator('#registro-modal')).toBeVisible();
   });
 
 });

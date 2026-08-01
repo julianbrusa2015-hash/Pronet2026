@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
 
 const PRESTADOR = {
   email: process.env.TEST_PRESTADOR_EMAIL || 'prestador_test@pronet.test',
-  pw:    process.env.TEST_PRESTADOR_PW    || 'Test1234!',
+  pw:    process.env.TEST_PRESTADOR_PW    || '12345678',
 };
 
 async function esperarDOM(page) {
@@ -215,23 +215,31 @@ test.describe('F.1 · Feed prestador filtrado por rubro', () => {
     let loginOk = false;
     try { await loginPrestador(page); loginOk = true; } catch (e) { console.log('[F.1] login falló:', e.message.slice(0, 80)); }
     if (!loginOk) { test.skip(); return; }
-    // El rubro vive en `prestadores`, no en usuarioActual: la app lo lee al
-    // iniciar y lo vuelca en catActiva si matchea una categoría conocida.
-    // Skipear solo si catActiva quedó en 'todos' (sin rubro o rubro sin match).
-    const catActiva = await page.evaluate(() => window.catActiva);
-    if (catActiva === 'todos') {
-      console.log('[F.1] prestador_test no tiene rubro o no matchea categoría — test no aplica');
+    // catActiva vive en el scope cerrado de app.js (no está en window).
+    // En lugar de leer la variable interna, verificamos el DOM:
+    // si el prestador tiene rubro que matchea una categoría, activarHomePrestador()
+    // agrega clase 'on' al chip correspondiente y quita 'on' de #cat-todos.
+    // Esperar hasta 8s por si activarHomePrestador aún no terminó.
+    await page.waitForFunction(
+      () => {
+        // Hay un chip 'on' distinto de todos (todos es el default)
+        const activo = document.querySelector('.rubro.on');
+        return activo !== null;
+      },
+      { timeout: 8000 }
+    ).catch(() => {});
+    const chipOnId = await page.evaluate(() => {
+      const chip = document.querySelector('.rubro.on');
+      return chip ? chip.id : null;
+    });
+    if (!chipOnId || chipOnId === 'cat-todos') {
+      console.log('[F.1] ningún chip de rubro activo — prestador_test sin rubro o sin match');
       test.skip();
       return;
     }
-    // catActiva debe ser distinto de 'todos'
-    expect(catActiva).not.toBe('todos');
-    // El chip correspondiente debe tener clase 'on'
-    const chipActivo = await page.evaluate((cat) => {
-      const chip = document.getElementById('cat-' + cat);
-      return chip ? chip.classList.contains('on') : false;
-    }, catActiva);  // catActiva ya es string
-    expect(chipActivo).toBe(true);
+    // Hay un chip de rubro específico activo — prestador entró con filtro por rubro
+    expect(chipOnId).not.toBe('cat-todos');
+    console.log('[F.1] chip activo:', chipOnId);
   });
 
   test('Feed de prestador no muestra vista de vecino', async ({ page }) => {
