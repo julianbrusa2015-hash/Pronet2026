@@ -442,7 +442,7 @@
     display: flex; align-items: center; justify-content: space-between;
   }
   .urg-txt h4 { font-size: 13px; font-weight: 700; color: #BE123C; }
-  .urg-txt p { font-size: 11px; color: #E11D48; margin-top: 2px; }
+  .urg-txt p { font-size: 11px; color: #BE123C; margin-top: 2px; }
   .urg-btn {
     background: #BE123C; color: white; border: none; border-radius: 10px;
     padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
