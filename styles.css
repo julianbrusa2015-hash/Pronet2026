@@ -109,7 +109,7 @@
   :root {
     --ink:      #0D0F1A;
     --ink2:     #3D4259;
-    --ink3:     #7B82A0;
+    --ink3:     #5E6480;
     --surface:  #F4F5FA;
     --white:    #FFFFFF;
     --blue:     #2B5BFF;
@@ -456,7 +456,7 @@
     position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9;
     display: flex; gap: 10px; align-items: center;
   }
-  .back-btn { cursor: pointer; flex-shrink: 0; }
+  .back-btn { cursor: pointer; flex-shrink: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
   .search-input {
     flex: 1; background: var(--surface); border: 1.5px solid var(--border);
     border-radius: 12px; padding: 9px 14px; font-size: 16px; color: var(--ink);
