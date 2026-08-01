@@ -500,6 +500,7 @@
   }
   .mkt-fab:active { transform: scale(.94); }
   .mkt-empty-zona { padding: 4px 18px 14px; font-size: 12px; color: var(--ink3); }
+  .rep-opt.on { border-color: var(--blue) !important; background: var(--blue-s); color: var(--blue); font-weight: 600; }
 
   /* ── RANKING SCREEN ── */
   .rank-header {

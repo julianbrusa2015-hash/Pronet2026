@@ -3255,6 +3255,7 @@ document.addEventListener('focusin', (e) => {
           </div>
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
           <button class="btn-p" onclick="mktConsultar('${escHTML(p.id)}','${escHTML(nombre)}','${escHTML(p.autor_id)}')">💬 Consultar</button>
+          <div style="text-align:right;margin-top:6px"><span onclick="abrirReportarPub('${escHTML(p.id)}','${escHTML(p.autor_id)}','${escHTML(p.titulo)}')" style="font-size:11px;color:var(--ink3);cursor:pointer">⚑ Reportar</span></div>
         </div>
       </div>`;
   }
@@ -3302,6 +3303,7 @@ document.addEventListener('focusin', (e) => {
   async function mktConsultar(pubId, autorNombre, autorId) {
     if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Consultar', sub: 'Necesitás una cuenta para enviar mensajes.' }); return; }
     if (usuarioActual.id === autorId) { showToast && showToast('No podés consultar tu propia publicación'); return; }
+    chatMercadoContraparteId = autorId;
     // Set up header immediately
     const avEl = document.getElementById('cmk-av');
     const nameEl = document.getElementById('cmk-name');
@@ -3380,13 +3382,24 @@ document.addEventListener('focusin', (e) => {
     inp.value = '';
     agregarBurbujaMercado(txt, new Date().toISOString(), true, null);
     const res = await PronetDB.enviarMensajeMercado(chatMercadoActualId, txt);
-    if (!res.ok) { showToast && showToast('⚠️ No se pudo enviar: ' + res.error); }
+    if (!res.ok) { showToast && showToast('⚠️ No se pudo enviar: ' + res.error); return; }
+    // Notificar al otro participante (best-effort, no bloquea UX)
+    if (chatMercadoContraparteId) {
+      PronetDB.notificar({
+        destino: 'usuario',
+        usuario_id: chatMercadoContraparteId,
+        tipo: 'mensaje_mercado',
+        titulo: '💬 Nueva consulta en ProMarket',
+        cuerpo: txt.slice(0, 100),
+      }).catch(() => {});
+    }
   }
   window.enviarMsgMercado = enviarMsgMercado;
 
   function cerrarChatMercado() {
     if (chatMercadoSuscripcion) { chatMercadoSuscripcion(); chatMercadoSuscripcion = null; }
     chatMercadoActualId = null;
+    chatMercadoContraparteId = null;
     goTo('s-mercado');
   }
   window.cerrarChatMercado = cerrarChatMercado;
@@ -3502,6 +3515,65 @@ document.addEventListener('focusin', (e) => {
     window.location.href = res.init_point;
   }
   window.contratarProMarket = contratarProMarket;
+
+  // ── Reportar publicación ─────────────────────────────────────────────
+  let reportarPubId = null;
+  let reportarAutorId = null;
+
+  function abrirReportarPub(pubId, autorId, titulo) {
+    if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Reportar', sub: 'Necesitás una cuenta para reportar.' }); return; }
+    reportarPubId = pubId;
+    reportarAutorId = autorId;
+    const tit = document.getElementById('reportar-pub-titulo');
+    if (tit) tit.textContent = titulo || 'Publicación';
+    // Reset form
+    document.querySelectorAll('#modal-reportar-pub .rep-opt').forEach(o => o.classList.remove('on'));
+    const det = document.getElementById('rep-detalle');
+    if (det) det.value = '';
+    const m = document.getElementById('modal-reportar-pub');
+    if (m) m.style.display = 'flex';
+  }
+  window.abrirReportarPub = abrirReportarPub;
+
+  function cerrarReportarPub() {
+    const m = document.getElementById('modal-reportar-pub');
+    if (m) m.style.display = 'none';
+    reportarPubId = null; reportarAutorId = null;
+  }
+  window.cerrarReportarPub = cerrarReportarPub;
+
+  function selRepOpt(el) {
+    document.querySelectorAll('#modal-reportar-pub .rep-opt').forEach(o => o.classList.remove('on'));
+    el.classList.add('on');
+  }
+  window.selRepOpt = selRepOpt;
+
+  async function enviarReportePub() {
+    const motivoEl = document.querySelector('#modal-reportar-pub .rep-opt.on');
+    if (!motivoEl) { showToast && showToast('⚠️ Elegí el motivo del reporte'); return; }
+    const motivo = motivoEl.dataset.motivo;
+    const detalle = (document.getElementById('rep-detalle')?.value || '').trim() || null;
+    const btn = document.getElementById('btn-enviar-reporte');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+    try {
+      await PronetDB.crear('denuncias', {
+        denunciante_id: usuarioActual.id,
+        denunciado_id: reportarAutorId || null,
+        publicacion_id: reportarPubId,
+        tipo: 'publicacion',
+        motivo,
+        detalle,
+        estado: 'pendiente',
+      });
+      cerrarReportarPub();
+      showToast && showToast('✅ Reporte enviado. Lo revisaremos en 72 hs.');
+    } catch(e) {
+      showToast && showToast('⚠️ No se pudo enviar el reporte.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Enviar reporte'; }
+    }
+  }
+  window.enviarReportePub = enviarReportePub;
 
   function pmSelCat(chip) {
     document.querySelectorAll('#pm-cat-row .chip').forEach(c => c.classList.remove('on'));
@@ -6919,6 +6991,7 @@ document.addEventListener('focusin', (e) => {
   let chatOrigen = 's-pedidos';
   let chatMercadoActualId = null;
   let chatMercadoSuscripcion = null;
+  let chatMercadoContraparteId = null;
 
   function volverDesdeChat() {
     if (chatSuscripcion) { chatSuscripcion(); chatSuscripcion = null; }
