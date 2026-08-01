@@ -9,3 +9,6 @@ supabase/.temp/
 # Capacitor: www/ es una copia generada del código de la raíz (ver
 # scripts/sync-www.js), no una fuente propia — no versionar.
 www/
+
+# CSS minificado — generado en build, no versionar
+styles.min.css

@@ -1,15 +1,8 @@
-# Optimización automática de assets en el CDN de Netlify
-# Minifica CSS (ahorra ~4 KB), comprime imágenes. JS no se toca para no romper el sourcemap.
-[build.processing]
-  skip_processing = false
-[build.processing.css]
-  bundle = false
-  minify = true
-[build.processing.js]
-  bundle = false
-  minify = false
-[build.processing.html]
-  pretty_urls = false
+[build]
+  command = "npm install && npm run build"
+  publish = "."
+
+# Comprimir imágenes automáticamente (el CSS ya lo minificamos nosotros)
 [build.processing.images]
   compress = true
 
