@@ -1,3 +1,32 @@
+# Service worker: nunca cachear para que las actualizaciones lleguen inmediatamente
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+# JS y CSS: 1 hora — balance entre velocidad y actualizaciones frecuentes
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, must-revalidate"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, must-revalidate"
+
+# Íconos e imágenes: 1 semana (cambian poco)
+[[headers]]
+  for = "/iconos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, immutable"
+
+# HTML principal: siempre revalidar
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
 [[headers]]
   for = "/*"
   [headers.values]
