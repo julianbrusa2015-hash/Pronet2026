@@ -98,6 +98,21 @@ if (window.visualViewport) {
   });
 }
 
+// Bloque 1c: scroll controlado al enfocar un input (Fix iOS layout jump)
+// iOS scrollea el contenedor equivocado al enfocar inputs. Sobreescribimos
+// con un scroll al contenedor .screen.active después de un frame.
+document.addEventListener('focusin', (e) => {
+  const tag = e.target.tagName;
+  if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+  const t = e.target.type;
+  if (['checkbox', 'radio', 'range', 'file', 'hidden'].includes(t)) return;
+  const screen = e.target.closest('.screen.active');
+  if (!screen) return;
+  requestAnimationFrame(() => {
+    e.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+});
+
 // Bloque 2: lógica principal de la aplicación
 // ══════════════════════════════════════════════════════════════════
   // SISTEMA DE FEATURE FLAGS — controla qué funcionalidades están activas
