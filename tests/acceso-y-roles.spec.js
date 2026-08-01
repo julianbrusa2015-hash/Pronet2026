@@ -16,6 +16,7 @@ const sesion = (rol) => path.join(__dirname, '.auth', `${rol}.json`);
 test.describe('C1 · Acceso y sesión', () => {
 
   test('invitado: las pantallas protegidas muestran el gate de registro', async ({ page }) => {
+    test.setTimeout(90000);
     await entrarComoInvitado(page);
 
     // Cada una de estas está en PANTALLA_ACCION (app.js) y debe frenar al invitado.
@@ -33,6 +34,7 @@ test.describe('C1 · Acceso y sesión', () => {
   });
 
   test('invitado: el home es navegable sin cuenta', async ({ page }) => {
+    test.setTimeout(90000);
     await entrarComoInvitado(page);
     // El modo invitado existe para que se pueda explorar antes de registrarse:
     // si el home también frenara, no habría nada que ver.

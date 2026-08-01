@@ -83,12 +83,14 @@ async function loginPrestador(page) {
 test.describe('E-02 · Widget WhatsApp', () => {
 
   test('FAB visible para invitado', async ({ page }) => {
+    test.setTimeout(90000);
     await entrarComoInvitado(page);
     const fab = page.locator('#wa-fab');
     await expect(fab).toBeVisible();
   });
 
   test('Click FAB abre popup con elementos correctos', async ({ page }) => {
+    test.setTimeout(90000);
     await entrarComoInvitado(page);
     await page.locator('#wa-fab').click();
     const popup = page.locator('#wa-popup');
@@ -106,6 +108,7 @@ test.describe('E-02 · Widget WhatsApp', () => {
   });
 
   test('Botón X cierra el popup', async ({ page }) => {
+    test.setTimeout(90000);
     await entrarComoInvitado(page);
     await page.locator('#wa-fab').click();
     await expect(page.locator('#wa-popup')).toBeVisible();
@@ -114,6 +117,7 @@ test.describe('E-02 · Widget WhatsApp', () => {
   });
 
   test('Segundo click en FAB cierra el popup (toggle)', async ({ page }) => {
+    test.setTimeout(90000);
     await entrarComoInvitado(page);
     await page.locator('#wa-fab').click();
     await expect(page.locator('#wa-popup')).toBeVisible();

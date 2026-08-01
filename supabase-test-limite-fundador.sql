@@ -44,10 +44,15 @@ BEGIN
     );
   END IF;
 
-  -- Insertar las propuestas que faltan para llegar a 10 (deben pasar)
+  -- Insertar las propuestas que faltan para llegar a 10 (deben pasar).
+  -- Los timestamps se espacían 2 horas dentro del mes actual para que el
+  -- trigger de rate-limit (ventana corta) no dispare durante el test.
   FOR i IN 1..v_faltante LOOP
-    INSERT INTO propuestas (prestador_id, pedido_id, precio, plazo, mensaje, estado)
-    VALUES (p_prestador_id, v_pedidos[i], 1, '1 dia', 'TEST_GF_' || i, 'pendiente');
+    INSERT INTO propuestas (prestador_id, pedido_id, precio, plazo, mensaje, estado, creado)
+    VALUES (p_prestador_id, v_pedidos[i], 1, '1 dia', 'TEST_GF_' || i, 'pendiente',
+            date_trunc('month', now() at time zone 'America/Argentina/Buenos_Aires')
+              at time zone 'America/Argentina/Buenos_Aires'
+              + (i * interval '2 hours'));
   END LOOP;
 
   -- La propuesta siguiente (la 11) DEBE ser bloqueada

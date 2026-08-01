@@ -24,6 +24,7 @@ test.describe('GF-1 · Grandfathering — contrato de API y estado en DB', () =>
 
   test('obtenerSuscripcion() devuelve es_fundador_activo como booleano', async ({ page }) => {
     await abrir(page);
+    await page.waitForFunction(() => typeof window.PronetDB?.obtenerSuscripcion === 'function', { timeout: 10000 });
     const suscripcion = await page.evaluate(async () => {
       return await window.PronetDB.obtenerSuscripcion();
     });
@@ -32,6 +33,7 @@ test.describe('GF-1 · Grandfathering — contrato de API y estado en DB', () =>
 
   test('prestador_test tiene es_fundador_activo = true en DB', async ({ page }) => {
     await abrir(page);
+    await page.waitForFunction(() => typeof window.PronetDB?.obtenerSuscripcion === 'function', { timeout: 10000 });
     const { esFundador } = await page.evaluate(async () => {
       const s = await window.PronetDB.obtenerSuscripcion();
       return { esFundador: s.es_fundador_activo };
