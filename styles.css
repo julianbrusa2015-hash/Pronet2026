@@ -1166,8 +1166,14 @@
   #s-nuevo-pedido > div { min-height: 100%; display: flex; flex-direction: column; }
   #s-nuevo-pedido > div > .pub-footer { margin-top: auto; }
 
-  /* Detalle pedido: sin espacio gris bajo el footer */
-  #s-detalle-pedido { padding-bottom: 0; }
+  /* Detalle pedido: header fijo arriba, footer fijo abajo, contenido scrollea */
+  #s-detalle-pedido { overflow: hidden; padding-bottom: 0; }
+  #s-detalle-pedido .nprop-header { position: static; }
+  #s-detalle-pedido .pd-scroll-body {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
 
   /* Estado propuesta: header fijo arriba, resto scrollea abajo */
   #s-estado-propuesta { overflow: hidden; }
