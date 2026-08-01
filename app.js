@@ -3440,12 +3440,14 @@ document.addEventListener('focusin', (e) => {
   window.mktAbrirHilo = mktAbrirHilo;
 
   // ── Mis publicaciones ProMarket ──────────────────────────────────────
+  let mktMisPubs = [];
 
   async function renderMisPublicaciones() {
     const lista = document.getElementById('mis-pubs-lista');
     if (!lista) return;
     lista.innerHTML = '<div style="padding:32px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
-    const pubs = await PronetDB.listarMisPublicaciones().catch(() => []);
+    mktMisPubs = await PronetDB.listarMisPublicaciones().catch(() => []);
+    const pubs = mktMisPubs;
     if (!pubs.length) {
       lista.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--ink3)">Todavía no publicaste nada.<br><span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="abrirPublicarMercado()">¡Publicá ahora!</span></div>';
       return;
@@ -3478,6 +3480,7 @@ document.addEventListener('focusin', (e) => {
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             ${estadoBadge}
             ${accionBtn}
+            <button onclick="editarMiPublicacion('${p.id}')" style="background:none;border:1.5px solid var(--blue);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Inter',sans-serif">Editar</button>
           </div>
         </div>
       </div>`;
@@ -3537,6 +3540,15 @@ document.addEventListener('focusin', (e) => {
 
   // ── Pantalla publicar en ProMarket ────────────────────────────────
   let pmFotoArchivo = null;
+  let pmFotoUrlActual = null; // foto existente al editar
+  let pmEditandoId = null;   // null = nueva pub, string = editar
+
+  function pmCerrar() {
+    goTo(pmEditandoId ? 's-mis-publicaciones' : 's-mercado');
+    pmEditandoId = null;
+    pmFotoUrlActual = null;
+  }
+  window.pmCerrar = pmCerrar;
 
   function abrirPublicarMercado() {
     if (!usuarioActual) {
@@ -3547,6 +3559,8 @@ document.addEventListener('focusin', (e) => {
       abrirModalProMarketSub();
       return;
     }
+    pmEditandoId = null;
+    pmFotoUrlActual = null;
     // Limpiar el form antes de abrir
     pmFotoArchivo = null;
     const prev = document.getElementById('pm-foto-preview');
@@ -3561,9 +3575,46 @@ document.addEventListener('focusin', (e) => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     document.querySelectorAll('#pm-cat-row .chip').forEach((c,i) => c.classList.toggle('on', i===0));
+    const tit = document.getElementById('pm-screen-titulo'); if (tit) tit.textContent = 'Nueva publicación';
+    const btn = document.getElementById('pm-submit-btn'); if (btn) btn.textContent = 'Publicar';
     goTo('s-pub-mercado');
   }
   window.abrirPublicarMercado = abrirPublicarMercado;
+
+  async function editarMiPublicacion(id) {
+    const pub = mktMisPubs.find(p => p.id === id);
+    if (!pub) return;
+    pmEditandoId = id;
+    pmFotoUrlActual = pub.foto_url || null;
+    pmFotoArchivo = null;
+    // Precargar form
+    const inp = document.getElementById('pm-foto-input');
+    if (inp) inp.value = '';
+    const prev = document.getElementById('pm-foto-preview');
+    if (prev) {
+      if (pub.foto_url) {
+        prev.innerHTML = `<img src="${escHTML(pub.foto_url)}" style="width:100%;height:100%;object-fit:cover">`;
+      } else {
+        prev.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div style="font-size:13px;font-weight:600;color:var(--blue)">Tocá para cambiar foto</div>
+          <div style="font-size:11px;color:var(--ink3)">Formato 4:5 · máx 5 MB</div>`;
+      }
+    }
+    ['pm-titulo','pm-desc','pm-precio'].forEach(fid => {
+      const el = document.getElementById(fid);
+      if (!el) return;
+      if (fid === 'pm-titulo') el.value = pub.titulo || '';
+      else if (fid === 'pm-desc') el.value = pub.descripcion || '';
+      else if (fid === 'pm-precio') el.value = pub.precio != null ? pub.precio : '';
+    });
+    document.querySelectorAll('#pm-cat-row .chip').forEach(c => {
+      c.classList.toggle('on', c.dataset.cat === pub.categoria);
+    });
+    const tit = document.getElementById('pm-screen-titulo'); if (tit) tit.textContent = 'Editar publicación';
+    const btn = document.getElementById('pm-submit-btn'); if (btn) btn.textContent = 'Guardar';
+    goTo('s-pub-mercado');
+  }
+  window.editarMiPublicacion = editarMiPublicacion;
 
   function abrirModalProMarketSub() {
     const m = document.getElementById('modal-promarket-sub');
@@ -3678,37 +3729,47 @@ document.addEventListener('focusin', (e) => {
     const precio = document.getElementById('pm-precio')?.value;
     const catEl  = document.querySelector('#pm-cat-row .chip.on');
     const categoria = catEl?.dataset.cat || 'productos';
+    const editando = !!pmEditandoId;
 
     if (!titulo) { showToast && showToast('⚠️ Escribí un título para tu publicación'); return; }
 
     btn.disabled = true;
-    btn.textContent = 'Publicando...';
+    btn.textContent = editando ? 'Guardando...' : 'Publicando...';
 
-    let foto_url = null;
+    let foto_url = editando ? pmFotoUrlActual : null;
     if (pmFotoArchivo) {
       const res = await PronetDB.subirFotoMercado(pmFotoArchivo, usuarioActual.id);
       if (!res.ok) {
         showToast && showToast('⚠️ No se pudo subir la foto: ' + res.error);
         btn.disabled = false;
-        btn.textContent = 'Publicar';
+        btn.textContent = editando ? 'Guardar' : 'Publicar';
         return;
       }
       foto_url = res.url;
     }
 
-    const zona = usuarioActual.zona || null;
-    const res  = await PronetDB.crearPublicacion({ categoria, titulo, descripcion: desc || null,
-                                                   precio: precio ? Number(precio) : null,
-                                                   foto_url, zona });
+    let res;
+    if (editando) {
+      res = await PronetDB.editarPublicacion(pmEditandoId, { categoria, titulo, descripcion: desc || null,
+                                                              precio: precio ? Number(precio) : null, foto_url });
+    } else {
+      const zona = usuarioActual.zona || null;
+      res = await PronetDB.crearPublicacion({ categoria, titulo, descripcion: desc || null,
+                                             precio: precio ? Number(precio) : null, foto_url, zona });
+    }
+
     btn.disabled = false;
-    btn.textContent = 'Publicar';
+    btn.textContent = editando ? 'Guardar' : 'Publicar';
 
     if (!res.ok) {
-      showToast && showToast('⚠️ No se pudo publicar: ' + res.error);
+      showToast && showToast('⚠️ No se pudo ' + (editando ? 'guardar' : 'publicar') + ': ' + res.error);
       return;
     }
-    showToast && showToast('✅ ¡Publicación creada!');
-    goTo('s-mercado');
+    showToast && showToast(editando ? '✅ ¡Publicación actualizada!' : '✅ ¡Publicación creada!');
+    const destino = editando ? 's-mis-publicaciones' : 's-mercado';
+    pmEditandoId = null;
+    pmFotoUrlActual = null;
+    goTo(destino);
   }
   window.pmPublicar = pmPublicar;
 

@@ -580,6 +580,18 @@ const PronetDB = (() => {
       return { ok: true, id: data.id };
     },
 
+    /** Edita campos de una publicación propia. foto_url=undefined la deja sin cambios. */
+    async editarPublicacion(id, { categoria, titulo, descripcion, precio, foto_url }) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
+      const campos = { categoria, titulo, descripcion: descripcion || null, precio: precio ?? null };
+      if (foto_url !== undefined) campos.foto_url = foto_url;
+      const { error } = await sb.from('publicaciones').update(campos).eq('id', id).eq('autor_id', uid);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+
     /** Lista todos los hilos de chat recibidos como autor de publicaciones. */
     async listarConsultasRecibidas() {
       if (!remoto) return [];
