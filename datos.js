@@ -580,6 +580,23 @@ const PronetDB = (() => {
       return { ok: true, id: data.id };
     },
 
+    /** Lista todos los hilos de chat recibidos como autor de publicaciones. */
+    async listarConsultasRecibidas() {
+      if (!remoto) return [];
+      const uid = await this.usuarioIdActual();
+      if (!uid) return [];
+      const { data: chats, error } = await sb.from('chats_mercado')
+        .select('id, ultimo_mensaje, hora_ultimo, publicacion_id, consultante_id, publicaciones(titulo)')
+        .eq('autor_id', uid)
+        .order('hora_ultimo', { ascending: false, nullsFirst: false });
+      if (error) { console.warn('[PronetDB] listarConsultasRecibidas', error.message); return []; }
+      if (!chats || !chats.length) return [];
+      const ids = [...new Set(chats.map(c => c.consultante_id))];
+      const { data: perfiles } = await sb.from('perfiles').select('id, nombre, foto_url').in('id', ids);
+      const pm = Object.fromEntries((perfiles || []).map(p => [p.id, p]));
+      return chats.map(c => ({ ...c, consultante: pm[c.consultante_id] || {} }));
+    },
+
     /** Lista todas las publicaciones propias (activas e inactivas). */
     async listarMisPublicaciones() {
       if (!remoto) return [];
