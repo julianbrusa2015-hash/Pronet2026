@@ -3640,11 +3640,12 @@ document.addEventListener('focusin', (e) => {
     await cargarMensajesMercado();
     if (chatMercadoSuscripcion) chatMercadoSuscripcion();
     chatMercadoSuscripcion = PronetDB.suscribir('mensajes_mercado', (payload) => {
-      if (payload.new && payload.new.chat_id === chatMercadoActualId) {
-        if (payload.new.autor_id !== usuarioActual.id) {
-          agregarBurbujaMercado(payload.new.texto, payload.new.creado, false, payload.new.id);
-          PronetDB.marcarLeidosMercado(chatMercadoActualId);
-        }
+      if (!payload.new || payload.new.chat_id !== chatMercadoActualId) return;
+      if (payload.eventType === 'UPDATE' || payload.new.tipo === 'reserva') {
+        cargarMensajesMercado();
+      } else if (payload.new.autor_id !== usuarioActual.id) {
+        agregarBurbujaMercado(payload.new, false);
+        PronetDB.marcarLeidosMercado(chatMercadoActualId);
       }
     });
     PronetDB.marcarLeidosMercado(chatMercadoActualId);
@@ -3658,27 +3659,88 @@ document.addEventListener('focusin', (e) => {
     body.innerHTML = '';
     if (!mensajes.length) {
       body.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">👋 ¡Primer mensaje! Preguntá lo que quieras.</div>';
+      sincronizarBotonReserva(mensajes);
       return;
     }
-    mensajes.forEach(m => {
-      agregarBurbujaMercado(m.texto, m.creado, m.autor_id === usuarioActual.id, m.id);
-    });
+    mensajes.forEach(m => agregarBurbujaMercado(m, m.autor_id === usuarioActual.id));
     body.scrollTop = body.scrollHeight;
+    sincronizarBotonReserva(mensajes);
   }
 
-  function agregarBurbujaMercado(texto, creado, esPropio, msgId) {
+  function sincronizarBotonReserva(mensajes) {
+    const btn = document.getElementById('cmk-reservar-btn');
+    if (!btn) return;
+    const reservaActiva = mensajes.find(m => m.tipo === 'reserva' && (m.metadata?.estado === 'pendiente' || m.metadata?.estado === 'confirmada'));
+    btn.style.display = reservaActiva ? 'none' : '';
+  }
+
+  function formatearFechaReserva(fecha, hora) {
+    if (!fecha) return '';
+    const [y, mo, d] = fecha.split('-');
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const label = `${parseInt(d)} ${meses[parseInt(mo)-1]} ${y}`;
+    return hora ? `${label} · ${hora} hs` : label;
+  }
+
+  function agregarBurbujaMercado(msg, esPropio) {
+    // Compatibilidad con llamadas antiguas (texto, creado, esPropio, msgId)
+    if (typeof msg === 'string') {
+      const [texto, creado, _esPropio, msgId] = [msg, arguments[1], arguments[2], arguments[3]];
+      msg = { texto, creado, tipo: 'texto', id: msgId };
+      esPropio = _esPropio;
+    }
     const body = document.getElementById('cmk-body');
     if (!body) return;
-    if (msgId && body.querySelector('[data-msg-id="' + msgId + '"]')) return;
+    if (msg.id && body.querySelector('[data-msg-id="' + msg.id + '"]')) return;
     const placeholder = body.querySelector('div[style*="text-align:center"]');
     if (placeholder) placeholder.remove();
-    const hora = new Date(creado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
+
+    if (msg.tipo === 'reserva') {
+      const meta   = msg.metadata || {};
+      const estado = meta.estado || 'pendiente';
+      const fechaStr = formatearFechaReserva(meta.fecha, meta.hora);
+      const esPropioReserva = esPropio;
+
+      const colores = { pendiente: '#2B5BFF', confirmada: '#16a34a', cancelada: '#9ca3af' };
+      const color = colores[estado] || '#2B5BFF';
+
+      let acciones = '';
+      if (estado === 'pendiente' && !esPropioReserva) {
+        acciones = `<div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="responderReserva('${msg.id}','confirmada')"
+            style="flex:1;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer">Confirmar</button>
+          <button onclick="responderReserva('${msg.id}','cancelada')"
+            style="flex:1;background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer">Rechazar</button>
+        </div>`;
+      } else if (estado === 'pendiente' && esPropioReserva) {
+        acciones = `<div style="margin-top:8px;font-size:12px;color:var(--ink3)">Esperando respuesta...</div>`;
+      } else if (estado === 'confirmada') {
+        acciones = `<button onclick="cancelarReserva('${msg.id}')"
+          style="margin-top:10px;width:100%;background:none;border:1.5px solid #dc2626;color:#dc2626;border-radius:8px;padding:7px;font-size:13px;font-weight:600;cursor:pointer">Cancelar reserva</button>`;
+      }
+
+      const etiquetas = { pendiente: '📅 Propuesta de reserva', confirmada: '✅ Reserva confirmada', cancelada: '❌ Reserva cancelada' };
+
+      const div = document.createElement('div');
+      div.style.cssText = 'margin:8px 14px';
+      if (msg.id) div.dataset.msgId = msg.id;
+      div.innerHTML = `<div style="border:1.5px solid ${color};border-radius:12px;padding:14px 14px 12px;background:var(--surface)">
+        <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:6px">${etiquetas[estado] || etiquetas.pendiente}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink)">${escHTML(fechaStr)}</div>
+        ${acciones}
+      </div>`;
+      body.appendChild(div);
+      body.scrollTop = body.scrollHeight;
+      return;
+    }
+
+    const hora = new Date(msg.creado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
     const div = document.createElement('div');
     div.className = 'msg ' + (esPropio ? 'out' : 'in');
-    if (msgId) div.dataset.msgId = msgId;
+    if (msg.id) div.dataset.msgId = msg.id;
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
-    bubble.textContent = texto;
+    bubble.textContent = msg.texto;
     const timeEl = document.createElement('div');
     timeEl.className = 'msg-time';
     timeEl.textContent = hora;
@@ -3709,6 +3771,60 @@ document.addEventListener('focusin', (e) => {
   }
   window.enviarMsgMercado = enviarMsgMercado;
 
+  function abrirModalReserva() {
+    const modal = document.getElementById('modal-reserva');
+    if (!modal) return;
+    // Poner fecha mínima = hoy
+    const hoy = new Date().toISOString().slice(0, 10);
+    const fechaInp = document.getElementById('reserva-fecha');
+    if (fechaInp) { fechaInp.min = hoy; fechaInp.value = ''; }
+    const horaInp = document.getElementById('reserva-hora');
+    if (horaInp) horaInp.value = '';
+    modal.style.display = '';
+  }
+  window.abrirModalReserva = abrirModalReserva;
+
+  function cerrarModalReserva() {
+    const modal = document.getElementById('modal-reserva');
+    if (modal) modal.style.display = 'none';
+  }
+  window.cerrarModalReserva = cerrarModalReserva;
+
+  async function confirmarEnvioReserva() {
+    const fecha = document.getElementById('reserva-fecha')?.value;
+    const hora  = document.getElementById('reserva-hora')?.value;
+    if (!fecha) { showToast('⚠️ Elegí una fecha'); return; }
+    if (!hora)  { showToast('⚠️ Elegí una hora'); return; }
+    cerrarModalReserva();
+    const res = await PronetDB.enviarReservaMercado(chatMercadoActualId, fecha, hora);
+    if (!res.ok) { showToast('⚠️ No se pudo enviar la reserva'); return; }
+    await cargarMensajesMercado();
+    if (chatMercadoContraparteId) {
+      PronetDB.notificar({
+        destino: 'usuario',
+        usuario_id: chatMercadoContraparteId,
+        tipo: 'reserva_mercado',
+        titulo: '📅 Propuesta de reserva',
+        cuerpo: formatearFechaReserva(fecha, hora),
+      }).catch(() => {});
+    }
+  }
+  window.confirmarEnvioReserva = confirmarEnvioReserva;
+
+  async function responderReserva(mensajeId, accion) {
+    const res = await PronetDB.actualizarEstadoReserva(mensajeId, accion);
+    if (!res.ok) { showToast('⚠️ No se pudo actualizar la reserva'); return; }
+    await cargarMensajesMercado();
+  }
+  window.responderReserva = responderReserva;
+
+  async function cancelarReserva(mensajeId) {
+    const res = await PronetDB.actualizarEstadoReserva(mensajeId, 'cancelada');
+    if (!res.ok) { showToast('⚠️ No se pudo cancelar la reserva'); return; }
+    await cargarMensajesMercado();
+  }
+  window.cancelarReserva = cancelarReserva;
+
   function cerrarChatMercado() {
     if (chatMercadoSuscripcion) { chatMercadoSuscripcion(); chatMercadoSuscripcion = null; }
     chatMercadoActualId = null;
@@ -3738,11 +3854,12 @@ document.addEventListener('focusin', (e) => {
     await cargarMensajesMercado();
     if (chatMercadoSuscripcion) chatMercadoSuscripcion();
     chatMercadoSuscripcion = PronetDB.suscribir('mensajes_mercado', (payload) => {
-      if (payload.new && payload.new.chat_id === chatMercadoActualId) {
-        if (payload.new.autor_id !== usuarioActual.id) {
-          agregarBurbujaMercado(payload.new.texto, payload.new.creado, false, payload.new.id);
-          PronetDB.marcarLeidosMercado(chatMercadoActualId);
-        }
+      if (!payload.new || payload.new.chat_id !== chatMercadoActualId) return;
+      if (payload.eventType === 'UPDATE' || payload.new.tipo === 'reserva') {
+        cargarMensajesMercado();
+      } else if (payload.new.autor_id !== usuarioActual.id) {
+        agregarBurbujaMercado(payload.new, false);
+        PronetDB.marcarLeidosMercado(chatMercadoActualId);
       }
     });
     PronetDB.marcarLeidosMercado(chatMercadoActualId);

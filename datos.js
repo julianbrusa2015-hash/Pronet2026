@@ -766,6 +766,33 @@ const PronetDB = (() => {
       return { ok: true, mensaje: data };
     },
 
+    /** Envía una propuesta de reserva en un chat de mercado. */
+    async enviarReservaMercado(chatId, fecha, hora) {
+      if (!remoto) return { ok: false };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false };
+      const metadata = { fecha, hora, estado: 'pendiente' };
+      const { data, error } = await sb.from('mensajes_mercado')
+        .insert({ chat_id: chatId, autor_id: uid, texto: `Reserva: ${fecha} ${hora}`, tipo: 'reserva', metadata })
+        .select().single();
+      if (error) { console.warn('[PronetDB] enviarReservaMercado', error.message); return { ok: false, error: error.message }; }
+      await sb.from('chats_mercado').update({
+        ultimo_mensaje: `📅 Propuesta de reserva`,
+        hora_ultimo: new Date().toISOString(),
+      }).eq('id', chatId);
+      return { ok: true, mensaje: data };
+    },
+
+    /** Actualiza el estado de una reserva (pendiente → confirmada | cancelada). */
+    async actualizarEstadoReserva(mensajeId, nuevoEstado) {
+      if (!remoto) return { ok: false };
+      const { data } = await sb.from('mensajes_mercado').select('metadata').eq('id', mensajeId).single();
+      const meta = { ...(data?.metadata || {}), estado: nuevoEstado };
+      const { error } = await sb.from('mensajes_mercado').update({ metadata: meta }).eq('id', mensajeId);
+      if (error) { console.warn('[PronetDB] actualizarEstadoReserva', error.message); return { ok: false }; }
+      return { ok: true };
+    },
+
     /** Marca como leídos los mensajes de un chat de mercado que no son del usuario. */
     async marcarLeidosMercado(chatId) {
       if (!remoto) return;
