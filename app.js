@@ -4252,7 +4252,7 @@ document.addEventListener('focusin', (e) => {
   }
 
   // CTA "Quiero ofrecer mis servicios": maneja invitados y vecinos logueados
-  async function quieroSerPrestador() {
+  function quieroSerPrestador() {
     if (!usuarioActual) {
       // Invitado → registro con tipo prestador pre-seleccionado
       const radioP = document.querySelector('input[name="reg-tipo"][value="prestador"]');
@@ -4261,13 +4261,47 @@ document.addEventListener('focusin', (e) => {
       mostrarFormRegistro();
       return;
     }
+    // Vecino logueado → mostrar confirmación antes de habilitar doble perfil
+    abrirModalConfirmPrestador();
+  }
+
+  function abrirModalConfirmPrestador() {
+    let m = document.getElementById('modal-confirm-prestador');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'modal-confirm-prestador';
+      m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;align-items:flex-end;justify-content:center';
+      m.innerHTML = `
+        <div style="background:white;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;box-shadow:0 -4px 24px rgba(0,0,0,.15)">
+          <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px"></div>
+          <div style="font-size:22px;margin-bottom:10px;text-align:center">🔧</div>
+          <div style="font-family:'Sora',sans-serif;font-size:17px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:8px">Activar perfil de prestador</div>
+          <div style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:20px;text-align:center">
+            Se habilitará el <strong>doble perfil</strong>: vas a poder alternar entre tu rol de vecino y el de prestador desde Mi Perfil.<br><br>
+            Como prestador podés recibir pedidos de servicio, publicar tu disponibilidad y aparecer en el mapa del barrio.
+          </div>
+          <button onclick="confirmarActivarPrestador()" style="width:100%;padding:14px;background:var(--blue);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:10px">Activar doble perfil</button>
+          <button onclick="cerrarModalConfirmPrestador()" style="width:100%;padding:12px;background:none;color:var(--ink3);border:none;font-size:14px;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
+        </div>`;
+      document.body.appendChild(m);
+    }
+    m.style.display = 'flex';
+  }
+  function cerrarModalConfirmPrestador() {
+    const m = document.getElementById('modal-confirm-prestador');
+    if (m) m.style.display = 'none';
+  }
+  window.cerrarModalConfirmPrestador = cerrarModalConfirmPrestador;
+
+  async function confirmarActivarPrestador() {
+    cerrarModalConfirmPrestador();
+    if (!window._sb) { showToast('Sin conexión'); return; }
     // Vecino logueado sin perfil prestador → sumar el rol de prestador.
     // NO se toca `tipo`: antes esto hacía update({tipo:'prestador'}) y como
     // tieneDoblePerfil() exige tipo!=='prestador', el vecino perdía su vista
     // de vecino para siempre — no podía volver a publicar pedidos ni le
     // aparecía el toggle. El rol de prestador lo habilita `prestador_id`,
     // que es lo que esPrestador() mira, así que queda con doble perfil.
-    if (!window._sb) { showToast('Sin conexión'); return; }
     const res = await PronetDB.asegurarFichaPrestador();
     if (!res.ok) {
       showToast('No se pudo activar el perfil de prestador' + (res.error ? ': ' + res.error : ''));
@@ -4278,6 +4312,7 @@ document.addEventListener('focusin', (e) => {
     showToast('Perfil de prestador activado. Podés alternar entre vecino y prestador desde Mi Perfil.');
     goTo('s-edit-perfil');
   }
+  window.confirmarActivarPrestador = confirmarActivarPrestador;
 
   async function loginWith(method, ev) {
     const btn = ev && ev.target ? ev.target.closest('button') : null;
