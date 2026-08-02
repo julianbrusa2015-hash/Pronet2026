@@ -2525,7 +2525,7 @@ document.addEventListener('focusin', (e) => {
     'El Naudir':        { lat: -34.3050, lng: -58.8050 },
     'CUBE':             { lat: -34.3180, lng: -58.7720 },
     'El Cazador':       { lat: -34.3900, lng: -58.8230 },
-    'Nordelta':         { lat: -34.4050, lng: -58.6690 },
+    'Nordelta':         { lat: -34.4000, lng: -58.6500 }, // Tigre, no Escobar — coordenada real del centro de Nordelta
     'Escobar Centro':   { lat: -34.3494, lng: -58.7938 },
     'Escobar':          { lat: -34.3486, lng: -58.8100 },
     'Matheu / Garín':   { lat: -34.4420, lng: -58.7050 },

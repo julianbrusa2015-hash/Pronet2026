@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v89'; // v89: aceptación de T&C queda guardada en perfiles.tyc_aceptado_en
+const CACHE_VERSION = 'pronet-v90'; // v90: coordenada de Nordelta corregida (era Escobar, es Tigre)
 
 const SHELL = [
   './',
