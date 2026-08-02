@@ -273,20 +273,28 @@ test.describe('PM-6 · Contacto directo', () => {
     expect(r).toBeNull();
   });
 
-  test('un SELECT directo a perfiles no trae teléfonos ajenos', async ({ page }) => {
+  test('perfiles es legible (columnas públicas) pero el teléfono no', async ({ page }) => {
     await abrir(page);
-    // Defensa en profundidad: aunque perfiles es legible por cualquier
-    // autenticado, el teléfono no debe poder cosecharse en masa desde el
-    // cliente. Este test documenta el estado real para que un cambio de
-    // policy que lo abra sea visible en CI.
-    const r = await page.evaluate(async () => {
-      const { data } = await window._sb.from('perfiles').select('id, telefono').limit(20);
-      const propio = (await window._sb.auth.getUser()).data.user?.id;
-      const ajenosConTel = (data || []).filter(p => p.id !== propio && p.telefono);
-      return { total: (data || []).length, ajenosConTel: ajenosConTel.length };
+    // Defensa en profundidad, en dos partes:
+    // 1) las columnas públicas (nombre, zona) sí se leen — el feed, los
+    //    comentarios y "mis consultas" dependen de esto.
+    // 2) pedir 'telefono' explícitamente en el mismo select falla del todo
+    //    (PostgREST rechaza la query completa si pide una columna sin
+    //    grant, no la omite en silencio) — así se prueba que no es
+    //    cosechable en masa, no que "no vino" por otro motivo.
+    const publicas = await page.evaluate(async () => {
+      const { data, error } = await window._sb.from('perfiles').select('id, nombre').limit(20);
+      return { total: (data || []).length, error: error?.message || null };
     });
-    expect(r.total).toBeGreaterThan(0); // la lectura de perfiles sí funciona
-    expect(r.ajenosConTel, 'los teléfonos ajenos no deberían ser cosechables').toBe(0);
+    expect(publicas.error).toBeNull();
+    expect(publicas.total).toBeGreaterThan(0);
+
+    const conTelefono = await page.evaluate(async () => {
+      const { data, error } = await window._sb.from('perfiles').select('id, telefono').limit(20);
+      return { huboError: !!error, trajoFilas: (data || []).length > 0 };
+    });
+    expect(conTelefono.huboError, 'pedir teléfono en un select directo debería ser rechazado').toBe(true);
+    expect(conTelefono.trajoFilas).toBe(false);
   });
 
   test('el botón de contacto arranca oculto', async ({ page }) => {
