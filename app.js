@@ -1223,14 +1223,12 @@ document.addEventListener('focusin', (e) => {
     if (zonaActual) filtros.zona = zonaParaFiltro();
     let prestadores = await PronetDB.listarPrestadores(filtros);
     // Aplicar boost por plan y re-ordenar. El privilegio de ranking sale de
-    // `desempate` en PRONET_CONFIG.PLANES: 'primero' (Elite) > true (Pro) > sin boost.
+    // `desempate` en PRONET_CONFIG.PLANES: true (Pro) > sin boost.
     const _boostPro    = window.PRONET_CONFIG?.BOOST_PRO     || 1.4;
-    const _boostPrimero = window.PRONET_CONFIG?.BOOST_EMPRESA || 1.6;
     const _boostDePlan = (p) => {
       // Sin plan propio no hereda nada: getPlanConfig() cae a planActual (el del
       // usuario que mira), así que sólo lo consultamos si el prestador tiene plan.
       const des = p.plan ? getPlanConfig(p.plan).desempate : false;
-      if (des === 'primero') return _boostPrimero;
       if (des || p.premium)  return _boostPro;
       return 1.0;
     };
@@ -4598,7 +4596,7 @@ document.addEventListener('focusin', (e) => {
   // SESIÓN Y GATING (Opción C: invitado + registro en puntos de conversión)
   // ══════════════════════════════════════════════════════════════════
   let usuarioActual = null; // null = invitado
-  let planActual         = 'base'; // 'base' | 'plus' | 'pro' | 'elite'
+  let planActual         = 'base'; // 'base' | 'plus' | 'pro'
   let periodoActual      = 'anual'; // 'mensual' | 'anual'
   let venceActual        = null;   // ISO string o null
   let esFundadorActual   = false;  // true si el prestador tiene grandfathering activo
@@ -4874,7 +4872,7 @@ document.addEventListener('focusin', (e) => {
   window.toggleModoRol = toggleModoRol;
 
   function esPro() {
-    return planActual === 'plus' || planActual === 'pro' || planActual === 'elite';
+    return planActual === 'plus' || planActual === 'pro';
   }
 
   function getPlanConfig(id) {
@@ -4883,15 +4881,14 @@ document.addEventListener('focusin', (e) => {
   }
 
   /** Badge del plan de un prestador para las cards de búsqueda.
-   *  Sólo los planes con badge_busqueda lo muestran (hoy Pro y Elite).
+   *  Sólo los planes con badge_busqueda lo muestran (hoy Pro).
    *  Recibe el plan del prestador, no el del usuario que mira. */
   function badgePlanPrestador(plan) {
     if (!plan) return '';
     const planes = (window.PRONET_CONFIG || {}).PLANES || [];
     const cfg = planes.find(p => p.id === plan);
     if (!cfg || !cfg.badge_busqueda) return '';
-    const clase = plan === 'elite' ? 'b-elite' : 'b-pro';
-    return `<span class="badge ${clase}">${cfg.emoji} ${escHTML(cfg.badge_label)}</span>`;
+    return `<span class="badge b-pro">${cfg.emoji} ${escHTML(cfg.badge_label)}</span>`;
   }
 
   // Config global de la app (tabla config_app). Se carga al iniciar.
@@ -4959,8 +4956,7 @@ document.addEventListener('focusin', (e) => {
         // usuario: a un Pro no le sirve que le ofrezcan lo que ya tiene.
         txt.textContent =
           actual === 0 ? 'Tu plan no incluye analítica. Con Plus ves tus vistas al perfil y tu reputación del mes.'
-        : actual === 1 ? 'Con Pro sumás ranking por zona, embudo de contacto y de dónde vienen tus visitas.'
-        :                'Con Elite podés descargar tu historial de trabajos en CSV, con montos y calificaciones.';
+        :                'Con Pro sumás ranking por zona, embudo de contacto, de dónde vienen tus visitas y exportar tu historial en CSV.';
       }
     }
   }
@@ -4977,7 +4973,7 @@ document.addEventListener('focusin', (e) => {
    *  prestador necesita de verdad — no las métricas de visitas. */
   async function exportarHistorialCSV() {
     if (tierEstadisticas() !== 'export') {
-      showToast && showToast('⚠️ La exportación está disponible en el plan Elite.');
+      showToast && showToast('⚠️ La exportación está disponible en el plan Pro.');
       return;
     }
     const btn = document.getElementById('an-export-btn');
@@ -5049,7 +5045,7 @@ document.addEventListener('focusin', (e) => {
     if (chk) chk.checked = on;
     if (est) {
       est.textContent = on
-        ? 'Activados · los usuarios pueden contratar Plus, Pro y Elite'
+        ? 'Activados · los usuarios pueden contratar Plus y Pro'
         : 'Desactivados · etapa fundadora, solo Base con límites de Plus';
       est.style.color = on ? 'var(--green)' : 'var(--ink3)';
     }
@@ -5173,7 +5169,7 @@ document.addEventListener('focusin', (e) => {
 
   function reflejarPlan() {
     const cfg = getPlanConfig(planActual);
-    const ids = ['base','plus','pro','elite'];
+    const ids = ['base','plus','pro'];
     const pagosOn = planesPagosActivos();
 
     // Prelanzamiento: ocultar los planes pagos y el acceso a Suscripción.
@@ -5199,7 +5195,7 @@ document.addEventListener('focusin', (e) => {
         btn.className   = 'pc-cta active-plan';
         btn.textContent = '✓ Tu plan actual';
         btn.onclick     = null;
-        if (id !== 'elite') btn.style.cssText = '';
+        btn.style.cssText = '';
         if (card) card.classList.add('current');
       } else {
         if (card) card.classList.remove('current');
@@ -5211,8 +5207,7 @@ document.addEventListener('focusin', (e) => {
         } else {
           const pCfg = getPlanConfig(id);
           btn.className   = 'pc-cta primary';
-          if (id === 'elite') btn.style.cssText = 'background:linear-gradient(135deg,#92400E,#D97706);border:none';
-          else btn.style.cssText = '';
+          btn.style.cssText = '';
           btn.textContent = 'Activar Plan ' + pCfg.nombre + ' →';
           btn.onclick     = () => abrirCheckout(id);
         }

@@ -1744,7 +1744,7 @@
         </div>
         <div style="font-size:32px;margin-bottom:8px">⭐</div>
         <h2>Elegí tu plan</h2>
-        <p>Base · Plus · Pro · Elite — empezá gratis y crecé a tu ritmo</p>
+        <p>Base · Plus · Pro — empezá gratis y crecé a tu ritmo</p>
         <div class="plan-toggle">
           <button class="pt-btn" onclick="switchBilling(this,'mes')" id="btn-mes">Mensual</button>
           <button class="pt-btn on" onclick="switchBilling(this,'anual')" id="btn-anual">
@@ -1844,33 +1844,6 @@
           <button class="pc-cta primary" id="subs-btn-pro" onclick="abrirCheckout('pro')">Activar Plan Pro →</button>
         </div>
 
-        <!-- Elite -->
-        <div class="plan-card-full" id="subs-card-elite">
-          <div class="pc-header">
-            <div class="pc-badge biz" id="subs-badge-elite">💎 Elite</div>
-            <div class="pc-name">Elite</div>
-            <div class="pc-price">
-              <span class="pc-amount" id="elite-amount">$199.900</span>
-              <span class="pc-period" id="elite-period">/ año</span>
-              <span class="pc-saving" id="elite-saving">2 meses gratis</span>
-            </div>
-            <div class="pc-desc" id="elite-desc">Equivale a $19.990 por mes. Cancelás cuando quieras.</div>
-          </div>
-          <div class="pc-divider"></div>
-          <div class="boost-bar-wrap" style="padding-top:12px">
-            <div class="boost-label"><span>Loyalty boost</span><span style="color:#92400E">×2.0 máximo</span></div>
-            <div class="boost-track"><div class="boost-fill" style="width:100%;background:linear-gradient(90deg,var(--gold),#F59E0B)"></div></div>
-          </div>
-          <div class="pc-features">
-            <div class="pc-feat"><span class="fi">✓</span><span><strong>Propuestas ilimitadas</strong></span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span><strong>Fotos ilimitadas</strong> de portfolio</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Badge <strong>💎 Elite</strong> + primero en ranking</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Chat + WhatsApp soporte</span></div>
-            <div class="pc-feat"><span class="fi">✓</span><span>Estadísticas completas + exportar historial</span></div>
-          </div>
-          <button class="pc-cta primary" id="subs-btn-elite" onclick="abrirCheckout('elite')" style="background:linear-gradient(135deg,#92400E,#D97706);border:none">Activar Plan Elite →</button>
-        </div>
-
       </div>
 
       <!-- Por qué subir de plan -->
@@ -1881,7 +1854,7 @@
             <span style="font-size:16px">📈</span>Más propuestas = más chances de cerrar trabajos cada mes
           </div>
           <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink2)">
-            <span style="font-size:16px">⭐</span>El loyalty boost Pro/Elite acumula puntos más rápido y desbloquea canjes exclusivos
+            <span style="font-size:16px">⭐</span>El loyalty boost de Pro acumula puntos más rápido y desbloquea canjes exclusivos
           </div>
           <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink2)">
             <span style="font-size:16px">💰</span>Con 1 trabajo extra por mes ya cubrís el costo del plan anual
@@ -4280,7 +4253,6 @@
         <select id="cf-valor-plan" class="ob-input" style="display:none">
           <option value="plus">Plus</option>
           <option value="pro">Pro</option>
-          <option value="elite">Elite</option>
         </select>
         <input type="number" id="cf-valor-puntos" class="ob-input" placeholder="500" min="1" style="display:none">
       </div>

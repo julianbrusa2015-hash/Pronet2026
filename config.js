@@ -77,7 +77,7 @@ Object.assign(window.PRONET_CONFIG, {
   IMG_PORTFOLIO_PX: 800,            // ancho máximo al redimensionar fotos de portfolio
   IMG_TRABAJO_PX: 1024,             // ancho máximo al redimensionar fotos de trabajo terminado
 
-  // Planes de suscripción (4 tiers: Base · Plus · Pro · Elite)
+  // Planes de suscripción (3 tiers: Base · Plus · Pro)
   // Precios en ARS. Anual = 10 meses (2 meses gratis).
   //
   // Estos valores son el FALLBACK offline/inicial. En restaurarSesion()
@@ -112,15 +112,6 @@ Object.assign(window.PRONET_CONFIG, {
       badge_label: 'Pro',
       loyalty_boost: 1.5,
       badge_busqueda: true, desempate: true,
-      estadisticas: 'completas',
-    },
-    {
-      id: 'elite', nombre: 'Elite', emoji: '💎',
-      precio_mes: 19990, precio_anual: 199900,
-      propuestas_mes: null, fotos_portfolio: null,
-      badge_label: 'Elite',
-      loyalty_boost: 2.0,
-      badge_busqueda: true, desempate: 'primero',
       estadisticas: 'export',
     },
   ],
