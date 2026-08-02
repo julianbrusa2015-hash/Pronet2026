@@ -828,12 +828,17 @@ const PronetDB = (() => {
     async listarComentarios(pubId, limit = 30) {
       if (!remoto) return [];
       const { data, error } = await sb.from('comentarios_publicaciones')
-        .select('id, texto, creado, autor_id, perfiles:autor_id(nombre)')
+        .select('id, texto, creado, autor_id')
         .eq('publicacion_id', pubId)
         .order('creado', { ascending: true })
         .limit(limit);
       if (error) { console.warn('[PronetDB] listarComentarios', error.message); return []; }
-      return data || [];
+      if (!data?.length) return [];
+      // Fetch author names separately to avoid PostgREST FK join cache issues
+      const ids = [...new Set(data.map(c => c.autor_id))];
+      const { data: perfs } = await sb.from('perfiles').select('id, nombre').in('id', ids);
+      const perfilesMap = Object.fromEntries((perfs || []).map(p => [p.id, p]));
+      return data.map(c => ({ ...c, perfiles: perfilesMap[c.autor_id] || null }));
     },
 
     /** Crea un comentario en una publicación. */
