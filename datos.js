@@ -598,6 +598,22 @@ const PronetDB = (() => {
       return chats.map(c => ({ ...c, autor: pm[c.autor_id] || {} }));
     },
 
+    /** Devuelve {zona: count} de publicaciones activas, sin paginar, para el mapa. */
+    async contarPublicacionesPorZona({ categoria = null, busqueda = null } = {}) {
+      if (!remoto) return {};
+      let q = sb.from('publicaciones').select('zona').eq('activa', true);
+      if (categoria && categoria !== 'todos') q = q.eq('categoria', categoria);
+      if (busqueda && busqueda.trim()) {
+        const term = `%${busqueda.trim()}%`;
+        q = q.or(`titulo.ilike.${term},descripcion.ilike.${term}`);
+      }
+      const { data } = await q;
+      if (!data) return {};
+      const counts = {};
+      data.forEach(p => { if (p.zona) counts[p.zona] = (counts[p.zona] || 0) + 1; });
+      return counts;
+    },
+
     /** Edita campos de una publicación propia. foto_url=undefined la deja sin cambios. */
     async editarPublicacion(id, { categoria, titulo, descripcion, precio, foto_url }) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };

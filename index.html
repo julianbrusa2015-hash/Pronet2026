@@ -253,7 +253,14 @@
           </div>
           <div class="logo" style="font-size:17px">ProMarket</div>
         </div>
-        <div class="avatar-sm" id="mkt-avatar" onclick="goTo('s-miperfil')">JL</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button id="mkt-toggle-mapa" onclick="toggleMapaMercado()" title="Ver mapa"
+            style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--ink3);font-family:'Inter',sans-serif">
+            <svg id="mkt-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            <span id="mkt-toggle-lbl">Mapa</span>
+          </button>
+          <div class="avatar-sm" id="mkt-avatar" onclick="goTo('s-miperfil')">JL</div>
+        </div>
       </div>
 
       <div class="filter-row">
@@ -290,6 +297,12 @@
           <option value="Matheu / Garín">Matheu / Garín</option>
           <option value="Garín">Garín</option>
         </select>
+      </div>
+
+      <!-- Mapa de publicaciones -->
+      <div id="mkt-mapa-cont" style="display:none;position:relative">
+        <div id="mkt-mapa-div" style="width:100%;height:calc(100svh - 220px);min-height:300px"></div>
+        <div id="mkt-mapa-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface);font-size:13px;color:var(--ink3)">⏳ Cargando mapa...</div>
       </div>
 
       <!-- Feed -->
@@ -338,6 +351,23 @@
           <div class="chip" data-cat="comercios"   onclick="pmSelCat(this)">🏪 Comercios</div>
           <div class="chip" data-cat="anuncios"    onclick="pmSelCat(this)">📢 Anuncios</div>
         </div>
+
+        <!-- Zona -->
+        <label class="ob-label" for="pm-zona">Zona <span style="color:#E53E3E">*</span></label>
+        <select class="ob-input" id="pm-zona" name="pm-zona" style="margin-bottom:16px">
+          <option value="">Seleccioná tu zona…</option>
+          <option value="Puertos del Lago">Puertos del Lago</option>
+          <option value="El Cantón">El Cantón</option>
+          <option value="San Matías">San Matías</option>
+          <option value="El Naudir">El Naudir</option>
+          <option value="CUBE">CUBE</option>
+          <option value="El Cazador">El Cazador</option>
+          <option value="Nordelta">Nordelta</option>
+          <option value="Escobar Centro">Escobar Centro</option>
+          <option value="Escobar">Escobar</option>
+          <option value="Matheu / Garín">Matheu / Garín</option>
+          <option value="Garín">Garín</option>
+        </select>
 
         <!-- Título -->
         <label class="ob-label" for="pm-titulo">Título</label>

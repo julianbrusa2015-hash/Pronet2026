@@ -313,6 +313,13 @@ document.addEventListener('focusin', (e) => {
       if (inp && !mktBusqueda) inp.value = '';
       const sel = document.getElementById('mkt-zona-select');
       if (sel) sel.value = mktZonaActiva || '';
+      // Asegurarse de que el mapa esté oculto y el feed visible al entrar
+      if (mktModo === 'mapa') {
+        mktModo = 'lista';
+        const mc = document.getElementById('mkt-mapa-cont'); if (mc) mc.style.display = 'none';
+        const fd = document.getElementById('mkt-feed'); if (fd) fd.style.display = '';
+        const lbl = document.getElementById('mkt-toggle-lbl'); if (lbl) lbl.textContent = 'Mapa';
+      }
       renderMercado();
     }
     // Si va a Pedidos, refrescar la lista desde la base de datos
@@ -2495,6 +2502,24 @@ document.addEventListener('focusin', (e) => {
     }
   }
 
+  // ── ProMarket mapa — centroides por zona ─────────────────────────────────
+  const MKT_ZONA_COORD = {
+    'Puertos del Lago': { lat: -34.2960, lng: -58.7460 },
+    'El Cantón':        { lat: -34.3350, lng: -58.7580 },
+    'San Matías':       { lat: -34.2640, lng: -58.7880 },
+    'El Naudir':        { lat: -34.3050, lng: -58.8050 },
+    'CUBE':             { lat: -34.3180, lng: -58.7720 },
+    'El Cazador':       { lat: -34.3900, lng: -58.8230 },
+    'Nordelta':         { lat: -34.4050, lng: -58.6690 },
+    'Escobar Centro':   { lat: -34.3494, lng: -58.7938 },
+    'Escobar':          { lat: -34.3486, lng: -58.8100 },
+    'Matheu / Garín':   { lat: -34.4420, lng: -58.7050 },
+    'Garín':            { lat: -34.4280, lng: -58.7300 },
+  };
+  let mapaGoogleMkt = null;
+  let mktMarcadores = [];
+  let mktModo = 'lista'; // 'lista' | 'mapa'
+
   // ── Google Maps ──────────────────────────────────────────────────────────
   let mapaGoogle = null;       // instancia google.maps.Map
   let mapaUserMarker = null;   // marcador de la ubicación del usuario
@@ -3309,9 +3334,99 @@ document.addEventListener('focusin', (e) => {
 
   function mktFiltrarZona(valor) {
     mktZonaActiva = valor || null;
+    const sel = document.getElementById('mkt-zona-select');
+    if (sel) sel.value = mktZonaActiva || '';
     renderMercado(true);
   }
   window.mktFiltrarZona = mktFiltrarZona;
+
+  function toggleMapaMercado() {
+    mktModo = mktModo === 'lista' ? 'mapa' : 'lista';
+    const feedEls = ['mkt-feed', 'mkt-ver-mas'];
+    const filterEls = ['mkt-buscador', 'mkt-zona-select', 'mkt-mapa-cont'];
+    // Los controles de filtro (chips, buscador, select zona) son comunes a ambos modos
+    document.getElementById('mkt-mapa-cont').style.display = mktModo === 'mapa' ? 'block' : 'none';
+    document.getElementById('mkt-feed').style.display       = mktModo === 'lista' ? '' : 'none';
+    document.getElementById('mkt-ver-mas').style.display    = mktModo === 'lista' && mktHayMas ? 'block' : 'none';
+    const lbl = document.getElementById('mkt-toggle-lbl');
+    if (lbl) lbl.textContent = mktModo === 'mapa' ? 'Lista' : 'Mapa';
+    if (mktModo === 'mapa') renderMapaMercado();
+  }
+  window.toggleMapaMercado = toggleMapaMercado;
+
+  async function renderMapaMercado() {
+    const loading = document.getElementById('mkt-mapa-loading');
+    if (loading) loading.style.display = 'flex';
+
+    const ok = await cargarGoogleMapsAPI();
+    if (!ok) {
+      if (loading) loading.textContent = '⚠️ El mapa no está disponible en este momento';
+      return;
+    }
+
+    const counts = await PronetDB.contarPublicacionesPorZona({ categoria: mktFiltroActivo, busqueda: mktBusqueda }).catch(() => ({}));
+    const container = document.getElementById('mkt-mapa-div');
+    if (!container) return;
+
+    if (!mapaGoogleMkt) {
+      mapaGoogleMkt = new google.maps.Map(container, {
+        center: { lat: ESCOBAR_LAT, lng: ESCOBAR_LNG },
+        zoom: 11,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
+      });
+    }
+
+    // Limpiar marcadores anteriores
+    mktMarcadores.forEach(m => m.setMap(null));
+    mktMarcadores = [];
+
+    const bounds = new google.maps.LatLngBounds();
+    let hayPins = false;
+
+    Object.entries(counts).forEach(([zona, count]) => {
+      const coord = MKT_ZONA_COORD[zona];
+      if (!coord) return;
+      const pos = new google.maps.LatLng(coord.lat, coord.lng);
+      bounds.extend(pos);
+      hayPins = true;
+      const label = count > 9 ? '9+' : String(count);
+      const marker = new google.maps.Marker({
+        position: pos,
+        map: mapaGoogleMkt,
+        title: zona + ' — ' + count + ' publicación' + (count !== 1 ? 'es' : ''),
+        label: { text: label, color: 'white', fontWeight: '700', fontSize: '12px' },
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 22,
+          fillColor: '#2B5BFF',
+          fillOpacity: 1,
+          strokeColor: 'white',
+          strokeWeight: 2,
+        },
+      });
+      const info = new google.maps.InfoWindow({
+        content: `<div style="font-family:'Inter',sans-serif;min-width:160px;padding:4px 0">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px">${escHTML(zona)}</div>
+          <div style="font-size:12px;color:#555;margin-bottom:8px">${count} publicación${count !== 1 ? 'es' : ''}</div>
+          <button onclick="mktFiltrarZona('${escHTML(zona)}');toggleMapaMercado()"
+            style="background:#2B5BFF;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;width:100%">Ver publicaciones</button>
+        </div>`,
+      });
+      marker.addListener('click', () => {
+        mktMarcadores.forEach(m => m._info && m._info.close());
+        info.open(mapaGoogleMkt, marker);
+      });
+      marker._info = info;
+      mktMarcadores.push(marker);
+    });
+
+    if (hayPins) mapaGoogleMkt.fitBounds(bounds, 60);
+    if (loading) loading.style.display = 'none';
+  }
+  window.renderMapaMercado = renderMapaMercado;
 
   async function mktConsultar(pubId, autorNombre, autorId) {
     if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Consultar', sub: 'Necesitás una cuenta para enviar mensajes.' }); return; }
@@ -3629,6 +3744,8 @@ document.addEventListener('focusin', (e) => {
     ['pm-titulo','pm-desc','pm-precio'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
+    const zonaEl = document.getElementById('pm-zona');
+    if (zonaEl) zonaEl.value = zonaActual && MKT_ZONA_COORD[zonaActual] ? zonaActual : '';
     document.querySelectorAll('#pm-cat-row .chip').forEach((c,i) => c.classList.toggle('on', i===0));
     const tit = document.getElementById('pm-screen-titulo'); if (tit) tit.textContent = 'Nueva publicación';
     const btn = document.getElementById('pm-submit-btn'); if (btn) btn.textContent = 'Publicar';
@@ -3662,6 +3779,8 @@ document.addEventListener('focusin', (e) => {
       else if (fid === 'pm-desc') el.value = pub.descripcion || '';
       else if (fid === 'pm-precio') el.value = pub.precio != null ? pub.precio : '';
     });
+    const zonaEl = document.getElementById('pm-zona');
+    if (zonaEl) zonaEl.value = pub.zona || '';
     document.querySelectorAll('#pm-cat-row .chip').forEach(c => {
       c.classList.toggle('on', c.dataset.cat === pub.categoria);
     });
@@ -3782,11 +3901,13 @@ document.addEventListener('focusin', (e) => {
     const titulo = document.getElementById('pm-titulo')?.value.trim();
     const desc   = document.getElementById('pm-desc')?.value.trim();
     const precio = document.getElementById('pm-precio')?.value;
+    const zona   = document.getElementById('pm-zona')?.value;
     const catEl  = document.querySelector('#pm-cat-row .chip.on');
     const categoria = catEl?.dataset.cat || 'productos';
     const editando = !!pmEditandoId;
 
     if (!titulo) { showToast && showToast('⚠️ Escribí un título para tu publicación'); return; }
+    if (!zona)   { showToast && showToast('⚠️ Seleccioná tu zona para publicar'); return; }
 
     btn.disabled = true;
     btn.textContent = editando ? 'Guardando...' : 'Publicando...';
@@ -3806,9 +3927,8 @@ document.addEventListener('focusin', (e) => {
     let res;
     if (editando) {
       res = await PronetDB.editarPublicacion(pmEditandoId, { categoria, titulo, descripcion: desc || null,
-                                                              precio: precio ? Number(precio) : null, foto_url });
+                                                              precio: precio ? Number(precio) : null, foto_url, zona });
     } else {
-      const zona = usuarioActual.zona || null;
       res = await PronetDB.crearPublicacion({ categoria, titulo, descripcion: desc || null,
                                              precio: precio ? Number(precio) : null, foto_url, zona });
     }
