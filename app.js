@@ -3323,6 +3323,7 @@ document.addEventListener('focusin', (e) => {
             <div class="mkt-post-price">${p.precio_convenir ? 'A convenir' : (p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar')}</div>
           </div>
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
+          ${p.detalles && p.detalles.length ? `<ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--ink2)">${p.detalles.map(d => `<li>${escHTML(d)}</li>`).join('')}</ul>` : ''}
           ${p.zona ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">📍 ${escHTML(p.zona)}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</div>` : ''}
           <div style="display:flex;align-items:center;gap:12px;margin:10px 0 8px">
             <button id="like-btn-${escHTML(p.id)}" onclick="mktToggleLike('${escHTML(p.id)}')"
@@ -4223,6 +4224,7 @@ document.addEventListener('focusin', (e) => {
     });
     const convenirChk = document.getElementById('pm-precio-convenir');
     if (convenirChk) { convenirChk.checked = false; pmTogglePrecioConvenir(convenirChk); }
+    pmResetDetalles();
     const zonaEl = document.getElementById('pm-zona');
     if (zonaEl) zonaEl.value = zonaActual && MKT_ZONA_COORD[zonaActual] ? zonaActual : '';
     const catSel = document.getElementById('pm-categoria');
@@ -4240,6 +4242,52 @@ document.addEventListener('focusin', (e) => {
     if (chk.checked) precioEl.value = '';
   }
   window.pmTogglePrecioConvenir = pmTogglePrecioConvenir;
+
+  // ── Detalles adicionales del formulario de publicar: líneas libres, máx 5 ──
+  const PM_DETALLES_MAX = 5;
+
+  function pmDetallesLineaHTML(valor) {
+    return `<div class="pm-detalle-row" style="display:flex;gap:8px;margin-bottom:8px">
+      <input class="ob-input" type="text" maxlength="80" placeholder="Ej: Sabores: chocolate, vainilla" value="${escHTML(valor || '')}" style="flex:1">
+      <button type="button" onclick="this.closest('.pm-detalle-row').remove(); pmActualizarBotonDetalle()"
+        style="background:none;border:1.5px solid var(--border);border-radius:10px;width:40px;flex-shrink:0;color:var(--ink3);font-size:16px;cursor:pointer">×</button>
+    </div>`;
+  }
+
+  function pmActualizarBotonDetalle() {
+    const lista = document.getElementById('pm-detalles-lista');
+    const addRow = document.getElementById('pm-detalles-add-row');
+    if (!lista || !addRow) return;
+    const cantidad = lista.querySelectorAll('.pm-detalle-row').length;
+    addRow.style.display = cantidad >= PM_DETALLES_MAX ? 'none' : '';
+  }
+
+  function pmAgregarLineaDetalle(valor) {
+    const lista = document.getElementById('pm-detalles-lista');
+    if (!lista) return;
+    if (lista.querySelectorAll('.pm-detalle-row').length >= PM_DETALLES_MAX) return;
+    lista.insertAdjacentHTML('beforeend', pmDetallesLineaHTML(valor));
+    pmActualizarBotonDetalle();
+  }
+  window.pmAgregarLineaDetalle = pmAgregarLineaDetalle;
+  window.pmActualizarBotonDetalle = pmActualizarBotonDetalle;
+
+  function pmResetDetalles(valores) {
+    const lista = document.getElementById('pm-detalles-lista');
+    if (!lista) return;
+    lista.innerHTML = '';
+    (valores && valores.length ? valores : []).forEach(v => pmAgregarLineaDetalle(v));
+    pmActualizarBotonDetalle();
+  }
+
+  function pmLeerDetalles() {
+    const lista = document.getElementById('pm-detalles-lista');
+    if (!lista) return [];
+    return [...lista.querySelectorAll('.pm-detalle-row input')]
+      .map(inp => inp.value.trim())
+      .filter(Boolean)
+      .slice(0, PM_DETALLES_MAX);
+  }
 
   async function editarMiPublicacion(id) {
     const pub = mktMisPubs.find(p => p.id === id);
@@ -4272,6 +4320,7 @@ document.addEventListener('focusin', (e) => {
       convenirChk.checked = !!pub.precio_convenir;
       pmTogglePrecioConvenir(convenirChk);
     }
+    pmResetDetalles(pub.detalles);
     const zonaEl = document.getElementById('pm-zona');
     if (zonaEl) zonaEl.value = pub.zona || '';
     const catSelEdit = document.getElementById('pm-categoria');
@@ -4399,6 +4448,7 @@ document.addEventListener('focusin', (e) => {
     const desc   = document.getElementById('pm-desc')?.value.trim();
     const precio = document.getElementById('pm-precio')?.value;
     const precioConvenir = !!document.getElementById('pm-precio-convenir')?.checked;
+    const detalles = pmLeerDetalles();
     const zona   = document.getElementById('pm-zona')?.value;
     const categoria = document.getElementById('pm-categoria')?.value;
     const editando = !!pmEditandoId;
@@ -4425,10 +4475,10 @@ document.addEventListener('focusin', (e) => {
     let res;
     if (editando) {
       res = await PronetDB.editarPublicacion(pmEditandoId, { categoria, titulo, descripcion: desc || null,
-                                                              precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, foto_url, zona });
+                                                              precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona });
     } else {
       res = await PronetDB.crearPublicacion({ categoria, titulo, descripcion: desc || null,
-                                             precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, foto_url, zona });
+                                             precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona });
     }
 
     btn.disabled = false;

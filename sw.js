@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v99'; // v99: opción "Precio a convenir" al publicar en ProMarket
+const CACHE_VERSION = 'pronet-v100'; // v100: detalles adicionales (líneas libres, máx 5) en publicaciones ProMarket
 
 const SHELL = [
   './',

@@ -401,6 +401,14 @@
           <span style="font-size:13px;color:var(--ink)">Precio a convenir</span>
         </label>
 
+        <!-- Detalles adicionales: líneas libres, máx 5 -->
+        <label class="ob-label">Detalles adicionales <span style="font-weight:400;color:var(--ink3)">(opcional — ej: sabores, modelos, talles)</span></label>
+        <div id="pm-detalles-lista" style="margin-bottom:8px"></div>
+        <div id="pm-detalles-add-row">
+          <button type="button" onclick="pmAgregarLineaDetalle()"
+            style="background:none;border:1.5px dashed var(--border);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;width:100%;font-family:'Inter',sans-serif">+ Agregar línea</button>
+        </div>
+
       </div>
 
       <!-- Footer fijo -->
