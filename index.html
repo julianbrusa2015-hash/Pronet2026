@@ -278,6 +278,13 @@
             style="padding-left:34px;margin-bottom:0;font-size:13px"
             oninput="mktBuscar(this.value)">
         </div>
+        <div id="mkt-alerta-row" style="display:none;margin-top:8px">
+          <button id="mkt-alerta-btn" onclick="mktToggleAlerta()"
+            style="background:none;border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:5px">
+            <span id="mkt-alerta-icon">🔔</span>
+            <span id="mkt-alerta-lbl">Avisame cuando haya nuevo</span>
+          </button>
+        </div>
       </div>
 
       <div style="padding:0 14px 10px;display:flex;align-items:center;gap:8px">

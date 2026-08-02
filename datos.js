@@ -578,7 +578,45 @@ const PronetDB = (() => {
                   precio: precio || null, foto_url: foto_url || null, zona: zona || null })
         .select('id').single();
       if (error) return { ok: false, error: error.message };
+      // Best-effort: notificar suscriptores con alertas que coincidan
+      if (data?.id) {
+        sb.functions.invoke('match-alertas', { body: { publicacion_id: data.id } }).catch(() => {});
+      }
       return { ok: true, id: data.id };
+    },
+
+    /** Crea o reutiliza una alerta de búsqueda para el usuario actual. */
+    async crearAlertaBusqueda(termino) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
+      const t = termino.trim().toLowerCase();
+      const { error } = await sb.from('alertas_busqueda')
+        .upsert({ usuario_id: uid, termino: t, activa: true },
+                 { onConflict: 'usuario_id,termino', ignoreDuplicates: false });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+
+    /** Elimina una alerta de búsqueda del usuario actual. */
+    async eliminarAlertaBusqueda(termino) {
+      if (!remoto) return { ok: false };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false };
+      await sb.from('alertas_busqueda')
+        .delete().eq('usuario_id', uid).eq('termino', termino.trim().toLowerCase());
+      return { ok: true };
+    },
+
+    /** Devuelve true si el usuario ya tiene una alerta activa para ese término. */
+    async verificarAlertaBusqueda(termino) {
+      if (!remoto) return false;
+      const uid = await this.usuarioIdActual();
+      if (!uid) return false;
+      const { data } = await sb.from('alertas_busqueda')
+        .select('id').eq('usuario_id', uid).eq('termino', termino.trim().toLowerCase())
+        .eq('activa', true).maybeSingle();
+      return !!data;
     },
 
     /** Lista todos los hilos de chat iniciados por el usuario como consultante. */

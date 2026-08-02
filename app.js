@@ -313,6 +313,8 @@ document.addEventListener('focusin', (e) => {
       if (inp && !mktBusqueda) inp.value = '';
       const sel = document.getElementById('mkt-zona-select');
       if (sel) sel.value = mktZonaActiva || '';
+      const alertaRow = document.getElementById('mkt-alerta-row');
+      if (alertaRow && !mktBusqueda) alertaRow.style.display = 'none';
       // Asegurarse de que el mapa esté oculto y el feed visible al entrar
       if (mktModo === 'mapa') {
         mktModo = 'lista';
@@ -3238,13 +3240,14 @@ document.addEventListener('focusin', (e) => {
     anuncios:    '📢 Anuncios',
   };
 
-  let mktFiltroActivo  = 'todos';
-  let mktBusqueda      = '';
-  let mktZonaActiva    = null;
-  let mktDebounceTimer = null;
-  let mktOffset        = 0;
-  let mktCargando      = false;
-  let mktHayMas        = true;
+  let mktFiltroActivo   = 'todos';
+  let mktBusqueda       = '';
+  let mktZonaActiva     = null;
+  let mktDebounceTimer  = null;
+  let mktOffset         = 0;
+  let mktCargando       = false;
+  let mktHayMas         = true;
+  let mktAlertaActiva   = false;
 
   function mktIniciales(nombre) {
     if (!nombre) return '?';
@@ -3325,12 +3328,70 @@ document.addEventListener('focusin', (e) => {
 
   function mktBuscar(valor) {
     clearTimeout(mktDebounceTimer);
-    mktDebounceTimer = setTimeout(() => {
+    mktDebounceTimer = setTimeout(async () => {
       mktBusqueda = valor || '';
       renderMercado(true);
+      // Mostrar/ocultar chip de alerta
+      const row = document.getElementById('mkt-alerta-row');
+      if (!row) return;
+      const termino = mktBusqueda.trim();
+      if (!termino || termino.length < 2 || !usuarioActual) {
+        row.style.display = 'none';
+        return;
+      }
+      row.style.display = 'block';
+      mktAlertaActiva = await PronetDB.verificarAlertaBusqueda(termino).catch(() => false);
+      mktActualizarChipAlerta();
     }, 400);
   }
   window.mktBuscar = mktBuscar;
+
+  function mktActualizarChipAlerta() {
+    const btn  = document.getElementById('mkt-alerta-btn');
+    const icon = document.getElementById('mkt-alerta-icon');
+    const lbl  = document.getElementById('mkt-alerta-lbl');
+    if (!btn || !icon || !lbl) return;
+    if (mktAlertaActiva) {
+      btn.style.borderColor  = 'var(--blue)';
+      btn.style.color        = 'var(--blue)';
+      btn.style.background   = 'var(--blue-s, #EEF2FF)';
+      icon.textContent       = '🔔';
+      lbl.textContent        = 'Siguiendo "' + mktBusqueda.trim() + '" · Dejar de seguir';
+    } else {
+      btn.style.borderColor  = 'var(--border)';
+      btn.style.color        = 'var(--ink3)';
+      btn.style.background   = 'none';
+      icon.textContent       = '🔔';
+      lbl.textContent        = 'Avisame cuando haya "' + mktBusqueda.trim() + '"';
+    }
+  }
+
+  async function mktToggleAlerta() {
+    if (!usuarioActual) {
+      mostrarGate && mostrarGate({ titulo: 'Alertas', sub: 'Necesitás una cuenta para guardar búsquedas.' });
+      return;
+    }
+    const termino = mktBusqueda.trim();
+    if (!termino) return;
+    const btn = document.getElementById('mkt-alerta-btn');
+    if (btn) btn.style.opacity = '0.5';
+    if (mktAlertaActiva) {
+      await PronetDB.eliminarAlertaBusqueda(termino).catch(() => {});
+      mktAlertaActiva = false;
+      showToast && showToast('Alerta eliminada');
+    } else {
+      const res = await PronetDB.crearAlertaBusqueda(termino).catch(() => ({ ok: false }));
+      if (res.ok) {
+        mktAlertaActiva = true;
+        showToast && showToast('🔔 ¡Listo! Te avisamos cuando haya algo nuevo de "' + termino + '"');
+      } else {
+        showToast && showToast('⚠️ No se pudo guardar la alerta');
+      }
+    }
+    if (btn) btn.style.opacity = '1';
+    mktActualizarChipAlerta();
+  }
+  window.mktToggleAlerta = mktToggleAlerta;
 
   function mktFiltrarZona(valor) {
     mktZonaActiva = valor || null;
