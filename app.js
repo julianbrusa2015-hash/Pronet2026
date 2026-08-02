@@ -3298,6 +3298,8 @@ document.addEventListener('focusin', (e) => {
   async function renderMercado(reset = true) {
     const cont = document.getElementById('mkt-feed');
     if (!cont || mktCargando) return;
+    const btnPub = document.getElementById('mkt-btn-publicar');
+    if (btnPub) btnPub.style.display = usuarioActual?.es_pro_marketplace ? '' : 'none';
     if (reset) {
       mktOffset  = 0;
       mktHayMas  = true;
@@ -3807,7 +3809,8 @@ document.addEventListener('focusin', (e) => {
     });
     const zonaEl = document.getElementById('pm-zona');
     if (zonaEl) zonaEl.value = zonaActual && MKT_ZONA_COORD[zonaActual] ? zonaActual : '';
-    document.querySelectorAll('#pm-cat-row .chip').forEach((c,i) => c.classList.toggle('on', i===0));
+    const catSel = document.getElementById('pm-categoria');
+    if (catSel) catSel.value = '';
     const tit = document.getElementById('pm-screen-titulo'); if (tit) tit.textContent = 'Nueva publicación';
     const btn = document.getElementById('pm-submit-btn'); if (btn) btn.textContent = 'Publicar';
     goTo('s-pub-mercado');
@@ -3842,9 +3845,8 @@ document.addEventListener('focusin', (e) => {
     });
     const zonaEl = document.getElementById('pm-zona');
     if (zonaEl) zonaEl.value = pub.zona || '';
-    document.querySelectorAll('#pm-cat-row .chip').forEach(c => {
-      c.classList.toggle('on', c.dataset.cat === pub.categoria);
-    });
+    const catSelEdit = document.getElementById('pm-categoria');
+    if (catSelEdit) catSelEdit.value = pub.categoria || '';
     const tit = document.getElementById('pm-screen-titulo'); if (tit) tit.textContent = 'Editar publicación';
     const btn = document.getElementById('pm-submit-btn'); if (btn) btn.textContent = 'Guardar';
     goTo('s-pub-mercado');
@@ -3963,12 +3965,12 @@ document.addEventListener('focusin', (e) => {
     const desc   = document.getElementById('pm-desc')?.value.trim();
     const precio = document.getElementById('pm-precio')?.value;
     const zona   = document.getElementById('pm-zona')?.value;
-    const catEl  = document.querySelector('#pm-cat-row .chip.on');
-    const categoria = catEl?.dataset.cat || 'productos';
+    const categoria = document.getElementById('pm-categoria')?.value;
     const editando = !!pmEditandoId;
 
-    if (!titulo) { showToast && showToast('⚠️ Escribí un título para tu publicación'); return; }
-    if (!zona)   { showToast && showToast('⚠️ Seleccioná tu zona para publicar'); return; }
+    if (!titulo)    { showToast && showToast('⚠️ Escribí un título para tu publicación'); return; }
+    if (!zona)      { showToast && showToast('⚠️ Seleccioná tu zona para publicar'); return; }
+    if (!categoria) { showToast && showToast('⚠️ Seleccioná una categoría'); return; }
 
     btn.disabled = true;
     btn.textContent = editando ? 'Guardando...' : 'Publicando...';

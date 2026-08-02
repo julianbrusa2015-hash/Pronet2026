@@ -259,6 +259,7 @@
             <svg id="mkt-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
             <span id="mkt-toggle-lbl">Mapa</span>
           </button>
+          <button id="mkt-btn-publicar" onclick="abrirPublicarMercado()" style="display:none;background:var(--blue);border:none;border-radius:10px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:700;color:#fff;font-family:'Inter',sans-serif">+ Publicar</button>
           <div class="avatar-sm" id="mkt-avatar" onclick="goTo('s-miperfil')">JL</div>
         </div>
       </div>
@@ -347,12 +348,20 @@
         <input type="file" id="pm-foto-input" accept="image/*" style="display:none" onchange="pmPrevisualizarFoto(this)">
 
         <!-- Categoría -->
-        <label class="ob-label">Categoría</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="pm-cat-row">
-          <div class="chip on" data-cat="gastronomia" onclick="pmSelCat(this)">🍕 Gastronomía</div>
-          <div class="chip" data-cat="productos"   onclick="pmSelCat(this)">🛍️ Productos</div>
-          <div class="chip" data-cat="comercios"   onclick="pmSelCat(this)">🏪 Comercios</div>
-          <div class="chip" data-cat="anuncios"    onclick="pmSelCat(this)">📢 Anuncios</div>
+        <label class="ob-label" for="pm-categoria">Categoría <span style="color:#E53E3E">*</span></label>
+        <select class="ob-input" id="pm-categoria" name="pm-categoria" style="margin-bottom:16px">
+          <option value="">Seleccioná una categoría…</option>
+          <option value="gastronomia">🍕 Gastronomía</option>
+          <option value="productos">🛍️ Productos</option>
+          <option value="comercios">🏪 Comercios</option>
+          <option value="anuncios">📢 Anuncios</option>
+        </select>
+        <!-- Fila de chips oculta: se mantiene por compatibilidad con pmSelCat/pm-cat-row -->
+        <div style="display:none" id="pm-cat-row">
+          <div class="chip on" data-cat="gastronomia"></div>
+          <div class="chip" data-cat="productos"></div>
+          <div class="chip" data-cat="comercios"></div>
+          <div class="chip" data-cat="anuncios"></div>
         </div>
 
         <!-- Zona -->
