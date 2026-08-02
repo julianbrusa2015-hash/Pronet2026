@@ -146,15 +146,15 @@ Deno.serve(async (req) => {
     const vence = new Date();
     vence.setMonth(vence.getMonth() + (periodo === 'anual' ? 12 : 1));
 
-    // ProMarket: actualiza perfiles en vez de suscripciones
-    if (plan === 'promarket') {
-      const { error: errPM } = await supabase.from('perfiles').update({
-        es_pro_marketplace: true,
-        pro_marketplace_hasta: vence.toISOString(),
-      }).eq('id', usuarioId);
-      if (errPM) {
+    // Publicación extra de ProMarket: acredita 1 crédito, no es una suscripción.
+    if (plan === 'promarket_credito') {
+      const { error: errCred } = await supabase.rpc('incrementar_creditos_promarket', {
+        p_usuario_id: usuarioId,
+        p_cantidad: 1,
+      });
+      if (errCred) {
         await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
-        console.error('[webhook-mp] error activando ProMarket', errPM.message);
+        console.error('[webhook-mp] error acreditando crédito ProMarket', errCred.message);
         return new Response('error', { status: 500 });
       }
       return new Response('ok', { status: 200 });

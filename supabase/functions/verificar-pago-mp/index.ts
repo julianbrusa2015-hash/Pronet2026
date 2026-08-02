@@ -74,11 +74,9 @@ Deno.serve(async (req) => {
       monto: pago.transaction_amount ?? null,
     });
     if (errPago) {
-      // 23505 = ya procesado por el webhook: leer el perfil actualizado y devolver éxito
+      // 23505 = ya procesado por el webhook: la activación ya ocurrió, devolver éxito.
       if (errPago.code === '23505') {
-        const { data: perfil } = await sbAdmin.from('perfiles')
-          .select('es_pro_marketplace').eq('id', user.id).maybeSingle();
-        return json({ ok: true, ya_procesado: true, activo: perfil?.es_pro_marketplace ?? false }, 200);
+        return json({ ok: true, ya_procesado: true, plan }, 200);
       }
       console.error('[verificar-pago-mp] error registrando pago', errPago.message);
       return json({ error: 'Error interno' }, 500);
@@ -87,17 +85,17 @@ Deno.serve(async (req) => {
     const vence = new Date();
     vence.setMonth(vence.getMonth() + (periodo === 'anual' ? 12 : 1));
 
-    if (plan === 'promarket') {
-      const { error: errPM } = await sbAdmin.from('perfiles').update({
-        es_pro_marketplace: true,
-        pro_marketplace_hasta: vence.toISOString(),
-      }).eq('id', user.id);
-      if (errPM) {
+    if (plan === 'promarket_credito') {
+      const { error: errCred } = await sbAdmin.rpc('incrementar_creditos_promarket', {
+        p_usuario_id: user.id,
+        p_cantidad: 1,
+      });
+      if (errCred) {
         await sbAdmin.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
-        console.error('[verificar-pago-mp] error activando ProMarket', errPM.message);
-        return json({ error: 'Error activando plan' }, 500);
+        console.error('[verificar-pago-mp] error acreditando crédito ProMarket', errCred.message);
+        return json({ error: 'Error acreditando publicación' }, 500);
       }
-      return json({ ok: true, plan: 'promarket', vence: vence.toISOString() }, 200);
+      return json({ ok: true, plan: 'promarket_credito' }, 200);
     }
 
     // Otros planes: upsert en suscripciones

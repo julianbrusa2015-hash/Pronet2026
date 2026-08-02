@@ -3443,7 +3443,7 @@ document.addEventListener('focusin', (e) => {
     const cont = document.getElementById('mkt-feed');
     if (!cont || mktCargando) return;
     const btnPub = document.getElementById('mkt-btn-publicar');
-    if (btnPub) btnPub.style.display = usuarioActual?.es_pro_marketplace ? '' : 'none';
+    if (btnPub) btnPub.style.display = usuarioActual ? '' : 'none';
     if (reset) {
       mktOffset  = 0;
       mktHayMas  = true;
@@ -4172,13 +4172,38 @@ document.addEventListener('focusin', (e) => {
   }
   window.pmCerrar = pmCerrar;
 
-  function abrirPublicarMercado() {
+  /** ¿Le queda cupo para publicar en ProMarket? Base/vecino: 3 gratis por
+   *  año + créditos comprados. Plus: 10/mes. Pro: ilimitado. */
+  async function puedePublicarMercado() {
+    if (!usuarioActual) return { ok: false, motivo: 'sin_sesion' };
+    const legacyHasta = usuarioActual.pro_marketplace_hasta ? new Date(usuarioActual.pro_marketplace_hasta) : null;
+    if (usuarioActual.es_pro_marketplace && (!legacyHasta || legacyHasta > new Date())) {
+      return { ok: true }; // legacy: suscriptor de la vieja ProMarket, ilimitado hasta que venza
+    }
+    const plan = planParaLimites(planActual);
+    if (plan === 'pro') return { ok: true };
+    if (plan === 'plus') {
+      const usadas = await PronetDB.contarPublicacionesMercadoMes(usuarioActual.id).catch(() => 0);
+      return { ok: usadas < 10, motivo: 'limite_mes', usadas, limite: 10 };
+    }
+    const usadas = await PronetDB.contarPublicacionesMercadoAnio(usuarioActual.id).catch(() => 0);
+    if (usadas < 3) return { ok: true };
+    if ((usuarioActual.promarket_creditos || 0) > 0) return { ok: true };
+    return { ok: false, motivo: 'sin_creditos', usadas, limite: 3 };
+  }
+
+  async function abrirPublicarMercado() {
     if (!usuarioActual) {
       mostrarGate && mostrarGate({ titulo: 'Publicar en ProMarket', sub: 'Necesitás una cuenta para publicar.' });
       return;
     }
-    if (!usuarioActual.es_pro_marketplace) {
-      abrirModalProMarketSub();
+    const cupo = await puedePublicarMercado();
+    if (!cupo.ok) {
+      if (cupo.motivo === 'limite_mes') {
+        showToast && showToast('⚠️ Ya usaste tus 10 publicaciones de este mes con tu plan Plus. Se renueva el mes que viene.');
+      } else {
+        abrirModalComprarPublicacion();
+      }
       return;
     }
     pmEditandoId = null;
@@ -4242,7 +4267,7 @@ document.addEventListener('focusin', (e) => {
   }
   window.editarMiPublicacion = editarMiPublicacion;
 
-  function abrirModalProMarketSub() {
+  function abrirModalComprarPublicacion() {
     const m = document.getElementById('modal-promarket-sub');
     if (m) { m.style.display = 'flex'; }
   }
@@ -4252,18 +4277,23 @@ document.addEventListener('focusin', (e) => {
   }
   window.cerrarModalProMarketSub = cerrarModalProMarketSub;
 
-  async function contratarProMarket() {
+  async function comprarPublicacionExtra() {
     const btn = document.getElementById('btn-contratar-promarket');
     if (btn) { btn.disabled = true; btn.textContent = 'Redirigiendo a MercadoPago…'; }
-    const res = await PronetDB.crearPreferenciaMP('promarket', 'mes');
+    // Marca qué se está comprando para que el retorno de MP sepa qué activar
+    // (ver capturarRetornoMP / restaurarSesion) — es un pago único, no una
+    // suscripción, así que no encaja en el flujo viejo de es_pro_marketplace.
+    localStorage.setItem('pronet_compra_credito_pendiente', '1');
+    const res = await PronetDB.crearPreferenciaMP('promarket_credito', 'mes');
     if (!res.ok) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Suscribirme — pago seguro 🔒'; }
+      localStorage.removeItem('pronet_compra_credito_pendiente');
+      if (btn) { btn.disabled = false; btn.textContent = 'Comprar — pago seguro 🔒'; }
       showToast && showToast('⚠️ No se pudo iniciar el pago. ' + (res.error || ''));
       return;
     }
     window.location.href = res.init_point;
   }
-  window.contratarProMarket = contratarProMarket;
+  window.comprarPublicacionExtra = comprarPublicacionExtra;
 
   // ── Reportar publicación ─────────────────────────────────────────────
   let reportarPubId = null;
@@ -4389,6 +4419,18 @@ document.addEventListener('focusin', (e) => {
     btn.textContent = editando ? 'Guardar' : 'Publicar';
 
     if (!res.ok) {
+      // Red de seguridad: si el chequeo de cupo del cliente quedó desactualizado
+      // (otra pestaña, otra publicación mientras tanto), el trigger del servidor
+      // rechaza igual — acá se traduce a algo accionable en vez del error crudo.
+      if (res.error?.includes('sin_creditos_publicacion')) {
+        showToast && showToast('⚠️ Ya usaste tus publicaciones gratis de este año.');
+        abrirModalComprarPublicacion();
+        return;
+      }
+      if (res.error?.includes('limite_publicaciones_mes')) {
+        showToast && showToast('⚠️ Ya usaste tus 10 publicaciones de este mes con tu plan Plus.');
+        return;
+      }
       showToast && showToast('⚠️ No se pudo ' + (editando ? 'guardar' : 'publicar') + ': ' + res.error);
       return;
     }
@@ -5405,26 +5447,55 @@ document.addEventListener('focusin', (e) => {
     // ── ProMarket: sección completa visible si el feature está activo y el usuario está logueado ──
     const secPM = document.getElementById('seccion-promarket-perfil');
     if (secPM) secPM.style.display = (FEATURES.mercadoPlaza && usuarioActual) ? '' : 'none';
-    // Sub-label muestra estado del plan
-    const pmEstadoLbl = document.getElementById('pm-perfil-estado-lbl');
-    if (pmEstadoLbl) {
-      if (usuarioActual?.es_pro_marketplace) {
-        const hasta = usuarioActual.pro_marketplace_hasta
-          ? ' · hasta ' + new Date(usuarioActual.pro_marketplace_hasta).toLocaleDateString('es-AR', { day:'numeric', month:'short' })
-          : '';
-        pmEstadoLbl.textContent = 'Activo' + hasta;
-        pmEstadoLbl.style.color = '#10B981';
-      } else {
-        pmEstadoLbl.textContent = 'Sin suscripción';
-        pmEstadoLbl.style.color = 'var(--ink3)';
-      }
-    }
-    // Mis publicaciones: solo para suscriptores (pueden publicar)
+    // Cualquier usuario logueado puede publicar (hasta su cupo) — ya no
+    // depende de una suscripción, así que estos menús quedan visibles siempre.
     const menuMisPubs = document.getElementById('menu-mis-pubs-mkt');
-    if (menuMisPubs) menuMisPubs.style.display = usuarioActual?.es_pro_marketplace ? '' : 'none';
-    // Consultas recibidas: solo para suscriptores (son autores de publicaciones)
+    if (menuMisPubs) menuMisPubs.style.display = usuarioActual ? '' : 'none';
     const menuMisConsultas = document.getElementById('menu-mis-consultas-mkt');
-    if (menuMisConsultas) menuMisConsultas.style.display = usuarioActual?.es_pro_marketplace ? '' : 'none';
+    if (menuMisConsultas) menuMisConsultas.style.display = usuarioActual ? '' : 'none';
+    actualizarEstadoProMarketPerfil();
+  }
+
+  // Sub-label de la sección ProMarket en Mi Perfil: cupo restante según el
+  // plan (Base=3/año gratis + créditos comprados, Plus=10/mes, Pro=ilimitado).
+  async function actualizarEstadoProMarketPerfil() {
+    const pmEstadoLbl = document.getElementById('pm-perfil-estado-lbl');
+    if (!pmEstadoLbl || !usuarioActual) return;
+
+    // Legacy: quien pagó la vieja suscripción de $10.000/mes sigue ilimitado
+    // hasta que venza lo que ya pagó.
+    const legacyHasta = usuarioActual.pro_marketplace_hasta ? new Date(usuarioActual.pro_marketplace_hasta) : null;
+    if (usuarioActual.es_pro_marketplace && (!legacyHasta || legacyHasta > new Date())) {
+      const hasta = legacyHasta ? ' · hasta ' + legacyHasta.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : '';
+      pmEstadoLbl.textContent = 'Ilimitado' + hasta;
+      pmEstadoLbl.style.color = '#10B981';
+      return;
+    }
+
+    const plan = planParaLimites(planActual);
+    if (plan === 'pro') {
+      pmEstadoLbl.textContent = 'Ilimitado con tu plan Pro';
+      pmEstadoLbl.style.color = '#10B981';
+      return;
+    }
+    if (plan === 'plus') {
+      const usadas = await PronetDB.contarPublicacionesMercadoMes(usuarioActual.id).catch(() => 0);
+      pmEstadoLbl.textContent = usadas + '/10 este mes';
+      pmEstadoLbl.style.color = usadas >= 10 ? '#EF4444' : 'var(--ink3)';
+      return;
+    }
+    const usadas = await PronetDB.contarPublicacionesMercadoAnio(usuarioActual.id).catch(() => 0);
+    const creditos = usuarioActual.promarket_creditos || 0;
+    if (usadas < 3) {
+      pmEstadoLbl.textContent = usadas + '/3 gratis este año';
+      pmEstadoLbl.style.color = 'var(--ink3)';
+    } else if (creditos > 0) {
+      pmEstadoLbl.textContent = creditos + ' publicación' + (creditos !== 1 ? 'es' : '') + ' extra disponible' + (creditos !== 1 ? 's' : '');
+      pmEstadoLbl.style.color = 'var(--blue)';
+    } else {
+      pmEstadoLbl.textContent = 'Sin cupo — $5.000 por publicación extra';
+      pmEstadoLbl.style.color = '#EF4444';
+    }
   }
 
   // ── Mensajes no leídos (dinámico) ──────────────────────────────────
@@ -9157,7 +9228,32 @@ document.addEventListener('focusin', (e) => {
         if (_mpRes) {
           delete window._pendingMpResult;
           delete window._pendingMpPayment;
-          if (_mpRes === 'success') {
+          if (_mpRes === 'success' && localStorage.getItem('pronet_compra_credito_pendiente')) {
+            localStorage.removeItem('pronet_compra_credito_pendiente');
+            (async function activarCreditoPromarket() {
+              const creditosAntes = usuarioActual?.promarket_creditos || 0;
+              const exito = async () => {
+                usuarioActual = await PronetDB.usuarioActual().catch(() => usuarioActual);
+                reflejarUsuario();
+                showToast('✅ ¡Publicación extra acreditada! Ya podés publicar de nuevo.', 6000);
+                setTimeout(() => goTo('s-mercado'), 400);
+              };
+              const u0 = await PronetDB.usuarioActual().catch(() => null);
+              if ((u0?.promarket_creditos || 0) > creditosAntes) { usuarioActual = u0; return exito(); }
+
+              showToast('✅ Pago recibido — acreditando tu publicación...', 4000);
+              if (_mpPago) {
+                const r = await PronetDB.verificarPagoMP(_mpPago);
+                if (r?.ok) return exito();
+              }
+              for (const ms of [2500, 5000, 10000]) {
+                await new Promise(r => setTimeout(r, ms));
+                const u2 = await PronetDB.usuarioActual().catch(() => null);
+                if ((u2?.promarket_creditos || 0) > creditosAntes) { usuarioActual = u2; return exito(); }
+              }
+              showToast('⚠️ El pago está siendo procesado. En unos minutos se acredita — si no, contactanos.', 9000);
+            })();
+          } else if (_mpRes === 'success') {
             (async function activarProMarket() {
               const exito = async () => {
                 usuarioActual = await PronetDB.usuarioActual().catch(() => usuarioActual);

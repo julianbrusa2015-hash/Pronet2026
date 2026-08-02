@@ -587,6 +587,34 @@ const PronetDB = (() => {
       return { ok: true, id: data.id };
     },
 
+    /** Publicaciones que un usuario creó en el mes calendario actual (cupo Plus). */
+    async contarPublicacionesMercadoMes(usuarioId) {
+      if (!remoto || !usuarioId) return 0;
+      const inicio = new Date();
+      inicio.setDate(1);
+      inicio.setHours(0, 0, 0, 0);
+      const { count, error } = await sb.from('publicaciones')
+        .select('id', { count: 'exact', head: true })
+        .eq('autor_id', usuarioId)
+        .gte('creado', inicio.toISOString());
+      if (error) { console.warn('[PronetDB] contarPublicacionesMercadoMes', error.message); return 0; }
+      return count || 0;
+    },
+
+    /** Publicaciones que un usuario creó en el año calendario actual (cupo gratis). */
+    async contarPublicacionesMercadoAnio(usuarioId) {
+      if (!remoto || !usuarioId) return 0;
+      const inicio = new Date();
+      inicio.setMonth(0, 1);
+      inicio.setHours(0, 0, 0, 0);
+      const { count, error } = await sb.from('publicaciones')
+        .select('id', { count: 'exact', head: true })
+        .eq('autor_id', usuarioId)
+        .gte('creado', inicio.toISOString());
+      if (error) { console.warn('[PronetDB] contarPublicacionesMercadoAnio', error.message); return 0; }
+      return count || 0;
+    },
+
     /** Crea o reutiliza una alerta de búsqueda para el usuario actual. */
     async crearAlertaBusqueda(termino) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
