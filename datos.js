@@ -600,6 +600,30 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
+    /** Registra una búsqueda en ProMarket (best-effort, no bloquea la UX).
+     *  Se usa solo para agregar tendencias — nunca se expone individualmente. */
+    async registrarBusquedaMercado(termino, zona, categoria, resultadosCount) {
+      if (!remoto) return;
+      const uid = await this.usuarioIdActual();
+      if (!uid) return; // solo se loguea de usuarios logueados
+      await sb.from('busquedas_mercado').insert({
+        termino: termino.trim().toLowerCase().slice(0, 100),
+        zona: zona || null,
+        categoria: categoria && categoria !== 'todos' ? categoria : null,
+        resultados_count: resultadosCount || 0,
+        usuario_id: uid,
+      }).catch(() => {});
+    },
+
+    /** Términos más buscados sin resultado en una zona (últimos 7 días,
+     *  mínimo 3 búsquedas). Devuelve [{termino, cantidad}]. */
+    async listarTendenciasBusqueda(zona) {
+      if (!remoto || !zona) return [];
+      const { data, error } = await sb.rpc('tendencias_busqueda_zona', { p_zona: zona });
+      if (error) { console.warn('[PronetDB] listarTendenciasBusqueda', error.message); return []; }
+      return data || [];
+    },
+
     /** Lista todas las alertas de búsqueda activas del usuario actual. */
     async listarMisAlertas() {
       if (!remoto) return [];

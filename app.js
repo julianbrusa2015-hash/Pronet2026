@@ -3263,6 +3263,7 @@ document.addEventListener('focusin', (e) => {
   let mktCargando       = false;
   let mktHayMas         = true;
   let mktAlertaActiva   = false;
+  let mktUltimoResultCount = 0;
 
   function mktIniciales(nombre) {
     if (!nombre) return '?';
@@ -3453,7 +3454,7 @@ document.addEventListener('focusin', (e) => {
     mktCargando = true;
     const posts = await PronetDB.listarPublicaciones({ categoria: mktFiltroActivo, busqueda: mktBusqueda, zona: mktZonaActiva, offset: mktOffset }).catch(() => []);
     mktCargando = false;
-    if (reset) cont.innerHTML = '';
+    if (reset) { cont.innerHTML = ''; mktUltimoResultCount = posts.length; }
     // Cargar qué publicaciones likeó el usuario actual (merge con el Set existente)
     if (posts.length && usuarioActual) {
       const ids = posts.map(p => p.id);
@@ -3483,11 +3484,17 @@ document.addEventListener('focusin', (e) => {
     clearTimeout(mktDebounceTimer);
     mktDebounceTimer = setTimeout(async () => {
       mktBusqueda = valor || '';
-      renderMercado(true);
+      const termino = mktBusqueda.trim();
+      await renderMercado(true);
+      // Registrar la búsqueda (best-effort) para detectar demanda sin oferta.
+      // La zona relevante es la del que busca (usuarioActual.zona), no el
+      // filtro de zona del feed — la mayoría busca sin filtrar por zona.
+      if (termino.length >= 2 && usuarioActual?.zona) {
+        PronetDB.registrarBusquedaMercado(termino, usuarioActual.zona, mktFiltroActivo, mktUltimoResultCount).catch(() => {});
+      }
       // Mostrar/ocultar chip de alerta
       const row = document.getElementById('mkt-alerta-row');
       if (!row) return;
-      const termino = mktBusqueda.trim();
       if (!termino || termino.length < 2 || !usuarioActual) {
         row.style.display = 'none';
         return;
@@ -3983,6 +3990,21 @@ document.addEventListener('focusin', (e) => {
     const activas = pubs.filter(p => p.activa).length;
     const subEl = document.getElementById('mp-mis-pubs-sub');
     if (subEl) subEl.textContent = activas + ' publicación' + (activas !== 1 ? 'es' : '') + ' activa' + (activas !== 1 ? 's' : '');
+    renderTendenciasMercado();
+  }
+
+  // Tendencias de búsqueda sin resultado en la zona del publicador — "se
+  // busca esto y no lo encuentran", señal de oportunidad para nuevos rubros.
+  async function renderTendenciasMercado() {
+    const card = document.getElementById('mkt-tendencias-card');
+    const lista = document.getElementById('mkt-tendencias-lista');
+    if (!card || !lista || !usuarioActual?.zona) { if (card) card.style.display = 'none'; return; }
+    const tendencias = await PronetDB.listarTendenciasBusqueda(usuarioActual.zona).catch(() => []);
+    if (!tendencias.length) { card.style.display = 'none'; return; }
+    lista.innerHTML = tendencias.map(t =>
+      `<div style="font-size:13px;color:#3730A3;line-height:1.7">"${escHTML(t.termino)}" <span style="opacity:.7">· ${t.cantidad} búsqueda${t.cantidad !== 1 ? 's' : ''}</span></div>`
+    ).join('');
+    card.style.display = '';
   }
 
   function misPubsCardHTML(p) {
