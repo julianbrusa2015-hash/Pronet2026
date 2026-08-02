@@ -941,6 +941,9 @@
         </div>
       </div>
 
+      <div style="padding:18px 14px 6px">
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase">PRONET</div>
+      </div>
       <div class="menu-list">
         <div class="menu-item" id="menu-push" style="display:none" onclick="togglePushNotif()">
           <div class="m-icon" style="background:#FFF7ED">🔔</div>
@@ -1023,30 +1026,6 @@
           <div class="notif-dot" id="mp-mensajes-dot"></div>
           <div class="m-chev">›</div>
         </div>
-        <div id="menu-mis-pubs-mkt" class="menu-item" data-feature="mercadoPlaza" style="display:none" onclick="goTo('s-mis-publicaciones')">
-          <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🛍️</div>
-          <div class="m-txt">
-            <div class="m-title">Mis publicaciones ProMarket</div>
-            <div class="m-sub" id="mp-mis-pubs-sub">Tus publicaciones activas</div>
-          </div>
-          <div class="m-chev">›</div>
-        </div>
-        <div id="menu-mis-consultas-mkt" class="menu-item" data-feature="mercadoPlaza" style="display:none" onclick="goTo('s-mis-consultas-mkt')">
-          <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">💬</div>
-          <div class="m-txt">
-            <div class="m-title">Consultas recibidas</div>
-            <div class="m-sub" id="mp-mis-consultas-sub">Mensajes de interesados</div>
-          </div>
-          <div class="m-chev">›</div>
-        </div>
-        <div id="menu-mis-consultas-env" class="menu-item" data-feature="mercadoPlaza" style="display:none" onclick="goTo('s-mis-consultas-enviadas')">
-          <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🔍</div>
-          <div class="m-txt">
-            <div class="m-title">Mis consultas</div>
-            <div class="m-sub">Publicaciones que consultaste</div>
-          </div>
-          <div class="m-chev">›</div>
-        </div>
         <div class="menu-item" data-solo-prestador="true" onclick="abrirCobertura()">
           <div class="m-icon" style="background:#F5F3FF">🗺️</div>
           <div class="m-txt">
@@ -1062,6 +1041,49 @@
             <div class="m-sub" id="perfil-suscripcion-menu-sub">Plan Base · MercadoPago</div>
           </div>
           <div class="m-chev">›</div>
+        </div>
+      </div>
+
+      <!-- ── Sección ProMarket ───────────────────────────────────── -->
+      <div id="seccion-promarket-perfil" data-feature="mercadoPlaza" style="display:none">
+        <div style="padding:18px 14px 6px;display:flex;align-items:center;gap:8px">
+          <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase">ProMarket</div>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <div style="font-size:10px;color:var(--ink3);font-weight:600" id="pm-perfil-estado-lbl"></div>
+        </div>
+        <div class="menu-list">
+          <div id="menu-mis-pubs-mkt" class="menu-item" onclick="goTo('s-mis-publicaciones')">
+            <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🛍️</div>
+            <div class="m-txt">
+              <div class="m-title">Mis publicaciones</div>
+              <div class="m-sub" id="mp-mis-pubs-sub">Tus publicaciones activas</div>
+            </div>
+            <div class="m-chev">›</div>
+          </div>
+          <div id="menu-mis-consultas-mkt" class="menu-item" onclick="goTo('s-mis-consultas-mkt')">
+            <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">💬</div>
+            <div class="m-txt">
+              <div class="m-title">Consultas recibidas</div>
+              <div class="m-sub" id="mp-mis-consultas-sub">Mensajes de interesados</div>
+            </div>
+            <div class="m-chev">›</div>
+          </div>
+          <div id="menu-mis-consultas-env" class="menu-item" onclick="goTo('s-mis-consultas-enviadas')">
+            <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🔍</div>
+            <div class="m-txt">
+              <div class="m-title">Mis consultas</div>
+              <div class="m-sub">Publicaciones que consultaste</div>
+            </div>
+            <div class="m-chev">›</div>
+          </div>
+          <div class="menu-item" onclick="goTo('s-mercado')">
+            <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🛒</div>
+            <div class="m-txt">
+              <div class="m-title">Ir al feed ProMarket</div>
+              <div class="m-sub">Ver todas las publicaciones</div>
+            </div>
+            <div class="m-chev">›</div>
+          </div>
         </div>
       </div>
 

@@ -4911,13 +4911,29 @@ document.addEventListener('focusin', (e) => {
     if (admin) cargarBadgeDenuncias();
     // ── DINÁMICO: rankings del prestador ──
     if (tienePrestadorId) cargarRankingsPerfil();
-    // ── ProMarket: mostrar menu item solo si tiene la suscripción activa ──
+    // ── ProMarket: sección completa visible si el feature está activo y el usuario está logueado ──
+    const secPM = document.getElementById('seccion-promarket-perfil');
+    if (secPM) secPM.style.display = (FEATURES.mercadoPlaza && usuarioActual) ? '' : 'none';
+    // Sub-label muestra estado del plan
+    const pmEstadoLbl = document.getElementById('pm-perfil-estado-lbl');
+    if (pmEstadoLbl) {
+      if (usuarioActual?.es_pro_marketplace) {
+        const hasta = usuarioActual.pro_marketplace_hasta
+          ? ' · hasta ' + new Date(usuarioActual.pro_marketplace_hasta).toLocaleDateString('es-AR', { day:'numeric', month:'short' })
+          : '';
+        pmEstadoLbl.textContent = 'Activo' + hasta;
+        pmEstadoLbl.style.color = '#10B981';
+      } else {
+        pmEstadoLbl.textContent = 'Sin suscripción';
+        pmEstadoLbl.style.color = 'var(--ink3)';
+      }
+    }
+    // Mis publicaciones: solo para suscriptores (pueden publicar)
     const menuMisPubs = document.getElementById('menu-mis-pubs-mkt');
-    if (menuMisPubs) menuMisPubs.style.display = (FEATURES.mercadoPlaza && usuarioActual?.es_pro_marketplace) ? '' : 'none';
+    if (menuMisPubs) menuMisPubs.style.display = usuarioActual?.es_pro_marketplace ? '' : 'none';
+    // Consultas recibidas: solo para suscriptores (son autores de publicaciones)
     const menuMisConsultas = document.getElementById('menu-mis-consultas-mkt');
-    if (menuMisConsultas) menuMisConsultas.style.display = (FEATURES.mercadoPlaza && usuarioActual?.es_pro_marketplace) ? '' : 'none';
-    const menuMisConsultasEnv = document.getElementById('menu-mis-consultas-env');
-    if (menuMisConsultasEnv) menuMisConsultasEnv.style.display = (FEATURES.mercadoPlaza && usuarioActual) ? '' : 'none';
+    if (menuMisConsultas) menuMisConsultas.style.display = usuarioActual?.es_pro_marketplace ? '' : 'none';
   }
 
   // ── Mensajes no leídos (dinámico) ──────────────────────────────────
