@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v96'; // v96: fix teléfono cosechable (grant de columna en perfiles) + guardado sin RETURNING
+const CACHE_VERSION = 'pronet-v97'; // v97: tabla de comparación de planes en Loyalty sin la columna Elite
 
 const SHELL = [
   './',
