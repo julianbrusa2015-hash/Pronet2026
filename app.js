@@ -3323,7 +3323,7 @@ document.addEventListener('focusin', (e) => {
             <div class="mkt-post-price">${p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar'}</div>
           </div>
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
-          ${distLabel ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">${distLabel}</div>` : ''}
+          ${p.zona ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">📍 ${escHTML(p.zona)}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</div>` : ''}
           <div style="display:flex;align-items:center;gap:12px;margin:10px 0 8px">
             <button id="like-btn-${escHTML(p.id)}" onclick="mktToggleLike('${escHTML(p.id)}')"
               data-liked="${liked ? '1' : '0'}"
