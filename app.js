@@ -8637,6 +8637,37 @@ document.addEventListener('focusin', (e) => {
         }
         renderHomeFeed(catInicial);
         renderPedidosGuardados();
+
+        // Procesar retorno desde MercadoPago (capturado sincrónicamente antes)
+        const _mpRes = window._pendingMpResult;
+        if (_mpRes) {
+          delete window._pendingMpResult;
+          if (_mpRes === 'success') {
+            if (usuarioActual?.es_pro_marketplace) {
+              showToast('¡Ya sos Pro Market! Tocá + para publicar en el feed.', 6000);
+              setTimeout(() => goTo('s-mercado'), 600);
+            } else {
+              showToast('✅ Pago recibido — verificando acceso ProMarket...', 4000);
+              (async function esperarActivacionProMarket() {
+                for (const ms of [2500, 5000, 10000]) {
+                  await new Promise(r => setTimeout(r, ms));
+                  const u2 = await PronetDB.usuarioActual().catch(() => null);
+                  if (u2?.es_pro_marketplace) {
+                    usuarioActual = u2;
+                    reflejarUsuario();
+                    showToast('¡Ya sos Pro Market! Tocá + para publicar en el feed.', 6000);
+                    setTimeout(() => goTo('s-mercado'), 400);
+                    return;
+                  }
+                }
+                showToast('⚠️ El pago está siendo procesado. En unos minutos se activa — si no, contactanos.', 9000);
+              })();
+            }
+          } else if (_mpRes === 'failure') {
+            showToast('⚠️ El pago no se completó. Podés intentarlo de nuevo.', 5000);
+          }
+        }
+
       } else {
         // Token inválido o expirado: mostrar login
         quitarAntiFlash();
@@ -8651,25 +8682,14 @@ document.addEventListener('focusin', (e) => {
     }
   })();
 
-  // Handler de vuelta desde MercadoPago
-  (function manejarRetornoMP() {
-    const params = new URLSearchParams(location.search);
-    const mp = params.get('mp');
-    if (!mp) return;
-    history.replaceState(null, '', location.pathname); // limpiar ?mp= de la URL
-    if (mp === 'success') {
-      // restaurarSesion() ya corrió y cargó el perfil; si es_pro_marketplace
-      // es true el webhook ya procesó el pago. Si no, puede estar demorado.
-      const activo = usuarioActual?.es_pro_marketplace;
-      showToast && showToast(
-        activo
-          ? '¡Ya sos Pro Market! Tocá + para publicar en el feed.'
-          : '✅ Pago recibido — tu acceso ProMarket se activará en segundos.',
-        6000
-      );
-      if (activo) setTimeout(() => goTo('s-mercado'), 600);
-    } else if (mp === 'failure') {
-      showToast && showToast('⚠️ El pago no se completó. Podés intentarlo de nuevo.', 5000);
+  // Capturar el resultado de MP y limpiar la URL de forma síncrona.
+  // El procesamiento real ocurre dentro de restaurarSesion() una vez que
+  // usuarioActual ya está cargado (ver _pendingMpResult más abajo).
+  (function capturarRetornoMP() {
+    const mp = new URLSearchParams(location.search).get('mp');
+    if (mp) {
+      window._pendingMpResult = mp;
+      history.replaceState(null, '', location.pathname);
     }
   })();
 
