@@ -253,6 +253,7 @@ document.addEventListener('focusin', (e) => {
     's-estado-propuesta':   'nb-pedidos',
     's-historial':          'nb-perfil',
     's-tyc':                'nb-home',
+    's-privacidad':         'nb-perfil',
     's-loyalty':            'nb-perfil',
     's-denuncia':         'nb-perfil',
     's-moderacion':       'nb-perfil',
@@ -260,7 +261,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub'];
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -4587,6 +4588,73 @@ document.addEventListener('focusin', (e) => {
     goTo('s-edit-perfil');
   }
   window.confirmarActivarPrestador = confirmarActivarPrestador;
+
+  // ── Aceptación de Términos/Privacidad previa al login ──────────────────
+  const TYC_LOGIN_KEY = 'pronet_tyc_aceptado';
+  let tycAccionPendiente = null; // { method, ev }
+
+  function gateLogin(method, ev) {
+    if (localStorage.getItem(TYC_LOGIN_KEY)) {
+      ejecutarAccionLogin(method, ev);
+      return;
+    }
+    tycAccionPendiente = { method, ev };
+    const modal = document.getElementById('modal-tyc-login');
+    const c1 = document.getElementById('tyc-check-terminos');
+    const c2 = document.getElementById('tyc-check-edad');
+    if (c1) c1.checked = false;
+    if (c2) c2.checked = false;
+    actualizarBotonTyc();
+    if (modal) modal.style.display = 'flex';
+  }
+  window.gateLogin = gateLogin;
+
+  function ejecutarAccionLogin(method, ev) {
+    if (method === 'invitado') entrarInvitado();
+    else loginWith(method, ev);
+  }
+
+  function actualizarBotonTyc() {
+    const c1 = document.getElementById('tyc-check-terminos');
+    const c2 = document.getElementById('tyc-check-edad');
+    const btn = document.getElementById('tyc-continuar-btn');
+    if (!btn) return;
+    const listo = c1?.checked && c2?.checked;
+    btn.disabled = !listo;
+    btn.style.opacity = listo ? '1' : '.4';
+  }
+  window.actualizarBotonTyc = actualizarBotonTyc;
+
+  function confirmarTyc() {
+    const c1 = document.getElementById('tyc-check-terminos');
+    const c2 = document.getElementById('tyc-check-edad');
+    if (!c1?.checked || !c2?.checked) return;
+    localStorage.setItem(TYC_LOGIN_KEY, new Date().toISOString());
+    const modal = document.getElementById('modal-tyc-login');
+    if (modal) modal.style.display = 'none';
+    const accion = tycAccionPendiente;
+    tycAccionPendiente = null;
+    if (accion) ejecutarAccionLogin(accion.method, accion.ev);
+  }
+  window.confirmarTyc = confirmarTyc;
+
+  function cancelarTyc() {
+    const modal = document.getElementById('modal-tyc-login');
+    if (modal) modal.style.display = 'none';
+    tycAccionPendiente = null;
+  }
+  window.cancelarTyc = cancelarTyc;
+
+  // Abre T&C o Privacidad desde dentro del modal (login-screen tiene z-index
+  // por encima de .screen, hay que ocultarlo para que se vea la pantalla).
+  function guardarAccionPendienteYVer(pantalla) {
+    const modal = document.getElementById('modal-tyc-login');
+    if (modal) modal.style.display = 'none';
+    const login = document.getElementById('login-screen');
+    if (login) login.classList.add('hidden');
+    goTo(pantalla);
+  }
+  window.guardarAccionPendienteYVer = guardarAccionPendienteYVer;
 
   async function loginWith(method, ev) {
     const btn = ev && ev.target ? ev.target.closest('button') : null;
