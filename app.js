@@ -9053,6 +9053,8 @@ document.addEventListener('focusin', (e) => {
           return;
         }
         usuarioActual = u;
+        const tycTs = localStorage.getItem('pronet_tyc_aceptado');
+        if (tycTs) PronetDB.registrarAceptacionTyc(tycTs).catch(() => {});
         // modoRol persiste en localStorage entre sesiones y entre cuentas.
         // Si el usuario que ingresa es un prestador puro (sin doble perfil),
         // limpiar para que no herede un 'vecino' de una sesión anterior.

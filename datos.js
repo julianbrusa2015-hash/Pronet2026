@@ -725,6 +725,21 @@ const PronetDB = (() => {
       return { ok: true, url: data.publicUrl };
     },
 
+    /** Registra en la base la aceptación de T&C/privacidad, una sola vez por
+     *  cuenta (conserva la fecha de la primera aceptación, no la pisa).
+     *  Recibe el timestamp real del checkbox (guardado en localStorage) en
+     *  vez de usar "ahora" — así no se inventa una fecha de consentimiento
+     *  para sesiones viejas que nunca vieron el modal. */
+    async registrarAceptacionTyc(timestampLocal) {
+      if (!remoto || !timestampLocal) return;
+      const uid = await this.usuarioIdActual();
+      if (!uid) return;
+      const { data } = await sb.from('perfiles').select('tyc_aceptado_en').eq('id', uid).maybeSingle();
+      if (data?.tyc_aceptado_en) return;
+      await sb.from('perfiles').update({ tyc_aceptado_en: timestampLocal }).eq('id', uid)
+        .catch(() => {});
+    },
+
     /** Devuelve el teléfono de un usuario, solo si ya comparten un chat de
      *  ProMarket (ver supabase-fix-perfiles-lectura.sql — el teléfono no es
      *  legible por un SELECT genérico, solo por esta función). */
