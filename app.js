@@ -323,6 +323,17 @@ document.addEventListener('focusin', (e) => {
         const fd = document.getElementById('mkt-feed'); if (fd) fd.style.display = '';
         const lbl = document.getElementById('mkt-toggle-lbl'); if (lbl) lbl.textContent = 'Mapa';
       }
+      // Pedir geolocalización best-effort; si ya la tenemos no volvemos a pedir
+      if (!userLat && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+            renderMercado(); // re-render para mostrar distancias
+          },
+          () => {} // permiso denegado — silencioso
+        );
+      }
       renderMercado();
     }
     // Si va a Pedidos, refrescar la lista desde la base de datos
@@ -3268,6 +3279,16 @@ document.addEventListener('focusin', (e) => {
 
   let mktMisLikes = new Set(); // IDs de publicaciones likeadas por el usuario actual
 
+  function mktDistanciaLabel(zona) {
+    if (!userLat || !zona) return '';
+    const coord = MKT_ZONA_COORD[zona];
+    if (!coord) return '';
+    const km = calcDistanciaKm(userLat, userLng, coord.lat, coord.lng);
+    const minutos = Math.max(1, Math.round(km / 5 * 60)); // 5 km/h caminando
+    const distStr = km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1).replace('.', ',') + ' km';
+    return `📍 A ${minutos} min caminando · ${distStr}`;
+  }
+
   function mktCardHTML(p) {
     const nombre    = p.perfiles?.nombre || 'Vecino';
     const iniciales = mktIniciales(nombre);
@@ -3276,6 +3297,7 @@ document.addEventListener('focusin', (e) => {
     const liked     = mktMisLikes.has(p.id);
     const likes     = p.likes_count || 0;
     const comentarios = p.comentarios_count || 0;
+    const distLabel = mktDistanciaLabel(p.zona);
     const foto = p.foto_url
       ? `<img src="${escHTML(p.foto_url)}" alt="${escHTML(p.titulo)}" style="width:100%;aspect-ratio:4/5;object-fit:cover;display:block">`
       : `<div class="mkt-post-photo" style="background:var(--surface);font-size:48px">🛍️</div>`;
@@ -3295,6 +3317,7 @@ document.addEventListener('focusin', (e) => {
             <div class="mkt-post-price">${p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar'}</div>
           </div>
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
+          ${distLabel ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">${distLabel}</div>` : ''}
           <div style="display:flex;align-items:center;gap:12px;margin:10px 0 8px">
             <button id="like-btn-${escHTML(p.id)}" onclick="mktToggleLike('${escHTML(p.id)}')"
               data-liked="${liked ? '1' : '0'}"
