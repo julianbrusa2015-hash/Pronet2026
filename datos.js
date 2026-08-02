@@ -725,6 +725,13 @@ const PronetDB = (() => {
       return { ok: true, url: data.publicUrl };
     },
 
+    /** Devuelve el teléfono cargado por un usuario (o null si no tiene). */
+    async obtenerTelefonoUsuario(userId) {
+      if (!remoto || !userId) return null;
+      const { data } = await sb.from('perfiles').select('telefono').eq('id', userId).maybeSingle();
+      return data?.telefono || null;
+    },
+
     /** Abre (o recupera) el chat de consulta entre quien consulta y el autor de la publicación. */
     async abrirChatMercado(publicacionId) {
       if (!remoto) return { ok: false, error: 'El chat requiere modo remoto' };

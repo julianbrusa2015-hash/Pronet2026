@@ -3645,6 +3645,8 @@ document.addEventListener('focusin', (e) => {
     if (usuarioActual.id === autorId) { showToast && showToast('No podés consultar tu propia publicación'); return; }
     chatMercadoOrigen = 's-mercado';
     chatMercadoContraparteId = autorId;
+    chatMercadoContraparteNombre = autorNombre || 'Vendedor';
+    chatMercadoContraparteTelefono = null;
     // Set up header immediately
     const avEl = document.getElementById('cmk-av');
     const nameEl = document.getElementById('cmk-name');
@@ -3656,6 +3658,9 @@ document.addEventListener('focusin', (e) => {
       avEl.style.background = '#EEF2FF'; avEl.style.color = '#2B5BFF';
     }
     if (subEl) subEl.textContent = 'ProMarket';
+    const contactBtn1 = document.getElementById('cmk-contactar-btn');
+    if (contactBtn1) contactBtn1.style.display = 'none';
+    cargarTelefonoContraparte(autorId);
     goTo('s-chat-mercado');
     const body = document.getElementById('cmk-body');
     if (body) body.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Abriendo chat...</div>';
@@ -3866,14 +3871,61 @@ document.addEventListener('focusin', (e) => {
     if (chatMercadoSuscripcion) { chatMercadoSuscripcion(); chatMercadoSuscripcion = null; }
     chatMercadoActualId = null;
     chatMercadoContraparteId = null;
+    chatMercadoContraparteNombre = null;
+    chatMercadoContraparteTelefono = null;
     goTo(chatMercadoOrigen || 's-mercado');
   }
   window.cerrarChatMercado = cerrarChatMercado;
+
+  // Trae el teléfono de la contraparte (si lo cargó) y muestra el botón de contacto.
+  async function cargarTelefonoContraparte(userId) {
+    const tel = await PronetDB.obtenerTelefonoUsuario(userId).catch(() => null);
+    // El usuario pudo haber cambiado de chat mientras esto resolvía
+    if (chatMercadoContraparteId !== userId) return;
+    chatMercadoContraparteTelefono = tel;
+    const btn = document.getElementById('cmk-contactar-btn');
+    if (btn) btn.style.display = tel ? '' : 'none';
+  }
+
+  function abrirModalContacto() {
+    if (!chatMercadoContraparteTelefono) return;
+    const modal = document.getElementById('modal-contacto');
+    if (!modal) return;
+    const tel = chatMercadoContraparteTelefono.replace(/[^\d+]/g, '');
+    const nombre = chatMercadoContraparteNombre || 'este vecino';
+    const titEl = document.getElementById('contacto-titulo');
+    if (titEl) titEl.textContent = `Contactar a ${nombre}`;
+    const telLbl = document.getElementById('contacto-tel-label');
+    if (telLbl) telLbl.textContent = chatMercadoContraparteTelefono;
+    const llamarEl = document.getElementById('contacto-llamar');
+    if (llamarEl) llamarEl.href = 'tel:' + tel;
+    const waEl = document.getElementById('contacto-whatsapp');
+    if (waEl) waEl.href = 'https://wa.me/' + tel.replace('+', '') + '?text=' + encodeURIComponent('Hola! Te escribo por tu publicación en ProMarket');
+    modal.style.display = 'flex';
+  }
+  window.abrirModalContacto = abrirModalContacto;
+
+  function cerrarModalContacto() {
+    const modal = document.getElementById('modal-contacto');
+    if (modal) modal.style.display = 'none';
+  }
+  window.cerrarModalContacto = cerrarModalContacto;
+
+  function copiarNumeroContacto() {
+    if (!chatMercadoContraparteTelefono) return;
+    navigator.clipboard?.writeText(chatMercadoContraparteTelefono).then(() => {
+      showToast('📋 Número copiado');
+      cerrarModalContacto();
+    }).catch(() => showToast('⚠️ No se pudo copiar'));
+  }
+  window.copiarNumeroContacto = copiarNumeroContacto;
 
   // Abre un hilo de chat existente. origen controla a dónde vuelve el back.
   async function mktAbrirHilo(chatId, contraparteId, contraNombre, pubTitulo, origen) {
     chatMercadoOrigen = origen || 's-mis-consultas-mkt';
     chatMercadoContraparteId = contraparteId;
+    chatMercadoContraparteNombre = contraNombre || 'Vecino';
+    chatMercadoContraparteTelefono = null;
     const avEl = document.getElementById('cmk-av');
     const nameEl = document.getElementById('cmk-name');
     const subEl = document.getElementById('cmk-sub');
@@ -3884,6 +3936,9 @@ document.addEventListener('focusin', (e) => {
       avEl.style.background = '#EEF2FF'; avEl.style.color = '#2B5BFF';
     }
     if (subEl) subEl.textContent = pubTitulo || 'ProMarket';
+    const contactBtn2 = document.getElementById('cmk-contactar-btn');
+    if (contactBtn2) contactBtn2.style.display = 'none';
+    cargarTelefonoContraparte(contraparteId);
     goTo('s-chat-mercado');
     const body = document.getElementById('cmk-body');
     if (body) body.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
@@ -7760,6 +7815,8 @@ document.addEventListener('focusin', (e) => {
   let chatMercadoActualId = null;
   let chatMercadoSuscripcion = null;
   let chatMercadoContraparteId = null;
+  let chatMercadoContraparteNombre = null;
+  let chatMercadoContraparteTelefono = null;
   let chatMercadoOrigen = 's-mercado';
 
   function volverDesdeChat() {
