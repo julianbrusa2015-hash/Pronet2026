@@ -3308,7 +3308,7 @@ document.addEventListener('focusin', (e) => {
               <span style="font-size:13px;font-weight:600;color:var(--ink3)">${comentarios > 0 ? comentarios : ''}</span>
             </button>
             <div style="flex:1"></div>
-            <button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar('${escHTML(p.id)}','${escHTML(nombre)}','${escHTML(p.autor_id)}')">💬 Consultar</button>
+            <button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar('${escHTML(p.id)}','${escHTML(nombre)}','${escHTML(p.autor_id)}','${escHTML(p.titulo)}')">💬 Consultar</button>
           </div>
           <div style="text-align:right"><span onclick="abrirReportarPub('${escHTML(p.id)}','${escHTML(p.autor_id)}','${escHTML(p.titulo)}')" style="font-size:11px;color:var(--ink3);cursor:pointer">⚑ Reportar</span></div>
         </div>
@@ -3612,7 +3612,7 @@ document.addEventListener('focusin', (e) => {
   }
   window.renderMapaMercado = renderMapaMercado;
 
-  async function mktConsultar(pubId, autorNombre, autorId) {
+  async function mktConsultar(pubId, autorNombre, autorId, pubTitulo) {
     if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Consultar', sub: 'Necesitás una cuenta para enviar mensajes.' }); return; }
     if (usuarioActual.id === autorId) { showToast && showToast('No podés consultar tu propia publicación'); return; }
     chatMercadoOrigen = 's-mercado';
@@ -3649,6 +3649,15 @@ document.addEventListener('focusin', (e) => {
       }
     });
     PronetDB.marcarLeidosMercado(chatMercadoActualId);
+    // Notificar al autor que alguien abrió una consulta
+    const nombreConsultante = usuarioActual.nombre || 'Un vecino';
+    PronetDB.notificar({
+      destino: 'usuario',
+      usuario_id: autorId,
+      tipo: 'consulta_mercado',
+      titulo: `💬 ${nombreConsultante} quiere consultarte`,
+      cuerpo: pubTitulo ? pubTitulo.slice(0, 80) : 'Nueva consulta en ProMarket',
+    }).catch(() => {});
   }
   window.mktConsultar = mktConsultar;
 
