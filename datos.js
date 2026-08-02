@@ -1811,13 +1811,8 @@ const PronetDB = (() => {
       }
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return null;
-      // Traer el perfil vinculado. Se usa la función mi_perfil() (security definer)
-      // en vez de un select directo porque el SELECT genérico sobre perfiles
-      // ahora excluye la columna teléfono a nivel de grant (ver
-      // supabase-fix-perfiles-lectura.sql) — el dueño de la cuenta sí necesita
-      // ver su propio teléfono para prellenar el form de edición.
-      const { data: perfilesRpc } = await sb.rpc('mi_perfil');
-      const perfil = Array.isArray(perfilesRpc) ? perfilesRpc[0] : perfilesRpc;
+      // Traer el perfil vinculado
+      const { data: perfil } = await sb.from('perfiles').select('*').eq('id', user.id).maybeSingle();
       // Autorreparación: prestador sin fila en `prestadores` (bug de registro).
       // Antes esto insertaba directo en `prestadores`, pero no hay policy de
       // INSERT ahí: RLS lo rechazaba con 403 y el error se descartaba, así que
