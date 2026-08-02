@@ -250,7 +250,15 @@ test.describe('D-01b · Sync precio_mes/precio_anual desde planes_limites', () =
   test.use({ storageState: sesionPrestador });
   test.beforeEach(async ({ page }) => { await abrir(page); });
 
-  test('PRONET_CONFIG.PLANES coincide con planes_limites para los 4 planes', async ({ page }) => {
+  // planes_limites dejó de ser sólo "planes de prestador" el 2026-08-02:
+  // ahora también vive ahí 'promarket_credito', un ítem de pago único (una
+  // publicación extra de ProMarket) que a propósito NO tiene tarjeta en
+  // PRONET_CONFIG.PLANES ni en s-subs — no es una suscripción, no se elige
+  // desde la pantalla de planes. El sync de precios sigue aplicando sólo a
+  // los planes de prestador de verdad.
+  const NO_SON_PLANES_DE_PRESTADOR = ['promarket_credito'];
+
+  test('PRONET_CONFIG.PLANES coincide con planes_limites para los planes de prestador', async ({ page }) => {
     const { planes, filas } = await page.evaluate(async () => ({
       planes: window.PRONET_CONFIG.PLANES,
       filas:  await window.PronetDB.listarPlanesLimites(),
@@ -258,12 +266,23 @@ test.describe('D-01b · Sync precio_mes/precio_anual desde planes_limites', () =
     expect(filas.length, 'listarPlanesLimites() no devolvió filas').toBeGreaterThan(0);
 
     const porId = Object.fromEntries(planes.map(p => [p.id, p]));
-    for (const fila of filas) {
+    for (const fila of filas.filter(f => !NO_SON_PLANES_DE_PRESTADOR.includes(f.plan))) {
       const p = porId[fila.plan];
       expect(p, `plan "${fila.plan}" de la DB no existe en PRONET_CONFIG.PLANES`).toBeTruthy();
       expect(p.precio_mes,   `precio_mes desincronizado para "${fila.plan}"`).toBe(fila.precio_mes);
       expect(p.precio_anual, `precio_anual desincronizado para "${fila.plan}"`).toBe(fila.precio_anual);
     }
+  });
+
+  test('promarket_credito existe en planes_limites pero no como plan de prestador', async ({ page }) => {
+    const { planes, filas } = await page.evaluate(async () => ({
+      planes: window.PRONET_CONFIG.PLANES,
+      filas:  await window.PronetDB.listarPlanesLimites(),
+    }));
+    const credito = filas.find(f => f.plan === 'promarket_credito');
+    expect(credito, 'falta la fila de promarket_credito en planes_limites').toBeTruthy();
+    expect(credito.precio_mes).toBe(5000);
+    expect(planes.some(p => p.id === 'promarket_credito')).toBe(false);
   });
 });
 
