@@ -3370,7 +3370,7 @@ document.addEventListener('focusin', (e) => {
       const nombre = c.perfiles?.nombre || 'Vecino';
       const ini    = mktIniciales(nombre);
       const tiempo = mktTiempoRelativo(c.creado);
-      const esPropio = c.autor_id === usuarioActual?.id;
+      const esPropio = c.autor_id === usuarioActual?.id || esAdmin();
       return `<div style="display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)">
         <div class="c-av" style="width:34px;height:34px;flex-shrink:0;font-size:12px;background:var(--blue-s);color:var(--blue)">${escHTML(ini)}</div>
         <div style="flex:1;min-width:0">
