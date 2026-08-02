@@ -189,7 +189,7 @@ document.addEventListener('focusin', (e) => {
     editarPerfilPro:   ['s-historial'],
     suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
-    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado', 's-mis-publicaciones', 's-mis-consultas-mkt', 's-mis-consultas-enviadas'],
+    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado', 's-mis-publicaciones', 's-mis-consultas-mkt', 's-mis-consultas-enviadas', 's-comentarios-pub'],
   };
 
   function isScreenEnabled(id) {
@@ -234,6 +234,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-publicaciones':  'nb-perfil',
     's-mis-consultas-mkt':       'nb-perfil',
     's-mis-consultas-enviadas':  'nb-perfil',
+    's-comentarios-pub':         'nb-mercado',
     's-chat':             'nb-buscar',
     's-chats':            'nb-buscar',
     's-prof':             'nb-buscar',
@@ -3265,12 +3266,17 @@ document.addEventListener('focusin', (e) => {
     return `hace ${dias} días`;
   }
 
+  let mktMisLikes = new Set(); // IDs de publicaciones likeadas por el usuario actual
+
   function mktCardHTML(p) {
-    const nombre   = p.perfiles?.nombre || 'Vecino';
+    const nombre    = p.perfiles?.nombre || 'Vecino';
     const iniciales = mktIniciales(nombre);
-    const catLabel = MKT_CAT_LABELS[p.categoria] || p.categoria;
-    const tiempo   = mktTiempoRelativo(p.creado);
-    const foto     = p.foto_url
+    const catLabel  = MKT_CAT_LABELS[p.categoria] || p.categoria;
+    const tiempo    = mktTiempoRelativo(p.creado);
+    const liked     = mktMisLikes.has(p.id);
+    const likes     = p.likes_count || 0;
+    const comentarios = p.comentarios_count || 0;
+    const foto = p.foto_url
       ? `<img src="${escHTML(p.foto_url)}" alt="${escHTML(p.titulo)}" style="width:100%;aspect-ratio:4/5;object-fit:cover;display:block">`
       : `<div class="mkt-post-photo" style="background:var(--surface);font-size:48px">🛍️</div>`;
     return `
@@ -3289,11 +3295,120 @@ document.addEventListener('focusin', (e) => {
             <div class="mkt-post-price">${p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar'}</div>
           </div>
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
-          <button class="btn-p" onclick="mktConsultar('${escHTML(p.id)}','${escHTML(nombre)}','${escHTML(p.autor_id)}')">💬 Consultar</button>
-          <div style="text-align:right;margin-top:6px"><span onclick="abrirReportarPub('${escHTML(p.id)}','${escHTML(p.autor_id)}','${escHTML(p.titulo)}')" style="font-size:11px;color:var(--ink3);cursor:pointer">⚑ Reportar</span></div>
+          <div style="display:flex;align-items:center;gap:12px;margin:10px 0 8px">
+            <button id="like-btn-${escHTML(p.id)}" onclick="mktToggleLike('${escHTML(p.id)}')"
+              data-liked="${liked ? '1' : '0'}"
+              style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;padding:0;font-family:'Inter',sans-serif">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="${liked ? '#EF4444' : 'none'}" stroke="${liked ? '#EF4444' : 'var(--ink3)'}" stroke-width="2" style="transition:all .15s"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <span id="like-cnt-${escHTML(p.id)}" style="font-size:13px;font-weight:600;color:${liked ? '#EF4444' : 'var(--ink3)'}">${likes > 0 ? likes : ''}</span>
+            </button>
+            <button onclick="mktAbrirComentarios('${escHTML(p.id)}','${escHTML(p.titulo)}')"
+              style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;padding:0;font-family:'Inter',sans-serif">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span style="font-size:13px;font-weight:600;color:var(--ink3)">${comentarios > 0 ? comentarios : ''}</span>
+            </button>
+            <div style="flex:1"></div>
+            <button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar('${escHTML(p.id)}','${escHTML(nombre)}','${escHTML(p.autor_id)}')">💬 Consultar</button>
+          </div>
+          <div style="text-align:right"><span onclick="abrirReportarPub('${escHTML(p.id)}','${escHTML(p.autor_id)}','${escHTML(p.titulo)}')" style="font-size:11px;color:var(--ink3);cursor:pointer">⚑ Reportar</span></div>
         </div>
       </div>`;
   }
+
+  async function mktToggleLike(pubId) {
+    if (!usuarioActual) { showToast('Iniciá sesión para dar me gusta'); return; }
+    const btn = document.getElementById('like-btn-' + pubId);
+    const cntEl = document.getElementById('like-cnt-' + pubId);
+    const wasLiked = btn?.dataset.liked === '1';
+    // Optimistic update
+    const newLiked = !wasLiked;
+    const newCount = parseInt(cntEl?.textContent || '0') + (newLiked ? 1 : -1);
+    if (btn) {
+      btn.dataset.liked = newLiked ? '1' : '0';
+      const svg = btn.querySelector('svg');
+      if (svg) { svg.setAttribute('fill', newLiked ? '#EF4444' : 'none'); svg.setAttribute('stroke', newLiked ? '#EF4444' : 'var(--ink3)'); }
+      if (cntEl) { cntEl.textContent = newCount > 0 ? newCount : ''; cntEl.style.color = newLiked ? '#EF4444' : 'var(--ink3)'; }
+    }
+    if (newLiked) mktMisLikes.add(pubId); else mktMisLikes.delete(pubId);
+    const res = await PronetDB.toggleLike(pubId);
+    if (!res.ok) {
+      // Revertir si falló
+      if (btn) {
+        btn.dataset.liked = wasLiked ? '1' : '0';
+        const svg = btn.querySelector('svg');
+        if (svg) { svg.setAttribute('fill', wasLiked ? '#EF4444' : 'none'); svg.setAttribute('stroke', wasLiked ? '#EF4444' : 'var(--ink3)'); }
+        if (cntEl) { cntEl.textContent = (newCount + (newLiked ? -1 : 1)) > 0 ? (newCount + (newLiked ? -1 : 1)) : ''; }
+      }
+      if (wasLiked) mktMisLikes.add(pubId); else mktMisLikes.delete(pubId);
+    }
+  }
+  window.mktToggleLike = mktToggleLike;
+
+  let mktComentariosPubId = null;
+
+  async function mktAbrirComentarios(pubId, titulo) {
+    mktComentariosPubId = pubId;
+    const tit = document.getElementById('com-pub-titulo');
+    if (tit) tit.textContent = titulo;
+    const inp = document.getElementById('com-input');
+    if (inp) inp.value = '';
+    goTo('s-comentarios-pub');
+    await mktCargarComentarios();
+  }
+  window.mktAbrirComentarios = mktAbrirComentarios;
+
+  async function mktCargarComentarios() {
+    const lista = document.getElementById('com-lista');
+    if (!lista || !mktComentariosPubId) return;
+    lista.innerHTML = '<div style="padding:20px;text-align:center;color:var(--ink3);font-size:13px">⏳ Cargando...</div>';
+    const items = await PronetDB.listarComentarios(mktComentariosPubId).catch(() => []);
+    if (!items.length) {
+      lista.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Todavía no hay comentarios.<br>¡Sé el primero!</div>';
+      return;
+    }
+    lista.innerHTML = items.map(c => {
+      const nombre = c.perfiles?.nombre || 'Vecino';
+      const ini    = mktIniciales(nombre);
+      const tiempo = mktTiempoRelativo(c.creado);
+      const esPropio = c.autor_id === usuarioActual?.id;
+      return `<div style="display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div class="c-av" style="width:34px;height:34px;flex-shrink:0;font-size:12px;background:var(--blue-s);color:var(--blue)">${escHTML(ini)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:2px">
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">${escHTML(nombre)}</span>
+            <span style="font-size:11px;color:var(--ink3)">${escHTML(tiempo)}</span>
+            ${esPropio ? `<span onclick="mktBorrarComentario('${escHTML(c.id)}')" style="margin-left:auto;font-size:11px;color:var(--ink3);cursor:pointer">✕</span>` : ''}
+          </div>
+          <div style="font-size:13px;color:var(--ink);line-height:1.5;word-break:break-word">${escHTML(c.texto)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  window.mktCargarComentarios = mktCargarComentarios;
+
+  async function mktEnviarComentario() {
+    if (!usuarioActual) { showToast('Iniciá sesión para comentar'); return; }
+    const inp = document.getElementById('com-input');
+    const texto = inp?.value.trim();
+    if (!texto) return;
+    const btn = document.getElementById('com-enviar-btn');
+    if (btn) btn.disabled = true;
+    const res = await PronetDB.crearComentario(mktComentariosPubId, texto);
+    if (btn) btn.disabled = false;
+    if (!res.ok) { showToast('⚠️ No se pudo enviar el comentario'); return; }
+    if (inp) inp.value = '';
+    // Actualizar contador en el card del feed
+    const cntEl = document.querySelector(`[onclick*="${mktComentariosPubId}"] span`);
+    // Recargar lista
+    await mktCargarComentarios();
+  }
+  window.mktEnviarComentario = mktEnviarComentario;
+
+  async function mktBorrarComentario(comentarioId) {
+    const res = await PronetDB.borrarComentario(comentarioId);
+    if (res.ok) await mktCargarComentarios();
+  }
+  window.mktBorrarComentario = mktBorrarComentario;
 
   async function renderMercado(reset = true) {
     const cont = document.getElementById('mkt-feed');
@@ -3309,6 +3424,12 @@ document.addEventListener('focusin', (e) => {
     const posts = await PronetDB.listarPublicaciones({ categoria: mktFiltroActivo, busqueda: mktBusqueda, zona: mktZonaActiva, offset: mktOffset }).catch(() => []);
     mktCargando = false;
     if (reset) cont.innerHTML = '';
+    // Cargar qué publicaciones likeó el usuario actual (merge con el Set existente)
+    if (posts.length && usuarioActual) {
+      const ids = posts.map(p => p.id);
+      const nuevos = await PronetDB.listarMisLikes(ids).catch(() => new Set());
+      nuevos.forEach(id => mktMisLikes.add(id));
+    }
     if (!posts.length && mktOffset === 0) {
       cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay publicaciones en esta categoría.<br><span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="abrirPublicarMercado()">¡Publicá el primero!</span></div>';
       mktHayMas = false;

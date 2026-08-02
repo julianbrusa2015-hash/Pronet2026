@@ -555,7 +555,7 @@ const PronetDB = (() => {
       if (!remoto) return [];
       let q = sb.from('publicaciones')
         .select(`id, autor_id, categoria, titulo, descripcion, precio, foto_url, zona, creado,
-                 perfiles:autor_id (nombre, zona)`)
+                 likes_count, comentarios_count, perfiles:autor_id (nombre, zona)`)
         .eq('activa', true)
         .order('creado', { ascending: false })
         .range(offset, offset + 9);
@@ -796,6 +796,65 @@ const PronetDB = (() => {
         if (!data?.init_point) return { ok: false, error: 'Respuesta inválida de MercadoPago' };
         return { ok: true, init_point: data.init_point };
       } catch (e) { return { ok: false, error: String(e) }; }
+    },
+
+    /** Devuelve Set con los IDs de publicaciones que el usuario actual likeó. */
+    async listarMisLikes(pubIds) {
+      if (!remoto || !pubIds?.length) return new Set();
+      const uid = await this.usuarioIdActual();
+      if (!uid) return new Set();
+      const { data } = await sb.from('likes_publicaciones')
+        .select('publicacion_id').eq('usuario_id', uid).in('publicacion_id', pubIds);
+      return new Set((data || []).map(r => r.publicacion_id));
+    },
+
+    /** Alterna like en una publicación. Devuelve { ok, liked } */
+    async toggleLike(pubId) {
+      if (!remoto) return { ok: false };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
+      const { data: existing } = await sb.from('likes_publicaciones')
+        .select('publicacion_id').eq('usuario_id', uid).eq('publicacion_id', pubId).maybeSingle();
+      if (existing) {
+        await sb.from('likes_publicaciones').delete().eq('usuario_id', uid).eq('publicacion_id', pubId);
+        return { ok: true, liked: false };
+      } else {
+        await sb.from('likes_publicaciones').insert({ usuario_id: uid, publicacion_id: pubId });
+        return { ok: true, liked: true };
+      }
+    },
+
+    /** Lista los primeros N comentarios de una publicación con el nombre del autor. */
+    async listarComentarios(pubId, limit = 30) {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('comentarios_publicaciones')
+        .select('id, texto, creado, autor_id, perfiles:autor_id(nombre)')
+        .eq('publicacion_id', pubId)
+        .order('creado', { ascending: true })
+        .limit(limit);
+      if (error) { console.warn('[PronetDB] listarComentarios', error.message); return []; }
+      return data || [];
+    },
+
+    /** Crea un comentario en una publicación. */
+    async crearComentario(pubId, texto) {
+      if (!remoto) return { ok: false };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
+      const { error } = await sb.from('comentarios_publicaciones')
+        .insert({ publicacion_id: pubId, autor_id: uid, texto: texto.trim().slice(0, 500) });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+
+    /** Borra un comentario propio. */
+    async borrarComentario(comentarioId) {
+      if (!remoto) return { ok: false };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false };
+      const { error } = await sb.from('comentarios_publicaciones')
+        .delete().eq('id', comentarioId).eq('autor_id', uid);
+      return error ? { ok: false } : { ok: true };
     },
 
     async verificarPagoMP(paymentId) {
