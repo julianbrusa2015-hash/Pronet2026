@@ -231,12 +231,12 @@ test.describe('C4/C9 · Analítica — tiers de plan', () => {
 
     if (visible) {
       expect(texto.length).toBeGreaterThan(0);
-      // El texto debe mencionar un plan superior (Plus, Pro o Elite)
-      expect(texto).toMatch(/plus|pro|elite/i);
+      // El texto debe mencionar un plan superior (Plus o Pro)
+      expect(texto).toMatch(/plus|pro/i);
     }
   });
 
-  test('la sección de exportar CSV está oculta si el plan no es Elite', async ({ page }) => {
+  test('la sección de exportar CSV está oculta si el plan no llega al tier export', async ({ page }) => {
     await abrir(page);
     await irA(page, 's-analytics');
 

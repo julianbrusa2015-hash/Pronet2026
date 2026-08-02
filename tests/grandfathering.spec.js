@@ -113,10 +113,10 @@ test.describe('GF-1 · Grandfathering — lógica de límites', () => {
     expect(resultado).toBe('plus');
   });
 
-  test('planParaLimites("elite") devuelve "elite" independiente del estado fundador', async ({ page }) => {
+  test('planParaLimites("pro") devuelve "pro" independiente del estado fundador', async ({ page }) => {
     await abrir(page);
-    const resultado = await page.evaluate(() => window._planesAPI.planParaLimites('elite'));
-    expect(resultado).toBe('elite');
+    const resultado = await page.evaluate(() => window._planesAPI.planParaLimites('pro'));
+    expect(resultado).toBe('pro');
   });
 });
 

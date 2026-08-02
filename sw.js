@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v94'; // v94: ProMarket pasa de plan flat a cupos (3 gratis/año + créditos + Plus/Pro)
+const CACHE_VERSION = 'pronet-v95'; // v95: superficie de test _marketAPI para los specs de ProMarket
 
 const SHELL = [
   './',

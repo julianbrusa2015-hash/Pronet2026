@@ -5191,6 +5191,20 @@ document.addEventListener('focusin', (e) => {
     sesionLista:      () => !!usuarioActual,
   };
 
+  // Superficie de test de ProMarket: funciones de cupo y formato que los
+  // specs verifican sin tener que publicar de verdad (los tests corren contra
+  // producción y publicar consumiría cupo real del año de la cuenta de prueba).
+  window._marketAPI = {
+    puedePublicarMercado,
+    mktDistanciaLabel,
+    formatearFechaReserva,
+    mktIniciales,
+    mktTiempoRelativo,
+    zonaCoords:  () => ({ ...MKT_ZONA_COORD }),
+    creditos:    () => usuarioActual?.promarket_creditos ?? null,
+    legacyActivo: () => !!usuarioActual?.es_pro_marketplace,
+  };
+
   /** Aviso de límite alcanzado, con el nombre del plan actual. */
   function avisarLimitePlan(texto) {
     const cfg = getPlanConfig(planActual);

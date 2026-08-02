@@ -32,15 +32,29 @@ async function abrirApp(page) {
 test.describe('C9 · Catálogo de planes', () => {
   test.beforeEach(async ({ page }) => { await abrirApp(page); });
 
-  test('los 4 planes existen con sus IDs y precios', async ({ page }) => {
+  test('los 3 planes existen con sus IDs y precios', async ({ page }) => {
+    // Elite se dio de baja el 2026-08-02 (0 suscriptores). Techo: Pro.
     const planes = await page.evaluate(() => window.PRONET_CONFIG.PLANES);
-    expect(planes.map(p => p.id)).toEqual(['base', 'plus', 'pro', 'elite']);
+    expect(planes.map(p => p.id)).toEqual(['base', 'plus', 'pro']);
 
     const porId = Object.fromEntries(planes.map(p => [p.id, p]));
     expect(porId.base.precio_mes).toBe(0);
     expect(porId.plus.precio_mes).toBe(4990);
     expect(porId.pro.precio_mes).toBe(9990);
-    expect(porId.elite.precio_mes).toBe(19990);
+  });
+
+  test('Elite ya no es un plan comprable', async ({ page }) => {
+    // Al sacarlo hay que verificar los dos lados: que no esté en el catálogo
+    // del cliente y que getPlanConfig no lo resuelva como plan propio (cae a
+    // base, igual que cualquier id desconocido).
+    const r = await page.evaluate(() => ({
+      enCatalogo: window.PRONET_CONFIG.PLANES.some(p => p.id === 'elite'),
+      cfgId: window._planesAPI.getPlanConfig('elite').id,
+      card: !!document.getElementById('subs-card-elite'),
+    }));
+    expect(r.enCatalogo).toBe(false);
+    expect(r.cfgId).toBe('base');
+    expect(r.card).toBe(false);
   });
 
   test('el precio anual equivale a 10 meses (2 gratis)', async ({ page }) => {
@@ -64,11 +78,11 @@ test.describe('C4 · Resolución de límites por plan', () => {
 
   test('los planes superiores nunca se degradan', async ({ page }) => {
     // Invariante que vale con el interruptor en cualquier estado: el
-    // prelanzamiento sólo puede mejorar Base, nunca empeorar Plus/Pro/Elite.
+    // prelanzamiento sólo puede mejorar Base, nunca empeorar Plus/Pro.
     const superiores = await page.evaluate(() =>
-      ['plus', 'pro', 'elite'].map(p => window._planesAPI.planParaLimites(p))
+      ['plus', 'pro'].map(p => window._planesAPI.planParaLimites(p))
     );
-    expect(superiores).toEqual(['plus', 'pro', 'elite']);
+    expect(superiores).toEqual(['plus', 'pro']);
   });
 
   test('Base nunca recibe límites peores que los suyos', async ({ page }) => {
@@ -95,13 +109,11 @@ test.describe('C4 · Resolución de límites por plan', () => {
         base:  api.planParaLimites('base'),
         plus:  api.planParaLimites('plus'),
         pro:   api.planParaLimites('pro'),
-        elite: api.planParaLimites('elite'),
       };
     });
     expect(r.base).toBe(r.on ? 'base' : 'plus');
     expect(r.plus).toBe('plus');
     expect(r.pro).toBe('pro');
-    expect(r.elite).toBe('elite');
   });
 });
 
@@ -113,12 +125,10 @@ test.describe('C9 · Badge de plan en búsqueda', () => {
       base:  window._planesAPI.badgePlanPrestador('base'),
       plus:  window._planesAPI.badgePlanPrestador('plus'),
       pro:   window._planesAPI.badgePlanPrestador('pro'),
-      elite: window._planesAPI.badgePlanPrestador('elite'),
     }));
     expect(r.base).toBe('');
     expect(r.plus).toBe('');
     expect(r.pro).toContain('Pro');
-    expect(r.elite).toContain('Elite');
   });
 
   test('un plan inexistente no rompe ni inventa badge', async ({ page }) => {
@@ -151,7 +161,7 @@ test.describe('C9 · Interruptor de planes pagos', () => {
   test('con pagos desactivados no se ofrecen planes comprables', async ({ page }) => {
     const r = await page.evaluate(() => {
       const on = window._planesAPI.planesPagosActivos();
-      const visibles = ['plus', 'pro', 'elite'].filter(id => {
+      const visibles = ['plus', 'pro'].filter(id => {
         const c = document.getElementById('subs-card-' + id);
         return c && c.style.display !== 'none';
       });
