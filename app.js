@@ -189,7 +189,7 @@ document.addEventListener('focusin', (e) => {
     editarPerfilPro:   ['s-historial'],
     suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
-    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado', 's-mis-publicaciones', 's-mis-consultas-mkt', 's-mis-consultas-enviadas', 's-comentarios-pub'],
+    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado', 's-mis-publicaciones', 's-mis-consultas-mkt', 's-mis-consultas-enviadas', 's-comentarios-pub', 's-mis-alertas'],
   };
 
   function isScreenEnabled(id) {
@@ -234,6 +234,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-publicaciones':  'nb-perfil',
     's-mis-consultas-mkt':       'nb-perfil',
     's-mis-consultas-enviadas':  'nb-perfil',
+    's-mis-alertas':             'nb-perfil',
     's-comentarios-pub':         'nb-mercado',
     's-chat':             'nb-buscar',
     's-chats':            'nb-buscar',
@@ -261,7 +262,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad'];
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -309,6 +310,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-mis-publicaciones') { renderMisPublicaciones(); }
     if (id === 's-mis-consultas-mkt') { renderMisConsultasMkt(); }
     if (id === 's-mis-consultas-enviadas') { renderMisConsultasEnviadas(); }
+    if (id === 's-mis-alertas') { renderMisAlertas(); }
     // Si va a Mercado, renderizar el feed (sin resetear búsqueda si vuelve desde chat)
     if (id === 's-mercado') {
       const inp = document.getElementById('mkt-buscador');
@@ -4100,6 +4102,43 @@ document.addEventListener('focusin', (e) => {
         ${hora ? `<div style="font-size:11px;color:var(--ink3);flex-shrink:0">${hora}</div>` : ''}
       </div>`;
   }
+
+  // ── Mis alertas de búsqueda (ProMarket) ────────────────────────────
+  async function renderMisAlertas() {
+    const lista = document.getElementById('mis-alertas-lista');
+    if (!lista) return;
+    lista.innerHTML = '<div style="padding:32px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
+    const alertas = await PronetDB.listarMisAlertas().catch(() => []);
+    if (!alertas.length) {
+      lista.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--ink3)">Todavía no guardaste ninguna alerta.<br>Buscá algo en ProMarket y tocá "🔔 Avisame" si no hay resultados.</div>';
+      return;
+    }
+    lista.innerHTML = alertas.map(mktAlertaCardHTML).join('');
+  }
+  window.renderMisAlertas = renderMisAlertas;
+
+  function mktAlertaCardHTML(a) {
+    const termino = escHTML(a.termino);
+    const fecha = a.creado ? new Date(a.creado).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : '';
+    return `
+      <div style="display:flex;gap:10px;align-items:center;padding:12px 14px;background:white;border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        <div style="font-size:18px">🔔</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--ink)">${termino}</div>
+          ${fecha ? `<div style="font-size:11px;color:var(--ink3);margin-top:1px">Desde el ${fecha}</div>` : ''}
+        </div>
+        <button onclick="mktBorrarAlerta('${escHTML(a.id)}')"
+          style="background:none;border:none;color:var(--ink3);font-size:13px;font-weight:600;cursor:pointer;padding:6px">Eliminar</button>
+      </div>`;
+  }
+
+  async function mktBorrarAlerta(id) {
+    const res = await PronetDB.eliminarAlertaBusquedaPorId(id);
+    if (!res.ok) { showToast('⚠️ No se pudo eliminar la alerta'); return; }
+    showToast('🔕 Alerta eliminada');
+    renderMisAlertas();
+  }
+  window.mktBorrarAlerta = mktBorrarAlerta;
 
   // ── Pantalla publicar en ProMarket ────────────────────────────────
   let pmFotoArchivo = null;

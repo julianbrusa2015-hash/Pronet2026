@@ -600,6 +600,29 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
+    /** Lista todas las alertas de búsqueda activas del usuario actual. */
+    async listarMisAlertas() {
+      if (!remoto) return [];
+      const uid = await this.usuarioIdActual();
+      if (!uid) return [];
+      const { data, error } = await sb.from('alertas_busqueda')
+        .select('id, termino, creado')
+        .eq('usuario_id', uid).eq('activa', true)
+        .order('creado', { ascending: false });
+      if (error) { console.warn('[PronetDB] listarMisAlertas', error.message); return []; }
+      return data || [];
+    },
+
+    /** Elimina una alerta de búsqueda por id (usada desde la pantalla Mis alertas). */
+    async eliminarAlertaBusquedaPorId(id) {
+      if (!remoto) return { ok: false };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false };
+      const { error } = await sb.from('alertas_busqueda').delete().eq('id', id).eq('usuario_id', uid);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+
     /** Elimina una alerta de búsqueda del usuario actual. */
     async eliminarAlertaBusqueda(termino) {
       if (!remoto) return { ok: false };
