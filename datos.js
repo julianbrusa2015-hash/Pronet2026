@@ -573,8 +573,10 @@ const PronetDB = (() => {
     /** Crea una publicación nueva. El autor_id lo pone RLS (auth.uid()). */
     async crearPublicacion({ categoria, titulo, descripcion, precio, foto_url, zona }) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
       const { data, error } = await sb.from('publicaciones')
-        .insert({ categoria, titulo, descripcion: descripcion || null,
+        .insert({ autor_id: uid, categoria, titulo, descripcion: descripcion || null,
                   precio: precio || null, foto_url: foto_url || null, zona: zona || null })
         .select('id').single();
       if (error) return { ok: false, error: error.message };
