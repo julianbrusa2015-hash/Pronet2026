@@ -3284,8 +3284,12 @@ document.addEventListener('focusin', (e) => {
     const coord = MKT_ZONA_COORD[zona];
     if (!coord) return '';
     const km = calcDistanciaKm(userLat, userLng, coord.lat, coord.lng);
+    // Más de 1km: solo distancia (caminar deja de ser un dato útil).
+    // Es el mismo criterio que usan apps de delivery (Rappi/PedidosYa muestran
+    // tiempo estimado solo en el rango "cerca").
+    if (km > 1) return `📍 A ${km.toFixed(1).replace('.', ',')} km`;
     const minutos = Math.max(1, Math.round(km / 5 * 60)); // 5 km/h caminando
-    const distStr = km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1).replace('.', ',') + ' km';
+    const distStr = Math.round(km * 1000) + ' m';
     return `📍 A ${minutos} min caminando · ${distStr}`;
   }
 
