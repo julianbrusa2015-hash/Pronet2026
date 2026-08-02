@@ -3320,7 +3320,7 @@ document.addEventListener('focusin', (e) => {
         <div class="mkt-post-body">
           <div class="mkt-post-title-row">
             <div class="mkt-post-title">${escHTML(p.titulo)}</div>
-            <div class="mkt-post-price">${p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar'}</div>
+            <div class="mkt-post-price">${p.precio_convenir ? 'A convenir' : (p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar')}</div>
           </div>
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
           ${p.zona ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">📍 ${escHTML(p.zona)}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</div>` : ''}
@@ -4007,7 +4007,7 @@ document.addEventListener('focusin', (e) => {
 
   function misPubsCardHTML(p) {
     const cat = MKT_CAT_LABELS[p.categoria] || p.categoria;
-    const precio = p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar';
+    const precio = p.precio_convenir ? 'A convenir' : (p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar');
     const foto = p.foto_url
       ? `<img src="${escHTML(p.foto_url)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;flex-shrink:0">`
       : `<div style="width:72px;height:72px;border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">🛍️</div>`;
@@ -4221,6 +4221,8 @@ document.addEventListener('focusin', (e) => {
     ['pm-titulo','pm-desc','pm-precio'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
+    const convenirChk = document.getElementById('pm-precio-convenir');
+    if (convenirChk) { convenirChk.checked = false; pmTogglePrecioConvenir(convenirChk); }
     const zonaEl = document.getElementById('pm-zona');
     if (zonaEl) zonaEl.value = zonaActual && MKT_ZONA_COORD[zonaActual] ? zonaActual : '';
     const catSel = document.getElementById('pm-categoria');
@@ -4230,6 +4232,14 @@ document.addEventListener('focusin', (e) => {
     goTo('s-pub-mercado');
   }
   window.abrirPublicarMercado = abrirPublicarMercado;
+
+  function pmTogglePrecioConvenir(chk) {
+    const precioEl = document.getElementById('pm-precio');
+    if (!precioEl) return;
+    precioEl.disabled = chk.checked;
+    if (chk.checked) precioEl.value = '';
+  }
+  window.pmTogglePrecioConvenir = pmTogglePrecioConvenir;
 
   async function editarMiPublicacion(id) {
     const pub = mktMisPubs.find(p => p.id === id);
@@ -4257,6 +4267,11 @@ document.addEventListener('focusin', (e) => {
       else if (fid === 'pm-desc') el.value = pub.descripcion || '';
       else if (fid === 'pm-precio') el.value = pub.precio != null ? pub.precio : '';
     });
+    const convenirChk = document.getElementById('pm-precio-convenir');
+    if (convenirChk) {
+      convenirChk.checked = !!pub.precio_convenir;
+      pmTogglePrecioConvenir(convenirChk);
+    }
     const zonaEl = document.getElementById('pm-zona');
     if (zonaEl) zonaEl.value = pub.zona || '';
     const catSelEdit = document.getElementById('pm-categoria');
@@ -4383,6 +4398,7 @@ document.addEventListener('focusin', (e) => {
     const titulo = document.getElementById('pm-titulo')?.value.trim();
     const desc   = document.getElementById('pm-desc')?.value.trim();
     const precio = document.getElementById('pm-precio')?.value;
+    const precioConvenir = !!document.getElementById('pm-precio-convenir')?.checked;
     const zona   = document.getElementById('pm-zona')?.value;
     const categoria = document.getElementById('pm-categoria')?.value;
     const editando = !!pmEditandoId;
@@ -4409,10 +4425,10 @@ document.addEventListener('focusin', (e) => {
     let res;
     if (editando) {
       res = await PronetDB.editarPublicacion(pmEditandoId, { categoria, titulo, descripcion: desc || null,
-                                                              precio: precio ? Number(precio) : null, foto_url, zona });
+                                                              precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, foto_url, zona });
     } else {
       res = await PronetDB.crearPublicacion({ categoria, titulo, descripcion: desc || null,
-                                             precio: precio ? Number(precio) : null, foto_url, zona });
+                                             precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, foto_url, zona });
     }
 
     btn.disabled = false;

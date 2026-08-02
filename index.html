@@ -395,7 +395,11 @@
         <!-- Precio -->
         <label class="ob-label" for="pm-precio">Precio <span style="font-weight:400;color:var(--ink3)">(dejá vacío para "Consultar")</span></label>
         <input class="ob-input" id="pm-precio" name="pm-precio" type="number" min="0"
-          placeholder="Ej: 8500" style="margin-bottom:24px">
+          placeholder="Ej: 8500" style="margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:24px;cursor:pointer">
+          <input type="checkbox" id="pm-precio-convenir" onchange="pmTogglePrecioConvenir(this)" style="width:18px;height:18px">
+          <span style="font-size:13px;color:var(--ink)">Precio a convenir</span>
+        </label>
 
       </div>
 
