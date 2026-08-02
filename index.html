@@ -956,6 +956,16 @@
         <button id="modo-cambiar-btn" onclick="toggleModoRol()" style="background:var(--blue);color:white;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap">Cambiar a Vecino →</button>
       </div>
 
+      <!-- Aviso: falta cargar teléfono (habilita contacto directo en ProMarket) -->
+      <div id="banner-cargar-telefono" onclick="goTo('s-edit-perfil')" style="display:none;margin:14px 14px 0;background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:12px 14px;cursor:pointer;align-items:center;gap:10px">
+        <div style="font-size:20px">📱</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:var(--blue)">Cargá tu teléfono</div>
+          <div style="font-size:11px;color:var(--blue);opacity:.85;margin-top:1px">Así los vecinos te pueden contactar más rápido por WhatsApp</div>
+        </div>
+        <div style="color:var(--blue);font-size:16px">›</div>
+      </div>
+
       <!-- Acceso rápido — Points y Analítica, mismo estilo sutil que el resto del menú -->
       <div class="menu-list" style="margin:14px 14px 0">
         <div class="menu-item" data-feature="loyalty" onclick="goTo('s-loyalty')">

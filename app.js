@@ -5259,6 +5259,9 @@ document.addEventListener('focusin', (e) => {
       if (btnPub)   btnPub.style.display   = '';
     }
     if (!usuarioActual) return;
+    // Aviso para cargar teléfono (habilita el botón de contacto directo en ProMarket)
+    const bannerTel = document.getElementById('banner-cargar-telefono');
+    if (bannerTel) bannerTel.style.display = usuarioActual.telefono ? 'none' : 'flex';
     const nombre = usuarioActual.nombre || 'Usuario';
     const inic = inicialesDe(nombre);
     const tipo = admin ? 'Administrador' : (esPrestador() ? 'Prestador' : 'Cliente');
