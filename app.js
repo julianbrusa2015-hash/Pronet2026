@@ -8639,30 +8639,40 @@ document.addEventListener('focusin', (e) => {
         renderPedidosGuardados();
 
         // Procesar retorno desde MercadoPago (capturado sincrónicamente antes)
-        const _mpRes = window._pendingMpResult;
+        const _mpRes  = window._pendingMpResult;
+        const _mpPago = window._pendingMpPayment;
         if (_mpRes) {
           delete window._pendingMpResult;
+          delete window._pendingMpPayment;
           if (_mpRes === 'success') {
-            if (usuarioActual?.es_pro_marketplace) {
-              showToast('¡Ya sos Pro Market! Tocá + para publicar en el feed.', 6000);
-              setTimeout(() => goTo('s-mercado'), 600);
-            } else {
-              showToast('✅ Pago recibido — verificando acceso ProMarket...', 4000);
-              (async function esperarActivacionProMarket() {
-                for (const ms of [2500, 5000, 10000]) {
-                  await new Promise(r => setTimeout(r, ms));
-                  const u2 = await PronetDB.usuarioActual().catch(() => null);
-                  if (u2?.es_pro_marketplace) {
-                    usuarioActual = u2;
-                    reflejarUsuario();
-                    showToast('¡Ya sos Pro Market! Tocá + para publicar en el feed.', 6000);
-                    setTimeout(() => goTo('s-mercado'), 400);
-                    return;
-                  }
-                }
-                showToast('⚠️ El pago está siendo procesado. En unos minutos se activa — si no, contactanos.', 9000);
-              })();
-            }
+            (async function activarProMarket() {
+              const exito = async () => {
+                usuarioActual = await PronetDB.usuarioActual().catch(() => usuarioActual);
+                reflejarUsuario();
+                showToast('¡Ya sos Pro Market! Tocá + para publicar en el feed.', 6000);
+                setTimeout(() => goTo('s-mercado'), 400);
+              };
+
+              if (usuarioActual?.es_pro_marketplace) return exito();
+
+              showToast('✅ Pago recibido — activando tu acceso...', 4000);
+
+              // Verificación directa contra MP: no depende de que el webhook
+              // haya llegado. Activa el plan en el momento si el pago está
+              // aprobado, y es idempotente respecto del webhook.
+              if (_mpPago) {
+                const r = await PronetDB.verificarPagoMP(_mpPago);
+                if (r?.ok) return exito();
+              }
+
+              // Fallback: el webhook puede estar demorado
+              for (const ms of [2500, 5000, 10000]) {
+                await new Promise(r => setTimeout(r, ms));
+                const u2 = await PronetDB.usuarioActual().catch(() => null);
+                if (u2?.es_pro_marketplace) { usuarioActual = u2; return exito(); }
+              }
+              showToast('⚠️ El pago está siendo procesado. En unos minutos se activa — si no, contactanos.', 9000);
+            })();
           } else if (_mpRes === 'failure') {
             showToast('⚠️ El pago no se completó. Podés intentarlo de nuevo.', 5000);
           }
@@ -8686,9 +8696,12 @@ document.addEventListener('focusin', (e) => {
   // El procesamiento real ocurre dentro de restaurarSesion() una vez que
   // usuarioActual ya está cargado (ver _pendingMpResult más abajo).
   (function capturarRetornoMP() {
-    const mp = new URLSearchParams(location.search).get('mp');
+    const p = new URLSearchParams(location.search);
+    const mp = p.get('mp');
     if (mp) {
-      window._pendingMpResult = mp;
+      // MP agrega payment_id / collection_id a la back_url al volver
+      window._pendingMpResult  = mp;
+      window._pendingMpPayment = p.get('payment_id') || p.get('collection_id') || null;
       history.replaceState(null, '', location.pathname);
     }
   })();

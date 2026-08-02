@@ -796,6 +796,15 @@ const PronetDB = (() => {
       } catch (e) { return { ok: false, error: String(e) }; }
     },
 
+    async verificarPagoMP(paymentId) {
+      if (!remoto) return { ok: false };
+      try {
+        const { data, error } = await sb.functions.invoke('verificar-pago-mp', { body: { payment_id: String(paymentId) } });
+        if (error) { console.warn('[PronetDB] verificarPagoMP', error.message); return { ok: false }; }
+        return data || { ok: false };
+      } catch (e) { return { ok: false }; }
+    },
+
     /** Propuestas que el prestador creó en el mes calendario actual.
      *  Ante error devuelve 0 (falla abierta): un límite de plan no debe
      *  bloquear al usuario por una caída transitoria de red. */
