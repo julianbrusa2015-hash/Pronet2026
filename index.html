@@ -271,27 +271,16 @@
         <div class="chip" onclick="filtrarMercado(this,'anuncios')">📢 Anuncios</div>
       </div>
 
-      <div style="padding:0 14px 10px">
-        <div style="position:relative">
+      <div style="padding:0 14px 8px;display:flex;align-items:center;gap:8px">
+        <div style="position:relative;flex:1">
           <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);pointer-events:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="mkt-buscador" class="ob-input" type="search" placeholder="Buscá empanadas, tortas, plantas..."
+          <input id="mkt-buscador" class="ob-input" type="search" placeholder="Buscá productos, servicios..."
             style="padding-left:34px;margin-bottom:0;font-size:13px"
             oninput="mktBuscar(this.value)">
         </div>
-        <div id="mkt-alerta-row" style="display:none;margin-top:8px">
-          <button id="mkt-alerta-btn" onclick="mktToggleAlerta()"
-            style="background:none;border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:5px">
-            <span id="mkt-alerta-icon">🔔</span>
-            <span id="mkt-alerta-lbl">Avisame cuando haya nuevo</span>
-          </button>
-        </div>
-      </div>
-
-      <div style="padding:0 14px 10px;display:flex;align-items:center;gap:8px">
-        <span style="font-size:14px;flex-shrink:0">📍</span>
         <select id="mkt-zona-select" onchange="mktFiltrarZona(this.value)"
-          style="flex:1;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);background:white;appearance:none;-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px">
-          <option value="">Todas las zonas</option>
+          style="width:120px;flex-shrink:0;border:1.5px solid var(--border);border-radius:10px;padding:8px 24px 8px 8px;font-size:12px;font-family:'Inter',sans-serif;color:var(--ink);background:white;appearance:none;-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 7px center">
+          <option value="">📍 Zona</option>
           <option value="Puertos del Lago">Puertos del Lago</option>
           <option value="El Cantón">El Cantón</option>
           <option value="San Matías">San Matías</option>
@@ -304,6 +293,13 @@
           <option value="Matheu / Garín">Matheu / Garín</option>
           <option value="Garín">Garín</option>
         </select>
+      </div>
+      <div id="mkt-alerta-row" style="display:none;padding:0 14px 8px">
+        <button id="mkt-alerta-btn" onclick="mktToggleAlerta()"
+          style="background:none;border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:5px">
+          <span id="mkt-alerta-icon">🔔</span>
+          <span id="mkt-alerta-lbl">Avisame cuando haya nuevo</span>
+        </button>
       </div>
 
       <!-- Mapa de publicaciones -->
