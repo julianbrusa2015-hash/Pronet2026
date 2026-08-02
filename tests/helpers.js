@@ -30,13 +30,33 @@ async function limpiarSesion(page) {
   });
 }
 
+/** Marca los checkboxes y confirma el modal "Antes de continuar" (T&C/edad)
+ *  si apareció — gateLogin() lo muestra en el PRIMER intento de login de
+ *  cada contexto de browser (localStorage limpio, como es cada test de
+ *  Playwright), y se interpone entre "Ingresar" y el login real. Sin este
+ *  paso el click en Ingresar no dispara loginWith(): solo abre el modal. */
+async function aceptarTycSiAparece(page) {
+  const modal = page.locator('#modal-tyc-login');
+  const aparecio = await modal.evaluate(el => el.style.display !== 'none').catch(() => false);
+  if (!aparecio) return;
+  await page.locator('#tyc-check-terminos').check();
+  await page.locator('#tyc-check-edad').check();
+  await page.locator('#tyc-continuar-btn').click();
+}
+
 async function entrarComoInvitado(page) {
   await page.goto('/');
   await limpiarSesion(page);
   await page.reload();
   await esperarDOM(page);
   await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
-  await page.locator('button[onclick*="entrarInvitado"]').click();
+  // Regresión 2026-08-02: el botón de invitado pasó de onclick="entrarInvitado()"
+  // a onclick="gateLogin('invitado', event)" (modal de T&C antes del primer
+  // login de cada contexto) — el selector viejo por texto del onclick ya no
+  // matchea. Se busca por texto visible en su lugar, más resistente a este tipo
+  // de cambio interno.
+  await page.locator('#login-screen button', { hasText: /explorar sin cuenta/i }).click();
+  await aceptarTycSiAparece(page);
   await page.waitForFunction(() => {
     const ls = document.getElementById('login-screen');
     return ls && ls.classList.contains('hidden');
@@ -62,6 +82,8 @@ async function login(page, cuenta, preparar) {
   const btn = page.locator('#login-screen button').filter({ hasText: /ingresar|entrar|login/i }).first();
   if (await btn.isVisible().catch(() => false)) await btn.click();
   else await page.locator('#login-pw').press('Enter');
+
+  await aceptarTycSiAparece(page);
 
   await page.waitForFunction(() => {
     const ls = document.getElementById('login-screen');
@@ -157,4 +179,4 @@ async function visible(page, selector) {
   }, selector);
 }
 
-module.exports = { CUENTAS, esperarDOM, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible };
+module.exports = { CUENTAS, esperarDOM, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece };

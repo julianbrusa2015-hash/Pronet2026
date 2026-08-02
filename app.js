@@ -4595,8 +4595,8 @@ document.addEventListener('focusin', (e) => {
       // 1. Perfil del usuario (nombre + teléfono)
       const perfilCambios = { nombre, telefono };
       if (fotoPerfilNueva) perfilCambios.foto_url = fotoPerfilNueva;
-      const perfilNuevo = await PronetDB.actualizar('perfiles', usuarioActual.id, perfilCambios);
-      if (perfilNuevo) { usuarioActual.nombre = nombre; usuarioActual.telefono = telefono; if (fotoPerfilNueva) usuarioActual.foto_url = fotoPerfilNueva; }
+      const perfilGuardado = await PronetDB.actualizarMiPerfilBasico(perfilCambios);
+      if (perfilGuardado) { usuarioActual.nombre = nombre; usuarioActual.telefono = telefono; if (fotoPerfilNueva) usuarioActual.foto_url = fotoPerfilNueva; }
       // 2. Fila del prestador (si lo es)
       if (usuarioActual.prestador_id) {
         const especialidades = Array.from(document.querySelectorAll('#edit-especialidades .sub-opt.on')).map(e => e.dataset.esp);

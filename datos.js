@@ -1704,6 +1704,22 @@ const PronetDB = (() => {
       return escribirLocal(coleccion, items);
     },
 
+    /** Actualiza nombre/teléfono/foto del propio perfil sin pedir la fila de
+     *  vuelta. A propósito: el RETURNING de un UPDATE está sujeto al mismo
+     *  grant de columna que un SELECT, y `telefono` está excluido de ese
+     *  grant (ver supabase-fix-telefono-cosechable.sql) para que no sea
+     *  cosechable por cualquier autenticado. Pedir la fila de vuelta acá
+     *  rompería el guardado del propio teléfono sin necesidad — el llamador
+     *  ya tiene los valores que mandó, no necesita que el server se los confirme. */
+    async actualizarMiPerfilBasico(cambios) {
+      if (!remoto) return false;
+      const uid = await this.usuarioIdActual();
+      if (!uid) return false;
+      const { error } = await sb.from('perfiles').update(cambios).eq('id', uid);
+      if (error) { console.warn('[PronetDB] actualizarMiPerfilBasico', error.message); return false; }
+      return true;
+    },
+
     /** Actualiza un registro por id. Devuelve el registro actualizado. */
     async actualizar(coleccion, id, cambios) {
       if (remoto) {
@@ -1901,8 +1917,13 @@ const PronetDB = (() => {
       }
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return null;
-      // Traer el perfil vinculado
-      const { data: perfil } = await sb.from('perfiles').select('*').eq('id', user.id).maybeSingle();
+      // Traer el perfil vinculado. Va por mi_perfil() (security definer) y no
+      // por un select directo: la tabla perfiles tiene el teléfono excluido
+      // del grant de columna genérico (supabase-fix-telefono-cosechable.sql)
+      // para que no sea cosechable por cualquier autenticado — el dueño de la
+      // cuenta sigue necesitando ver su propio teléfono para el form de edición.
+      const { data: perfilesRpc } = await sb.rpc('mi_perfil');
+      const perfil = Array.isArray(perfilesRpc) ? perfilesRpc[0] : perfilesRpc;
       // Autorreparación: prestador sin fila en `prestadores` (bug de registro).
       // Antes esto insertaba directo en `prestadores`, pero no hay policy de
       // INSERT ahí: RLS lo rechazaba con 403 y el error se descartaba, así que
