@@ -3323,7 +3323,10 @@ document.addEventListener('focusin', (e) => {
             <div class="mkt-post-price">${p.precio_convenir ? 'A convenir' : (p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar')}</div>
           </div>
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
-          ${p.detalles && p.detalles.length ? `<ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--ink2)">${p.detalles.map(d => `<li>${escHTML(d)}</li>`).join('')}</ul>` : ''}
+          ${p.detalles && p.detalles.length ? `<details style="margin:8px 0 0">
+            <summary style="font-size:12px;color:var(--blue);font-weight:600;cursor:pointer">Ver detalles</summary>
+            <ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--ink2)">${p.detalles.map(d => `<li>${escHTML(d)}</li>`).join('')}</ul>
+          </details>` : ''}
           ${p.zona ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">📍 ${escHTML(p.zona)}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</div>` : ''}
           <div style="display:flex;align-items:center;gap:12px;margin:10px 0 8px">
             <button id="like-btn-${escHTML(p.id)}" onclick="mktToggleLike('${escHTML(p.id)}')"
