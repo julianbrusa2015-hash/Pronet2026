@@ -131,7 +131,11 @@ async function sesionRestaurada(page) {
     return api.sesionLista() && typeof window.goTo === 'function'
       && !!window._sb && !!window.PronetDB;
   }, { timeout: 30000 });
-  await page.waitForTimeout(300);
+  // Tras sesionLista() todavía corren cadenas async cortas (mostrarZonaAlLogin,
+  // tutorial, chequeo de actualización del SW) que pueden interrumpir un
+  // evaluate() inmediato. 300ms no alcanzaba — se veía como "window.PronetDB
+  // is undefined" al azar en toda la suite.
+  await page.waitForTimeout(1200);
 }
 
 /** Abre la app con la sesión que ya trae el contexto (storageState) y espera
