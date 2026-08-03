@@ -1936,7 +1936,11 @@ const PronetDB = (() => {
       // Lazy expiry: si el plan ProMarket venció, lo apagamos en el momento
       if (perfil && perfil.es_pro_marketplace && perfil.pro_marketplace_hasta) {
         if (new Date(perfil.pro_marketplace_hasta) < new Date()) {
-          await sb.from('perfiles').update({ es_pro_marketplace: false }).eq('id', user.id);
+          // RPC en vez de update directo: la columna dejó de ser escribible
+          // por el cliente (auditoría 2026-08-03, ver
+          // supabase-fix-perfiles-columnas-sensibles.sql) para que nadie
+          // pudiera activarse es_pro_marketplace propio desde la consola.
+          await sb.rpc('expirar_mi_pro_marketplace').catch(() => {});
           perfil.es_pro_marketplace = false;
         }
       }
