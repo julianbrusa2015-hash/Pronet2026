@@ -19,16 +19,19 @@
   [headers.values]
     Cache-Control = "no-store, no-cache, must-revalidate"
 
-# JS y CSS: 1 hora — balance entre velocidad y actualizaciones frecuentes
+# JS y CSS: siempre revalidar contra el origen (ETag/304, casi tan rápido
+# como cachear, pero garantiza que cada deploy llegue de inmediato). El
+# max-age=3600 anterior dejaba a la CDN sirviendo versiones viejas hasta
+# una hora después de cada push, independiente del Service Worker.
 [[headers]]
   for = "/*.js"
   [headers.values]
-    Cache-Control = "public, max-age=3600, must-revalidate"
+    Cache-Control = "public, no-cache, must-revalidate"
 
 [[headers]]
   for = "/*.css"
   [headers.values]
-    Cache-Control = "public, max-age=3600, must-revalidate"
+    Cache-Control = "public, no-cache, must-revalidate"
 
 # Íconos e imágenes: 1 semana (cambian poco)
 [[headers]]
