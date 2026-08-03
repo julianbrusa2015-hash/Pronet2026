@@ -9434,24 +9434,22 @@ document.addEventListener('focusin', (e) => {
   // abriendo el archivo directo (file://) se omite sin romper nada.
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').then(reg => {
-        // Cuando el SW se actualiza, recargar para tomar los archivos nuevos
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-              console.log('[PWA] SW actualizado — recargando para aplicar cambios');
-              window.location.reload();
-            }
-          });
-        });
-      }).catch(err => {
+      navigator.serviceWorker.register('sw.js').catch(err => {
         console.warn('[PWA] No se pudo registrar el Service Worker:', err);
       });
     });
-    // Si el controlador cambió (nuevo SW tomó control), recargar
+    // Único disparador de reload: 'controllerchange' es la señal correcta de
+    // que un SW nuevo tomó control de la página (dispara tanto en la primera
+    // instalación como en actualizaciones posteriores). Antes también se
+    // recargaba desde 'updatefound'/'statechange', duplicando el reload en
+    // CADA actualización — dos reloads casi simultáneos podían interrumpirse
+    // entre sí y dejar la página con un contexto a medio destruir (visible
+    // en los tests de Playwright como "window.PronetDB is undefined" al azar).
+    let recargando = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (recargando) return;
+      recargando = true;
+      console.log('[PWA] SW actualizado — recargando para aplicar cambios');
       window.location.reload();
     });
 

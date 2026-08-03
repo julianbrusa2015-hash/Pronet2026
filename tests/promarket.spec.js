@@ -2,15 +2,18 @@
 // ProMarket — feed, cupos, likes, comentarios, reservas, contacto y tendencias
 // Corre contra: https://pronetprueba.netlify.app
 //
-// ⚠️ Estos tests NO publican de verdad. El cupo del vecino se cuenta por AÑO
-// calendario (3 gratis), así que un test que publicara en cada corrida agotaría
-// el cupo de la cuenta de prueba y a partir de ahí fallaría por diseño, no por
-// un bug. Lo que se verifica acá es la lógica de cupo, el contrato de la API y
-// el comportamiento del feed — todo sin INSERT.
+// ⚠️ La mayoría de estos tests NO publican de verdad — el cupo del vecino se
+// cuenta por AÑO calendario (3 gratis), así que un test que publicara en cada
+// corrida agotaría el cupo de la cuenta de prueba y a partir de ahí fallaría
+// por diseño, no por un bug. Lo que se verifica en esos bloques es la lógica
+// de cupo, el contrato de la API y el comportamiento del feed — todo sin INSERT.
 //
-// El corte real del trigger (`trg_cupo_publicacion_mercado`) queda como
-// pendiente de automatizar: necesita una función SQL de test que resetee el
-// contador, igual que `fn_test_limite_propuestas` hizo para las propuestas.
+// La EXCEPCIÓN es PM-8bis: usa fn_test_cupo_publicacion_mercado() (RPC
+// security definer, supabase-test-cupo-publicacion-mercado.sql), que inserta
+// y borra sus propias filas de prueba dentro de una función server-side —
+// mismo patrón que fn_test_limite_propuestas para las propuestas de trabajo.
+// No consume cupo real de la cuenta: restaura promarket_creditos al valor
+// que tenía antes de correr.
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 const { abrir, irA, visible, entrarComoInvitado } = require('./helpers');
@@ -377,5 +380,43 @@ test.describe('PM-8 · Publicación extra', () => {
     expect(texto).toContain('5.000');
     expect(texto).toMatch(/pago único/i);
     expect(texto).not.toContain('10.000');
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PM-8bis · Trigger de DB — el cupo real de ProMarket bloquea y consume créditos
+// ══════════════════════════════════════════════════════════════════════════════
+// A diferencia del resto del archivo, esto SÍ inserta filas — pero dentro de
+// fn_test_cupo_publicacion_mercado() (SECURITY DEFINER), que limpia sus propios
+// residuos (título 'TEST_CUPO_%') y restaura promarket_creditos al valor previo
+// sea cual sea el resultado. No hay INSERT desde el test en sí.
+test.describe('PM-8bis · Cupo de publicaciones — trigger real en DB', () => {
+  test.use({ storageState: sesionVecino });
+
+  test('fn_test_cupo_publicacion_mercado: bloquea sin créditos y consume 1 al haberlo', async ({ page }) => {
+    await abrir(page);
+
+    const resultado = await page.evaluate(async () => {
+      const uid = (await window._sb.auth.getUser()).data.user?.id;
+      const { data, error } = await window._sb.rpc('fn_test_cupo_publicacion_mercado', { p_usuario_id: uid });
+      return { data, error: error?.message };
+    });
+
+    if (resultado.error) {
+      throw new Error(
+        'RPC falló: ' + resultado.error +
+        ' — ¿se corrió supabase-test-cupo-publicacion-mercado.sql en Supabase?'
+      );
+    }
+
+    const r = resultado.data;
+    if (r.skip) {
+      console.log('[PM-8bis] skip —', r.reason);
+      test.skip();
+      return;
+    }
+
+    expect(r.error, JSON.stringify(r)).toBeNull();
+    expect(r.pass).toBe(true);
   });
 });

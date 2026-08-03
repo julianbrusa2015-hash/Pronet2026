@@ -124,7 +124,12 @@ async function sesionRestaurada(page) {
     }
     // goTo se define en el IIFE de app.js: si no está, la página todavía está
     // navegando/recargando y cualquier evaluate fallaría con contexto destruido.
-    return api.sesionLista() && typeof window.goTo === 'function';
+    // window._sb/PronetDB (datos.js) también, por la misma razón: en desarrollo
+    // activo el SW puede disparar una recarga automática justo después de que
+    // sesionLista() diera true, dejando un instante donde datos.js todavía no
+    // terminó de re-ejecutarse tras la recarga.
+    return api.sesionLista() && typeof window.goTo === 'function'
+      && !!window._sb && !!window.PronetDB;
   }, { timeout: 30000 });
   await page.waitForTimeout(300);
 }
