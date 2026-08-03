@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v100'; // v100: detalles adicionales (líneas libres, máx 5) en publicaciones ProMarket
+const CACHE_VERSION = 'pronet-v101'; // v101: fetch de red-primero usa cache:'no-store' (evita servir HTTP cache viejo del browser)
 
 const SHELL = [
   './',
@@ -62,7 +62,11 @@ self.addEventListener('fetch', (event) => {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 5000);
         try {
-          const res = await fetch(req, { signal: controller.signal });
+          // cache:'no-store' evita que "red primero" reuse silenciosamente
+          // una respuesta vieja del caché HTTP nativo del navegador (el que
+          // no controla CACHE_VERSION) — es lo que causó servir app.js viejo
+          // incluso con el Service Worker y el Cache Storage recién limpiados.
+          const res = await fetch(req, { signal: controller.signal, cache: 'no-store' });
           clearTimeout(timer);
           const copia = res.clone();
           caches.open(CACHE_VERSION).then((c) => c.put(req, copia));
