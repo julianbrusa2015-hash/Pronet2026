@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v103'; // v103: fix doble reload al actualizar el SW (controllerchange + updatefound duplicados)
+const CACHE_VERSION = 'pronet-v104'; // v104: SEGURIDAD — fix XSS almacenado en ProMarket (título/nombre en onclick)
 
 const SHELL = [
   './',

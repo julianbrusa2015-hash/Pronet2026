@@ -3262,6 +3262,10 @@ document.addEventListener('focusin', (e) => {
   let mktHayMas         = true;
   let mktAlertaActiva   = false;
   let mktUltimoResultCount = 0;
+  // Cache de publicaciones ya renderizadas, por id — permite que los onclick
+  // de la card pasen solo el id (uuid, no controlado por el usuario) en vez
+  // de interpolar título/nombre (texto libre) directo en el atributo onclick.
+  const mktPostsCache = new Map();
 
   function mktIniciales(nombre) {
     if (!nombre) return '?';
@@ -3335,13 +3339,13 @@ document.addEventListener('focusin', (e) => {
               <svg width="22" height="22" viewBox="0 0 24 24" fill="${liked ? '#EF4444' : 'none'}" stroke="${liked ? '#EF4444' : 'var(--ink3)'}" stroke-width="2" style="transition:all .15s"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               <span id="like-cnt-${escHTML(p.id)}" style="font-size:13px;font-weight:600;color:${liked ? '#EF4444' : 'var(--ink3)'}">${likes > 0 ? likes : ''}</span>
             </button>
-            <button onclick="mktAbrirComentarios('${escHTML(p.id)}','${escHTML(p.titulo)}')"
+            <button onclick="mktAbrirComentarios('${escHTML(p.id)}')"
               style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;padding:0;font-family:'Inter',sans-serif">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               <span style="font-size:13px;font-weight:600;color:var(--ink3)">${comentarios > 0 ? comentarios : ''}</span>
             </button>
             <div style="flex:1"></div>
-            <button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar('${escHTML(p.id)}','${escHTML(nombre)}','${escHTML(p.autor_id)}','${escHTML(p.titulo)}')">💬 Consultar</button>
+            <button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar('${escHTML(p.id)}')">💬 Consultar</button>
           </div>
           <div style="text-align:right"><span onclick="abrirReportarPub('${escHTML(p.id)}','${escHTML(p.autor_id)}','${escHTML(p.titulo)}')" style="font-size:11px;color:var(--ink3);cursor:pointer">⚑ Reportar</span></div>
         </div>
@@ -3379,10 +3383,16 @@ document.addEventListener('focusin', (e) => {
 
   let mktComentariosPubId = null;
 
-  async function mktAbrirComentarios(pubId, titulo) {
+  async function mktAbrirComentarios(pubId) {
     mktComentariosPubId = pubId;
     const tit = document.getElementById('com-pub-titulo');
-    if (tit) tit.textContent = titulo;
+    // El título sale del cache (ya cargado por el feed), nunca de un
+    // parámetro interpolado en el onclick — ver mktCardHTML: escHTML() no
+    // alcanza para neutralizar contenido de usuario dentro de un atributo
+    // onclick (el parser HTML decodifica las entidades antes de que el JS
+    // las lea), así que un título con comillas podía romper el string e
+    // inyectar JS que corría en el navegador de cualquiera que viera el feed.
+    if (tit) tit.textContent = mktPostsCache.get(pubId)?.titulo || '';
     const inp = document.getElementById('com-input');
     if (inp) inp.value = '';
     goTo('s-comentarios-pub');
@@ -3457,6 +3467,7 @@ document.addEventListener('focusin', (e) => {
     const posts = await PronetDB.listarPublicaciones({ categoria: mktFiltroActivo, busqueda: mktBusqueda, zona: mktZonaActiva, offset: mktOffset }).catch(() => []);
     mktCargando = false;
     if (reset) { cont.innerHTML = ''; mktUltimoResultCount = posts.length; }
+    posts.forEach(p => mktPostsCache.set(p.id, p));
     // Cargar qué publicaciones likeó el usuario actual (merge con el Set existente)
     if (posts.length && usuarioActual) {
       const ids = posts.map(p => p.id);
@@ -3651,7 +3662,13 @@ document.addEventListener('focusin', (e) => {
   }
   window.renderMapaMercado = renderMapaMercado;
 
-  async function mktConsultar(pubId, autorNombre, autorId, pubTitulo) {
+  async function mktConsultar(pubId) {
+    // nombre/autorId/título salen del cache del feed, no de parámetros
+    // interpolados en el onclick — ver nota de seguridad en mktAbrirComentarios.
+    const pubCache = mktPostsCache.get(pubId) || {};
+    const autorNombre = pubCache.perfiles?.nombre || 'Vendedor';
+    const autorId = pubCache.autor_id;
+    const pubTitulo = pubCache.titulo || '';
     if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Consultar', sub: 'Necesitás una cuenta para enviar mensajes.' }); return; }
     if (usuarioActual.id === autorId) { showToast && showToast('No podés consultar tu propia publicación'); return; }
     chatMercadoOrigen = 's-mercado';
