@@ -494,6 +494,7 @@ document.addEventListener('focusin', (e) => {
 
   // ── Loyalty ──────────────────────────────────────────────────────────
   let ptsDisponibles = 0; // se sincroniza con la DB real en renderLoyaltyScreen()
+  const _canjesCatalogoCache = new Map(); // id → item, evita interpolar nombre libre en onclick
 
   function switchLoyalty(tab) {
     ['ganar','canjear','niveles','planes','historial'].forEach(t => {
@@ -504,7 +505,8 @@ document.addEventListener('focusin', (e) => {
     });
   }
 
-  async function canjear(btn, costo, nombre, canjeId) {
+  async function canjear(btn, costo, canjeId) {
+    const nombre = _canjesCatalogoCache.get(canjeId)?.nombre || 'Beneficio';
     if (ptsDisponibles < costo) {
       btn.textContent = 'Sin pts';
       btn.disabled = true;
@@ -1864,6 +1866,7 @@ document.addEventListener('focusin', (e) => {
     el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     try {
       const items = await PronetDB.listarCatalogoCanjeAdmin();
+      _canjesAdminCache = items;
       if (!items.length) {
         el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">Sin beneficios cargados aún.</div>';
         return;
@@ -1879,7 +1882,7 @@ document.addEventListener('focusin', (e) => {
           <div style="display:flex;gap:6px">
             <button onclick="abrirFormCanje('${i.id}')" style="background:var(--surface);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px">✏️</button>
             <button onclick="toggleCanjeAdmin('${i.id}',${!i.activo})" style="background:var(--surface);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px">${i.activo ? '🚫' : '✅'}</button>
-            <button onclick="eliminarCanjeAdmin('${i.id}','${escHTML(i.nombre).replace(/'/g,"\\'")}')" style="background:var(--surface);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px">🗑️</button>
+            <button onclick="eliminarCanjeAdmin('${i.id}')" style="background:var(--surface);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px">🗑️</button>
           </div>
         </div>`).join('');
     } catch(e) {
@@ -1988,7 +1991,8 @@ document.addEventListener('focusin', (e) => {
   }
   window.toggleCanjeAdmin = toggleCanjeAdmin;
 
-  async function eliminarCanjeAdmin(id, nombre) {
+  async function eliminarCanjeAdmin(id) {
+    const nombre = _canjesAdminCache.find(c => c.id === id)?.nombre || '';
     if (!confirm('¿Eliminar el beneficio "' + nombre + '"? Esta acción no se puede deshacer.')) return;
     const res = await PronetDB.eliminarCanje(id);
     if (res.ok) { showToast && showToast('🗑️ Beneficio eliminado'); _canjesAdminCache = []; renderBeneficiosAdmin(); }
@@ -3347,7 +3351,7 @@ document.addEventListener('focusin', (e) => {
             <div style="flex:1"></div>
             <button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar('${escHTML(p.id)}')">💬 Consultar</button>
           </div>
-          <div style="text-align:right"><span onclick="abrirReportarPub('${escHTML(p.id)}','${escHTML(p.autor_id)}','${escHTML(p.titulo)}')" style="font-size:11px;color:var(--ink3);cursor:pointer">⚑ Reportar</span></div>
+          <div style="text-align:right"><span onclick="abrirReportarPub('${escHTML(p.id)}','${escHTML(p.autor_id)}')" style="font-size:11px;color:var(--ink3);cursor:pointer">⚑ Reportar</span></div>
         </div>
       </div>`;
   }
@@ -3949,10 +3953,18 @@ document.addEventListener('focusin', (e) => {
   window.copiarNumeroContacto = copiarNumeroContacto;
 
   // Abre un hilo de chat existente. origen controla a dónde vuelve el back.
-  async function mktAbrirHilo(chatId, contraparteId, contraNombre, pubTitulo, origen) {
+  // Cache de las cards de "Mis consultas" (recibidas/enviadas), por chatId —
+  // mismo motivo que mktPostsCache: evita interpolar nombre/título (texto
+  // libre) directo en el onclick, donde escHTML() no protege.
+  const mktConsultasCache = new Map();
+
+  async function mktAbrirHilo(chatId, contraparteId, origen) {
+    const cache = mktConsultasCache.get(chatId) || {};
+    const contraNombre = cache.nombre || 'Vecino';
+    const pubTitulo = cache.titulo || '';
     chatMercadoOrigen = origen || 's-mis-consultas-mkt';
     chatMercadoContraparteId = contraparteId;
-    chatMercadoContraparteNombre = contraNombre || 'Vecino';
+    chatMercadoContraparteNombre = contraNombre;
     chatMercadoContraparteTelefono = null;
     const avEl = document.getElementById('cmk-av');
     const nameEl = document.getElementById('cmk-name');
@@ -3986,8 +3998,8 @@ document.addEventListener('focusin', (e) => {
   }
   window.mktAbrirHilo = mktAbrirHilo;
 
-  function mktAbrirHiloEnviado(chatId, contraparteId, contraNombre, pubTitulo) {
-    return mktAbrirHilo(chatId, contraparteId, contraNombre, pubTitulo, 's-mis-consultas-enviadas');
+  function mktAbrirHiloEnviado(chatId, contraparteId) {
+    return mktAbrirHilo(chatId, contraparteId, 's-mis-consultas-enviadas');
   }
   window.mktAbrirHiloEnviado = mktAbrirHiloEnviado;
 
@@ -4092,8 +4104,9 @@ document.addEventListener('focusin', (e) => {
     const hora = c.hora_ultimo ? new Date(c.hora_ultimo).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
     const chatId = escHTML(c.id);
     const contraId = escHTML(c.consultante_id);
+    mktConsultasCache.set(c.id, { nombre: c.consultante.nombre || 'Vecino', titulo: (c.publicaciones && c.publicaciones.titulo) || '' });
     return `
-      <div onclick="mktAbrirHilo('${chatId}','${contraId}','${nombre}','${pubTitulo}')"
+      <div onclick="mktAbrirHilo('${chatId}','${contraId}')"
            style="display:flex;gap:12px;align-items:center;padding:12px;background:white;border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer">
         <div style="width:44px;height:44px;border-radius:50%;background:#EEF2FF;color:#2B5BFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0">${ini}</div>
         <div style="flex:1;min-width:0">
@@ -4131,8 +4144,9 @@ document.addEventListener('focusin', (e) => {
     const avatar = pubFoto
       ? `<img src="${escHTML(pubFoto)}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0" alt="">`
       : `<div style="width:44px;height:44px;border-radius:10px;background:#EEF2FF;color:#2B5BFF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0">${ini}</div>`;
+    mktConsultasCache.set(c.id, { nombre: c.autor.nombre || 'Vendedor', titulo: (c.publicaciones && c.publicaciones.titulo) || '' });
     return `
-      <div onclick="mktAbrirHiloEnviado('${chatId}','${contraId}','${autorNombre}','${pubTitulo}')"
+      <div onclick="mktAbrirHiloEnviado('${chatId}','${contraId}')"
            style="display:flex;gap:12px;align-items:center;padding:12px;background:white;border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer">
         ${avatar}
         <div style="flex:1;min-width:0">
@@ -4383,12 +4397,12 @@ document.addEventListener('focusin', (e) => {
   let reportarPubId = null;
   let reportarAutorId = null;
 
-  function abrirReportarPub(pubId, autorId, titulo) {
+  function abrirReportarPub(pubId, autorId) {
     if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Reportar', sub: 'Necesitás una cuenta para reportar.' }); return; }
     reportarPubId = pubId;
     reportarAutorId = autorId;
     const tit = document.getElementById('reportar-pub-titulo');
-    if (tit) tit.textContent = titulo || 'Publicación';
+    if (tit) tit.textContent = mktPostsCache.get(pubId)?.titulo || 'Publicación';
     // Reset form
     document.querySelectorAll('#modal-reportar-pub .rep-opt').forEach(o => o.classList.remove('on'));
     const det = document.getElementById('rep-detalle');
@@ -5771,6 +5785,7 @@ document.addEventListener('focusin', (e) => {
       if (canjesDiv) {
         const tipoUsuario = esPrestador() ? 'prestador' : 'vecino';
         const items = await PronetDB.listarCatalogoCanje(tipoUsuario).catch(() => []);
+        items.forEach(i => _canjesCatalogoCache.set(i.id, i));
         if (!items.length) {
           canjesDiv.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">No hay beneficios disponibles por ahora.</div>';
         } else {
@@ -5785,7 +5800,7 @@ document.addEventListener('focusin', (e) => {
                 ${i.descripcion ? `<div class="canje-sub">${escHTML(i.descripcion)}</div>` : ''}
                 <div class="canje-costo">💜 ${i.costo_puntos.toLocaleString('es-AR')} puntos</div>
               </div>
-              <button class="canje-btn" onclick="canjear(this,${i.costo_puntos},'${escHTML(i.nombre).replace(/'/g,"\\'")}','${i.id}')">Canjear</button>
+              <button class="canje-btn" onclick="canjear(this,${i.costo_puntos},'${i.id}')">Canjear</button>
             </div>`;
           let html = '';
           if (esPrestador() && prestItems.length) {
