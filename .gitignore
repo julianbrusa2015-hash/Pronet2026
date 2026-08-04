@@ -3,7 +3,11 @@ node_modules/
 test-results/
 playwright-report/
 tests/.auth/
-.env.local
+# Cualquier .env — .env.staging lleva la SERVICE_ROLE_KEY, que saltea
+# toda la RLS. Un `git add .` sin este patrón la publicaría en el repo.
+.env
+.env.*
+!.env.example
 supabase/.temp/
 
 # Capacitor: www/ es una copia generada del código de la raíz (ver

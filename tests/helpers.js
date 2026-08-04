@@ -37,11 +37,26 @@ async function limpiarSesion(page) {
  *  paso el click en Ingresar no dispara loginWith(): solo abre el modal. */
 async function aceptarTycSiAparece(page) {
   const modal = page.locator('#modal-tyc-login');
-  const aparecio = await modal.evaluate(el => el.style.display !== 'none').catch(() => false);
-  if (!aparecio) return;
+  // El modal aparece de forma ASÍNCRONA tras el click en Ingresar. La
+  // versión anterior leía `el.style.display` en el mismo tick: si todavía
+  // no se había mostrado daba "no apareció", se salía sin aceptar, y el
+  // login quedaba bloqueado detrás del modal hasta agotar el timeout de
+  // 60 s. Además comparaba el estilo INLINE, que puede decir 'flex'
+  // mientras un ancestro oculto lo mantiene invisible.
+  //
+  // waitFor({state:'visible'}) resuelve las dos cosas: espera de verdad y
+  // evalúa visibilidad real, no el atributo.
+  try {
+    await modal.waitFor({ state: 'visible', timeout: 5000 });
+  } catch {
+    return; // no apareció: este contexto ya tenía los T&C aceptados
+  }
   await page.locator('#tyc-check-terminos').check();
   await page.locator('#tyc-check-edad').check();
   await page.locator('#tyc-continuar-btn').click();
+  // Esperar el cierre antes de seguir: si no, el siguiente paso puede
+  // clickear contra el overlay que todavía está desapareciendo.
+  await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
 }
 
 async function entrarComoInvitado(page) {
@@ -64,6 +79,36 @@ async function entrarComoInvitado(page) {
   await page.waitForTimeout(500);
 }
 
+/** Escribe las credenciales y CONFIRMA que quedaron escritas.
+ *
+ *  app.js recarga la página en el evento 'controllerchange' del Service
+ *  Worker (app.js ~9510). Eso ocurre la primera vez que el SW toma
+ *  control de un contexto nuevo — es decir, en cada test de Playwright —
+ *  y de nuevo tras cada bump de CACHE_VERSION. Si la recarga cae después
+ *  del fill, los inputs se vacían, el click en "Ingresar" no manda nada,
+ *  y el test agota los 60 s esperando un login que nunca se disparó.
+ *
+ *  El síntoma en el snapshot de fallo es delator: formulario de login
+ *  visible con email y contraseña EN BLANCO. */
+async function completarCredenciales(page, email, pw) {
+  for (let intento = 1; intento <= 3; intento++) {
+    await page.locator('#login-email').fill(email);
+    await page.locator('#login-pw').fill(pw);
+    await page.waitForTimeout(800); // ventana donde caería la recarga del SW
+    const quedaron = await page.evaluate(() =>
+      !!document.getElementById('login-email')?.value &&
+      !!document.getElementById('login-pw')?.value
+    ).catch(() => false);
+    if (quedaron) return;
+    // Se perdieron: esperar a que el login vuelva a estar listo y reintentar.
+    await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
+  }
+  throw new Error(
+    'No se pudieron fijar las credenciales tras 3 intentos: el Service Worker ' +
+    'sigue recargando la página. ¿Se bumpeó CACHE_VERSION recién?'
+  );
+}
+
 /** Inicia sesión con una de las cuentas de CUENTAS.
  *  `preparar` corre después de limpiar la sesión y antes de recargar — sirve
  *  para dejar estado en localStorage y verificar cómo lo trata el login. */
@@ -76,8 +121,7 @@ async function login(page, cuenta, preparar) {
   await page.reload();
   await esperarDOM(page);
   await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
-  await page.locator('#login-email').fill(c.email);
-  await page.locator('#login-pw').fill(c.pw);
+  await completarCredenciales(page, c.email, c.pw);
 
   const btn = page.locator('#login-screen button').filter({ hasText: /ingresar|entrar|login/i }).first();
   if (await btn.isVisible().catch(() => false)) await btn.click();
