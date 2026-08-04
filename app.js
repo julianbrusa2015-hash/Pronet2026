@@ -294,6 +294,12 @@ document.addEventListener('focusin', (e) => {
       const el = document.getElementById(s);
       if (el) { el.classList.remove('active'); el.scrollTop = 0; }
     });
+    // El scroll que importa no es el de cada .screen (eso ya se resetea
+    // arriba) sino el del contenedor compartido .phone: si quedó desplazado
+    // por la pantalla anterior, la nueva pantalla activa hereda ese offset
+    // y su header puede renderizar fuera del viewport visible.
+    const phone = document.querySelector('.phone');
+    if (phone) phone.scrollTop = 0;
     const t = document.getElementById(id);
     if (t) { t.classList.add('active'); }
     // Ocultar FAB de WhatsApp en pantallas con input de texto (chat)
@@ -1675,9 +1681,10 @@ document.addEventListener('focusin', (e) => {
     if (!listaEl) return;
     listaEl.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     try {
-      const { data: todas } = await window._sb.from('denuncias')
+      const { data: todas, error: errDenuncias } = await window._sb.from('denuncias')
         .select('*, perfiles!denunciado_id(nombre, prestador_id, prestadores(id, suspendido, denuncias_confirmadas))')
         .order('creado', { ascending: false });
+      if (errDenuncias) throw errDenuncias;
       const denuncias = todas || [];
       // Stats
       const setPendientes = denuncias.filter(d => d.estado === 'pendiente').length;
@@ -5047,9 +5054,14 @@ document.addEventListener('focusin', (e) => {
     return configApp.mp_checkout_activo === 'true';
   }
 
-  /** ¿El tab ProMarket está habilitado? Lo controla el admin. */
+  /** ¿El tab ProMarket está habilitado? Lo controla el admin.
+   *  Default ON si la clave no está definida en config_app — mismo criterio
+   *  que FEATURES.mercadoPlaza (línea ~9274), que es el que realmente
+   *  oculta o muestra el tab. Antes usaban criterios opuestos (=== 'true'
+   *  acá vs. !== 'false' allá): con la clave sin definir, este toggle
+   *  mostraba "Desactivado" mientras ProMarket estaba activo para todos. */
   function promarketActivo() {
-    return configApp.promarket_activo === 'true';
+    return configApp.promarket_activo !== 'false';
   }
 
   /** Plan cuyos límites aplican realmente.
@@ -8421,11 +8433,18 @@ document.addEventListener('focusin', (e) => {
     // Editar una propuesta existente no consume cupo; sólo las nuevas.
     const editando=propuestaMia&&(propuestaMia.estado==='pendiente'||propuestaMia.estado==='retirada');
     if(!editando){
+      // El chequeo de cupo es async y sin feedback se sentía como que el
+      // toque no había registrado — deshabilitar mientras se resuelve.
+      const btnProponer = document.getElementById('pd-btn-proponer');
+      const btnTextoOriginal = btnProponer ? btnProponer.textContent : '';
+      if (btnProponer) { btnProponer.disabled = true; btnProponer.textContent = '⏳ Verificando...'; }
       const cupo = await puedeEnviarPropuesta();
       if(!cupo.ok){
+        if (btnProponer) { btnProponer.disabled = false; btnProponer.textContent = btnTextoOriginal; }
         avisarLimitePlan('Ya enviaste tus ' + cupo.limite + ' propuestas de este mes');
         return;
       }
+      if (btnProponer) { btnProponer.disabled = false; btnProponer.textContent = btnTextoOriginal; }
     }
     const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
     set('np-icono', p.icono || '📋');
