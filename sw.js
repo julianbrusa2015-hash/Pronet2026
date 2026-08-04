@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v108'; // v108: UX — el tab ProMarket ahora respeta el flag del admin (dos lugares lo re-mostraban)
+const CACHE_VERSION = 'pronet-v109'; // v109: PERF — contadores del mapa por RPC (GROUP BY server-side) en vez de traer toda la tabla
 
 const SHELL = [
   './',

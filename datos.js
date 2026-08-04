@@ -714,19 +714,23 @@ const PronetDB = (() => {
       return chats.map(c => ({ ...c, autor: pm[c.autor_id] || {} }));
     },
 
-    /** Devuelve {zona: count} de publicaciones activas, sin paginar, para el mapa. */
+    /** Devuelve {zona: count} de publicaciones activas para el mapa.
+     *
+     *  El GROUP BY corre en Postgres (RPC contar_publicaciones_por_zona).
+     *  Antes se traían TODAS las filas con select('zona') y se contaban
+     *  acá con un forEach: a 50k publicaciones eso transfería 50k filas
+     *  al dispositivo para armar un contador de 11 números, con costo
+     *  lineal al tamaño de la tabla. Ahora la respuesta es de tamaño
+     *  constante (una fila por zona). */
     async contarPublicacionesPorZona({ categoria = null, busqueda = null } = {}) {
       if (!remoto) return {};
-      let q = sb.from('publicaciones').select('zona').eq('activa', true);
-      if (categoria && categoria !== 'todos') q = q.eq('categoria', categoria);
-      if (busqueda && busqueda.trim()) {
-        const term = `%${busqueda.trim()}%`;
-        q = q.or(`titulo.ilike.${term},descripcion.ilike.${term}`);
-      }
-      const { data } = await q;
-      if (!data) return {};
+      const { data, error } = await sb.rpc('contar_publicaciones_por_zona', {
+        p_categoria: categoria && categoria !== 'todos' ? categoria : null,
+        p_busqueda:  busqueda && busqueda.trim() ? busqueda.trim() : null,
+      });
+      if (error) { console.warn('[PronetDB] contarPublicacionesPorZona', error.message); return {}; }
       const counts = {};
-      data.forEach(p => { if (p.zona) counts[p.zona] = (counts[p.zona] || 0) + 1; });
+      (data || []).forEach(r => { if (r.zona) counts[r.zona] = Number(r.cantidad) || 0; });
       return counts;
     },
 

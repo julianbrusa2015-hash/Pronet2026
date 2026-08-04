@@ -15,10 +15,12 @@ Implementación del plan de performance. Ver el plan completo para estrategia, e
 | Índices P0/P1 | ✅ aplicados (`supabase-perf-indices.sql`) |
 | Script E1 — contratación | ✅ `e1-contratacion.js` |
 | Script E2 — marketplace | ✅ `e2-marketplace.js` |
+| Script E3 — pagos/idempotencia | ✅ `e3-pagos.js` (parcial, ver abajo) |
 | Seed de volumetría | ✅ `seed-volumetria.sql` (requiere staging) |
+| RPC de contadores por zona | ✅ aplicado + `datos.js` migrado |
 | Entorno de staging | ⬜ **pendiente — bloqueante** |
 | Alta de usuarios de prueba | ⬜ pendiente |
-| Script E3 — pagos/idempotencia | ⬜ pendiente |
+| Pagos de sandbox para idempotencia | ⬜ pendiente (ver E3) |
 
 ## Puesta en marcha
 
@@ -86,6 +88,60 @@ data.forEach(p => { counts[p.zona] = ... }); // ← agrupa en el cliente
 ```
 
 A 50 000 publicaciones eso transfiere 50 000 filas para construir un contador de 11 números. Por eso E2 mide `bytes_contadores_mapa` además de la latencia: acá el problema es el volumen transferido, no el tiempo de consulta. La corrección es un RPC con `GROUP BY` que devuelva sólo los pares zona→conteo.
+
+## E3 — Pagos e idempotencia
+
+**No es un test de throughput sino de correctitud bajo concurrencia.** Concurrencia baja (20 VUs) y criterios binarios: en dinero, "casi correcto" es un incidente. Subir los VUs no aporta — lo que se busca es la carrera, no el volumen.
+
+```bash
+k6 run -e SUPABASE_URL=… -e SUPABASE_ANON_KEY=… \
+       -e MP_WEBHOOK_SECRET=<secret de staging> \
+       tests/perf/e3-pagos.js
+```
+
+Cuatro escenarios; tres corren sin nada extra:
+
+| # | Qué valida | Requiere sandbox |
+|---|---|---|
+| A | Firma `x-signature` válida bajo concurrencia | No |
+| B | Rechazo de firma forjada (**control negativo**) | No |
+| C | `crear-preferencia` + arranque en frío del isolate | Token MP sandbox |
+| D | **Carrera de idempotencia** | Sí — ver abajo |
+
+El escenario B tiene `abortOnFail`: si empieza a devolver 200, la verificación de firma dejó de proteger el endpoint y cualquiera podría activarse un plan. Es una regresión de seguridad, no de rendimiento.
+
+### Por qué el escenario D necesita pagos de sandbox reales
+
+`webhook-mp` consulta el pago contra la API de MercadoPago **antes** de tocar `pagos_procesados`:
+
+```
+firma OK → GET api.mercadopago.com/v1/payments/{id} → 404 → return 200
+                                                              ↑
+                                        nunca llega al candado de idempotencia
+```
+
+Con un `payment_id` inventado, MP devuelve 404 y la función responde 200 sin activar nada — **la ruta de idempotencia jamás se ejercita**. Para probarla de verdad hacen falta pagos de sandbox en estado `approved`, creados previamente con las credenciales de prueba de MP, y pasados por env var:
+
+```bash
+-e MP_SANDBOX_PAYMENT_IDS=1234567890,1234567891,1234567892
+```
+
+Sin esa variable el escenario D se saltea (con aviso en consola) y los otros tres corren igual.
+
+### Verificación posterior — la hace SQL, no k6
+
+`pagos_procesados` tiene RLS activa **sin policies**: sólo el webhook con `service_role` la escribe y nadie la lee desde el cliente. Por diseño k6 no puede verificar el resultado. Después de la corrida:
+
+```sql
+-- Debe devolver 0 filas: un payment_id, un registro.
+select payment_id, count(*) from public.pagos_procesados
+ where payment_id in ('...')
+ group by payment_id having count(*) <> 1;
+
+-- vence_en debe ser ~1 mes, NO N meses acumulados por las N llamadas.
+select usuario_id, plan, vence_en from public.suscripciones
+ where activado_en > now() - interval '10 minutes';
+```
 
 ## Interpretación de resultados
 
