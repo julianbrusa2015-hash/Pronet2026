@@ -18,8 +18,8 @@ Implementación del plan de performance. Ver el plan completo para estrategia, e
 | Script E3 — pagos/idempotencia | ✅ `e3-pagos.js` (parcial, ver abajo) |
 | Seed de volumetría | ✅ `seed-volumetria.sql` (requiere staging) |
 | RPC de contadores por zona | ✅ aplicado + `datos.js` migrado |
+| Alta de usuarios de prueba | ✅ `seed-usuarios.mjs` |
 | Entorno de staging | ⬜ **pendiente — bloqueante** |
-| Alta de usuarios de prueba | ⬜ pendiente |
 | Pagos de sandbox para idempotencia | ⬜ pendiente (ver E3) |
 
 ## Puesta en marcha
@@ -39,11 +39,35 @@ insert into public.config_app (clave, valor) values ('entorno','staging')
 
 ### 3. Crear las cuentas de prueba
 
-Necesarias porque `pedidos.usuario_id` y `resenas.vecino_id` referencian `auth.users`, y las cuentas no se pueden crear con SQL directo — van por la Admin API de Auth.
+```bash
+export SUPABASE_URL=https://<ref-staging>.supabase.co
+export SUPABASE_SERVICE_ROLE_KEY=<service_role de STAGING>
+node tests/perf/seed-usuarios.mjs --vecinos=60 --prestadores=200
+```
 
-Convención de nombres que espera el script: `vecinoNNNN@load.test` y `prestaNNNN@load.test`, todas con la misma contraseña (`TEST_PW`).
+Crea `vecinoNNNN@load.test` y `prestaNNNN@load.test`, todas con la misma contraseña (`TEST_PW`, por defecto `LoadTest1234!`). **Es idempotente**: se puede re-correr, las que ya existen se saltean.
 
-**Importante:** las cuentas de prestador deben quedar con plan `pro` (`propuestas_mes = null`). Con plan base el trigger `chequear_limite_propuestas` corta a las 3–10 propuestas del mes y la prueba termina midiendo el trigger rechazando, no la capacidad del sistema.
+Otras opciones:
+
+```bash
+node tests/perf/seed-usuarios.mjs --dry-run   # muestra qué haría, sin escribir
+node tests/perf/seed-usuarios.mjs --limpiar   # borra todas las @load.test
+```
+
+**Por qué hace falta un script y no basta SQL:** `pedidos.usuario_id` y `resenas.vecino_id` referencian `auth.users`, y las cuentas de Auth no se pueden crear por SQL directo — van por la Admin API.
+
+**Lo que hace solo:** el trigger `handle_new_user()` se dispara al crear el usuario y, a partir del metadata, arma la fila en `perfiles`, la ficha en `prestadores`, el enlace `prestador_id` y la fila de `loyalty`. El script solo crea el usuario con el metadata correcto.
+
+**Lo que sí tiene que forzar:** la suscripción `pro`. Los prestadores nacen en plan `base` y el trigger `chequear_limite_propuestas` los cortaría a las 3 propuestas del mes (10 en etapa fundadora, porque `plan_para_limites` mapea base→plus). `pro` tiene `propuestas_mes = null` ⇒ ilimitadas. Sin esto la prueba mide el trigger rechazando, no el sistema.
+
+#### Guardas de seguridad
+
+Dos comprobaciones independientes, **ninguna salteable por parámetro**:
+
+1. **Host exacto en lista negra** — aborta contra `zgmwtyxtygnjfakeriiz.supabase.co` (producción). Comparación por host exacto y no por substring, para no bloquear un staging llamado `<ref>-staging`.
+2. **Marcador en `config_app`** — exige `entorno = 'staging'` en la base. Es la guarda autoritativa: producción no tiene esa clave, así que aborta incluso con credenciales válidas.
+
+La `SERVICE_ROLE_KEY` saltea RLS por completo: va siempre por variable de entorno, nunca como argumento (quedaría en el historial del shell) ni commiteada.
 
 ### 4. Sembrar volumetría
 

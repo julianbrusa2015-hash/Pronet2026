@@ -11,6 +11,7 @@
     "perf:e2": "k6 run tests/perf/e2-marketplace.js",
     "perf:e2:smoke": "k6 run --vus 5 --duration 30s tests/perf/e2-marketplace.js",
     "perf:e3": "k6 run tests/perf/e3-pagos.js",
+    "perf:seed-usuarios": "node tests/perf/seed-usuarios.mjs",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report",
     "sync-www": "node scripts/sync-www.js",
