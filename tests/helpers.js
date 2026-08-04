@@ -21,6 +21,28 @@ async function esperarDOM(page) {
   );
 }
 
+/** Espera a que el Service Worker ya esté controlando la página.
+ *
+ *  app.js llama a location.reload() en el evento 'controllerchange' del SW
+ *  (app.js ~9510). Eso ocurre la primera vez que el SW toma control de un
+ *  contexto nuevo — o sea, en CADA test de Playwright — y otra vez tras
+ *  cada bump de CACHE_VERSION.
+ *
+ *  Si esa recarga cae en medio de un fill o de un click, el test pierde el
+ *  estado y agota su timeout con un error engañoso ("locator.check timeout",
+ *  "campos vacíos"). Esperar a que el SW ya controle la página elimina toda
+ *  esa clase de fallos de una sola vez, en lugar de parchear cada síntoma.
+ *
+ *  No falla si el SW no llega: se sigue igual (catch vacío) para no romper
+ *  entornos donde no esté registrado. */
+async function esperarSWListo(page) {
+  await page.waitForFunction(
+    () => !('serviceWorker' in navigator) || !!navigator.serviceWorker.controller,
+    { timeout: 20000 }
+  ).catch(() => {});
+  await page.waitForTimeout(600); // margen para un reload ya disparado
+}
+
 /** Borra la sesión de Supabase del localStorage sin tocar el resto. */
 async function limpiarSesion(page) {
   await page.evaluate(() => {
@@ -64,6 +86,7 @@ async function entrarComoInvitado(page) {
   await limpiarSesion(page);
   await page.reload();
   await esperarDOM(page);
+  await esperarSWListo(page);
   await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
   // Regresión 2026-08-02: el botón de invitado pasó de onclick="entrarInvitado()"
   // a onclick="gateLogin('invitado', event)" (modal de T&C antes del primer
@@ -120,6 +143,7 @@ async function login(page, cuenta, preparar) {
   if (preparar) await page.evaluate(preparar);
   await page.reload();
   await esperarDOM(page);
+  await esperarSWListo(page);
   await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
   await completarCredenciales(page, c.email, c.pw);
 
@@ -232,4 +256,4 @@ async function visible(page, selector) {
   }, selector);
 }
 
-module.exports = { CUENTAS, esperarDOM, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece };
+module.exports = { CUENTAS, esperarDOM, esperarSWListo, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece };
