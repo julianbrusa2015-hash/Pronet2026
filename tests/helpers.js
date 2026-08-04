@@ -43,6 +43,23 @@ async function esperarSWListo(page) {
   await page.waitForTimeout(600); // margen para un reload ya disparado
 }
 
+/** Cierra el tutorial de bienvenida si está abierto.
+ *
+ *  Tras un login en un contexto nuevo (cada test de Playwright lo es), la
+ *  app abre #tutorial-overlay, que cubre toda la pantalla e intercepta los
+ *  clicks. El error de Playwright lo dice literal:
+ *  "<div id="tutorial-content"> … intercepts pointer events".
+ *
+ *  Cualquier test que toque el nav o una pantalla después de loguearse
+ *  necesita esto primero. */
+async function cerrarTutorialSiAparece(page) {
+  const overlay = page.locator('#tutorial-overlay.show');
+  if (!(await overlay.isVisible().catch(() => false))) return;
+  const saltar = page.locator('#tutorial-overlay .tt-skip');
+  if (await saltar.isVisible().catch(() => false)) await saltar.click();
+  await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+}
+
 /** Borra la sesión de Supabase del localStorage sin tocar el resto. */
 async function limpiarSesion(page) {
   await page.evaluate(() => {
@@ -256,4 +273,4 @@ async function visible(page, selector) {
   }, selector);
 }
 
-module.exports = { CUENTAS, esperarDOM, esperarSWListo, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece };
+module.exports = { CUENTAS, esperarDOM, esperarSWListo, cerrarTutorialSiAparece, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece };

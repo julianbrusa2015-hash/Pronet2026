@@ -3,40 +3,26 @@
 // Corre contra: https://pronetprueba.netlify.app
 const { test, expect } = require('@playwright/test');
 
-const PRESTADOR = {
-  email: process.env.TEST_PRESTADOR_EMAIL || 'prestador_test@pronet.test',
-  pw:    process.env.TEST_PRESTADOR_PW    || '12345678',
-};
+// Refactor 2026-08-03: esta suite tenía su propia copia de los helpers de
+// sesión y quedó desincronizada del comportamiento real de la app. Dos
+// bugs concretos que costaron 9 tests en verde:
+//
+//  · entrarComoInvitado() buscaba `button[onclick*="entrarInvitado"]`,
+//    pero el 2026-08-02 el botón pasó a `gateLogin('invitado', event)`.
+//    El selector no matcheaba NADA y el click agotaba su timeout.
+//  · No aceptaba el modal de T&C (introducido en ese mismo cambio) ni
+//    esperaba al Service Worker, que recarga la página al tomar control.
+//
+// Ahora las funciones locales delegan en tests/helpers.js manteniendo sus
+// firmas, así los call sites no cambian y hay una sola fuente de verdad.
+const H = require('./helpers');
 
-async function esperarDOM(page) {
-  await page.waitForFunction(() =>
-    document.querySelector('#s-home') !== null &&
-    !document.querySelector('#anti-flash-login'),
-    { timeout: 20000 }
-  );
-}
+const PRESTADOR = H.CUENTAS.prestador;
 
-async function entrarComoInvitado(page) {
-  // 1. Limpiar sesión Supabase de runs anteriores para evitar auto-login via onAuthStateChange
-  await page.goto('/');
-  await page.evaluate(() => {
-    Object.keys(localStorage).forEach(k => {
-      if (k.includes('supabase') || k.includes('sb-')) localStorage.removeItem(k);
-    });
-  });
-  // 2. Recargar sin sesión → login-screen aparece limpio
-  await page.reload();
-  await esperarDOM(page);
-  await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
-  // 3. Clic en "Explorar sin cuenta →"
-  await page.locator('button[onclick*="entrarInvitado"]').click();
-  await page.waitForFunction(() => {
-    const ls = document.getElementById('login-screen');
-    return ls && ls.classList.contains('hidden');
-  }, { timeout: 10000 });
-  // 4. Esperar que Supabase NO restaure sesión (no hay token en localStorage)
-  await page.waitForTimeout(500);
-}
+const esperarDOM = H.esperarDOM;
+
+// Firma idéntica a la anterior: los tests la siguen llamando igual.
+const entrarComoInvitado = H.entrarComoInvitado;
 
 async function submitLogin(page, timeout = 15000) {
   // Intentar click en el botón de login; si no hay clase btn-p, usar Enter
@@ -47,6 +33,10 @@ async function submitLogin(page, timeout = 15000) {
   } else {
     await page.locator('#login-pw').press('Enter');
   }
+  // El click en Ingresar abre el modal de T&C en el primer login de cada
+  // contexto; sin aceptarlo, loginWith() nunca se dispara y el wait de
+  // abajo agota su timeout.
+  await H.aceptarTycSiAparece(page);
   await page.waitForFunction(() => {
     const ls = document.getElementById('login-screen');
     const err = document.getElementById('login-error');
@@ -55,25 +45,11 @@ async function submitLogin(page, timeout = 15000) {
   }, { timeout });
 }
 
+// Delega en el login compartido: incluye espera del Service Worker,
+// verificación de que las credenciales quedaron escritas y aceptación
+// del modal de T&C. Lanza con mensaje propio si falla, como antes.
 async function loginPrestador(page) {
-  // Limpiar sesión existente (puede haber storageState de vecino_test)
-  await page.goto('/');
-  await page.evaluate(() => {
-    Object.keys(localStorage).forEach(k => {
-      if (k.includes('supabase') || k.includes('sb-')) localStorage.removeItem(k);
-    });
-  });
-  await page.reload();
-  await esperarDOM(page);
-  await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
-  await page.locator('#login-email').fill(PRESTADOR.email);
-  await page.locator('#login-pw').fill(PRESTADOR.pw);
-  await submitLogin(page);
-  // Verificar que el login fue exitoso (no error)
-  const loginHidden = await page.locator('#login-screen.hidden').count();
-  if (loginHidden === 0) {
-    throw new Error(`Login de prestador falló — ¿existe la cuenta ${PRESTADOR.email}?`);
-  }
+  await H.login(page, 'prestador');
   await page.waitForTimeout(800);
 }
 
@@ -127,20 +103,16 @@ test.describe('E-02 · Widget WhatsApp', () => {
 
   test('Mi Perfil: fila Soporte WhatsApp visible para vecino logueado', async ({ page }) => {
     // Los tests comparten contexto — loguear explícitamente como vecino_test
-    await page.goto('/');
-    await page.evaluate(() => {
-      Object.keys(localStorage).forEach(k => {
-        if (k.includes('supabase') || k.includes('sb-')) localStorage.removeItem(k);
-      });
-    });
-    await page.reload();
-    await esperarDOM(page);
-    await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
-    await page.locator('#login-email').fill('vecino_test@pronet.test');
-    await page.locator('#login-pw').fill('Test1234!');
-    await submitLogin(page);
-    const loginOk = await page.locator('#login-screen.hidden').count();
+    let loginOk = 1;
+    try {
+      await H.login(page, 'vecino');
+    } catch {
+      loginOk = 0;
+    }
     if (loginOk === 0) { test.skip(); return; }
+    // El tutorial de bienvenida se abre tras el login en un contexto nuevo
+    // y su overlay intercepta el click sobre el nav.
+    await H.cerrarTutorialSiAparece(page);
     // Navegar a Mi Perfil por el nav (goTo no es global)
     await page.locator('#nb-perfil').click();
     await page.waitForFunction(() => {

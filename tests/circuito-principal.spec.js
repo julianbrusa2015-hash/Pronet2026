@@ -1,6 +1,14 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 
+// Refactor 2026-08-03: el botón de login pasó de onclick="loginWith" a
+// onclick="gateLogin('email', event)" el 2026-08-02, y esta suite seguía
+// con el selector viejo — no matcheaba nada. Además gateLogin abre el
+// modal de T&C ANTES de validar, así que el segundo click de cada test
+// chocaba contra el overlay. Se reusa el helper compartido en vez de
+// mantener otra copia que vuelva a desincronizarse.
+const { aceptarTycSiAparece, esperarSWListo } = require('./helpers');
+
 // ─── Credenciales de test ────────────────────────────────────────────────────
 // Opción A: variables de entorno  TEST_VECINO_EMAIL / TEST_VECINO_PW
 // Opción B: crear vecino_test@pronet.test y prestador_test@pronet.test en Supabase
@@ -41,7 +49,8 @@ async function login(page, email, pw) {
   await page.locator('#login-email').fill(email);
   await page.locator('#login-pw').fill(pw);
   // Botón de login (usa onclick="loginWith" para no confundir con el de recupero)
-  await page.locator('button.btn-p[onclick*="loginWith"]').click();
+  await page.locator('button.btn-p[onclick*="gateLogin"]').click();
+  await aceptarTycSiAparece(page);
   // Esperar que el login-screen desaparezca (login ok) o error visible
   await page.waitForFunction(() => {
     const ls = document.getElementById('login-screen');
@@ -58,6 +67,9 @@ test.describe('PRONET — Circuito principal', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await esperarDOM(page);
+    // El SW recarga la página al tomar control del contexto; sin esperarlo,
+    // la recarga cae en medio del test y cierra modales o vacía inputs.
+    await esperarSWListo(page);
   });
 
   // ── 1. Home carga correctamente ──────────────────────────────────────────
@@ -80,20 +92,23 @@ test.describe('PRONET — Circuito principal', () => {
     // Campos vacíos: loginWith() usa reportValidity() que dispara la validación
     // nativa del browser (tooltip "Rellene este campo"). El submit queda bloqueado
     // — login-screen sigue visible, #login-error no aparece para estos casos.
-    await page.locator('button.btn-p[onclick*="loginWith"]').click();
+    await page.locator('button.btn-p[onclick*="gateLogin"]').click();
+    await aceptarTycSiAparece(page);
     await expect(page.locator('#login-screen')).not.toHaveClass(/hidden/);
 
     // Email con formato inválido: también bloqueado por la validación nativa de type="email".
     await page.locator('#login-email').fill('noesvalido');
     await page.locator('#login-pw').fill('Test1234!');
-    await page.locator('button.btn-p[onclick*="loginWith"]').click();
+    await page.locator('button.btn-p[onclick*="gateLogin"]').click();
+    await aceptarTycSiAparece(page);
     await expect(page.locator('#login-screen')).not.toHaveClass(/hidden/);
 
     // Credenciales con formato correcto pero incorrectas: pasan la validación nativa,
     // Supabase rechaza → loginWith() llama mostrarErrorLogin() → #login-error visible.
     await page.locator('#login-email').fill('no-existe@pronet.test');
     await page.locator('#login-pw').fill('ContraIncorrecta1!');
-    await page.locator('button.btn-p[onclick*="loginWith"]').click();
+    await page.locator('button.btn-p[onclick*="gateLogin"]').click();
+    await aceptarTycSiAparece(page);
     await expect(page.locator('#login-error')).toBeVisible({ timeout: 20000 });
     await expect(page.locator('#login-error')).toContainText(/incorrectos/i);
   });

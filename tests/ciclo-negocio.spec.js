@@ -1,6 +1,13 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 
+// Refactor 2026-08-03: esta suite tenía copia propia de los helpers de
+// sesión y quedó desincronizada: el botón de login pasó a
+// onclick="gateLogin(...)" el 2026-08-02 y acá seguía el selector viejo,
+// que no matcheaba nada. Se reusan los helpers compartidos para el modal
+// de T&C y la espera del Service Worker.
+const { aceptarTycSiAparece, esperarSWListo } = require('./helpers');
+
 // ─── Credenciales ────────────────────────────────────────────────────────────
 const VECINO    = { email: 'vecino_test@pronet.test',    pw: 'Test1234!' };
 const PRESTADOR = { email: 'prestador_test@pronet.test', pw: '12345678' };
@@ -11,6 +18,9 @@ const TITULO_PEDIDO = `Test E2E – Revisión eléctrica ${Date.now()}`;
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function esperarLoginScreen(page) {
+  // Antes de operar, dejar que el SW tome control: si recarga a mitad de
+  // camino, vacía los inputs y el login nunca se dispara.
+  await esperarSWListo(page);
   await page.waitForSelector('#login-screen:not(.hidden)', { timeout: 20000 });
   await page.waitForTimeout(300);
 }
@@ -54,7 +64,9 @@ async function login(page, email, pw) {
     await page.waitForTimeout(500);
   }
 
-  await page.locator('button.btn-p[onclick*="loginWith"]').click();
+  await page.locator('button.btn-p[onclick*="gateLogin"]').click();
+  // gateLogin abre el modal de T&C antes de llamar a loginWith().
+  await aceptarTycSiAparece(page);
   await expect(page.locator('#login-screen')).toHaveClass(/hidden/, { timeout: 25000 });
   // Esperar que la sesión de Supabase esté lista antes de operar con datos
   await page.waitForFunction(() =>
