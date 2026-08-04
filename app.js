@@ -5013,7 +5013,10 @@ document.addEventListener('focusin', (e) => {
     const btnPub   = document.getElementById('btn-publicar-pedido');
     const esPresta = esPrestador();
     if (nbBuscar) nbBuscar.style.display = esPresta ? 'none' : '';
-    if (nbMapa)   nbMapa.style.display   = esPresta ? 'none' : '';
+    // El tab de ProMarket depende del rol Y del feature flag: mostrarlo solo
+    // por no ser prestador pisaba lo que aplicarFeatureFlags() había ocultado
+    // y dejaba el tab visible con la feature apagada por el admin.
+    if (nbMapa)   nbMapa.style.display   = (esPresta || !FEATURES.mercadoPlaza) ? 'none' : '';
     if (btnPub)   btnPub.style.display   = esPresta ? 'none' : '';
     reflejarUsuario();
     goTo('s-home');
@@ -5479,7 +5482,10 @@ document.addEventListener('focusin', (e) => {
       if (btnPub)   btnPub.style.display   = 'none';
     } else {
       if (nbBuscar) nbBuscar.style.display = '';
-      if (nbMapa)   nbMapa.style.display   = '';
+      // Igual que en toggleModoRol(): el tab de ProMarket necesita rol Y
+      // feature flag. Sin el segundo chequeo, esto reaparecía el tab que
+      // aplicarFeatureFlags() ya había ocultado por config del admin.
+      if (nbMapa)   nbMapa.style.display   = FEATURES.mercadoPlaza ? '' : 'none';
       if (btnPub)   btnPub.style.display   = '';
     }
     if (!usuarioActual) return;

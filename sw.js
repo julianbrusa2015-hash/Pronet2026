@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v107'; // v107: UX — moderación visible, toggle ProMarket real, Plomería/Pintura publicables, scroll y duplicados
+const CACHE_VERSION = 'pronet-v108'; // v108: UX — el tab ProMarket ahora respeta el flag del admin (dos lugares lo re-mostraban)
 
 const SHELL = [
   './',
