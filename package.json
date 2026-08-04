@@ -8,6 +8,8 @@
     "test": "playwright test",
     "perf:e1": "k6 run tests/perf/e1-contratacion.js",
     "perf:e1:smoke": "k6 run --vus 5 --duration 30s tests/perf/e1-contratacion.js",
+    "perf:e2": "k6 run tests/perf/e2-marketplace.js",
+    "perf:e2:smoke": "k6 run --vus 5 --duration 30s tests/perf/e2-marketplace.js",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report",
     "sync-www": "node scripts/sync-www.js",

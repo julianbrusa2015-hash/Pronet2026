@@ -14,10 +14,10 @@ Implementación del plan de performance. Ver el plan completo para estrategia, e
 |---|---|
 | Índices P0/P1 | ✅ aplicados (`supabase-perf-indices.sql`) |
 | Script E1 — contratación | ✅ `e1-contratacion.js` |
+| Script E2 — marketplace | ✅ `e2-marketplace.js` |
 | Seed de volumetría | ✅ `seed-volumetria.sql` (requiere staging) |
 | Entorno de staging | ⬜ **pendiente — bloqueante** |
 | Alta de usuarios de prueba | ⬜ pendiente |
-| Script E2 — marketplace | ⬜ pendiente |
 | Script E3 — pagos/idempotencia | ⬜ pendiente |
 
 ## Puesta en marcha
@@ -55,7 +55,37 @@ Objetivo: 5 000 prestadores · 50 000 pedidos · 200 000 reseñas. El script ter
 
 ```bash
 k6 run -e SUPABASE_URL=https://<ref>.supabase.co -e SUPABASE_ANON_KEY=<anon> tests/perf/e1-contratacion.js
+k6 run -e SUPABASE_URL=https://<ref>.supabase.co -e SUPABASE_ANON_KEY=<anon> tests/perf/e2-marketplace.js
 ```
+
+## E2 — Marketplace
+
+Escenario de lectura intensiva. Mix: 70 % scroll paginado · 20 % filtros · 10 % búsqueda por texto.
+
+Usa **`ramping-arrival-rate`** en lugar de VUs fijos. La diferencia importa: con VUs fijos, si el servidor se degrada los usuarios virtuales esperan más y la carga ofrecida baja sola, enmascarando el problema. Con arrival rate la carga se mantiene aunque el sistema sufra, que es lo que hace un usuario real.
+
+| Métrica | Umbral | Qué mide |
+|---|---|---|
+| `op_feed_offset_0` | p95 < 600 ms | Primera página — línea base |
+| `op_feed_offset_50` | p95 < 700 ms | Scroll medio |
+| `op_feed_offset_200` | p95 < 900 ms | Scroll profundo |
+| `op_filtro_zona_categoria` | p95 < 600 ms | Filtro combinado (con índices) |
+| `op_busqueda_texto` | p95 < 1200 ms | `ILIKE '%…%'` — el subcaso caro |
+| `op_contadores_mapa` | p95 < 1500 ms | Contadores por zona |
+| `bytes_contadores_mapa` | — | **Peso transferido**, ver abajo |
+
+**Las tres profundidades de offset se miden por separado a propósito.** El costo de `OFFSET` crece con la profundidad porque Postgres genera y descarta las filas previas antes de devolver la página. Un p95 único las promediaría y escondería exactamente la degradación que hay que detectar. **Criterio: si offset 200 supera 2× el de offset 0, migrar a paginación por cursor (keyset).**
+
+### Hallazgo: los contadores del mapa transfieren la tabla entera
+
+`contarPublicacionesPorZona()` en `datos.js` **no es un `GROUP BY` server-side**. Hace `select('zona')` sin límite y agrupa en JavaScript en el navegador:
+
+```js
+const { data } = await q;                    // ← trae TODAS las filas
+data.forEach(p => { counts[p.zona] = ... }); // ← agrupa en el cliente
+```
+
+A 50 000 publicaciones eso transfiere 50 000 filas para construir un contador de 11 números. Por eso E2 mide `bytes_contadores_mapa` además de la latencia: acá el problema es el volumen transferido, no el tiempo de consulta. La corrección es un RPC con `GROUP BY` que devuelva sólo los pares zona→conteo.
 
 ## Interpretación de resultados
 
