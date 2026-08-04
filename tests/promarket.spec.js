@@ -276,15 +276,27 @@ test.describe('PM-6 · Contacto directo', () => {
     expect(r).toBeNull();
   });
 
-  test('perfiles es legible (columnas públicas) pero el teléfono no', async ({ page }) => {
+  test('perfiles solo es legible con sesión; el teléfono es visible entre usuarios', async ({ page, browser }) => {
+    // ⚠ ESTE TEST CAMBIÓ DE INTENCIÓN — leer antes de "arreglarlo".
+    //
+    // La versión original exigía que pedir 'telefono' fuera RECHAZADO: había
+    // un grant por columna que lo excluía (supabase-fix-perfiles-lectura.sql).
+    // Esa restricción se revirtió a propósito el 2026-08-02
+    // (supabase-fix-perfiles-columnas.sql, commit b815bc0) porque rompía el
+    // guardado del teléfono PROPIO: el UPDATE ... RETURNING usa el mismo
+    // permiso de columna que un SELECT, así que ni el dueño podía leer de
+    // vuelta el teléfono que acababa de guardar.
+    //
+    // GRANT/REVOKE es por rol, no por fila: no puede distinguir "el dueño lee
+    // el suyo" de "cualquiera lee el de otro". Se optó por el mismo criterio
+    // que prestadores/resenas — lectura para cualquier autenticado.
+    //
+    // Decisión confirmada por el usuario el 2026-08-03. El test ahora fija el
+    // límite que SÍ sigue vigente: sin cuenta no se lee nada.
     await abrir(page);
-    // Defensa en profundidad, en dos partes:
-    // 1) las columnas públicas (nombre, zona) sí se leen — el feed, los
-    //    comentarios y "mis consultas" dependen de esto.
-    // 2) pedir 'telefono' explícitamente en el mismo select falla del todo
-    //    (PostgREST rechaza la query completa si pide una columna sin
-    //    grant, no la omite en silencio) — así se prueba que no es
-    //    cosechable en masa, no que "no vino" por otro motivo.
+
+    // 1) Con sesión: las columnas públicas se leen — el feed, los comentarios
+    //    y "mis consultas" dependen de esto.
     const publicas = await page.evaluate(async () => {
       const { data, error } = await window._sb.from('perfiles').select('id, nombre').limit(20);
       return { total: (data || []).length, error: error?.message || null };
@@ -292,12 +304,46 @@ test.describe('PM-6 · Contacto directo', () => {
     expect(publicas.error).toBeNull();
     expect(publicas.total).toBeGreaterThan(0);
 
+    // 2) Con sesión, el teléfono también se lee. Se afirma explícitamente
+    //    para que un cambio futuro que lo vuelva a cerrar rompa este test y
+    //    obligue a revisar el guardado del teléfono propio.
     const conTelefono = await page.evaluate(async () => {
       const { data, error } = await window._sb.from('perfiles').select('id, telefono').limit(20);
       return { huboError: !!error, trajoFilas: (data || []).length > 0 };
     });
-    expect(conTelefono.huboError, 'pedir teléfono en un select directo debería ser rechazado').toBe(true);
-    expect(conTelefono.trajoFilas).toBe(false);
+    expect(conTelefono.huboError, 'telefono es legible con sesión desde el 2026-08-02').toBe(false);
+    expect(conTelefono.trajoFilas).toBe(true);
+
+    // 3) LÍMITE VIGENTE: sin sesión no se lee NADA. La policy
+    //    perfiles_lectura_autenticados es sólo para {authenticated}; anon
+    //    tiene el grant de tabla pero ninguna policy, así que RLS devuelve
+    //    cero filas. Esto es lo que impide cosechar teléfonos en masa desde
+    //    afuera con la anon key, que es pública.
+    //
+    // ⚠ NO usar window._sb.auth.signOut() acá. En Supabase el signOut por
+    //   defecto tiene scope 'global': revoca el refresh token en el SERVIDOR,
+    //   invalidando el storageState que comparten todos los specs y dejando
+    //   sin sesión a cada test posterior (costó 7 tests en rojo al escribir
+    //   esto). Se usa un contexto nuevo sin storageState, que es un
+    //   visitante anónimo de verdad y no toca la sesión compartida.
+    // storageState vacío EXPLÍCITO: el describe hace test.use({storageState}),
+    // y no conviene depender de si browser.newContext() lo hereda o no —
+    // en la práctica arrancó con sesión. Pasarlo vacío es determinista.
+    const ctxAnon  = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const pageAnon = await ctxAnon.newPage();
+    try {
+      await pageAnon.goto('/');
+      await pageAnon.waitForFunction(() => !!window._sb, { timeout: 20000 });
+      const sinSesion = await pageAnon.evaluate(async () => {
+        const { data: s } = await window._sb.auth.getSession();
+        const { data, error } = await window._sb.from('perfiles').select('id, telefono').limit(20);
+        return { haySesion: !!s?.session, filas: (data || []).length, error: error?.message || null };
+      });
+      expect(sinSesion.haySesion, 'el contexto anónimo no debe tener sesión').toBe(false);
+      expect(sinSesion.filas, 'un visitante sin cuenta no debe poder leer perfiles').toBe(0);
+    } finally {
+      await ctxAnon.close();
+    }
   });
 
   test('el botón de contacto arranca oculto', async ({ page }) => {
