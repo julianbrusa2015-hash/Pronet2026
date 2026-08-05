@@ -2257,80 +2257,16 @@
           </div>
         </div>
 
-        <div class="ped-zona-bar">
-          <div class="chip on">📍 Tu zona · 8 km</div>
-          <div class="chip" onclick="this.classList.toggle('on')">⚡ Mi rubro</div>
-          <div class="chip" onclick="this.classList.toggle('on')">🕐 Urgentes</div>
-          <div class="chip" onclick="this.classList.toggle('on')">💰 Mayor presupuesto</div>
+        <div class="ped-zona-bar" id="presto-chips">
+          <div class="chip on" data-f="zona"        onclick="togglePrestoFiltro(this,'zona')">📍 Tu zona</div>
+          <div class="chip"    data-f="rubro"       onclick="togglePrestoFiltro(this,'rubro')">⚡ Mi rubro</div>
+          <div class="chip"    data-f="urgentes"    onclick="togglePrestoFiltro(this,'urgentes')">🕐 Urgentes</div>
+          <div class="chip"    data-f="presupuesto" onclick="togglePrestoFiltro(this,'presupuesto')">💰 Mayor presupuesto</div>
         </div>
 
-        <div style="padding:12px 14px 6px;font-size:11px;color:var(--ink3)">Pedidos disponibles en tu zona · <span style="color:var(--blue);font-weight:600">5 pedidos</span></div>
+        <div style="padding:12px 14px 6px;font-size:11px;color:var(--ink3)" id="presto-meta">Cargando pedidos…</div>
 
-        <!-- Pedido disponible para postularse -->
-        <div class="ped-card" onclick="goTo('s-detalle-pedido')">
-          <div class="ped-card-top">
-            <div class="ped-ico" style="background:#EEF2FF">⚡</div>
-            <div class="ped-info">
-              <div class="ped-title">Revisión de tablero eléctrico</div>
-              <div class="ped-meta">📍 Escobar · 1.2 km de vos</div>
-            </div>
-            <div class="urg-badge urg-semana">Esta semana</div>
-          </div>
-          <div class="ped-desc">El diferencial se va cuando enciendo el aire. Busco electricista esta semana.</div>
-          <div class="ped-footer">
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <div class="ped-tag">💰 $5.000–$10.000</div>
-              <div class="ped-tag">👥 4 propuestas</div>
-            </div>
-            <div class="ped-timer urgent">🕐 Expira en 18hs</div>
-          </div>
-        </div>
-
-        <div class="ped-card" onclick="goTo('s-detalle-pedido')">
-          <div class="ped-card-top">
-            <div class="ped-ico" style="background:#FFF1F2">⚡</div>
-            <div class="ped-info">
-              <div class="ped-title">Instalación de tomacorrientes nuevos</div>
-              <div class="ped-meta">📍 Puertos del Lago · 3.4 km de vos</div>
-            </div>
-            <div class="urg-badge urg-hoy">Hoy</div>
-          </div>
-          <div class="ped-desc">Necesito instalar 3 tomacorrientes en el living y 2 en el dormitorio principal.</div>
-          <div class="ped-footer">
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <div class="ped-tag">💰 $8.000–$15.000</div>
-              <div class="ped-tag">👥 1 propuesta</div>
-            </div>
-            <div class="ped-timer urgent">🕐 Expira en 6hs</div>
-          </div>
-        </div>
-
-        <!-- Ya me postulé -->
-        <div class="ped-card" style="border:1.5px solid var(--green)" onclick="goTo('s-estado-propuesta')">
-          <div class="ped-card-top">
-            <div class="ped-ico" style="background:#ECFDF5">⚡</div>
-            <div class="ped-info">
-              <div class="ped-title">Certificación eléctrica para alquiler</div>
-              <div class="ped-meta">📍 San Matías · 5.1 km de vos</div>
-            </div>
-            <div style="background:var(--green-s);color:var(--green);border-radius:8px;padding:3px 8px;font-size:10px;font-weight:700;flex-shrink:0">✓ Propuesta enviada</div>
-          </div>
-          <div class="ped-desc">Necesito certificado ENRE para presentar en la inmobiliaria antes del viernes.</div>
-          <div class="ped-footer">
-            <div class="ped-tag">💰 $12.000</div>
-            <div class="ped-timer ok">🕐 Expira en 52hs</div>
-          </div>
-        </div>
-
-        <!-- Lock para básico (ejemplo) -->
-        <div class="pro-lock">
-          <div style="font-size:28px">🔒</div>
-          <div class="pro-lock-txt">
-            <div class="pl-title">5 pedidos más disponibles</div>
-            <div class="pl-sub">Actualizá al Plan Pro para postularte a todos</div>
-          </div>
-          <button class="pro-lock-btn" onclick="goTo('s-subs')">Ver Pro</button>
-        </div>
+        <div id="presto-lista"></div>
 
       </div>
 

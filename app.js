@@ -356,7 +356,11 @@ document.addEventListener('focusin', (e) => {
       if (esPrestador()) {
         if (vBusco) vBusco.style.display = 'none';
         if (vPresto) vPresto.style.display = 'block';
-        renderPedidosGuardados();
+        // renderPedidosGuardados() renderiza en #mis-pedidos-guardados, que
+        // vive dentro de #pview-busco — oculto para el prestador. O sea que
+        // se ejecutaba y su resultado no lo veía nadie. La vista del
+        // prestador tiene su propio render.
+        renderPedidosPresto();
       } else if (!usuarioActual) {
         // Invitado: mostrar CTA para registrarse
         if (vBusco) vBusco.style.display = 'block';
@@ -1388,6 +1392,92 @@ document.addEventListener('focusin', (e) => {
           <span style="color:var(--blue);font-size:15px">›</span>
         </div>
       </div>`;
+  }
+
+  // ── Filtros de la pantalla Pedidos (vista prestador) ─────────────────
+  // Antes esta vista era HTML estático: tres pedidos inventados con
+  // distancias y conteos escritos a mano, y cuatro chips que sólo hacían
+  // this.classList.toggle('on') — se prendían y no filtraban nada.
+  // Ahora consultan datos reales.
+  const filtrosPresto = { zona: true, rubro: false, urgentes: false, presupuesto: false };
+
+  function togglePrestoFiltro(el, clave) {
+    filtrosPresto[clave] = !filtrosPresto[clave];
+    if (el) el.classList.toggle('on', filtrosPresto[clave]);
+    renderPedidosPresto();
+  }
+  window.togglePrestoFiltro = togglePrestoFiltro;
+
+  /** Lista de pedidos disponibles para ofertar, con los 4 filtros.
+   *
+   *  "Tu zona" filtra por zona-madre, no por kilómetros: `pedidos` no
+   *  tiene lat/lng, así que la distancia real es imposible hoy. Por eso
+   *  el chip dice "Tu zona" a secas — el "· 8 km" anterior prometía una
+   *  precisión que no existe.
+   *
+   *  "Mayor presupuesto" ordena, no filtra: los pedidos a convenir no
+   *  quedan afuera, van al final. */
+  async function renderPedidosPresto() {
+    const wrap = document.getElementById('presto-lista');
+    const meta = document.getElementById('presto-meta');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando pedidos…</div>';
+
+    const pid = usuarioActual?.prestador_id || null;
+    const ficha = pid ? await PronetDB.obtener('prestadores', pid).catch(() => null) : null;
+    const rubro = ficha?.rubro || '';
+
+    let pedidos = await PronetDB.listar('pedidos').catch(() => []);
+    pedidos = pedidos.filter(p => (p.estado || 'Publicado') === 'Publicado');
+    // Un prestador no oferta sus propios pedidos.
+    if (usuarioActual) pedidos = pedidos.filter(p => p.usuario_id !== usuarioActual.id);
+
+    if (filtrosPresto.zona) {
+      const zf = zonaParaFiltro();
+      if (zf) pedidos = pedidos.filter(p => (ZONA_DB[p.zona || 'Escobar'] || p.zona || 'Escobar') === zf);
+    }
+    if (filtrosPresto.rubro && rubro) {
+      pedidos = pedidos.filter(p => matchRubro(p.rubro, rubro));
+    }
+    if (filtrosPresto.urgentes) {
+      pedidos = pedidos.filter(p => p.urgencia === 'hoy');
+    }
+    if (filtrosPresto.presupuesto) {
+      const tope = p => p.presupuesto_max || p.presupuesto_min || 0;
+      pedidos = pedidos.slice().sort((a, b) => tope(b) - tope(a));
+    }
+
+    const activos = Object.entries(filtrosPresto).filter(([, v]) => v).length;
+    if (meta) {
+      meta.innerHTML = pedidos.length
+        ? 'Pedidos disponibles · <span style="color:var(--blue);font-weight:600">' +
+          pedidos.length + ' pedido' + (pedidos.length !== 1 ? 's' : '') + '</span>'
+        : 'Sin resultados';
+    }
+
+    if (!pedidos.length) {
+      wrap.innerHTML = '<div style="padding:28px 18px;text-align:center;font-size:13px;color:var(--ink3)">' +
+        (activos > 1
+          ? 'Ningún pedido coincide con los filtros.<br>Probá desactivar alguno.'
+          : 'No hay pedidos disponibles en ' + (zonaActual || 'tu zona') + ' por ahora.') +
+        '</div>';
+      return;
+    }
+
+    // Nombre de quien publicó: sale de perfiles_publicos, porque la RLS de
+    // `perfiles` limita la lectura y el prestador no vería el nombre.
+    if (window._sb) {
+      const uids = [...new Set(pedidos.map(p => p.usuario_id).filter(Boolean))];
+      if (uids.length) {
+        const { data: prfs } = await window._sb.from('perfiles_publicos').select('id, nombre').in('id', uids);
+        const mapa = {};
+        (prfs || []).forEach(pr => { mapa[pr.id] = pr.nombre; });
+        pedidos = pedidos.map(p => ({ ...p, vecino_nombre: mapa[p.usuario_id] || null }));
+      }
+    }
+
+    wrap.innerHTML = '';
+    pedidos.forEach(p => wrap.appendChild(crearCardPedidoDisponible(p)));
   }
 
   async function renderPedidosDisponibles(cat) {
