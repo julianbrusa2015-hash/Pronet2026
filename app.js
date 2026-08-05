@@ -1275,15 +1275,18 @@ document.addEventListener('focusin', (e) => {
    *  banner contextual). Para prestador el tablero los reemplaza. */
   function cromoHomePrestador(esTablero) {
     const v = esTablero ? 'none' : '';
-    const chips = document.querySelector('#s-home .rubros');
-    if (chips) chips.style.display = v;
-    ['home-cat-header', 'home-banner'].forEach(id => {
+    // Por id donde existe. La banda de urgencias tiene el suyo
+    // (#home-urgencias): apuntar al <h4> interno y subir con closest()
+    // dejaba el botón "Ver ahora" huérfano en pantalla.
+    ['home-cat-header', 'home-banner', 'home-urgencias'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = v;
     });
-    const urg = document.getElementById('urg-title');
-    const banda = urg && urg.closest('div[class]');
-    if (banda) banda.style.display = v;
+    // Chips de rubro y su rótulo "Categorías", que no tiene id propio.
+    const chips = document.querySelector('#s-home .rubros');
+    if (chips) chips.style.display = v;
+    const rotulo = chips && chips.previousElementSibling;
+    if (rotulo && rotulo.classList.contains('sec-label')) rotulo.style.display = v;
   }
 
   /** Tablero de Inicio del prestador: qué necesita su atención hoy.
