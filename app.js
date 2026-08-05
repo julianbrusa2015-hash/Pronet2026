@@ -1220,10 +1220,16 @@ document.addEventListener('focusin', (e) => {
     setBannerContextual();
     renderChecklist(); // Checklist de primeros pasos
 
-    // ── Vista PRESTADOR: mostrar pedidos disponibles para ofertar ──
+    // ── Vista PRESTADOR: tablero de actividad, no un listado ──
+    // Antes Inicio repetía el mismo listado de pedidos que la pantalla
+    // Pedidos: dos entradas del nav al mismo contenido. Ahora Inicio
+    // responde "¿tengo algo pendiente?" y Pedidos "¿dónde consigo
+    // trabajo?". El listado vive sólo en Pedidos.
     if (esPrestador()) {
-      return renderPedidosDisponibles(cat);
+      cromoHomePrestador(true);
+      return renderInicioPrestador();
     }
+    cromoHomePrestador(false);
 
     // ── Vista CLIENTE / INVITADO: mostrar prestadores para contratar ──
     wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
@@ -1264,6 +1270,123 @@ document.addEventListener('focusin', (e) => {
   }
 
   // Renderiza pedidos disponibles (vista prestador), filtrados por zona y rubro
+  /** Muestra u oculta el cromo del Inicio que sólo aplica a la vista de
+   *  vecino (chips de rubro, cabecera del feed, banda de urgencias y el
+   *  banner contextual). Para prestador el tablero los reemplaza. */
+  function cromoHomePrestador(esTablero) {
+    const v = esTablero ? 'none' : '';
+    const chips = document.querySelector('#s-home .rubros');
+    if (chips) chips.style.display = v;
+    ['home-cat-header', 'home-banner'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = v;
+    });
+    const urg = document.getElementById('urg-title');
+    const banda = urg && urg.closest('div[class]');
+    if (banda) banda.style.display = v;
+  }
+
+  /** Tablero de Inicio del prestador: qué necesita su atención hoy.
+   *
+   *  Todo sale de datos que ya existen — chats, propuestas, ranking,
+   *  analítica y cupo del plan. La gracia no es calcular nada nuevo sino
+   *  traer al frente lo que hoy está enterrado a dos toques dentro de
+   *  Mi Perfil.
+   *
+   *  El bloque "Te esperan" se OMITE cuando no hay nada pendiente, en vez
+   *  de mostrar una caja vacía: con la app recién arrancando ese va a ser
+   *  el caso habitual, y una caja vacía es peor que no tenerla. */
+  async function renderInicioPrestador() {
+    const wrap = document.getElementById('home-feed-container');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+
+    const pid = usuarioActual?.prestador_id || null;
+    // El rubro NO está en usuarioActual: mi_perfil() devuelve la fila de
+    // `perfiles`, y el rubro vive en `prestadores`. Hay que traer la ficha
+    // aparte, igual que hace el ranking de Mi Perfil.
+    const ficha = pid ? await PronetDB.obtener('prestadores', pid).catch(() => null) : null;
+    const rubro = ficha?.rubro || '';
+
+    const [chats, noLeidos, cupo, analitica, ranking, pedidos] = await Promise.all([
+      PronetDB.listarChats().catch(() => []),
+      PronetDB.contarNoLeidos().catch(() => 0),
+      puedeEnviarPropuesta().catch(() => ({ ok: true })),
+      PronetDB.obtenerAnalitica().catch(() => null),
+      pid && rubro
+        ? PronetDB.obtenerRankingPrestador(pid, rubro).catch(() => [])
+        : Promise.resolve([]),
+      PronetDB.listar('pedidos').catch(() => []),
+    ]);
+
+    // ── Pendientes ──
+    const mios = chats.filter(c => c.prestador_id === pid);
+    const paraCerrar = mios.filter(c => c.estado === 'activo').length;
+    const enEspera   = mios.filter(c => c.estado === 'propuesta_enviada').length;
+
+    const items = [];
+    if (noLeidos > 0)   items.push({ ic:'💬', txt: noLeidos + ' mensaje' + (noLeidos>1?'s':'') + ' sin leer', accion: "goTo('s-chats')" });
+    if (paraCerrar > 0) items.push({ ic:'✅', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "goTo('s-chats')" });
+    if (enEspera > 0)   items.push({ ic:'🕐', txt: enEspera + ' propuesta' + (enEspera>1?'s':'') + ' esperando respuesta', accion: "goTo('s-mis-propuestas')" });
+
+    // ── Pedidos nuevos de su zona y rubro ──
+    const zonaF = zonaParaFiltro();
+    const nuevos = pedidos.filter(p => {
+      if (p.estado !== 'Publicado') return false;
+      if (zonaF) {
+        const madre = ZONA_DB[p.zona || 'Escobar'] || (p.zona || 'Escobar');
+        if (madre !== zonaF) return false;
+      }
+      return rubro ? matchRubro(p.rubro, rubro) : true;
+    }).length;
+
+    // ── Números del mes ──
+    const vistas = analitica?.vistas_mes ?? 0;
+    const pos = ranking.find(r => r.zona === (usuarioActual?.zona || zonaActual));
+    const posTxt = pos ? '#' + pos.posicion : '—';
+    const cupoTxt = cupo.limite == null ? '∞' : (cupo.usadas ?? 0) + '/' + cupo.limite;
+
+    const tarjeta = (v, l) =>
+      `<div style="background:var(--surface);border-radius:12px;padding:12px 8px;text-align:center">
+         <div style="font-size:20px;font-weight:800;color:var(--ink)">${escHTML(String(v))}</div>
+         <div style="font-size:11px;color:var(--ink3);margin-top:2px">${escHTML(l)}</div>
+       </div>`;
+
+    const bloquePendientes = items.length ? `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">Te esperan</div>
+        ${items.map((it, i) => `
+          <div role="button" tabindex="0" onclick="${it.accion}"
+               style="display:flex;align-items:center;gap:9px;padding:9px 0;cursor:pointer${i < items.length-1 ? ';border-bottom:1px solid var(--border)' : ''}">
+            <span style="font-size:15px">${it.ic}</span>
+            <span style="flex:1;font-size:13.5px;color:var(--ink)">${escHTML(it.txt)}</span>
+            <span style="color:var(--ink3);font-size:15px">›</span>
+          </div>`).join('')}
+      </div>` : `
+      <div style="background:var(--green-s);border-radius:14px;padding:13px 15px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:16px">✅</span>
+        <span style="font-size:13.5px;color:var(--green);font-weight:600">Todo al día — no tenés nada pendiente</span>
+      </div>`;
+
+    wrap.innerHTML = `
+      <div style="padding:0 14px 8px">
+        ${bloquePendientes}
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+          ${tarjeta(posTxt, 'en tu rubro')}
+          ${tarjeta(vistas, 'vistas del mes')}
+          ${tarjeta(cupoTxt, 'propuestas')}
+        </div>
+        <div role="button" tabindex="0" onclick="goTo('s-pedidos')"
+             style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
+          <span style="font-size:16px">💼</span>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">
+            ${nuevos > 0 ? nuevos + ' pedido' + (nuevos>1?'s':'') + ' para ofertar' : 'Ver pedidos disponibles'}
+          </span>
+          <span style="color:var(--blue);font-size:15px">›</span>
+        </div>
+      </div>`;
+  }
+
   async function renderPedidosDisponibles(cat) {
     const wrap = document.getElementById('home-feed-container');
     if (!wrap) return;

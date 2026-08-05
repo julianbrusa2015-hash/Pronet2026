@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v110'; // v110: marca vectorial en la portada (red + logotipo oblicuo) en vez del emoji
+const CACHE_VERSION = 'pronet-v111'; // v111: Inicio del prestador es un tablero de actividad, no un segundo listado de pedidos
 
 const SHELL = [
   './',
