@@ -2824,8 +2824,38 @@
 
     <!-- Hero -->
     <div class="login-hero">
-      <div style="font-size:40px;margin-bottom:10px">🔧</div>
-      <div class="login-logo">PRONET</div>
+      <!-- Marca vectorial: red de vecinos + logotipo oblicuo con la N-flecha.
+           La N va verde porque el degradado de fondo termina en #2B5BFF —
+           una N azul se borraría sobre su propio fondo.
+           La bajada queda como texto HTML (abajo) para que siga siendo
+           seleccionable y traducible. Fuente: iconos/pronet-lockup.svg -->
+      <svg class="login-marca" viewBox="0 0 560 284" role="img" aria-label="PRONET">
+        <g transform="translate(220,16)">
+          <g stroke="#10B981" stroke-width="5" stroke-linecap="round" opacity=".6" fill="none">
+            <path d="M58,54 L16,34"/><path d="M58,54 L52,12"/><path d="M58,54 L100,30"/>
+            <path d="M58,54 L104,78"/><path d="M58,54 L30,88"/>
+            <path d="M16,34 L52,12"/><path d="M100,30 L104,78"/>
+          </g>
+          <g fill="#10B981">
+            <circle cx="58" cy="54" r="11"/><circle cx="16" cy="34" r="8"/><circle cx="52" cy="12" r="9"/>
+            <circle cx="100" cy="30" r="7.5"/><circle cx="104" cy="78" r="8"/><circle cx="30" cy="88" r="7"/>
+          </g>
+        </g>
+        <g transform="translate(66.4,184) scale(0.86)"><g transform="skewX(-12)">
+          <g fill="#FFFFFF">
+            <path fill-rule="evenodd" d="M0,0 H33 A29,29 0 0 1 33,58 H23 V100 H0 Z M23,23 H33 A6,6 0 0 1 33,35 H23 Z"/>
+            <g transform="translate(74,0)">
+              <path fill-rule="evenodd" d="M0,0 H33 A29,29 0 0 1 33,58 H23 V100 H0 Z M23,23 H33 A6,6 0 0 1 33,35 H23 Z"/>
+              <path d="M30,52 H52 L74,100 H52 Z"/>
+            </g>
+            <path fill-rule="evenodd" transform="translate(160,0)" d="M0,50 A47,50 0 1 1 94,50 A47,50 0 1 1 0,50 Z M23,50 A24,27 0 1 1 71,50 A24,27 0 1 1 23,50 Z"/>
+            <path transform="translate(358,0)" d="M0,0 H68 V23 H23 V38.5 H61 V61.5 H23 V77 H68 V100 H0 Z"/>
+            <path transform="translate(438,0)" d="M0,0 H80 V23 H51.5 V100 H28.5 V23 H0 Z"/>
+          </g>
+          <path fill="#10B981" transform="translate(266,0)"
+                d="M0,0 H23 V100 H0 Z M23,0 H48 L80,100 H55 Z M57,-12 H80 V100 H57 Z M68.5,-50 L96,-12 H41 Z"/>
+        </g></g>
+      </svg>
       <div class="login-tag">Servicios de confianza en tu zona</div>
     </div>
 

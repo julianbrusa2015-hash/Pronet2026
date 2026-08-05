@@ -2039,6 +2039,11 @@
   .login-logo { font-family:'Sora',sans-serif; font-size:36px; font-weight:800; color:white; letter-spacing:-1px; }
   .login-tag  { font-size:13px; color:rgba(255,255,255,.7); margin-top:4px; }
 
+  /* Marca vectorial de la portada: red + logotipo. Reemplaza al emoji 🔧
+     y al texto 'PRONET' en Sora — el trazado no depende de que la fuente
+     haya cargado. */
+  .login-marca { display:block; width:100%; max-width:250px; height:auto; margin:0 auto; }
+
   .login-body { flex:1; overflow-y:auto; padding:20px 24px; scrollbar-width:none; }
   .login-body::-webkit-scrollbar { display:none; }
 

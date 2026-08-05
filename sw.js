@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v109'; // v109: PERF — contadores del mapa por RPC (GROUP BY server-side) en vez de traer toda la tabla
+const CACHE_VERSION = 'pronet-v110'; // v110: marca vectorial en la portada (red + logotipo oblicuo) en vez del emoji
 
 const SHELL = [
   './',

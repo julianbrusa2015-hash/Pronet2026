@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="PRONET">
+  <title>PRONET — isotipo</title>
+  <!-- Isotipo para app icon y favicon: solo la N-flecha.
+       Fondo con el degradado de marca de la app; la N va blanca para no
+       competir con él (el azul #2B5BFF es el final del propio degradado).
+       Radio de esquina 23% ≈ máscara de iOS.
+       Centrado sobre el bbox REAL de la marca ya inclinada (119,9 × 150):
+       la punta es más ancha que el asta y la oblicua corre la base a la
+       izquierda, así que centrar por el ancho del asta lo dejaba corrido. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0.62" y2="1">
+      <stop offset="0" stop-color="#0D0F1A"/>
+      <stop offset="0.6" stop-color="#1A3ACC"/>
+      <stop offset="1" stop-color="#2B5BFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#g)"/>
+  <path fill="#10B981" transform="translate(170.6,206) scale(2) skewX(-12)"
+        d="M0,0 H23 V100 H0 Z
+           M23,0 H48 L80,100 H55 Z
+           M57,-12 H80 V100 H57 Z
+           M68.5,-50 L96,-12 H41 Z"/>
+</svg>

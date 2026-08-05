@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 -1 112 100" width="112" height="100" role="img" aria-label="Red de vecinos">
+  <title>PRONET — red</title>
+  <!-- Constelación de vecinos: un nodo central (la persona que pide) y
+       cinco alrededor (los que responden). Deliberadamente asimétrica —
+       una estrella perfectamente radial lee como diagrama técnico, no
+       como barrio.
+       Las aristas van debajo de los nodos para que los círculos tapen
+       los extremos y no se vean puntas sueltas. -->
+  <g stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity=".55" fill="none">
+    <path d="M58,54 L16,34"/>
+    <path d="M58,54 L52,12"/>
+    <path d="M58,54 L100,30"/>
+    <path d="M58,54 L104,78"/>
+    <path d="M58,54 L30,88"/>
+    <path d="M16,34 L52,12"/>
+    <path d="M100,30 L104,78"/>
+  </g>
+  <g fill="currentColor">
+    <circle cx="58" cy="54" r="11"/>
+    <circle cx="16" cy="34" r="8"/>
+    <circle cx="52" cy="12" r="9"/>
+    <circle cx="100" cy="30" r="7.5"/>
+    <circle cx="104" cy="78" r="8"/>
+    <circle cx="30" cy="88" r="7"/>
+  </g>
+</svg>
