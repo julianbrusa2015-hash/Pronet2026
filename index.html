@@ -87,10 +87,21 @@
         </div>
       </div>
 
-      <div class="search-bar">
-        <div class="search-box" onclick="goTo('s-buscar')">
+      <!-- Antes era un contenedor con onclick que pateaba a s-buscar: un
+           botón disfrazado de campo, en el que no se podía escribir, y que
+           duplicaba un destino ya presente en el nav inferior.
+           Ahora filtra el feed en vivo, sin cambiar de pantalla.
+           Se oculta para el prestador (cromoHomePrestador): él no busca
+           prestadores, filtra pedidos, y eso vive en la pantalla Pedidos. -->
+      <div class="search-bar" id="home-search-bar">
+        <div class="search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <span>¿Qué servicio necesitás?</span>
+          <input id="home-search" type="search" inputmode="search" autocomplete="off"
+                 placeholder="Buscá un plomero, una niñera…" aria-label="Buscar prestadores"
+                 oninput="buscarEnHome(this.value)"
+                 style="flex:1;border:none;outline:none;background:transparent;font-family:'Inter',sans-serif;font-size:14px;color:var(--ink);min-width:0">
+          <button id="home-search-clear" onclick="limpiarBusquedaHome()" aria-label="Borrar búsqueda"
+                  style="display:none;background:none;border:none;cursor:pointer;color:var(--ink3);font-size:16px;padding:0 2px;line-height:1">✕</button>
         </div>
       </div>
 

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v116'; // v116: guard de generación — dos renders concurrentes de Inicio se pisaban y perdían el checklist
+const CACHE_VERSION = 'pronet-v117'; // v117: buscador real en Inicio (vecino) y sin barra para prestador
 
 const SHELL = [
   './',

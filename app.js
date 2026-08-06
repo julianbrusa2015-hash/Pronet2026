@@ -431,6 +431,30 @@ document.addEventListener('focusin', (e) => {
   }
 
   let catActiva = 'todos';
+
+  // ── Búsqueda en el feed de Inicio (vista vecino) ─────────────────────
+  // Filtra en vivo en vez de saltar a otra pantalla. El término va al
+  // mismo `busqueda` que ya acepta listarPrestadores(), que busca sobre
+  // nombre, rubro y subrubro.
+  let busquedaHome = '';
+  let _tBusqueda = null;
+
+  function buscarEnHome(valor) {
+    busquedaHome = (valor || '').trim();
+    const btn = document.getElementById('home-search-clear');
+    if (btn) btn.style.display = busquedaHome ? '' : 'none';
+    // Debounce: sin esto cada tecla dispara una consulta a Supabase.
+    clearTimeout(_tBusqueda);
+    _tBusqueda = setTimeout(() => renderHomeFeed(catActiva || 'todos'), 300);
+  }
+  window.buscarEnHome = buscarEnHome;
+
+  function limpiarBusquedaHome() {
+    const inp = document.getElementById('home-search');
+    if (inp) { inp.value = ''; inp.focus(); }
+    buscarEnHome('');
+  }
+  window.limpiarBusquedaHome = limpiarBusquedaHome;
   let rankCatActiva = 'electricistas';
 
   function switchCat(el) {
@@ -1239,6 +1263,7 @@ document.addEventListener('focusin', (e) => {
     wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     const filtros = cat && cat !== 'todos' ? { rubro: rubroDeCat(cat) } : {};
     if (zonaActual) filtros.zona = zonaParaFiltro();
+    if (busquedaHome) filtros.busqueda = busquedaHome;
     let prestadores = await PronetDB.listarPrestadores(filtros);
     // Aplicar boost por plan y re-ordenar. El privilegio de ranking sale de
     // `desempate` en PRONET_CONFIG.PLANES: true (Pro) > sin boost.
@@ -1257,9 +1282,19 @@ document.addEventListener('focusin', (e) => {
     // Actualizar meta con conteo real
     const meta = document.getElementById('home-cat-meta');
     const catLabel = cat && cat !== 'todos' ? rubroDeCat(cat) : 'Todos los servicios';
-    if (meta) meta.textContent = catLabel + ' · ' + (zonaActual || 'Escobar') + ' · ' + prestadores.length + ' prestador' + (prestadores.length !== 1 ? 'es' : '');
+    if (meta) {
+      meta.textContent = (busquedaHome ? 'Resultados para “' + busquedaHome + '”' : catLabel)
+        + ' · ' + (zonaActual || 'Escobar') + ' · '
+        + prestadores.length + ' prestador' + (prestadores.length !== 1 ? 'es' : '');
+    }
     if (prestadores.length === 0) {
-      wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">No hay prestadores en esta categoría aún.</div>';
+      // El mensaje tiene que nombrar el motivo real: decir "no hay en esta
+      // categoría" cuando en verdad no hubo coincidencias de búsqueda manda
+      // al usuario a cambiar el filtro equivocado.
+      const msg = busquedaHome
+        ? 'Sin resultados para <strong>' + escHTML(busquedaHome) + '</strong> en ' + escHTML(zonaActual || 'tu zona') + '.<br>Probá con otra palabra o cambiá de zona.'
+        : 'No hay prestadores en esta categoría aún.';
+      wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3);line-height:1.6">' + msg + '</div>';
       return;
     }
     prestadores.forEach(p => wrap.appendChild(crearCardPrestador(p)));
@@ -1306,6 +1341,10 @@ document.addEventListener('focusin', (e) => {
       const el = document.getElementById(id);
       if (el) el.style.display = v;
     });
+    // Buscador: el prestador no busca prestadores, filtra pedidos — y eso
+    // vive en la pantalla Pedidos. Se le libera esa franja.
+    const barra = document.getElementById('home-search-bar');
+    if (barra) barra.style.display = v;
     // Chips de rubro y su rótulo "Categorías", que no tiene id propio.
     const chips = document.querySelector('#s-home .rubros');
     if (chips) chips.style.display = v;
