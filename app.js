@@ -360,11 +360,9 @@ document.addEventListener('focusin', (e) => {
         // vive dentro de #pview-busco — oculto para el prestador. O sea que
         // se ejecutaba y su resultado no lo veía nadie. La vista del
         // prestador tiene su propio render.
-        // Al entrar acá ya los vio: se corre la marca para que el contador
-        // de "nuevos" del Inicio arranque de cero la próxima vez. Va ANTES
-        // del render porque es quien guarda _marcaPedidosPrevia, que es lo
-        // que el filtro "Nuevos" necesita leer.
-        marcarPedidosComoVistos();
+        // Sólo guarda la marca anterior; pisarla es decisión del render,
+        // que es el único que sabe qué se llegó a listar.
+        capturarMarcaPedidos();
         // Entrar por la barra inferior limpia los filtros que vienen del
         // tablero; irAPedidosPresto() ya dejó el suyo puesto.
         aplicarModoPresto(pedidosModoPendiente === 'ninguno' ? null : pedidosModoPendiente);
@@ -1408,11 +1406,16 @@ document.addEventListener('focusin', (e) => {
   // referencia justo en el momento en que el prestador lo va a usar: llega
   // desde el indicador "3 pedidos nuevos" y encuentra cero.
   let _marcaPedidosPrevia = null;
-  function marcarPedidosComoVistos() {
+  /** Guarda la marca anterior SIN pisarla. Va al entrar a la pantalla. */
+  function capturarMarcaPedidos() {
     if (!usuarioActual) return;
     const previa = localStorage.getItem(claveVistos());
-    if (previa) _marcaPedidosPrevia = new Date(previa);
-    localStorage.setItem(claveVistos(), new Date().toISOString());
+    _marcaPedidosPrevia = previa ? new Date(previa) : null;
+  }
+  /** Pisa la marca: de acá en adelante nada es "nuevo". Va DESPUÉS de
+   *  renderizar, y sólo si lo que se listó incluye todo lo nuevo. */
+  function marcarPedidosComoVistos() {
+    if (usuarioActual) localStorage.setItem(claveVistos(), new Date().toISOString());
   }
 
   async function renderInicioPrestador() {
@@ -1505,9 +1508,8 @@ document.addEventListener('focusin', (e) => {
     if (enEspera > 0)   items.push({ ic:'🕐', txt: enEspera + ' propuesta' + (enEspera>1?'s':'') + ' esperando respuesta', accion: "abrirMisPropuestas('pendiente')" });
 
     // ── Pedidos disponibles de su zona ──
-    // NO se filtra por rubro acá: en Inicio el filtro fino vive en la
-    // pantalla Pedidos. Si el rubro no matchea, esta sección quedaba
-    // vacía y el tablero era un hueco.
+    // Es la base de los indicadores de más abajo y del total del acceso a
+    // Pedidos. NO se filtra por rubro: el filtro fino vive en esa pantalla.
     const zonaF = zonaParaFiltro();
     const disponibles = pedidos.filter(p => {
       if ((p.estado || 'Publicado') !== 'Publicado') return false;
@@ -1643,43 +1645,26 @@ document.addEventListener('focusin', (e) => {
         ${bloqueMetricas}
         ${bloquePendientes}
         <div id="slot-checklist"></div>
-        ${disponibles.length ? `
-          <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 8px">
-            <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Para ofertar</span>
-            <span role="button" tabindex="0" onclick="goTo('s-pedidos')"
-                  style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Ver los ${disponibles.length} →</span>
-          </div>
-          <div id="inicio-recientes"></div>` : `
-          <div role="button" tabindex="0" onclick="goTo('s-pedidos')"
-               style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
-            <span style="font-size:16px">💼</span>
-            <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">Ver pedidos disponibles</span>
-            <span style="color:var(--blue);font-size:15px">›</span>
-          </div>`}
+        <div role="button" tabindex="0" onclick="goTo('s-pedidos')"
+             style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
+          <span style="font-size:16px">💼</span>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">${
+            disponibles.length
+              ? 'Ver los ' + disponibles.length + ' pedidos disponibles'
+              : 'Ver pedidos disponibles'}</span>
+          <span style="color:var(--blue);font-size:15px">›</span>
+        </div>
       </div>`;
 
     if (gen !== _genInicio) return;
-    // Orden del tablero: métricas (azul) → pendientes → checklist → pedidos.
+    // Orden del tablero: métricas (azul) → pendientes → checklist → acceso.
+    //
+    // Inicio muestra INDICADORES, no contenido. Antes traía las 3 tarjetas de
+    // pedidos más relevantes, pero no aportaban nada que la pantalla Pedidos
+    // no hiciera mejor —misma lista, sin filtros y recortada a 3— y con el
+    // bloque de métricas más hasta 6 pendientes empujaban todo fuera de la
+    // pantalla. Quedó un acceso de una línea con el total.
     moverChecklist('slot-checklist');
-
-    // Tarjetas reales debajo del resumen: Inicio queda "abierto" en vez de
-    // ser un enlace a otra pantalla. Se reusa la misma tarjeta que Pedidos.
-    const cont = document.getElementById('inicio-recientes');
-    if (cont && recientes.length) {
-      let lista = recientes;
-      if (window._sb) {
-        const uids = [...new Set(lista.map(p => p.usuario_id).filter(Boolean))];
-        if (uids.length) {
-          const { data: prfs } = await window._sb.from('perfiles_publicos')
-            .select('id, nombre').in('id', uids);
-          const mapa = {};
-          (prfs || []).forEach(pr => { mapa[pr.id] = pr.nombre; });
-          lista = lista.map(p => ({ ...p, vecino_nombre: mapa[p.usuario_id] || null }));
-        }
-      }
-      if (gen !== _genInicio) return;
-      lista.forEach(p => cont.appendChild(crearCardPedidoDisponible(p)));
-    }
   }
 
   // ── Filtros de la pantalla Pedidos (vista prestador) ─────────────────
@@ -1829,6 +1814,16 @@ document.addEventListener('focusin', (e) => {
 
     wrap.innerHTML = '';
     pedidos.forEach(p => wrap.appendChild(crearCardPedidoDisponible(p)));
+
+    // Marcar como vistos SÓLO si la lista no escondió pedidos nuevos.
+    // Antes se marcaba al entrar, sin mirar el filtro: llegabas desde
+    // "5 pedidos nuevos", tocabas "4 vencen pronto" —que muestra otros
+    // cuatro— y al volver el indicador de nuevos había desaparecido sin que
+    // los vieras nunca. `porVencer` y `urgentes` recortan por criterios que
+    // no tienen nada que ver con la antigüedad; el resto no: `zona` y
+    // `rubro` son los mismos límites con los que se cuenta, `nuevos` muestra
+    // exactamente esos, y `presupuesto` sólo ordena.
+    if (!filtrosPresto.porVencer && !filtrosPresto.urgentes) marcarPedidosComoVistos();
   }
 
   async function renderPedidosDisponibles(cat) {
