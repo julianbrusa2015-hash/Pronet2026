@@ -1323,12 +1323,19 @@ document.addEventListener('focusin', (e) => {
    *  El bloque "Te esperan" se OMITE cuando no hay nada pendiente, en vez
    *  de mostrar una caja vacía: con la app recién arrancando ese va a ser
    *  el caso habitual, y una caja vacía es peor que no tenerla. */
+  // Generación del render: dos llamadas concurrentes (navegar rápido entre
+  // Inicio y Pedidos) se pisaban entre sí. La vieja terminaba DESPUÉS de la
+  // nueva, reescribía el innerHTML y metía el checklist en su propio slot;
+  // el innerHTML de la nueva lo destruía y el nodo se perdía hasta recargar.
+  // Cada render toma un número y se retira si dejó de ser el vigente.
+  let _genInicio = 0;
+
   async function renderInicioPrestador() {
+    const gen = ++_genInicio;
     const wrap = document.getElementById('home-feed-container');
     if (!wrap) return;
     // Rescatar el checklist ANTES de pisar el innerHTML: si quedó dentro
-    // del slot de un render anterior, este innerHTML lo destruiría y el
-    // nodo no volvería nunca más.
+    // del slot de un render anterior, este innerHTML lo destruiría.
     moverChecklist(null);
     wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
 
@@ -1349,6 +1356,7 @@ document.addEventListener('focusin', (e) => {
         : Promise.resolve([]),
       PronetDB.listar('pedidos').catch(() => []),
     ]);
+    if (gen !== _genInicio) return; // llegó un render más nuevo
 
     // ── Pendientes ──
     const mios = chats.filter(c => c.prestador_id === pid);
@@ -1431,6 +1439,7 @@ document.addEventListener('focusin', (e) => {
           </div>`}
       </div>`;
 
+    if (gen !== _genInicio) return;
     // El checklist baja debajo de las estadísticas, después de "Te esperan".
     moverChecklist('slot-checklist');
 
@@ -1449,6 +1458,7 @@ document.addEventListener('focusin', (e) => {
           lista = lista.map(p => ({ ...p, vecino_nombre: mapa[p.usuario_id] || null }));
         }
       }
+      if (gen !== _genInicio) return;
       lista.forEach(p => cont.appendChild(crearCardPedidoDisponible(p)));
     }
   }
