@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v122'; // v122: aviso 24hs antes del vencimiento + botón para renovar el pedido
+const CACHE_VERSION = 'pronet-v123'; // v123: "¡Te eligieron!" en el tablero — 'activo' no era "para cerrar"
 
 const SHELL = [
   './',

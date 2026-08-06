@@ -1428,13 +1428,25 @@ document.addEventListener('focusin', (e) => {
     if (gen !== _genInicio) return; // llegó un render más nuevo
 
     // ── Pendientes ──
+    // Los estados salen del mismo mapa que usa la pantalla de estado de
+    // propuesta (ESTADOS, ~línea 9230). 'activo' NO es "para cerrar": ahí
+    // la app dice "¡Te eligieron! Trabajo en curso". Etiquetarlo como
+    // tarea pendiente convertía el mejor momento del prestador —ganar el
+    // trabajo— en un mandado.
     const mios = chats.filter(c => c.prestador_id === pid);
-    const paraCerrar = mios.filter(c => c.estado === 'activo').length;
-    const enEspera   = mios.filter(c => c.estado === 'propuesta_enviada').length;
+    const elegido   = mios.filter(c => ['activo','elegida'].includes(c.estado)).length;
+    const paraCerrar = mios.filter(c => c.estado === 'terminado_por_vecino').length;
+    const enEspera   = mios.filter(c => ['propuesta_enviada','pendiente'].includes(c.estado)).length;
+    const enConsulta = mios.filter(c => c.estado === 'consulta').length;
 
+    // Orden deliberado: primero lo que es una buena noticia y exige
+    // reaccionar (te eligieron), después lo que espera acción, y al final
+    // lo informativo.
     const items = [];
+    if (elegido > 0)    items.push({ ic:'🟢', txt: '¡Te eligieron! ' + elegido + ' trabajo' + (elegido>1?'s':'') + ' en curso', accion: "goTo('s-chats')" });
     if (noLeidos > 0)   items.push({ ic:'💬', txt: noLeidos + ' mensaje' + (noLeidos>1?'s':'') + ' sin leer', accion: "goTo('s-chats')" });
-    if (paraCerrar > 0) items.push({ ic:'✅', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "goTo('s-chats')" });
+    if (paraCerrar > 0) items.push({ ic:'🏁', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "goTo('s-chats')" });
+    if (enConsulta > 0) items.push({ ic:'💭', txt: enConsulta + ' vecino' + (enConsulta>1?'s':'') + ' consultando', accion: "goTo('s-chats')" });
     if (enEspera > 0)   items.push({ ic:'🕐', txt: enEspera + ' propuesta' + (enEspera>1?'s':'') + ' esperando respuesta', accion: "goTo('s-mis-propuestas')" });
 
     // ── Pedidos disponibles de su zona ──
