@@ -7067,6 +7067,39 @@ document.addEventListener('focusin', (e) => {
       const pedidoAbierto=!['cerrado','calificado','terminado','cancelado'].includes(p.estado);
       if(nProps>0&&pedidoAbierto){const pb=document.createElement('button');pb.textContent='📬 '+nProps+' propuesta'+(nProps!==1?'s':'')+' recibida'+(nProps!==1?'s':'')+' — Ver y comparar →';pb.style.cssText='width:100%;margin-top:10px;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-s);border:1.5px solid #C7D5FF;border-radius:10px;padding:9px;cursor:pointer;font-family:inherit';pb.addEventListener('click',(e)=>{e.stopPropagation();abrirDetallePedido(p.usuario_id ? p : { ...p, usuario_id: usuarioActual?.id });});card.appendChild(pb);}
 
+      // Aviso de vencimiento + renovar. Se muestra cuando quedan menos de
+      // 24hs o cuando ya venció, que son los dos momentos en que el vecino
+      // puede hacer algo al respecto.
+      const HS_V = window.PRONET_CONFIG?.PROPUESTA_EXPIRACION_HS || 168;
+      const vence = p.expira_en ? new Date(p.expira_en)
+                                : new Date(new Date(p.creado).getTime() + HS_V * 3600000);
+      const hsRestan = (vence - Date.now()) / 3600000;
+      const yaVencio = (p.estado === 'Vencido');
+      if (yaVencio || (pedidoAbierto && hsRestan > 0 && hsRestan <= 24)) {
+        const av = document.createElement('div');
+        av.style.cssText = 'display:flex;align-items:center;gap:9px;margin-top:10px;padding:9px 11px;border-radius:10px;background:' +
+          (yaVencio ? '#FEF2F2;border:1px solid #FECACA' : '#FFFBEB;border:1px solid #FDE68A');
+        const txt = yaVencio
+          ? 'Venció. Renovalo si seguís necesitándolo.'
+          : 'Vence en ' + Math.max(1, Math.round(hsRestan)) + 'hs.';
+        av.innerHTML = '<span style="font-size:14px">' + (yaVencio ? '⌛' : '🕐') + '</span>' +
+          '<span style="flex:1;font-size:11.5px;font-weight:600;color:' + (yaVencio ? '#B91C1C' : '#92400E') + '">' + escHTML(txt) + '</span>';
+        const btnR = document.createElement('button');
+        btnR.textContent = 'Renovar 7 días';
+        btnR.style.cssText = 'background:white;border:1.5px solid ' + (yaVencio ? '#FECACA' : '#FDE68A') +
+          ';border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:' +
+          (yaVencio ? '#B91C1C' : '#92400E') + ';flex-shrink:0';
+        btnR.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          btnR.disabled = true; btnR.textContent = 'Renovando…';
+          const r = await PronetDB.renovarPedido(p.id);
+          if (r?.ok) { showToast && showToast('✅ Pedido renovado por 7 días'); renderPedidosGuardados(); }
+          else { btnR.disabled = false; btnR.textContent = 'Renovar 7 días'; showToast && showToast('⚠️ ' + (r?.error || 'No se pudo renovar')); }
+        });
+        av.appendChild(btnR);
+        card.appendChild(av);
+      }
+
       // Botones: Editar + Eliminar
       const botones = document.createElement('div');
       botones.style.cssText = 'display:flex;gap:8px;margin-top:10px';

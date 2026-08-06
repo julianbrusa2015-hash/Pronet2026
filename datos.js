@@ -1773,6 +1773,17 @@ const PronetDB = (() => {
       return [];
     },
 
+    /** Renueva un pedido propio por otra ventana completa (7 días).
+     *  La validación de propiedad está DENTRO del RPC (usuario_id =
+     *  auth.uid()): mandarla desde acá permitiría revivir pedidos ajenos
+     *  con sólo conocer el uuid. */
+    async renovarPedido(pedidoId) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.rpc('renovar_pedido', { p_pedido_id: pedidoId });
+      if (error) { console.warn('[PronetDB] renovarPedido', error.message); return { ok: false, error: error.message }; }
+      return data || { ok: false };
+    },
+
     /** Obtiene la posición del prestador en el ranking por zona y rubro. */
     async obtenerRankingPrestador(prestadorId, rubro) {
       if (!remoto) return [];
