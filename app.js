@@ -8579,7 +8579,10 @@ document.addEventListener('focusin', (e) => {
       // Sin esta marca, "Trabajos en curso" mezclaba los trabajos que te
       // dieron con los que vos contrataste, y no había forma de distinguir
       // unos de otros: dos filas idénticas con estados iguales.
-      const rolBadge = c.soy_prestador === false
+      // Sólo para cuentas que son las dos cosas: en una que es únicamente
+      // vecina, TODOS los chats son contrataciones y el badge sería ruido
+      // repetido en cada fila sin distinguir nada.
+      const rolBadge = (usuarioActual?.prestador_id && c.soy_prestador === false)
         ? '<span style="font-size:10px;background:var(--surface);color:var(--ink3);border-radius:6px;padding:2px 6px;font-weight:700">Vos contrataste</span>'
         : '';
       item.innerHTML = `

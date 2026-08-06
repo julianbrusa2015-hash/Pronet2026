@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v134'; // v134: la lista de chats mostraba tu propio nombre si eras el prestador
+const CACHE_VERSION = 'pronet-v135'; // v135: el badge "Vos contrataste" solo en cuentas con doble rol
 
 const SHELL = [
   './',
