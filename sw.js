@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v136'; // v136: Mensajes separa "trabajos en curso" de "trabajos contratados"
+const CACHE_VERSION = 'pronet-v137'; // v137: fix referencia rota que vaciaba la lista de Mensajes
 
 const SHELL = [
   './',

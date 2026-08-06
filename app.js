@@ -8593,7 +8593,7 @@ document.addEventListener('focusin', (e) => {
             <div class="ci-name">${escHTML(c.contraparte_nombre||c.prestador_nombre||'Prestador')}</div>
             <div class="ci-time">${escHTML(c.hora_ultimo||'')}</div>
           </div>
-          <div style="margin-bottom:3px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">${estadoBadge}${rolBadge}</div>
+          <div style="margin-bottom:3px">${estadoBadge}</div>
           <div class="ci-preview">${escHTML(c.ultimo_mensaje||'Sin mensajes aún')}</div>
         </div>`;
       item.addEventListener('click', async () => {
