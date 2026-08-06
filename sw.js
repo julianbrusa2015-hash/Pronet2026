@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v113'; // v113: la pantalla Pedidos del prestador muestra datos reales y sus filtros funcionan
+const CACHE_VERSION = 'pronet-v114'; // v114: Inicio del prestador abre con los pedidos recientes en vez de un enlace
 
 const SHELL = [
   './',

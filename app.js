@@ -1336,16 +1336,24 @@ document.addEventListener('focusin', (e) => {
     if (paraCerrar > 0) items.push({ ic:'✅', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "goTo('s-chats')" });
     if (enEspera > 0)   items.push({ ic:'🕐', txt: enEspera + ' propuesta' + (enEspera>1?'s':'') + ' esperando respuesta', accion: "goTo('s-mis-propuestas')" });
 
-    // ── Pedidos nuevos de su zona y rubro ──
+    // ── Pedidos disponibles de su zona ──
+    // NO se filtra por rubro acá: en Inicio el filtro fino vive en la
+    // pantalla Pedidos. Si el rubro no matchea, esta sección quedaba
+    // vacía y el tablero era un hueco.
     const zonaF = zonaParaFiltro();
-    const nuevos = pedidos.filter(p => {
-      if (p.estado !== 'Publicado') return false;
-      if (zonaF) {
-        const madre = ZONA_DB[p.zona || 'Escobar'] || (p.zona || 'Escobar');
-        if (madre !== zonaF) return false;
-      }
-      return rubro ? matchRubro(p.rubro, rubro) : true;
-    }).length;
+    const disponibles = pedidos.filter(p => {
+      if ((p.estado || 'Publicado') !== 'Publicado') return false;
+      if (usuarioActual && p.usuario_id === usuarioActual.id) return false;
+      if (!zonaF) return true;
+      return (ZONA_DB[p.zona || 'Escobar'] || p.zona || 'Escobar') === zonaF;
+    });
+    // Los del rubro propio primero; dentro de cada grupo, los más nuevos.
+    const recientes = disponibles.slice().sort((a, b) => {
+      const ra = rubro && matchRubro(a.rubro, rubro) ? 0 : 1;
+      const rb = rubro && matchRubro(b.rubro, rubro) ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+      return new Date(b.creado || 0) - new Date(a.creado || 0);
+    }).slice(0, 3);
 
     // ── Números del mes ──
     const vistas = analitica?.vistas_mes ?? 0;
@@ -1383,15 +1391,38 @@ document.addEventListener('focusin', (e) => {
           ${tarjeta(vistas, 'vistas del mes')}
           ${tarjeta(cupoTxt, 'propuestas')}
         </div>
-        <div role="button" tabindex="0" onclick="goTo('s-pedidos')"
-             style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
-          <span style="font-size:16px">💼</span>
-          <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">
-            ${nuevos > 0 ? nuevos + ' pedido' + (nuevos>1?'s':'') + ' para ofertar' : 'Ver pedidos disponibles'}
-          </span>
-          <span style="color:var(--blue);font-size:15px">›</span>
-        </div>
+        ${disponibles.length ? `
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 8px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Para ofertar</span>
+            <span role="button" tabindex="0" onclick="goTo('s-pedidos')"
+                  style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Ver los ${disponibles.length} →</span>
+          </div>
+          <div id="inicio-recientes"></div>` : `
+          <div role="button" tabindex="0" onclick="goTo('s-pedidos')"
+               style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
+            <span style="font-size:16px">💼</span>
+            <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">Ver pedidos disponibles</span>
+            <span style="color:var(--blue);font-size:15px">›</span>
+          </div>`}
       </div>`;
+
+    // Tarjetas reales debajo del resumen: Inicio queda "abierto" en vez de
+    // ser un enlace a otra pantalla. Se reusa la misma tarjeta que Pedidos.
+    const cont = document.getElementById('inicio-recientes');
+    if (cont && recientes.length) {
+      let lista = recientes;
+      if (window._sb) {
+        const uids = [...new Set(lista.map(p => p.usuario_id).filter(Boolean))];
+        if (uids.length) {
+          const { data: prfs } = await window._sb.from('perfiles_publicos')
+            .select('id, nombre').in('id', uids);
+          const mapa = {};
+          (prfs || []).forEach(pr => { mapa[pr.id] = pr.nombre; });
+          lista = lista.map(p => ({ ...p, vecino_nombre: mapa[p.usuario_id] || null }));
+        }
+      }
+      lista.forEach(p => cont.appendChild(crearCardPedidoDisponible(p)));
+    }
   }
 
   // ── Filtros de la pantalla Pedidos (vista prestador) ─────────────────
