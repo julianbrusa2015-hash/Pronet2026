@@ -1850,7 +1850,7 @@ const PronetDB = (() => {
     .select('prestador_id').eq('id', uid).maybeSingle();
   const prestadorId = perfil?.prestador_id || null;
   let query = sb.from('chats_trabajo')
-    .select(`id, estado, creado, vecino_id, prestador_id,
+    .select(`id, estado, creado, vecino_id, prestador_id, pedido_id,
       pedidos ( titulo, rubro ),
       prestadores ( nombre ),
       mensajes_chat ( texto, creado )`)
@@ -1871,6 +1871,8 @@ const PronetDB = (() => {
       estado: c.estado,
       vecino_id: c.vecino_id,
       prestador_id: c.prestador_id,
+      // Hace falta para agrupar: dos chats del mismo pedido son un trabajo.
+      pedido_id: c.pedido_id,
       prestador_nombre: nombre,
       prestador_iniciales: nombre.slice(0,2).toUpperCase(),
       pedido_titulo: c.pedidos?.titulo || 'Trabajo',
