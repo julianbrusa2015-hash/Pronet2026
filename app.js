@@ -361,6 +361,9 @@ document.addEventListener('focusin', (e) => {
         // se ejecutaba y su resultado no lo veía nadie. La vista del
         // prestador tiene su propio render.
         renderPedidosPresto();
+        // Al entrar acá ya los vio: se corre la marca para que el contador
+        // de "nuevos" del Inicio arranque de cero la próxima vez.
+        marcarPedidosComoVistos();
       } else if (!usuarioActual) {
         // Invitado: mostrar CTA para registrarse
         if (vBusco) vBusco.style.display = 'block';
@@ -1374,6 +1377,28 @@ document.addEventListener('focusin', (e) => {
   // Cada render toma un número y se retira si dejó de ser el vigente.
   let _genInicio = 0;
 
+  /** Fecha desde la que se cuentan los pedidos "nuevos" para el prestador.
+   *
+   *  Por dispositivo (localStorage), que para un contador de novedades
+   *  alcanza y no agrega una tabla ni una escritura por visita.
+   *
+   *  La primera vez NO devuelve el principio de los tiempos: eso mostraría
+   *  "23 pedidos nuevos" a alguien que recién entra, que es ruido y no una
+   *  novedad. Se sella el momento actual y se empieza a contar desde ahí. */
+  function claveVistos() {
+    return 'pronet_pedidos_vistos_' + (usuarioActual?.id || 'anon');
+  }
+  function marcaPedidosVistos() {
+    const guardada = localStorage.getItem(claveVistos());
+    if (guardada) return new Date(guardada);
+    const ahora = new Date();
+    localStorage.setItem(claveVistos(), ahora.toISOString());
+    return ahora;
+  }
+  function marcarPedidosComoVistos() {
+    if (usuarioActual) localStorage.setItem(claveVistos(), new Date().toISOString());
+  }
+
   async function renderInicioPrestador() {
     const gen = ++_genInicio;
     const wrap = document.getElementById('home-feed-container');
@@ -1430,6 +1455,26 @@ document.addEventListener('focusin', (e) => {
       if (ra !== rb) return ra - rb;
       return new Date(b.creado || 0) - new Date(a.creado || 0);
     }).slice(0, 3);
+
+    // ── Pedidos de mi rubro que todavía no vi ──
+    // Los mensajes traen leído/no leído de la base; los pedidos no —
+    // nadie "abre" un pedido. Se guarda la fecha de la última visita a la
+    // pantalla Pedidos y se cuentan los posteriores. Va en "Te esperan"
+    // porque un pedido nuevo del rubro propio vence en 72hs: es una
+    // oportunidad con reloj, no una novedad decorativa.
+    if (rubro) {
+      const desde = marcaPedidosVistos();
+      const sinVer = disponibles.filter(p =>
+        matchRubro(p.rubro, rubro) && p.creado && new Date(p.creado) > desde
+      ).length;
+      if (sinVer > 0) {
+        items.push({
+          ic: '💼',
+          txt: sinVer + ' pedido' + (sinVer > 1 ? 's' : '') + ' nuevo' + (sinVer > 1 ? 's' : '') + ' de tu rubro',
+          accion: "goTo('s-pedidos')",
+        });
+      }
+    }
 
     // ── Números del mes ──
     const vistas = analitica?.vistas_mes ?? 0;
