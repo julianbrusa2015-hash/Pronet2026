@@ -1862,7 +1862,7 @@ const PronetDB = (() => {
   }
   const { data, error } = await query;
   if (error) { console.warn('[PronetDB] listarChats', error.message); return []; }
-  return (data || []).map(c => {
+  const chats = (data || []).map(c => {
     const msgs = (c.mensajes_chat || []).sort((a,b) => new Date(b.creado) - new Date(a.creado));
     const ultimo = msgs[0];
     const nombre = c.prestadores?.nombre || 'Prestador';
@@ -1873,6 +1873,9 @@ const PronetDB = (() => {
       prestador_id: c.prestador_id,
       // Hace falta para agrupar: dos chats del mismo pedido son un trabajo.
       pedido_id: c.pedido_id,
+      // Una cuenta puede ser prestador en un chat y vecino en otro: quien
+      // contrata a alguien sigue teniendo su propio perfil de prestador.
+      soy_prestador: !!prestadorId && c.prestador_id === prestadorId,
       prestador_nombre: nombre,
       prestador_iniciales: nombre.slice(0,2).toUpperCase(),
       pedido_titulo: c.pedidos?.titulo || 'Trabajo',
@@ -1881,6 +1884,26 @@ const PronetDB = (() => {
       hora_ultimo: ultimo ? new Date(ultimo.creado).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Argentina/Buenos_Aires'}) : '',
     };
   });
+
+  // Nombre del vecino. No se puede embeber: `perfiles` tiene la lectura
+  // limitada por RLS y no hay FK contra chats_trabajo. Sale de
+  // perfiles_publicos, igual que en la lista de pedidos del prestador.
+  const vecinoIds = [...new Set(chats.filter(c => c.soy_prestador).map(c => c.vecino_id).filter(Boolean))];
+  if (vecinoIds.length) {
+    const { data: prfs } = await sb.from('perfiles_publicos').select('id, nombre').in('id', vecinoIds);
+    const mapa = {};
+    (prfs || []).forEach(p => { mapa[p.id] = p.nombre; });
+    chats.forEach(c => { if (c.soy_prestador) c.vecino_nombre = mapa[c.vecino_id] || 'Vecino'; });
+  }
+
+  // La lista mostraba SIEMPRE el nombre del prestador, así que un prestador
+  // se veía a sí mismo en cada fila en vez de ver a quién le está hablando.
+  chats.forEach(c => {
+    c.contraparte_nombre = c.soy_prestador ? (c.vecino_nombre || 'Vecino') : c.prestador_nombre;
+    c.contraparte_iniciales = c.contraparte_nombre.slice(0, 2).toUpperCase();
+  });
+
+  return chats;
 },
 
     /** Vacía TODAS las colecciones locales (usado por "Reiniciar demo").

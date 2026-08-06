@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v133'; // v133: listarChats devuelve pedido_id, sin el no se podian agrupar
+const CACHE_VERSION = 'pronet-v134'; // v134: la lista de chats mostraba tu propio nombre si eras el prestador
 
 const SHELL = [
   './',

@@ -8575,17 +8575,24 @@ document.addEventListener('focusin', (e) => {
         'cancelado': '<span style="font-size:10px;background:#FFF1F2;color:#BE123C;border-radius:6px;padding:2px 6px;font-weight:700">❌ Cancelado</span>',
         'rechazada': '<span style="font-size:10px;background:#FFF1F2;color:#BE123C;border-radius:6px;padding:2px 6px;font-weight:700">😔 Rechazado</span>',
       }[c.estado] || '';
+      // Una misma cuenta puede ser prestador en un chat y cliente en otro.
+      // Sin esta marca, "Trabajos en curso" mezclaba los trabajos que te
+      // dieron con los que vos contrataste, y no había forma de distinguir
+      // unos de otros: dos filas idénticas con estados iguales.
+      const rolBadge = c.soy_prestador === false
+        ? '<span style="font-size:10px;background:var(--surface);color:var(--ink3);border-radius:6px;padding:2px 6px;font-weight:700">Vos contrataste</span>'
+        : '';
       item.innerHTML = `
         <div class="ci-av-wrap">
-          <div class="ci-av" style="background:#EEF2FF;color:#2B5BFF">${escHTML((c.prestador_iniciales||'??').slice(0,2).toUpperCase())}</div>
+          <div class="ci-av" style="background:#EEF2FF;color:#2B5BFF">${escHTML((c.contraparte_iniciales||c.prestador_iniciales||'??').slice(0,2).toUpperCase())}</div>
           ${['activo','consulta','propuesta_enviada'].includes(c.estado) ? '<div class="ci-online"></div>' : ''}
         </div>
         <div class="ci-body">
           <div class="ci-top">
-            <div class="ci-name">${escHTML(c.prestador_nombre||'Prestador')}</div>
+            <div class="ci-name">${escHTML(c.contraparte_nombre||c.prestador_nombre||'Prestador')}</div>
             <div class="ci-time">${escHTML(c.hora_ultimo||'')}</div>
           </div>
-          <div style="margin-bottom:3px">${estadoBadge}</div>
+          <div style="margin-bottom:3px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">${estadoBadge}${rolBadge}</div>
           <div class="ci-preview">${escHTML(c.ultimo_mensaje||'Sin mensajes aún')}</div>
         </div>`;
       item.addEventListener('click', async () => {
@@ -8593,8 +8600,8 @@ document.addEventListener('focusin', (e) => {
         const avEl = document.getElementById('chat-av');
         const tituloEl = document.getElementById('chat-service-titulo');
         const subEl = document.getElementById('chat-service-sub');
-        if (nameEl) nameEl.textContent = c.prestador_nombre || 'Prestador';
-        if (avEl) { avEl.innerHTML = (c.prestador_iniciales||'??').slice(0,2).toUpperCase(); avEl.style.background='#EEF2FF'; avEl.style.color='#2B5BFF'; }
+        if (nameEl) nameEl.textContent = c.contraparte_nombre || c.prestador_nombre || 'Prestador';
+        if (avEl) { avEl.innerHTML = (c.contraparte_iniciales||c.prestador_iniciales||'??').slice(0,2).toUpperCase(); avEl.style.background='#EEF2FF'; avEl.style.color='#2B5BFF'; }
         if (tituloEl) tituloEl.textContent = c.pedido_titulo || 'Trabajo';
         if (subEl) subEl.textContent = c.rubro || '';
         chatActualId = c.id;
