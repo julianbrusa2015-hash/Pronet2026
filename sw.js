@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v125'; // v125: multirubro — el prestador elige varios y el registro lo exige
+const CACHE_VERSION = 'pronet-v126'; // v126: aviso para completar rubros a quien todavía no los eligió
 
 const SHELL = [
   './',

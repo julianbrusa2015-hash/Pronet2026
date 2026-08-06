@@ -1563,8 +1563,28 @@ document.addEventListener('focusin', (e) => {
         <span style="font-size:13.5px;color:var(--green);font-weight:600">Todo al día — no tenés nada pendiente</span>
       </div>`;
 
+    // Sin rubro definido el prestador está INVISIBLE: notificar_rubro no lo
+    // alcanza y no aparece cuando el vecino filtra por categoría. Es un
+    // problema silencioso —nada falla, simplemente no llega nada— así que
+    // se avisa arriba de todo, antes que los pendientes.
+    // Alcanza a los dados de alta antes de que el registro exigiera rubro.
+    const sinRubro = !(ficha?.rubros?.length) && !rubro;
+    const avisoRubro = sinRubro ? `
+      <div role="button" tabindex="0" onclick="goTo('s-edit-perfil')"
+           style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:14px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;cursor:pointer">
+        <span style="font-size:18px">⚠️</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:#92400E">Elegí tus rubros</div>
+          <div style="font-size:11.5px;color:#92400E;opacity:.85;margin-top:2px;line-height:1.45">
+            Sin rubro no te avisamos de los pedidos nuevos ni aparecés cuando un vecino busca.
+          </div>
+        </div>
+        <span style="color:#92400E;font-size:15px">›</span>
+      </div>` : '';
+
     wrap.innerHTML = `
       <div style="padding:0 14px 8px">
+        ${avisoRubro}
         ${bloquePendientes}
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
           ${tarjeta(posTxt, 'en tu rubro')}
