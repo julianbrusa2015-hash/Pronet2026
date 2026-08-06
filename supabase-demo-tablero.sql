@@ -89,6 +89,22 @@ select (select id from public.pedidos where titulo = '[DEMO] Instalación de luc
   ) as c(estado, msg, mins)
  where p.pid is not null;
 
+-- ── 5. Mensajes sin leer ────────────────────────────────────────────────
+-- Encienden el indicador 💬 y, sobre todo, permiten probar que se APAGA:
+-- abrir el chat llama a marcarLeidos(), que los pone en leido = true.
+-- Los escribe el vecino (autor_id = vecino) porque contarNoLeidos() excluye
+-- los propios: un mensaje que escribiste vos no puede estar "sin leer".
+insert into public.mensajes_chat (chat_id, autor_id, texto, creado, leido)
+select ct.id, ct.vecino_id, m.txt,
+       now() - (m.mins || ' minutes')::interval, false
+  from public.chats_trabajo ct
+  cross join (values
+    ('[DEMO] Hola, seguís disponible para el jueves?', 25),
+    ('[DEMO] Te dejo la dirección cuando confirmes.',  20)
+  ) as m(txt, mins)
+ where ct.ultimo_mensaje like '[DEMO]%'
+   and ct.estado = 'activo';
+
 commit;
 
 -- ── Verificación ────────────────────────────────────────────────────────

@@ -8574,6 +8574,18 @@ document.addEventListener('focusin', (e) => {
         const denLink = document.getElementById('chat-denuncia-link');
         if (denLink) denLink.style.display = (c.vecino_id === usuarioActual?.id) ? 'block' : 'none';
         await cargarMensajesChat();
+        // Abrir el chat es haberlo visto. Esta llamada faltaba: la
+        // suscripción de abajo sólo marca los mensajes que llegan CON el chat
+        // ya abierto, así que los que estaban esperando quedaban sin leer
+        // para siempre y el contador del tablero no bajaba nunca.
+        // Los otros puntos que abren un chat (consulta y chat directo) lo
+        // crean en el momento, así que no tienen nada pendiente que marcar.
+        // `!== 0` y no `> 0`: si el caché no trae el dato (undefined) hay que
+        // marcar igual. Saltear el UPDATE es una optimización, no una regla.
+        if (c._noLeidos !== 0) {
+          await PronetDB.marcarLeidos(c.id);
+          c._noLeidos = 0;   // el caché tiene que reflejarlo por si se vuelve sin recargar
+        }
         await actualizarBannersChat(chatActualId);
         if (chatSuscripcion) chatSuscripcion();
         chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
