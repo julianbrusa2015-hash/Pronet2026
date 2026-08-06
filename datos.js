@@ -1876,7 +1876,11 @@ const PronetDB = (() => {
     // ══════════════════════════════════════════════════════════════════
 
     /** Registra un usuario nuevo. tipo = 'cliente' | 'prestador' */
-    async registrar(email, password, nombre, tipo, zona) {
+    /** `rubros` sólo aplica a tipo='prestador'. Viaja en el metadata del
+     *  alta, que es lo que lee handle_new_user() para armar la ficha —
+     *  sin esto el trigger caía en 'General' y la cuenta nacía invisible
+     *  para las notificaciones y el filtro del vecino. */
+    async registrar(email, password, nombre, tipo, zona, rubros) {
       if (!remoto) {
         // Modo local: guardar un "usuario" simulado
         const user = { id: 'local-' + Date.now(), email, nombre, tipo: tipo || 'cliente', zona: zona || 'Escobar' };
@@ -1885,7 +1889,12 @@ const PronetDB = (() => {
       }
       const { data, error } = await sb.auth.signUp({
         email, password,
-        options: { data: { nombre, tipo: tipo || 'cliente', zona: zona || 'Escobar' } }
+        options: { data: {
+          nombre, tipo: tipo || 'cliente', zona: zona || 'Escobar',
+          ...(Array.isArray(rubros) && rubros.length
+              ? { rubro: rubros[0], rubros }   // rubro = principal; rubros = todos
+              : {}),
+        } }
       });
       if (error) return { ok: false, error: error.message };
       return { ok: true, user: data.user };

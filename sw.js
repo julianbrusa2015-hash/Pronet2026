@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v124'; // v124: el rubro 'General' dejaba el tablero del prestador vacío
+const CACHE_VERSION = 'pronet-v125'; // v125: multirubro — el prestador elige varios y el registro lo exige
 
 const SHELL = [
   './',

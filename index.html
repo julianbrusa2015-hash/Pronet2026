@@ -2978,11 +2978,21 @@
       <div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:8px">¿Qué buscás?</div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px;border:1.5px solid var(--blue);border-radius:10px;cursor:pointer;background:var(--blue-s);font-size:13px;font-weight:600">
-          <input id="campo-16" type="radio" name="reg-tipo" value="cliente" checked style="accent-color:var(--blue)"> 🔍 Servicios
+          <input id="campo-16" type="radio" name="reg-tipo" value="cliente" checked style="accent-color:var(--blue)" onchange="mostrarRubrosRegistro(false)"> 🔍 Servicios
         </label>
         <label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600">
-          <input id="campo-17" type="radio" name="reg-tipo" value="prestador" style="accent-color:var(--blue)"> 🔧 Trabajar
+          <input id="campo-17" type="radio" name="reg-tipo" value="prestador" style="accent-color:var(--blue)" onchange="mostrarRubrosRegistro(true)"> 🔧 Trabajar
         </label>
+      </div>
+
+      <!-- Rubros: sólo para prestador, y obligatorio. Sin rubro la cuenta
+           queda invisible — no entra en el push de pedidos nuevos ni
+           aparece cuando el vecino filtra. Era lo que producía el
+           'General' por defecto. -->
+      <div id="reg-rubro-wrap" style="display:none;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:4px">¿En qué rubros trabajás?</div>
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:8px;line-height:1.5">Elegí uno o más. Podés cambiarlos después desde tu perfil.</div>
+        <div class="sub-opts" id="reg-rubros" role="group" aria-label="Rubros"></div>
       </div>
 
       <div id="reg-error" style="display:none;background:#FEF2F2;color:#DC2626;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px;text-align:center"></div>
@@ -4352,7 +4362,22 @@
           </div>
         </div>
 
-        <!-- Especialidades (se llenan según el rubro del prestador) -->
+        <!-- Rubros (multiselección). Definen dónde te encuentran: el push de
+             pedidos nuevos, el filtro del vecino y el ranking. NO limitan lo
+             que ves — el feed muestra todos los pedidos de tu zona. -->
+        <div class="ob-field" style="margin-top:12px" id="edit-rubros-field">
+          <label id="lbl-grupo-25b" class="ob-label">Tus rubros</label>
+          <div style="font-size:11px;color:var(--ink3);margin:-4px 0 8px;line-height:1.5">
+            Elegí uno o más. Definen en qué pedidos te avisamos y cómo te encuentran los vecinos.
+            El primero es tu rubro principal.
+          </div>
+          <div role="group" aria-labelledby="lbl-grupo-25b" class="sub-opts" id="edit-rubros"></div>
+          <div id="edit-rubros-error" style="display:none;font-size:11px;color:#BE123C;margin-top:6px;font-weight:600">
+            Elegí al menos un rubro.
+          </div>
+        </div>
+
+        <!-- Especialidades (se llenan según el rubro principal) -->
         <div class="ob-field" style="margin-top:12px" id="edit-esp-field">
           <label id="lbl-grupo-25" class="ob-label">Especialidades</label>
           <div role="group" aria-labelledby="lbl-grupo-25" class="sub-opts" id="edit-especialidades"></div>

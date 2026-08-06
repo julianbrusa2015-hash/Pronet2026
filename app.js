@@ -5042,6 +5042,30 @@ document.addEventListener('focusin', (e) => {
 
   // ══ Perfil de prestador: edición real ═══════════════════════════════
   // Subrubros disponibles por rubro (mismo catálogo que el wizard)
+  /** Alterna un rubro y refresca las especialidades del principal.
+   *  El PRIMERO marcado es el principal (lo sincroniza el trigger
+   *  trg_sync_rubro_principal en la base), así que al cambiarlo hay que
+   *  volver a ofrecer las especialidades correspondientes. */
+  function toggleRubroEdit(el) {
+    el.classList.toggle('on');
+    const err = document.getElementById('edit-rubros-error');
+    if (err) err.style.display = 'none';
+    const marcados = Array.from(document.querySelectorAll('#edit-rubros .sub-opt.on'))
+      .map(e => e.dataset.rubro);
+    const wrap = document.getElementById('edit-especialidades');
+    if (!wrap) return;
+    const principal = marcados[0];
+    const opciones = ESPECIALIDADES_POR_RUBRO[principal] || [];
+    // Se conservan las ya marcadas que sigan existiendo en el rubro nuevo.
+    const activas = Array.from(wrap.querySelectorAll('.sub-opt.on')).map(e => e.dataset.esp);
+    wrap.innerHTML = opciones.map(s =>
+      '<div class="sub-opt' + (activas.includes(s) ? ' on' : '') + '" data-esp="' + escHTML(s) + '"' +
+      ' onclick="this.classList.toggle(\'on\')">' + escHTML(s) + '</div>'
+    ).join('') || '<div style="font-size:12px;color:var(--ink3)">Elegí un rubro para ver sus especialidades.</div>';
+    if (typeof habilitarAccesibilidadTeclado === 'function') habilitarAccesibilidadTeclado(wrap);
+  }
+  window.toggleRubroEdit = toggleRubroEdit;
+
   const ESPECIALIDADES_POR_RUBRO = {
     'Limpieza':      ['Limpieza','Planchado','Post-obra','Vidrios'],
     'Electricistas': ['Instalaciones','Reparaciones','Tableros','Urgencias 24h','Certificación ENRE','Eficiencia energética'],
@@ -5074,6 +5098,22 @@ document.addEventListener('focusin', (e) => {
       if (desc) desc.value = p.descripcion || '';
       // Foto actual
       if (p.foto_url && av) { av.style.backgroundImage = 'url("'+p.foto_url+'")'; av.childNodes[0].textContent = ''; }
+      // Rubros: multiselección. El array manda; si está vacío (los que
+      // quedaron en 'General' por defecto) se cae al rubro suelto, salvo
+      // que ése también sea 'General' — ahí no se marca nada y el
+      // prestador tiene que elegir.
+      const wrapR = document.getElementById('edit-rubros');
+      if (wrapR) {
+        const guardados = (p.rubros && p.rubros.length)
+          ? p.rubros
+          : (p.rubro && !/^general$/i.test(p.rubro) ? [p.rubro] : []);
+        wrapR.innerHTML = Object.keys(ESPECIALIDADES_POR_RUBRO).map(r =>
+          '<div class="sub-opt' + (guardados.includes(r) ? ' on' : '') + '" data-rubro="' + escHTML(r) + '"' +
+          ' onclick="toggleRubroEdit(this)">' + escHTML(r) + '</div>'
+        ).join('');
+        if (typeof habilitarAccesibilidadTeclado === 'function') habilitarAccesibilidadTeclado(wrapR);
+      }
+
       // Especialidades del rubro, marcando las guardadas
       const wrap = document.getElementById('edit-especialidades');
       if (wrap) {
@@ -5148,11 +5188,23 @@ document.addEventListener('focusin', (e) => {
       if (usuarioActual.prestador_id) {
         const especialidades = Array.from(document.querySelectorAll('#edit-especialidades .sub-opt.on')).map(e => e.dataset.esp);
         const medios_pago = Array.from(document.querySelectorAll('#edit-pagos .pago-opt.on')).map(e => e.dataset.pago);
+        const rubros = Array.from(document.querySelectorAll('#edit-rubros .sub-opt.on')).map(e => e.dataset.rubro);
+        // Sin rubro el prestador queda invisible: no entra en el push de
+        // notificar_rubro ni aparece cuando el vecino filtra. Por eso se
+        // exige al menos uno, en vez de dejarlo caer en 'General'.
+        if (rubros.length === 0) {
+          const err = document.getElementById('edit-rubros-error');
+          if (err) err.style.display = 'block';
+          document.getElementById('edit-rubros')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
+          return;
+        }
         const iniciales = nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
         const cambios = {
           nombre, iniciales,
           descripcion: val('edit-desc'),
           especialidades,
+          rubros,   // el trigger de la base sincroniza `rubro` = rubros[1]
           medios_pago: medios_pago.length ? medios_pago : ['Efectivo'],
           subrubro: especialidades[0] || null,
         };
@@ -6459,9 +6511,28 @@ document.addEventListener('focusin', (e) => {
   }
 
   // ── Registro ────────────────────────────────────────────────────────
+  /** Muestra u oculta el selector de rubros según el tipo de cuenta. */
+  function mostrarRubrosRegistro(esPrestador) {
+    const wrap = document.getElementById('reg-rubro-wrap');
+    if (wrap) wrap.style.display = esPrestador ? 'block' : 'none';
+  }
+  window.mostrarRubrosRegistro = mostrarRubrosRegistro;
+
   function mostrarFormRegistro() {
     const modal = document.getElementById('registro-modal');
     if (modal) modal.style.display = 'flex';
+    // Los rubros se pintan al abrir, para que salgan del mismo catálogo
+    // que usa Editar perfil y no haya dos listas que se desincronicen.
+    const cont = document.getElementById('reg-rubros');
+    if (cont && !cont.children.length) {
+      cont.innerHTML = Object.keys(ESPECIALIDADES_POR_RUBRO).map(r =>
+        '<div class="sub-opt" data-rubro="' + escHTML(r) + '"' +
+        ' onclick="this.classList.toggle(\'on\')">' + escHTML(r) + '</div>'
+      ).join('');
+      if (typeof habilitarAccesibilidadTeclado === 'function') habilitarAccesibilidadTeclado(cont);
+    }
+    // Refleja el tipo que esté marcado al abrir.
+    mostrarRubrosRegistro(document.querySelector('input[name="reg-tipo"]:checked')?.value === 'prestador');
   }
   function cerrarRegistro(ev) {
     if (ev && ev.target && ev.target.id !== 'registro-modal') return;
@@ -6477,13 +6548,24 @@ document.addEventListener('focusin', (e) => {
     const err    = document.getElementById('reg-error');
 
     if (!nombre || !email || !pw) { if (err) { err.textContent = 'Completá todos los campos'; err.style.display='block'; } return; }
+
+    // Un prestador sin rubro queda invisible: no entra en el push de
+    // notificar_rubro ni aparece cuando el vecino filtra por categoría.
+    // Antes se caía en 'General' por defecto y el problema no se veía
+    // hasta que el prestador se preguntaba por qué no le llega nada.
+    const rubros = Array.from(document.querySelectorAll('#reg-rubros .sub-opt.on')).map(e => e.dataset.rubro);
+    if (tipo === 'prestador' && rubros.length === 0) {
+      if (err) { err.textContent = 'Elegí al menos un rubro para trabajar'; err.style.display = 'block'; }
+      document.getElementById('reg-rubro-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { if (err) { err.textContent = 'El email no tiene un formato válido'; err.style.display='block'; } return; }
     if (pw.length < 8) { if (err) { err.textContent = 'La contraseña debe tener al menos 8 caracteres'; err.style.display='block'; } return; }
     if (nombre.trim().split(/\s+/).length < 2) { if (err) { err.textContent = 'Ingresá nombre y apellido'; err.style.display='block'; } return; }
 
     const btn = document.getElementById('reg-submit');
     if (btn) btn.innerHTML = 'Creando cuenta...';
-    const res = await PronetDB.registrar(email, pw, nombre, tipo, zonaActual);
+    const res = await PronetDB.registrar(email, pw, nombre, tipo, zonaActual, rubros);
     if (btn) btn.innerHTML = 'Crear cuenta';
 
     if (!res.ok) {
