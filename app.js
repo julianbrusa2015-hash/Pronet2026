@@ -1456,6 +1456,44 @@ document.addEventListener('focusin', (e) => {
       return new Date(b.creado || 0) - new Date(a.creado || 0);
     }).slice(0, 3);
 
+    // ── Pedidos de mi rubro por vencer sin mi propuesta ──
+    // El más accionable de todos: el pedido existe, es de su rubro, tiene
+    // reloj corriendo y él todavía no ofertó. Si no aparece acá, se entera
+    // cuando ya cerró.
+    if (rubro && pid) {
+      const HS = window.PRONET_CONFIG?.PROPUESTA_EXPIRACION_HS || 72;
+      const UMBRAL_HS = 24; // "por vencer" = le queda menos de un día
+      const ahora = Date.now();
+
+      // Pedidos donde YA oferté: se excluyen. Sólo los propios del
+      // prestador, no todas las propuestas de la tabla.
+      let yaOferte = new Set();
+      if (window._sb) {
+        const { data: mias } = await window._sb.from('propuestas')
+          .select('pedido_id').eq('prestador_id', pid);
+        (mias || []).forEach(pr => yaOferte.add(pr.pedido_id));
+      }
+      if (gen !== _genInicio) return;
+
+      const porVencer = disponibles.filter(p => {
+        if (!matchRubro(p.rubro, rubro)) return false;
+        if (yaOferte.has(p.id)) return false;
+        if (!p.creado) return false;
+        const vence = p.expira_en ? new Date(p.expira_en)
+                                  : new Date(new Date(p.creado).getTime() + HS * 3600000);
+        const restan = (vence - ahora) / 3600000;
+        return restan > 0 && restan <= UMBRAL_HS;
+      }).length;
+
+      if (porVencer > 0) {
+        items.push({
+          ic: '⏳',
+          txt: porVencer + (porVencer > 1 ? ' pedidos vencen' : ' pedido vence') + ' pronto sin tu propuesta',
+          accion: "goTo('s-pedidos')",
+        });
+      }
+    }
+
     // ── Pedidos de mi rubro que todavía no vi ──
     // Los mensajes traen leído/no leído de la base; los pedidos no —
     // nadie "abre" un pedido. Se guarda la fecha de la última visita a la

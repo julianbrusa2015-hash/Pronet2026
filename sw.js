@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v119'; // v119: "N pedidos nuevos de tu rubro" en Te esperan, con marca de última visita
+const CACHE_VERSION = 'pronet-v120'; // v120: indicador de pedidos por vencer sin propuesta propia
 
 const SHELL = [
   './',
