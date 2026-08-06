@@ -1277,7 +1277,27 @@ document.addEventListener('focusin', (e) => {
   /** Muestra u oculta el cromo del Inicio que sólo aplica a la vista de
    *  vecino (chips de rubro, cabecera del feed, banda de urgencias y el
    *  banner contextual). Para prestador el tablero los reemplaza. */
+  /** Reubica el checklist de primeros pasos dentro del tablero.
+   *
+   *  En el DOM vive arriba de todo, que para un prestador que ya opera es
+   *  el lugar más valioso de la pantalla y se lo lleva por delante a
+   *  "Te esperan". Se mueve el NODO (no se re-dibuja) para no duplicar la
+   *  lógica de renderChecklist ni sus estados. */
+  let _hogarChecklist = null;
+  function moverChecklist(slotId) {
+    const cl = document.getElementById('home-checklist');
+    if (!cl) return;
+    if (!_hogarChecklist) _hogarChecklist = { padre: cl.parentNode, sig: cl.nextSibling };
+    if (slotId) {
+      const slot = document.getElementById(slotId);
+      if (slot) slot.appendChild(cl);
+    } else if (_hogarChecklist.padre) {
+      _hogarChecklist.padre.insertBefore(cl, _hogarChecklist.sig);
+    }
+  }
+
   function cromoHomePrestador(esTablero) {
+    if (!esTablero) moverChecklist(null); // vecino: vuelve a su lugar original
     const v = esTablero ? 'none' : '';
     // Por id donde existe. La banda de urgencias tiene el suyo
     // (#home-urgencias): apuntar al <h4> interno y subir con closest()
@@ -1306,6 +1326,10 @@ document.addEventListener('focusin', (e) => {
   async function renderInicioPrestador() {
     const wrap = document.getElementById('home-feed-container');
     if (!wrap) return;
+    // Rescatar el checklist ANTES de pisar el innerHTML: si quedó dentro
+    // del slot de un render anterior, este innerHTML lo destruiría y el
+    // nodo no volvería nunca más.
+    moverChecklist(null);
     wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
 
     const pid = usuarioActual?.prestador_id || null;
@@ -1391,6 +1415,7 @@ document.addEventListener('focusin', (e) => {
           ${tarjeta(vistas, 'vistas del mes')}
           ${tarjeta(cupoTxt, 'propuestas')}
         </div>
+        <div id="slot-checklist"></div>
         ${disponibles.length ? `
           <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 8px">
             <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Para ofertar</span>
@@ -1405,6 +1430,9 @@ document.addEventListener('focusin', (e) => {
             <span style="color:var(--blue);font-size:15px">›</span>
           </div>`}
       </div>`;
+
+    // El checklist baja debajo de las estadísticas, después de "Te esperan".
+    moverChecklist('slot-checklist');
 
     // Tarjetas reales debajo del resumen: Inicio queda "abierto" en vez de
     // ser un enlace a otra pantalla. Se reusa la misma tarjeta que Pedidos.
