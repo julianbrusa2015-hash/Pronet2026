@@ -63,7 +63,7 @@ window.PRONET_CONFIG.MAPS_KEY = 'AIzaSyCkSY-QijgqiSuanlgp5EpjxxCkfoOFSMY';   // 
 
 Object.assign(window.PRONET_CONFIG, {
   // Propuestas
-  PROPUESTA_EXPIRACION_HS: 72,      // horas hasta que una propuesta expira automáticamente
+  PROPUESTA_EXPIRACION_HS: 168,    // 7 días — el pedido no vence si tiene propuestas pendientes (ver supabase-vencer-pedidos.sql)
   INACTIVIDAD_CIERRE_DIAS: 7,       // días sin actividad para que el vecino pueda cerrar el pedido
 
   // Búsqueda / descubrimiento

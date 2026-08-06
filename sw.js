@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v120'; // v120: indicador de pedidos por vencer sin propuesta propia
+const CACHE_VERSION = 'pronet-v121'; // v121: los pedidos duran 7 días y no vencen con propuestas pendientes
 
 const SHELL = [
   './',
