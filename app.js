@@ -1438,7 +1438,7 @@ document.addEventListener('focusin', (e) => {
     const rubroFicha = ficha?.rubro || '';
     const rubro = /^general$/i.test(rubroFicha.trim()) ? '' : rubroFicha;
 
-    const [chats, noLeidos, cupo, analitica, ranking, pedidos] = await Promise.all([
+    const [chats, noLeidos, cupo, analitica, ranking, pedidos, misPropuestas] = await Promise.all([
       PronetDB.listarChats().catch(() => []),
       PronetDB.contarNoLeidos().catch(() => 0),
       puedeEnviarPropuesta().catch(() => ({ ok: true })),
@@ -1447,6 +1447,13 @@ document.addEventListener('focusin', (e) => {
         ? PronetDB.obtenerRankingPrestador(pid, rubro).catch(() => [])
         : Promise.resolve([]),
       PronetDB.listar('pedidos').catch(() => []),
+      // Las propuestas propias, con su estado. Alimentan dos cosas: el
+      // contador de "esperando respuesta" y la exclusión de los pedidos
+      // donde ya oferté (más abajo). Antes eran dos consultas.
+      pid && window._sb
+        ? window._sb.from('propuestas').select('pedido_id, estado').eq('prestador_id', pid)
+            .then(r => r.data || []).catch(() => [])
+        : Promise.resolve([]),
     ]);
     if (gen !== _genInicio) return; // llegó un render más nuevo
 
@@ -1459,8 +1466,12 @@ document.addEventListener('focusin', (e) => {
     const mios = chats.filter(c => c.prestador_id === pid);
     const elegido   = mios.filter(c => ['activo','elegida'].includes(c.estado)).length;
     const paraCerrar = mios.filter(c => c.estado === 'terminado_por_vecino').length;
-    const enEspera   = mios.filter(c => ['propuesta_enviada','pendiente'].includes(c.estado)).length;
     const enConsulta = mios.filter(c => c.estado === 'consulta').length;
+    // "Esperando respuesta" se cuenta sobre PROPUESTAS, no sobre chats: una
+    // propuesta puede no tener chat abierto, así que contar chats daba un
+    // número menor al de la pantalla a la que lleva el indicador (decía 3 y
+    // "Mis propuestas" listaba 10). La fuente de verdad es propuestas.estado.
+    const enEspera   = misPropuestas.filter(pr => pr.estado === 'pendiente').length;
 
     // Orden deliberado: primero lo que es una buena noticia y exige
     // reaccionar (te eligieron), después lo que espera acción, y al final
@@ -1503,15 +1514,9 @@ document.addEventListener('focusin', (e) => {
       const UMBRAL_HS = 24; // "por vencer" = le queda menos de un día
       const ahora = Date.now();
 
-      // Pedidos donde YA oferté: se excluyen. Sólo los propios del
-      // prestador, no todas las propuestas de la tabla.
-      let yaOferte = new Set();
-      if (window._sb) {
-        const { data: mias } = await window._sb.from('propuestas')
-          .select('pedido_id').eq('prestador_id', pid);
-        (mias || []).forEach(pr => yaOferte.add(pr.pedido_id));
-      }
-      if (gen !== _genInicio) return;
+      // Pedidos donde YA oferté: se excluyen. Salen de misPropuestas, que ya
+      // vino en el Promise.all de arriba.
+      const yaOferte = new Set(misPropuestas.map(pr => pr.pedido_id));
 
       const porVencer = disponibles.filter(p => {
         if (rubro && !matchRubro(p.rubro, rubro)) return false;
