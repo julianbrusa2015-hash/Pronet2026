@@ -1565,20 +1565,33 @@ document.addEventListener('focusin', (e) => {
     const posTxt = pos ? '#' + pos.posicion : '—';
     const cupoTxt = cupo.limite == null ? '∞' : (cupo.usadas ?? 0) + '/' + cupo.limite;
 
-    const tarjeta = (v, l) =>
-      `<div style="background:var(--surface);border-radius:12px;padding:12px 8px;text-align:center">
-         <div style="font-size:20px;font-weight:800;color:var(--ink)">${escHTML(String(v))}</div>
-         <div style="font-size:11px;color:var(--ink3);margin-top:2px">${escHTML(l)}</div>
+    // Bloque de métricas en azul de marca. Va ARRIBA de los pendientes: es lo
+    // primero que identifica al prestador en su propio tablero.
+    // Se muestra siempre, incluso en cero — una cuenta nueva ve "—", "0" y
+    // "0/10", que es la información correcta y además enseña qué se mide.
+    // Los separadores son verticales y no bordes de tarjeta: tres cajas
+    // sueltas sobre azul se leen como tres botones.
+    const metrica = (v, l, conBorde) =>
+      `<div style="text-align:center;padding:0 4px${conBorde ? ';border-left:1px solid rgba(255,255,255,.22);border-right:1px solid rgba(255,255,255,.22)' : ''}">
+         <div style="font-size:21px;font-weight:800;color:#FFFFFF;line-height:1.15">${escHTML(String(v))}</div>
+         <div style="font-size:11px;color:#C7D5FF;margin-top:3px">${escHTML(l)}</div>
        </div>`;
+
+    const bloqueMetricas = `
+      <div style="background:var(--blue);border-radius:14px;padding:14px 6px;margin-bottom:10px;display:grid;grid-template-columns:repeat(3,1fr)">
+        ${metrica(posTxt, 'en tu rubro', false)}
+        ${metrica(vistas, 'vistas del mes', true)}
+        ${metrica(cupoTxt, 'propuestas', false)}
+      </div>`;
 
     const bloquePendientes = items.length ? `
       <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px">
         <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">Te esperan</div>
         ${items.map((it, i) => `
           <div role="button" tabindex="0" onclick="${it.accion}"
-               style="display:flex;align-items:center;gap:9px;padding:9px 0;cursor:pointer${i < items.length-1 ? ';border-bottom:1px solid var(--border)' : ''}">
-            <span style="font-size:15px">${it.ic}</span>
-            <span style="flex:1;font-size:13.5px;color:var(--ink)">${escHTML(it.txt)}</span>
+               style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer${i < items.length-1 ? ';border-bottom:1px solid var(--border)' : ''}">
+            <span style="font-size:15px;width:18px;text-align:center;flex-shrink:0">${it.ic}</span>
+            <span style="flex:1;font-size:13px;color:var(--ink);line-height:1.35">${escHTML(it.txt)}</span>
             <span style="color:var(--ink3);font-size:15px">›</span>
           </div>`).join('')}
       </div>` : `
@@ -1609,12 +1622,8 @@ document.addEventListener('focusin', (e) => {
     wrap.innerHTML = `
       <div style="padding:0 14px 8px">
         ${avisoRubro}
+        ${bloqueMetricas}
         ${bloquePendientes}
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
-          ${tarjeta(posTxt, 'en tu rubro')}
-          ${tarjeta(vistas, 'vistas del mes')}
-          ${tarjeta(cupoTxt, 'propuestas')}
-        </div>
         <div id="slot-checklist"></div>
         ${disponibles.length ? `
           <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 8px">
@@ -1632,7 +1641,7 @@ document.addEventListener('focusin', (e) => {
       </div>`;
 
     if (gen !== _genInicio) return;
-    // El checklist baja debajo de las estadísticas, después de "Te esperan".
+    // Orden del tablero: métricas (azul) → pendientes → checklist → pedidos.
     moverChecklist('slot-checklist');
 
     // Tarjetas reales debajo del resumen: Inicio queda "abierto" en vez de
