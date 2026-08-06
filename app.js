@@ -1508,8 +1508,9 @@ document.addEventListener('focusin', (e) => {
     if (enEspera > 0)   items.push({ ic:'🕐', txt: enEspera + ' propuesta' + (enEspera>1?'s':'') + ' esperando respuesta', accion: "abrirMisPropuestas('pendiente')" });
 
     // ── Pedidos disponibles de su zona ──
-    // Es la base de los indicadores de más abajo y del total del acceso a
-    // Pedidos. NO se filtra por rubro: el filtro fino vive en esa pantalla.
+    // Es la base de los indicadores de más abajo, del total del acceso a
+    // Pedidos y del relleno cuando no hay pendientes. NO se filtra por
+    // rubro: el filtro fino vive en esa pantalla.
     const zonaF = zonaParaFiltro();
     const disponibles = pedidos.filter(p => {
       if ((p.estado || 'Publicado') !== 'Publicado') return false;
@@ -1518,6 +1519,7 @@ document.addEventListener('focusin', (e) => {
       return (ZONA_DB[p.zona || 'Escobar'] || p.zona || 'Escobar') === zonaF;
     });
     // Los del rubro propio primero; dentro de cada grupo, los más nuevos.
+    // Sólo se usan cuando el tablero no tiene nada pendiente que mostrar.
     const recientes = disponibles.slice().sort((a, b) => {
       const ra = rubro && matchRubro(a.rubro, rubro) ? 0 : 1;
       const rb = rubro && matchRubro(b.rubro, rubro) ? 0 : 1;
@@ -1645,26 +1647,53 @@ document.addEventListener('focusin', (e) => {
         ${bloqueMetricas}
         ${bloquePendientes}
         <div id="slot-checklist"></div>
-        <div role="button" tabindex="0" onclick="goTo('s-pedidos')"
-             style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
-          <span style="font-size:16px">💼</span>
-          <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">${
-            disponibles.length
-              ? 'Ver los ' + disponibles.length + ' pedidos disponibles'
-              : 'Ver pedidos disponibles'}</span>
-          <span style="color:var(--blue);font-size:15px">›</span>
-        </div>
+        ${!items.length && recientes.length ? `
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 8px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Oportunidades para vos</span>
+            <span role="button" tabindex="0" onclick="goTo('s-pedidos')"
+                  style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Ver los ${disponibles.length} →</span>
+          </div>
+          <div id="inicio-recientes"></div>` : `
+          <div role="button" tabindex="0" onclick="goTo('s-pedidos')"
+               style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
+            <span style="font-size:16px">💼</span>
+            <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">${
+              disponibles.length
+                ? 'Ver los ' + disponibles.length + ' pedidos disponibles'
+                : 'Ver pedidos disponibles'}</span>
+            <span style="color:var(--blue);font-size:15px">›</span>
+          </div>`}
       </div>`;
 
     if (gen !== _genInicio) return;
-    // Orden del tablero: métricas (azul) → pendientes → checklist → acceso.
-    //
-    // Inicio muestra INDICADORES, no contenido. Antes traía las 3 tarjetas de
-    // pedidos más relevantes, pero no aportaban nada que la pantalla Pedidos
-    // no hiciera mejor —misma lista, sin filtros y recortada a 3— y con el
-    // bloque de métricas más hasta 6 pendientes empujaban todo fuera de la
-    // pantalla. Quedó un acceso de una línea con el total.
+    // Orden del tablero: métricas (azul) → pendientes → checklist → pedidos.
     moverChecklist('slot-checklist');
+
+    // Las tarjetas de pedidos aparecen SÓLO si no hay nada pendiente.
+    //
+    // Con el tablero lleno estorbaban: repetían la pantalla Pedidos —misma
+    // lista, recortada a 3 y sin filtros— y empujaban los indicadores fuera
+    // de la pantalla. Pero sin ellas, un prestador al día se encontraba con
+    // el bloque azul, un "Todo al día" y nada más: una pantalla vacía justo
+    // cuando lo único que puede hacer es buscar trabajo.
+    // Así, ocupan el lugar que dejan los pendientes en vez de competir con
+    // ellos, y el que está al día entra viendo dónde ofertar.
+    const cont = document.getElementById('inicio-recientes');
+    if (cont && recientes.length) {
+      let lista = recientes;
+      if (window._sb) {
+        const uids = [...new Set(lista.map(p => p.usuario_id).filter(Boolean))];
+        if (uids.length) {
+          const { data: prfs } = await window._sb.from('perfiles_publicos')
+            .select('id, nombre').in('id', uids);
+          const mapa = {};
+          (prfs || []).forEach(pr => { mapa[pr.id] = pr.nombre; });
+          lista = lista.map(p => ({ ...p, vecino_nombre: mapa[p.usuario_id] || null }));
+        }
+      }
+      if (gen !== _genInicio) return;
+      lista.forEach(p => cont.appendChild(crearCardPedidoDisponible(p)));
+    }
   }
 
   // ── Filtros de la pantalla Pedidos (vista prestador) ─────────────────
