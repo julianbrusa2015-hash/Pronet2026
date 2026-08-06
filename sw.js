@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v128'; // v128: "esperando respuesta" se cuenta sobre propuestas, no sobre chats
+const CACHE_VERSION = 'pronet-v129'; // v129: plural de "conversaciones" en el vacío filtrado
 
 const SHELL = [
   './',

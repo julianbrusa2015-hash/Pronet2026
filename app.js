@@ -8513,7 +8513,7 @@ document.addEventListener('focusin', (e) => {
             '<div style="font-size:14px;font-weight:700;color:var(--ink)">Nada en «' +
               escHTML(ETIQUETA_CHAT[chatsFiltroActual] || chatsFiltroActual) + '»</div>' +
             '<div style="font-size:13px;color:var(--ink3);margin-top:4px">Tenés ' + unicos.length +
-              ' conversación' + (unicos.length !== 1 ? 'es' : '') + ' en otros estados.</div>' +
+              (unicos.length !== 1 ? ' conversaciones' : ' conversación') + ' en otros estados.</div>' +
             '<button onclick="filtrarChats(null,\'todos\')" style="margin-top:14px;background:var(--blue);color:white;border:none;border-radius:12px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Ver todas</button>' +
           '</div>';
         return;
