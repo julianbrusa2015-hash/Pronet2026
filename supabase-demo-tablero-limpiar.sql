@@ -7,8 +7,10 @@
 
 begin;
 
-delete from public.mensajes
- where chat_id in (select id from public.chats_trabajo where ultimo_mensaje like '[DEMO]%');
+-- La tabla es mensajes_chat (mensajes_mercado es la del marketplace).
+delete from public.mensajes_chat
+ where chat_id in (select id from public.chats_trabajo where ultimo_mensaje like '[DEMO]%')
+    or texto like '[DEMO]%';
 
 delete from public.chats_trabajo where ultimo_mensaje like '[DEMO]%';
 
