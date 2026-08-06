@@ -1438,9 +1438,10 @@ document.addEventListener('focusin', (e) => {
     const rubroFicha = ficha?.rubro || '';
     const rubro = /^general$/i.test(rubroFicha.trim()) ? '' : rubroFicha;
 
-    const [chats, noLeidos, cupo, analitica, ranking, pedidos, misPropuestas] = await Promise.all([
+    const [chats, sinLeerPorChat, cupo, analitica, ranking, pedidos, misPropuestas] = await Promise.all([
       PronetDB.listarChats().catch(() => []),
-      PronetDB.contarNoLeidos().catch(() => 0),
+      // Desglose por chat, no el total de mensajes: ver más abajo por qué.
+      PronetDB.noLeidosPorChat().catch(() => ({})),
       puedeEnviarPropuesta().catch(() => ({ ok: true })),
       PronetDB.obtenerAnalitica().catch(() => null),
       pid && rubro
@@ -1464,9 +1465,26 @@ document.addEventListener('focusin', (e) => {
     // tarea pendiente convertía el mejor momento del prestador —ganar el
     // trabajo— en un mandado.
     const mios = chats.filter(c => c.prestador_id === pid);
-    const elegido   = mios.filter(c => ['activo','elegida'].includes(c.estado)).length;
-    const paraCerrar = mios.filter(c => c.estado === 'terminado_por_vecino').length;
-    const enConsulta = mios.filter(c => c.estado === 'consulta').length;
+
+    // Cada indicador cuenta la COSA que nombra, no las filas de chat que la
+    // representan. Dos chats sobre el mismo pedido son un solo trabajo, y el
+    // mismo vecino consultando por dos pedidos es un solo vecino. Contando
+    // filas, el tablero decía "2 trabajos en curso" para un único trabajo.
+    // Los chats sin pedido (chat directo) valen por sí mismos: no hay pedido
+    // que los agrupe, así que la clave cae en su propio id.
+    const distintos = (lista, campo) =>
+      new Set(lista.map(c => c[campo] || ('chat:' + c.id))).size;
+
+    const porEstado = est => mios.filter(c => est.includes(c.estado));
+    const elegido    = distintos(porEstado(['activo', 'elegida']), 'pedido_id');
+    const paraCerrar = distintos(porEstado(['terminado_por_vecino']), 'pedido_id');
+    const enConsulta = distintos(porEstado(['consulta']), 'vecino_id');
+    // Se cuentan CONVERSACIONES, no mensajes. "4 mensajes sin leer" puede ser
+    // una sola charla de cuatro líneas: el número no decía cuántas cosas hay
+    // que abrir, que es la única pregunta que el prestador se hace acá.
+    // El resto del tablero ya cuenta cosas que se atienden de a una (trabajos,
+    // propuestas, pedidos) — contar mensajes era la excepción.
+    const chatsSinLeer = Object.values(sinLeerPorChat).filter(n => n > 0).length;
     // "Esperando respuesta" se cuenta sobre PROPUESTAS, no sobre chats: una
     // propuesta puede no tener chat abierto, así que contar chats daba un
     // número menor al de la pantalla a la que lleva el indicador (decía 3 y
@@ -1481,7 +1499,7 @@ document.addEventListener('focusin', (e) => {
     // indicador. Mandar a la lista completa obligaba a volver a buscar a
     // mano lo que el tablero acababa de señalar.
     if (elegido > 0)    items.push({ ic:'🟢', txt: '¡Te eligieron! ' + elegido + ' trabajo' + (elegido>1?'s':'') + ' en curso', accion: "irAChats('activo')" });
-    if (noLeidos > 0)   items.push({ ic:'💬', txt: noLeidos + ' mensaje' + (noLeidos>1?'s':'') + ' sin leer', accion: "irAChats('no_leidos')" });
+    if (chatsSinLeer > 0) items.push({ ic:'💬', txt: chatsSinLeer === 1 ? '1 conversación sin leer' : chatsSinLeer + ' conversaciones sin leer', accion: "irAChats('no_leidos')" });
     if (paraCerrar > 0) items.push({ ic:'🏁', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "irAChats('terminado_por_vecino')" });
     if (enConsulta > 0) items.push({ ic:'💭', txt: enConsulta + ' vecino' + (enConsulta>1?'s':'') + ' consultando', accion: "irAChats('consulta')" });
     if (enEspera > 0)   items.push({ ic:'🕐', txt: enEspera + ' propuesta' + (enEspera>1?'s':'') + ' esperando respuesta', accion: "abrirMisPropuestas('pendiente')" });
@@ -2220,9 +2238,11 @@ document.addEventListener('focusin', (e) => {
     // Se cuelga de cada chat para que el filtro "Sin leer" pueda decidir sin
     // volver a consultar. El total del badge sale de la misma suma.
     chatsCache = chats.map(c => ({ ...c, _noLeidos: porChat[c.id] || 0 }));
-    const noLeidos = Object.values(porChat).reduce((a, b) => a + b, 0);
+    // Conversaciones con algo sin leer, no total de mensajes: tiene que dar
+    // el mismo número que el indicador del tablero que trae hasta acá.
+    const noLeidos = Object.values(porChat).filter(n => n > 0).length;
     if (badge) {
-      if (noLeidos > 0) { badge.textContent = noLeidos + ' nuevo' + (noLeidos > 1 ? 's' : ''); badge.style.display = ''; }
+      if (noLeidos > 0) { badge.textContent = noLeidos + ' sin leer'; badge.style.display = ''; }
       else badge.style.display = 'none';
     }
     if (chatsFiltroPendiente) {
@@ -6248,9 +6268,12 @@ document.addEventListener('focusin', (e) => {
     const dotEl = document.getElementById('mp-mensajes-dot');
     if (!subEl) return;
     try {
-      const count = await PronetDB.contarNoLeidos();
+      // Conversaciones, no mensajes: es la unidad que el usuario atiende.
+      // Tiene que dar el mismo número que el tablero de Inicio.
+      const porChat = await PronetDB.noLeidosPorChat();
+      const count = Object.values(porChat).filter(n => n > 0).length;
       if (count > 0) {
-        subEl.textContent = count + ' mensaje' + (count > 1 ? 's' : '') + ' sin leer';
+        subEl.textContent = count === 1 ? '1 conversación sin leer' : count + ' conversaciones sin leer';
         if (dotEl) dotEl.style.display = '';
       } else {
         subEl.textContent = 'Sin mensajes nuevos';

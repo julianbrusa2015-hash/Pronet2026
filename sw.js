@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v131'; // v131: metricas en bloque azul arriba del tablero
+const CACHE_VERSION = 'pronet-v132'; // v132: los indicadores cuentan la cosa, no las filas de chat
 
 const SHELL = [
   './',
