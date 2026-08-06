@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v123'; // v123: "¡Te eligieron!" en el tablero — 'activo' no era "para cerrar"
+const CACHE_VERSION = 'pronet-v124'; // v124: el rubro 'General' dejaba el tablero del prestador vacío
 
 const SHELL = [
   './',

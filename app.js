@@ -1413,7 +1413,14 @@ document.addEventListener('focusin', (e) => {
     // `perfiles`, y el rubro vive en `prestadores`. Hay que traer la ficha
     // aparte, igual que hace el ranking de Mi Perfil.
     const ficha = pid ? await PronetDB.obtener('prestadores', pid).catch(() => null) : null;
-    const rubro = ficha?.rubro || '';
+    // 'General' es el rubro por DEFECTO que pone handle_new_user cuando el
+    // alta no trae uno — lo tienen 4 de los 11 prestadores. No matchea
+    // ningún pedido, así que tratarlo como rubro real dejaba el tablero
+    // vacío y el filtro "Mi rubro" sin resultados.
+    // Se lo trata como "sin rubro definido": se muestran todos los de la
+    // zona. Ver de más es mejor que no ver nada.
+    const rubroFicha = ficha?.rubro || '';
+    const rubro = /^general$/i.test(rubroFicha.trim()) ? '' : rubroFicha;
 
     const [chats, noLeidos, cupo, analitica, ranking, pedidos] = await Promise.all([
       PronetDB.listarChats().catch(() => []),
@@ -1472,7 +1479,7 @@ document.addEventListener('focusin', (e) => {
     // El más accionable de todos: el pedido existe, es de su rubro, tiene
     // reloj corriendo y él todavía no ofertó. Si no aparece acá, se entera
     // cuando ya cerró.
-    if (rubro && pid) {
+    if (pid) {
       const HS = window.PRONET_CONFIG?.PROPUESTA_EXPIRACION_HS || 72;
       const UMBRAL_HS = 24; // "por vencer" = le queda menos de un día
       const ahora = Date.now();
@@ -1488,7 +1495,7 @@ document.addEventListener('focusin', (e) => {
       if (gen !== _genInicio) return;
 
       const porVencer = disponibles.filter(p => {
-        if (!matchRubro(p.rubro, rubro)) return false;
+        if (rubro && !matchRubro(p.rubro, rubro)) return false;
         if (yaOferte.has(p.id)) return false;
         if (!p.creado) return false;
         const vence = p.expira_en ? new Date(p.expira_en)
@@ -1512,15 +1519,17 @@ document.addEventListener('focusin', (e) => {
     // pantalla Pedidos y se cuentan los posteriores. Va en "Te esperan"
     // porque un pedido nuevo del rubro propio vence en 72hs: es una
     // oportunidad con reloj, no una novedad decorativa.
-    if (rubro) {
+    {
       const desde = marcaPedidosVistos();
       const sinVer = disponibles.filter(p =>
-        matchRubro(p.rubro, rubro) && p.creado && new Date(p.creado) > desde
+        (!rubro || matchRubro(p.rubro, rubro)) && p.creado && new Date(p.creado) > desde
       ).length;
       if (sinVer > 0) {
         items.push({
           ic: '💼',
-          txt: sinVer + ' pedido' + (sinVer > 1 ? 's' : '') + ' nuevo' + (sinVer > 1 ? 's' : '') + ' de tu rubro',
+          // Sin rubro definido el texto no puede decir "de tu rubro".
+          txt: sinVer + ' pedido' + (sinVer > 1 ? 's' : '') + ' nuevo' + (sinVer > 1 ? 's' : '') +
+               (rubro ? ' de tu rubro' : ' en tu zona'),
           accion: "goTo('s-pedidos')",
         });
       }
@@ -1633,7 +1642,14 @@ document.addEventListener('focusin', (e) => {
 
     const pid = usuarioActual?.prestador_id || null;
     const ficha = pid ? await PronetDB.obtener('prestadores', pid).catch(() => null) : null;
-    const rubro = ficha?.rubro || '';
+    // 'General' es el rubro por DEFECTO que pone handle_new_user cuando el
+    // alta no trae uno — lo tienen 4 de los 11 prestadores. No matchea
+    // ningún pedido, así que tratarlo como rubro real dejaba el tablero
+    // vacío y el filtro "Mi rubro" sin resultados.
+    // Se lo trata como "sin rubro definido": se muestran todos los de la
+    // zona. Ver de más es mejor que no ver nada.
+    const rubroFicha = ficha?.rubro || '';
+    const rubro = /^general$/i.test(rubroFicha.trim()) ? '' : rubroFicha;
 
     let pedidos = await PronetDB.listar('pedidos').catch(() => []);
     pedidos = pedidos.filter(p => (p.estado || 'Publicado') === 'Publicado');
