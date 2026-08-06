@@ -1261,7 +1261,12 @@ document.addEventListener('focusin', (e) => {
 
     // ── Vista CLIENTE / INVITADO: mostrar prestadores para contratar ──
     wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
-    const filtros = cat && cat !== 'todos' ? { rubro: rubroDeCat(cat) } : {};
+    // Al buscar se IGNORA la categoría activa: buscar "plomero" con el chip
+    // Electricistas puesto devolvía cero y el rótulo decía "Resultados para
+    // plomero" sin nombrar el rubro — el texto mentía sobre lo que filtraba.
+    // Una búsqueda explícita gana sobre un chip que quedó de antes.
+    const filtros = {};
+    if (!busquedaHome && cat && cat !== 'todos') filtros.rubro = rubroDeCat(cat);
     if (zonaActual) filtros.zona = zonaParaFiltro();
     if (busquedaHome) filtros.busqueda = busquedaHome;
     let prestadores = await PronetDB.listarPrestadores(filtros);
