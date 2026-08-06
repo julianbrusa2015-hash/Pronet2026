@@ -360,10 +360,16 @@ document.addEventListener('focusin', (e) => {
         // vive dentro de #pview-busco — oculto para el prestador. O sea que
         // se ejecutaba y su resultado no lo veía nadie. La vista del
         // prestador tiene su propio render.
-        renderPedidosPresto();
         // Al entrar acá ya los vio: se corre la marca para que el contador
-        // de "nuevos" del Inicio arranque de cero la próxima vez.
+        // de "nuevos" del Inicio arranque de cero la próxima vez. Va ANTES
+        // del render porque es quien guarda _marcaPedidosPrevia, que es lo
+        // que el filtro "Nuevos" necesita leer.
         marcarPedidosComoVistos();
+        // Entrar por la barra inferior limpia los filtros que vienen del
+        // tablero; irAPedidosPresto() ya dejó el suyo puesto.
+        aplicarModoPresto(pedidosModoPendiente === 'ninguno' ? null : pedidosModoPendiente);
+        pedidosModoPendiente = null;
+        renderPedidosPresto();
       } else if (!usuarioActual) {
         // Invitado: mostrar CTA para registrarse
         if (vBusco) vBusco.style.display = 'block';
@@ -389,7 +395,9 @@ document.addEventListener('focusin', (e) => {
     // Si va a Buscar, cargar resultados
     if (id === 's-buscar') { renderBusqueda('', filtroActivo); }
     // Si va a Chats, cargar lista de conversaciones
-    if (id === 's-chats') { renderChats(); }
+    // Entrar por la barra inferior arranca sin filtro; irAChats() ya dejó el
+    // suyo puesto antes de llamar acá, así que no se pisa.
+    if (id === 's-chats') { if (!chatsFiltroPendiente) chatsFiltroPendiente = 'todos'; renderChats(); }
     if (id === 's-moderacion') { renderModeracion(); renderConfigAdmin(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
@@ -1395,8 +1403,16 @@ document.addEventListener('focusin', (e) => {
     localStorage.setItem(claveVistos(), ahora.toISOString());
     return ahora;
   }
+  // Marca anterior a la visita actual. Entrar a Pedidos pisa la marca con
+  // "ahora", así que sin esta copia el chip "Nuevos" se quedaría sin
+  // referencia justo en el momento en que el prestador lo va a usar: llega
+  // desde el indicador "3 pedidos nuevos" y encuentra cero.
+  let _marcaPedidosPrevia = null;
   function marcarPedidosComoVistos() {
-    if (usuarioActual) localStorage.setItem(claveVistos(), new Date().toISOString());
+    if (!usuarioActual) return;
+    const previa = localStorage.getItem(claveVistos());
+    if (previa) _marcaPedidosPrevia = new Date(previa);
+    localStorage.setItem(claveVistos(), new Date().toISOString());
   }
 
   async function renderInicioPrestador() {
@@ -1450,11 +1466,14 @@ document.addEventListener('focusin', (e) => {
     // reaccionar (te eligieron), después lo que espera acción, y al final
     // lo informativo.
     const items = [];
-    if (elegido > 0)    items.push({ ic:'🟢', txt: '¡Te eligieron! ' + elegido + ' trabajo' + (elegido>1?'s':'') + ' en curso', accion: "goTo('s-chats')" });
-    if (noLeidos > 0)   items.push({ ic:'💬', txt: noLeidos + ' mensaje' + (noLeidos>1?'s':'') + ' sin leer', accion: "goTo('s-chats')" });
-    if (paraCerrar > 0) items.push({ ic:'🏁', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "goTo('s-chats')" });
-    if (enConsulta > 0) items.push({ ic:'💭', txt: enConsulta + ' vecino' + (enConsulta>1?'s':'') + ' consultando', accion: "goTo('s-chats')" });
-    if (enEspera > 0)   items.push({ ic:'🕐', txt: enEspera + ' propuesta' + (enEspera>1?'s':'') + ' esperando respuesta', accion: "goTo('s-mis-propuestas')" });
+    // Cada acción deja la pantalla destino FILTRADA por lo que dice el
+    // indicador. Mandar a la lista completa obligaba a volver a buscar a
+    // mano lo que el tablero acababa de señalar.
+    if (elegido > 0)    items.push({ ic:'🟢', txt: '¡Te eligieron! ' + elegido + ' trabajo' + (elegido>1?'s':'') + ' en curso', accion: "irAChats('activo')" });
+    if (noLeidos > 0)   items.push({ ic:'💬', txt: noLeidos + ' mensaje' + (noLeidos>1?'s':'') + ' sin leer', accion: "irAChats('no_leidos')" });
+    if (paraCerrar > 0) items.push({ ic:'🏁', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "irAChats('terminado_por_vecino')" });
+    if (enConsulta > 0) items.push({ ic:'💭', txt: enConsulta + ' vecino' + (enConsulta>1?'s':'') + ' consultando', accion: "irAChats('consulta')" });
+    if (enEspera > 0)   items.push({ ic:'🕐', txt: enEspera + ' propuesta' + (enEspera>1?'s':'') + ' esperando respuesta', accion: "abrirMisPropuestas('pendiente')" });
 
     // ── Pedidos disponibles de su zona ──
     // NO se filtra por rubro acá: en Inicio el filtro fino vive en la
@@ -1508,7 +1527,7 @@ document.addEventListener('focusin', (e) => {
         items.push({
           ic: '⏳',
           txt: porVencer + (porVencer > 1 ? ' pedidos vencen' : ' pedido vence') + ' pronto sin tu propuesta',
-          accion: "goTo('s-pedidos')",
+          accion: "irAPedidosPresto('porVencer')",
         });
       }
     }
@@ -1530,7 +1549,7 @@ document.addEventListener('focusin', (e) => {
           // Sin rubro definido el texto no puede decir "de tu rubro".
           txt: sinVer + ' pedido' + (sinVer > 1 ? 's' : '') + ' nuevo' + (sinVer > 1 ? 's' : '') +
                (rubro ? ' de tu rubro' : ' en tu zona'),
-          accion: "goTo('s-pedidos')",
+          accion: "irAPedidosPresto('nuevos')",
         });
       }
     }
@@ -1636,7 +1655,7 @@ document.addEventListener('focusin', (e) => {
   // distancias y conteos escritos a mano, y cuatro chips que sólo hacían
   // this.classList.toggle('on') — se prendían y no filtraban nada.
   // Ahora consultan datos reales.
-  const filtrosPresto = { zona: true, rubro: false, urgentes: false, presupuesto: false };
+  const filtrosPresto = { zona: true, rubro: false, urgentes: false, presupuesto: false, porVencer: false, nuevos: false };
 
   function togglePrestoFiltro(el, clave) {
     filtrosPresto[clave] = !filtrosPresto[clave];
@@ -1644,6 +1663,37 @@ document.addEventListener('focusin', (e) => {
     renderPedidosPresto();
   }
   window.togglePrestoFiltro = togglePrestoFiltro;
+
+  /** Deja los chips reflejando el estado real de `filtrosPresto`.
+   *  Hace falta cuando el filtro lo prendió el tablero y no un click. */
+  function sincronizarChipsPresto() {
+    document.querySelectorAll('#presto-chips .chip').forEach(ch => {
+      const k = ch.dataset.f;
+      if (k) ch.classList.toggle('on', !!filtrosPresto[k]);
+    });
+  }
+
+  // Modo con el que hay que abrir Pedidos en la próxima entrada.
+  let pedidosModoPendiente = null;
+
+  /** Abre Pedidos con el filtro del indicador que se tocó.
+   *  `modo`: 'porVencer' | 'nuevos' | null (sin filtro). */
+  function irAPedidosPresto(modo) {
+    pedidosModoPendiente = modo || 'ninguno';
+    goTo('s-pedidos');
+  }
+  window.irAPedidosPresto = irAPedidosPresto;
+
+  function aplicarModoPresto(modo) {
+    filtrosPresto.porVencer = (modo === 'porVencer');
+    filtrosPresto.nuevos    = (modo === 'nuevos');
+    // Los dos indicadores hablan del rubro propio, así que el chip "Mi rubro"
+    // se prende; si no, el número del tablero no coincidiría con la lista.
+    // Al entrar SIN modo no se apaga: el prestador pudo haberlo puesto a mano
+    // y perder su filtro al volver de otra pantalla sería un bug.
+    if (modo) filtrosPresto.rubro = true;
+    sincronizarChipsPresto();
+  }
 
   /** Lista de pedidos disponibles para ofertar, con los 4 filtros.
    *
@@ -1685,6 +1735,31 @@ document.addEventListener('focusin', (e) => {
     }
     if (filtrosPresto.urgentes) {
       pedidos = pedidos.filter(p => p.urgencia === 'hoy');
+    }
+    // "Por vencer" replica exactamente el indicador del tablero: menos de
+    // 24hs de reloj y sin propuesta mía. Excluir los que ya oferté es lo que
+    // lo vuelve accionable — si no, la lista repite trabajo ya hecho.
+    if (filtrosPresto.porVencer) {
+      const HS = window.PRONET_CONFIG?.PROPUESTA_EXPIRACION_HS || 168;
+      const ahora = Date.now();
+      let yaOferte = new Set();
+      if (window._sb && pid) {
+        const { data: mias } = await window._sb.from('propuestas')
+          .select('pedido_id').eq('prestador_id', pid);
+        (mias || []).forEach(pr => yaOferte.add(pr.pedido_id));
+      }
+      pedidos = pedidos.filter(p => {
+        if (!p.creado || yaOferte.has(p.id)) return false;
+        const vence = p.expira_en ? new Date(p.expira_en)
+                                  : new Date(new Date(p.creado).getTime() + HS * 3600000);
+        const restan = (vence - ahora) / 3600000;
+        return restan > 0 && restan <= 24;
+      });
+    }
+    // "Nuevos" usa la marca ANTERIOR a esta visita (ver marcarPedidosComoVistos).
+    if (filtrosPresto.nuevos) {
+      const desde = _marcaPedidosPrevia;
+      pedidos = desde ? pedidos.filter(p => p.creado && new Date(p.creado) > desde) : [];
     }
     if (filtrosPresto.presupuesto) {
       const tope = p => p.presupuesto_max || p.presupuesto_min || 0;
@@ -2124,14 +2199,25 @@ document.addEventListener('focusin', (e) => {
     const badge = document.getElementById('chats-badge-nuevos');
     if (!lista) return;
     lista.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando mensajes...</div>';
-    const chats = await PronetDB.listarChats();
-    chatsCache = chats;
-    const noLeidos = await PronetDB.contarNoLeidos().catch(() => 0);
+    const [chats, porChat] = await Promise.all([
+      PronetDB.listarChats(),
+      PronetDB.noLeidosPorChat().catch(() => ({})),
+    ]);
+    // Se cuelga de cada chat para que el filtro "Sin leer" pueda decidir sin
+    // volver a consultar. El total del badge sale de la misma suma.
+    chatsCache = chats.map(c => ({ ...c, _noLeidos: porChat[c.id] || 0 }));
+    const noLeidos = Object.values(porChat).reduce((a, b) => a + b, 0);
     if (badge) {
       if (noLeidos > 0) { badge.textContent = noLeidos + ' nuevo' + (noLeidos > 1 ? 's' : ''); badge.style.display = ''; }
       else badge.style.display = 'none';
     }
-    renderizarListaChats(chatsCache);
+    if (chatsFiltroPendiente) {
+      const f = chatsFiltroPendiente;
+      chatsFiltroPendiente = null;
+      filtrarChats(null, f);   // ya llama a renderizarListaChats
+    } else {
+      renderizarListaChats(chatsCache);
+    }
   }
 
   // Renderiza el panel de moderación dinámicamente
@@ -8348,12 +8434,58 @@ document.addEventListener('focusin', (e) => {
   /** Filtra la lista de chats por estado. */
   let chatsFiltroActual = 'todos';
   let chatsCache = [];
+
+  /** Filtros que NO son un estado suelto.
+   *
+   *  Existen porque el tablero de Inicio agrupa: "¡Te eligieron!" cuenta
+   *  `activo` + `elegida`, y "sin leer" no es un estado sino un dato de los
+   *  mensajes. Si el chip filtrara por igualdad contra `estado`, tocar el
+   *  indicador llevaría a una lista con menos filas que el número que
+   *  acababa de mostrar — que es exactamente lo que no puede pasar. */
+  const GRUPOS_CHAT = {
+    activo:               c => ['activo', 'elegida'].includes(c.estado),
+    propuesta_enviada:    c => ['propuesta_enviada', 'pendiente'].includes(c.estado),
+    terminado_por_vecino: c => c.estado === 'terminado_por_vecino',
+    no_leidos:            c => (c._noLeidos || 0) > 0,
+  };
+  const ETIQUETA_CHAT = {
+    todos:                'Conversaciones activas',
+    activo:               'Trabajos en curso',
+    no_leidos:            'Con mensajes sin leer',
+    terminado_por_vecino: 'Trabajos para cerrar',
+    propuesta_enviada:    'Propuestas esperando respuesta',
+    consulta:             'Consultas',
+    calificado:           'Completados',
+    cancelado:            'Cancelados',
+    rechazada:            'Rechazados',
+  };
+
+  // Filtro con el que hay que abrir Mensajes en la próxima entrada. Lo deja
+  // puesto irAChats() y lo consume renderChats(), que es asíncrono: aplicarlo
+  // antes de que la lista exista no tendría efecto.
+  let chatsFiltroPendiente = null;
+
   function filtrarChats(chipEl, filtro) {
     chatsFiltroActual = filtro;
     document.querySelectorAll('#chats-filtros .chip').forEach(c => c.classList.remove('on'));
-    if (chipEl) chipEl.classList.add('on');
+    // Sin `chipEl` (viene del tablero, no de un click en el chip) hay que
+    // buscar el chip para que la pantalla muestre cuál filtro está activo.
+    const chip = chipEl || document.querySelector('#chats-filtros .chip[data-filtro="' + filtro + '"]');
+    if (chip) {
+      chip.classList.add('on');
+      if (!chipEl) chip.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }
     renderizarListaChats(chatsCache);
   }
+
+  /** Abre Mensajes ya filtrado. Lo usa el tablero de Inicio: si el indicador
+   *  dice "1 trabajo para cerrar", tocarlo tiene que dejar ese trabajo a la
+   *  vista, no la lista completa donde hay que volver a buscarlo. */
+  function irAChats(filtro) {
+    chatsFiltroPendiente = filtro || 'todos';
+    goTo('s-chats');
+  }
+  window.irAChats = irAChats;
 
   function renderizarListaChats(chats) {
     const lista = document.getElementById('chats-lista');
@@ -8361,18 +8493,35 @@ document.addEventListener('focusin', (e) => {
     if (!lista) return;
     // Deduplicar por id por si Supabase devuelve la misma fila más de una vez
     const unicos = [...new Map(chats.map(c => [c.id, c])).values()];
-    const filtrados = chatsFiltroActual === 'todos'
-      ? unicos
-      : unicos.filter(c => c.estado === chatsFiltroActual);
+    const test = GRUPOS_CHAT[chatsFiltroActual] || (c => c.estado === chatsFiltroActual);
+    const filtrados = chatsFiltroActual === 'todos' ? unicos : unicos.filter(test);
     lista.innerHTML = '';
     if (filtrados.length === 0) {
+      // El vacío genérico ("Cuando elijas a un prestador se abrirá el chat")
+      // es falso si hay chats y el que no tiene resultados es el filtro:
+      // deja al usuario creyendo que perdió sus conversaciones.
+      if (chatsFiltroActual !== 'todos' && unicos.length) {
+        if (vacio) vacio.style.display = 'none';
+        lista.innerHTML =
+          '<div style="padding:44px 24px;text-align:center">' +
+            '<div style="font-size:34px;margin-bottom:10px">🔍</div>' +
+            '<div style="font-size:14px;font-weight:700;color:var(--ink)">Nada en «' +
+              escHTML(ETIQUETA_CHAT[chatsFiltroActual] || chatsFiltroActual) + '»</div>' +
+            '<div style="font-size:13px;color:var(--ink3);margin-top:4px">Tenés ' + unicos.length +
+              ' conversación' + (unicos.length !== 1 ? 'es' : '') + ' en otros estados.</div>' +
+            '<button onclick="filtrarChats(null,\'todos\')" style="margin-top:14px;background:var(--blue);color:white;border:none;border-radius:12px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Ver todas</button>' +
+          '</div>';
+        return;
+      }
       if (vacio) vacio.style.display = '';
       return;
     }
     if (vacio) vacio.style.display = 'none';
     const secLabel = document.createElement('div');
     secLabel.style.cssText = 'padding:10px 16px 6px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px';
-    secLabel.textContent = chatsFiltroActual === 'todos' ? 'Conversaciones activas' : 'Filtrado por: ' + chatsFiltroActual;
+    // El texto anterior mostraba el valor crudo de la base
+    // ("Filtrado por: terminado_por_vecino"). ETIQUETA_CHAT lo traduce.
+    secLabel.textContent = ETIQUETA_CHAT[chatsFiltroActual] || 'Conversaciones';
     lista.appendChild(secLabel);
     filtrados.forEach(c => {
       const item = document.createElement('div');
@@ -9607,7 +9756,10 @@ document.addEventListener('focusin', (e) => {
     if(!usuarioActual||!usuarioActual.prestador_id){alert('Tu perfil de prestador no está completo todavía.');return;}
     try{const yo=await PronetDB.obtener('prestadores',usuarioActual.prestador_id);if(yo)abrirPerfilPrestador(yo);else alert('No se encontró tu perfil.');}catch(e){alert('No se pudo cargar tu perfil.');}
   }
-  async function abrirMisPropuestas(){
+  /** @param {string=} filtro Estado de propuesta a mostrar ('pendiente',
+   *  'elegida'…). Lo pasa el tablero de Inicio para que la pantalla muestre
+   *  las mismas que contó el indicador. Sin filtro, muestra todas. */
+  async function abrirMisPropuestas(filtro){
     if(!usuarioActual||!usuarioActual.prestador_id){alert('Tu perfil de prestador no está completo todavía.');return;}
     // Guardar la pantalla de origen para el back
     window._misPropuestasOrigen = document.querySelector('.screen.active')?.id || 's-miperfil';
@@ -9617,10 +9769,26 @@ document.addEventListener('focusin', (e) => {
     let mias=[],pedidos=[];
     try{const[props,peds]=await Promise.all([PronetDB.listar('propuestas'),PronetDB.listar('pedidos')]);mias=props.filter(pr=>pr.prestador_id===usuarioActual.prestador_id);pedidos=peds;}catch(e){wrap.innerHTML='<div style="padding:24px;text-align:center;color:#BE123C">⚠️ No se pudieron cargar tus propuestas.</div>';return;}
     if(mias.length===0){wrap.innerHTML='<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no enviaste propuestas.</div>';return;}
+    const totalMias=mias.length;
+    let bannerFiltro='';
+    if(filtro){
+      mias=mias.filter(pr=>pr.estado===filtro);
+      const LBL={pendiente:'Esperando respuesta',elegida:'Te eligieron',rechazada:'No elegidas',retirada:'Retiradas'};
+      if(mias.length===0){
+        wrap.innerHTML='<div style="padding:44px 24px;text-align:center"><div style="font-size:34px;margin-bottom:10px">🔍</div>'+
+          '<div style="font-size:14px;font-weight:700;color:var(--ink)">Nada en «'+escHTML(LBL[filtro]||filtro)+'»</div>'+
+          '<div style="font-size:13px;color:var(--ink3);margin-top:4px">Tenés '+totalMias+' propuesta'+(totalMias!==1?'s':'')+' en otros estados.</div>'+
+          '<button onclick="abrirMisPropuestas()" style="margin-top:14px;background:var(--blue);color:white;border:none;border-radius:12px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Ver todas</button></div>';
+        return;
+      }
+      bannerFiltro='<div style="display:flex;align-items:center;gap:8px;background:var(--blue-s);border-radius:12px;padding:9px 12px;margin-bottom:12px">'+
+        '<span style="flex:1;font-size:12px;font-weight:600;color:var(--blue)">Mostrando: '+escHTML(LBL[filtro]||filtro)+' ('+mias.length+')</span>'+
+        '<button onclick="abrirMisPropuestas()" style="background:white;border:1px solid #C7D5FF;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit">Ver todas</button></div>';
+    }
     const peso={elegida:0,pendiente:1,retirada:2,rechazada:3};
     mias.sort((a,b)=>(peso[a.estado]-peso[b.estado])||(new Date(b.creado)-new Date(a.creado)));
     const CHIP={elegida:'<span style="background:#DCFCE7;color:#16A34A;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">✅ ¡Te eligieron!</span>',pendiente:'<span style="background:var(--gold-s);color:#92400E;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">⏳ Pendiente</span>',rechazada:'<span style="background:var(--surface,#F1F5F9);color:var(--ink3);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">No elegida</span>',retirada:'<span style="background:var(--surface,#F1F5F9);color:var(--ink3);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">Retirada</span>'};
-    wrap.innerHTML='';
+    wrap.innerHTML=bannerFiltro;
     mias.forEach(pr=>{
       const ped=pedidos.find(p=>p.id===pr.pedido_id)||{},esElegida=pr.estado==='elegida';
       const card=document.createElement('div');

@@ -474,6 +474,28 @@ const PronetDB = (() => {
       return count || 0;
     },
 
+    /** Mensajes sin leer desglosados por chat: `{ [chat_id]: n }`.
+     *
+     *  `contarNoLeidos()` devuelve sólo el total, que alcanza para el badge
+     *  pero no para FILTRAR la lista: para eso hay que saber cuáles de los
+     *  chats son los que tienen algo sin leer. Es la misma consulta sin
+     *  `head: true`, así que no agrega una vuelta extra al servidor. */
+    async noLeidosPorChat() {
+      if (!remoto) return {};
+      const uid = await this.usuarioIdActual();
+      if (!uid) return {};
+      const { data: chats } = await sb.from('chats_trabajo').select('id');
+      if (!chats?.length) return {};
+      const { data: msgs } = await sb.from('mensajes_chat')
+        .select('chat_id')
+        .in('chat_id', chats.map(c => c.id))
+        .eq('leido', false)
+        .neq('autor_id', uid);
+      const mapa = {};
+      (msgs || []).forEach(m => { mapa[m.chat_id] = (mapa[m.chat_id] || 0) + 1; });
+      return mapa;
+    },
+
     // ── CATÁLOGO DE SERVICIOS (ABM) ──────────────────────────────────────
 
     /** Lista todos los servicios del catálogo ordenados por orden. */

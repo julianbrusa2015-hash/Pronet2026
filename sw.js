@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v126'; // v126: aviso para completar rubros a quien todavía no los eligió
+const CACHE_VERSION = 'pronet-v127'; // v127: los indicadores del tablero abren la pantalla ya filtrada
 
 const SHELL = [
   './',

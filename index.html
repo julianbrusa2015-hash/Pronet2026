@@ -1961,7 +1961,10 @@
       <!-- Chips de filtro por estado -->
       <div id="chats-filtros" style="display:flex;gap:6px;padding:0 14px 10px;overflow-x:auto;scrollbar-width:none">
         <div class="chip on" onclick="filtrarChats(this,'todos')" data-filtro="todos">Todos</div>
+        <div class="chip" onclick="filtrarChats(this,'no_leidos')" data-filtro="no_leidos">🔴 Sin leer</div>
         <div class="chip" onclick="filtrarChats(this,'activo')" data-filtro="activo">🔨 En curso</div>
+        <div class="chip" onclick="filtrarChats(this,'terminado_por_vecino')" data-filtro="terminado_por_vecino">🏁 Para cerrar</div>
+        <div class="chip" onclick="filtrarChats(this,'propuesta_enviada')" data-filtro="propuesta_enviada">🕐 Esperando</div>
         <div class="chip" onclick="filtrarChats(this,'consulta')" data-filtro="consulta">💬 Consultas</div>
         <div class="chip" onclick="filtrarChats(this,'calificado')" data-filtro="calificado">✅ Completados</div>
         <div class="chip" onclick="filtrarChats(this,'cancelado')" data-filtro="cancelado">❌ Cancelados</div>
@@ -2271,6 +2274,8 @@
         <div class="ped-zona-bar" id="presto-chips">
           <div class="chip on" data-f="zona"        onclick="togglePrestoFiltro(this,'zona')">📍 Tu zona</div>
           <div class="chip"    data-f="rubro"       onclick="togglePrestoFiltro(this,'rubro')">⚡ Mi rubro</div>
+          <div class="chip"    data-f="porVencer"   onclick="togglePrestoFiltro(this,'porVencer')">⏳ Por vencer</div>
+          <div class="chip"    data-f="nuevos"      onclick="togglePrestoFiltro(this,'nuevos')">🆕 Nuevos</div>
           <div class="chip"    data-f="urgentes"    onclick="togglePrestoFiltro(this,'urgentes')">🕐 Urgentes</div>
           <div class="chip"    data-f="presupuesto" onclick="togglePrestoFiltro(this,'presupuesto')">💰 Mayor presupuesto</div>
         </div>
