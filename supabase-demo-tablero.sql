@@ -89,6 +89,30 @@ select (select id from public.pedidos where titulo = '[DEMO] Instalación de luc
   ) as c(estado, msg, mins)
  where p.pid is not null;
 
+-- ── 4b. Un trabajo donde el prestador es el CLIENTE ─────────────────────
+-- Una cuenta puede ser prestador en un chat y cliente en otro. Sin este
+-- caso no se puede ver la separación de la lista de Mensajes en
+-- "Trabajos en curso" vs "Trabajos contratados", ni verificar que el
+-- indicador del tablero cuente sólo los primeros.
+insert into public.pedidos (titulo, descripcion, rubro, icono, zona, estado,
+                            presupuesto_min, presupuesto_max, urgencia,
+                            usuario_id, creado, expira_en)
+select '[DEMO] Arreglar la canilla de casa', 'Pierde agua desde el fin de semana.',
+       'Plomería', '🚿', 'Escobar', 'Publicado', 18000, 30000, 'semana',
+       pf.id, now() - interval '2 days', now() + interval '5 days'
+  from public.perfiles pf join auth.users u on u.id = pf.id
+ where u.email = 'prestador_test@pronet.test';
+
+insert into public.chats_trabajo (pedido_id, vecino_id, prestador_id, estado,
+                                  ultimo_mensaje, hora_ultimo, creado, ultimo_evento_at)
+select (select id from public.pedidos where titulo = '[DEMO] Arreglar la canilla de casa'),
+       (select pf.id from public.perfiles pf join auth.users u on u.id = pf.id
+         where u.email = 'prestador_test@pronet.test'),
+       (select pf.prestador_id from public.perfiles pf join auth.users u on u.id = pf.id
+         where u.email = 'carla.test@test.com'),
+       'activo', '[DEMO] Paso mañana a la mañana, te aviso.',
+       now() - interval '55 minutes', now() - interval '2 days', now() - interval '55 minutes';
+
 -- ── 5. Mensajes sin leer ────────────────────────────────────────────────
 -- Encienden el indicador 💬 y, sobre todo, permiten probar que se APAGA:
 -- abrir el chat llama a marcarLeidos(), que los pone en leido = true.

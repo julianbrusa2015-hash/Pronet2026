@@ -8554,13 +8554,17 @@ document.addEventListener('focusin', (e) => {
       return;
     }
     if (vacio) vacio.style.display = 'none';
-    const secLabel = document.createElement('div');
-    secLabel.style.cssText = 'padding:10px 16px 6px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px';
-    // El texto anterior mostraba el valor crudo de la base
-    // ("Filtrado por: terminado_por_vecino"). ETIQUETA_CHAT lo traduce.
-    secLabel.textContent = ETIQUETA_CHAT[chatsFiltroActual] || 'Conversaciones';
-    lista.appendChild(secLabel);
-    filtrados.forEach(c => {
+
+    const encabezado = (txt) => {
+      const el = document.createElement('div');
+      el.style.cssText = 'padding:10px 16px 6px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px';
+      // El texto anterior mostraba el valor crudo de la base
+      // ("Filtrado por: terminado_por_vecino"). ETIQUETA_CHAT lo traduce.
+      el.textContent = txt;
+      return el;
+    };
+
+    const crearItem = (c) => {
       const item = document.createElement('div');
       item.className = 'chat-item';
       item.style.cursor = 'pointer';
@@ -8579,12 +8583,6 @@ document.addEventListener('focusin', (e) => {
       // Sin esta marca, "Trabajos en curso" mezclaba los trabajos que te
       // dieron con los que vos contrataste, y no había forma de distinguir
       // unos de otros: dos filas idénticas con estados iguales.
-      // Sólo para cuentas que son las dos cosas: en una que es únicamente
-      // vecina, TODOS los chats son contrataciones y el badge sería ruido
-      // repetido en cada fila sin distinguir nada.
-      const rolBadge = (usuarioActual?.prestador_id && c.soy_prestador === false)
-        ? '<span style="font-size:10px;background:var(--surface);color:var(--ink3);border-radius:6px;padding:2px 6px;font-weight:700">Vos contrataste</span>'
-        : '';
       item.innerHTML = `
         <div class="ci-av-wrap">
           <div class="ci-av" style="background:#EEF2FF;color:#2B5BFF">${escHTML((c.contraparte_iniciales||c.prestador_iniciales||'??').slice(0,2).toUpperCase())}</div>
@@ -8637,8 +8635,35 @@ document.addEventListener('focusin', (e) => {
           }
         });
       });
-      lista.appendChild(item);
-    });
+      return item;
+    };
+
+    // Una misma cuenta puede ser prestador en un chat y cliente en otro, y
+    // mezclados eran indistinguibles: dos filas con el mismo estado "En
+    // curso", una del trabajo que le dieron y otra del que él contrató.
+    // Se separan en dos grupos con encabezado. Sólo tiene sentido en cuentas
+    // que son las dos cosas: en una puramente vecina TODO es contratado y el
+    // segundo encabezado sobra.
+    const dual = !!usuarioActual?.prestador_id;
+    const comoPrestador = dual ? filtrados.filter(c => c.soy_prestador !== false) : filtrados;
+    const comoCliente   = dual ? filtrados.filter(c => c.soy_prestador === false) : [];
+
+    // El segundo grupo describe la relación, no el estado: "Trabajos en
+    // curso" ya lo dice el primero, y repetirlo no distinguiría nada.
+    const LBL_CLIENTE = {
+      consulta:          'Consultas que hiciste',
+      propuesta_enviada: 'Propuestas que recibiste',
+    }[chatsFiltroActual] || 'Trabajos contratados';
+
+    if (comoPrestador.length) {
+      // Con un solo grupo el encabezado sigue siendo el del filtro, como antes.
+      lista.appendChild(encabezado(ETIQUETA_CHAT[chatsFiltroActual] || 'Conversaciones'));
+      comoPrestador.forEach(c => lista.appendChild(crearItem(c)));
+    }
+    if (comoCliente.length) {
+      lista.appendChild(encabezado(LBL_CLIENTE));
+      comoCliente.forEach(c => lista.appendChild(crearItem(c)));
+    }
   }
 
   function abrirResena() {
