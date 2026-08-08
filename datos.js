@@ -650,6 +650,36 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Guarda los límites y precios de un plan. Sólo admin (policy
+     *  `limites_admin_escribe`); si no lo es, RLS rechaza y se devuelve el
+     *  error en vez de fingir que guardó. */
+    async guardarPlanLimites(plan, cambios) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { error } = await sb.from('planes_limites').update(cambios).eq('plan', plan);
+      if (error) { console.warn('[PronetDB] guardarPlanLimites', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
+    },
+
+    /** Funcionalidades apagadas: una sola clave de config_app con los
+     *  nombres separados por coma. Devuelve un array. */
+    async listarFeaturesApagadas() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('config_app')
+        .select('valor').eq('clave', 'features_off').maybeSingle();
+      if (error) { console.warn('[PronetDB] listarFeaturesApagadas', error.message); return []; }
+      return (data?.valor || '').split(',').map(s => s.trim()).filter(Boolean);
+    },
+
+    /** Guarda la lista de funcionalidades apagadas. Sólo admin. */
+    async guardarFeaturesApagadas(lista) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const valor = (lista || []).filter(Boolean).join(',');
+      const { error } = await sb.from('config_app')
+        .upsert({ clave: 'features_off', valor }, { onConflict: 'clave' });
+      if (error) { console.warn('[PronetDB] guardarFeaturesApagadas', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
+    },
+
     // ── ProMarket ─────────────────────────────────────────────────────
 
     /** Lista publicaciones activas, opcionalmente filtradas por categoría.

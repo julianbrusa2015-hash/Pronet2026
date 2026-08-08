@@ -262,7 +262,8 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas'];
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
+    's-param-planes','s-param-features'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -397,6 +398,8 @@ document.addEventListener('focusin', (e) => {
     // suyo puesto antes de llamar acá, así que no se pisa.
     if (id === 's-chats') { if (!chatsFiltroPendiente) chatsFiltroPendiente = 'todos'; renderChats(); }
     if (id === 's-moderacion') { renderModeracion(); renderConfigAdmin(); }
+    if (id === 's-param-planes')   { renderParamPlanes(); }
+    if (id === 's-param-features') { renderParamFeatures(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -5968,6 +5971,117 @@ document.addEventListener('focusin', (e) => {
   }
 
   /** Pinta el estado de los interruptores de config en el panel admin. */
+  // ══ PARAMETRÍAS · PLANES ═══════════════════════════════════════════
+  //
+  // La tabla `planes_limites` ya era la fuente de verdad —la usan el
+  // trigger de límites y `crear-preferencia` para el cobro real— pero sólo
+  // se podía editar por SQL. Esto es la pantalla que faltaba.
+  //
+  // `config.js` sigue teniendo los mismos valores como respaldo offline;
+  // al iniciar, restaurarSesion() los pisa con estos. Editar acá cambia lo
+  // que se cobra y lo que se limita, sin deploy.
+  async function renderParamPlanes() {
+    const wrap = document.getElementById('param-planes-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando planes…</div>';
+
+    const filas = await PronetDB.listarPlanesLimites().catch(() => []);
+    // Sólo los planes de prestador: `promarket_credito` es un pago único,
+    // no un plan, y mezclarlo acá invitaría a editarlo como si lo fuera.
+    const planes = filas.filter(f => ['base', 'plus', 'pro'].includes(f.plan));
+    if (!planes.length) {
+      wrap.innerHTML = '<div style="padding:32px 18px;text-align:center;font-size:13px;color:#BE123C">⚠️ No se pudieron cargar los planes.</div>';
+      return;
+    }
+    const orden = { base: 0, plus: 1, pro: 2 };
+    planes.sort((a, b) => orden[a.plan] - orden[b.plan]);
+
+    const campo = (plan, clave, etiqueta, valor, ayuda) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1">
+          <div style="font-size:12.5px;color:var(--ink)">${escHTML(etiqueta)}</div>
+          ${ayuda ? `<div style="font-size:10.5px;color:var(--ink3);margin-top:1px">${escHTML(ayuda)}</div>` : ''}
+        </div>
+        <input id="pp-${escHTML(plan)}-${escHTML(clave)}" value="${escHTML(valor === null || valor === undefined ? '' : String(valor))}"
+               inputmode="decimal" autocomplete="off"
+               placeholder="${clave === 'propuestas_mes' ? '∞' : ''}"
+               style="width:96px;text-align:right;font-size:13px;font-weight:600;padding:7px 9px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;color:var(--ink)">
+      </div>`;
+
+    wrap.innerHTML = planes.map(p => `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:18px">${p.plan === 'pro' ? '⭐' : p.plan === 'plus' ? '⚡' : '🆓'}</span>
+          <div style="flex:1;font-size:14px;font-weight:800;color:var(--ink)">${escHTML(p.nombre || p.plan)}</div>
+          <span style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">${escHTML(p.plan)}</span>
+        </div>
+        ${campo(p.plan, 'precio_mes',      'Precio mensual',      p.precio_mes,      'En pesos. 0 = gratuito')}
+        ${campo(p.plan, 'precio_anual',    'Precio anual',        p.precio_anual,    'En pesos')}
+        ${campo(p.plan, 'propuestas_mes',  'Propuestas por mes',  p.propuestas_mes,  'Vacío = ilimitado')}
+        ${campo(p.plan, 'fotos_portfolio', 'Fotos de portfolio',  p.fotos_portfolio, '')}
+        ${campo(p.plan, 'loyalty_boost',   'Multiplicador de puntos', p.loyalty_boost, '1 = sin boost. 1.5 = 50% más puntos')}
+        <div id="pp-${escHTML(p.plan)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin-top:8px"></div>
+        <button onclick="guardarParamPlan('${escHTML(p.plan)}')"
+                style="width:100%;background:var(--blue);color:white;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+          Guardar ${escHTML(p.nombre || p.plan)}
+        </button>
+      </div>`).join('') + `
+      <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">
+        Estos valores son los que se cobran y los que limitan de verdad: los usa el trigger que bloquea propuestas y la función que crea el pago en MercadoPago. Un cambio acá impacta de inmediato.
+      </div>`;
+  }
+
+  /** Guarda un plan. Valida ANTES de mandar: un precio negativo o un cupo
+   *  en 0 no rompen nada visible pero dejan a alguien sin poder ofertar. */
+  async function guardarParamPlan(plan) {
+    const msg = document.getElementById('pp-' + plan + '-msg');
+    const leer = c => (document.getElementById('pp-' + plan + '-' + c)?.value || '').trim();
+    const decir = (t, color) => { if (msg) { msg.textContent = t; msg.style.color = color; } };
+
+    const num = (txt, { permitirVacio = false } = {}) => {
+      if (txt === '' ) return permitirVacio ? null : NaN;
+      const n = Number(txt.replace(',', '.'));
+      return Number.isFinite(n) ? n : NaN;
+    };
+
+    const cambios = {
+      precio_mes:      num(leer('precio_mes')),
+      precio_anual:    num(leer('precio_anual')),
+      propuestas_mes:  num(leer('propuestas_mes'), { permitirVacio: true }),  // null = ilimitado
+      fotos_portfolio: num(leer('fotos_portfolio')),
+      loyalty_boost:   num(leer('loyalty_boost')),
+    };
+
+    for (const [k, v] of Object.entries(cambios)) {
+      if (v === null) continue;
+      if (Number.isNaN(v)) { decir('⚠️ "' + k.replace(/_/g, ' ') + '" no es un número válido', '#BE123C'); return; }
+      if (v < 0)           { decir('⚠️ "' + k.replace(/_/g, ' ') + '" no puede ser negativo', '#BE123C'); return; }
+    }
+    if (cambios.loyalty_boost < 1) { decir('⚠️ El multiplicador no puede ser menor a 1 — restaría puntos', '#BE123C'); return; }
+    if (cambios.fotos_portfolio < 1) { decir('⚠️ Al menos 1 foto de portfolio', '#BE123C'); return; }
+    if (cambios.propuestas_mes !== null && cambios.propuestas_mes < 1) {
+      decir('⚠️ Con 0 propuestas nadie podría ofertar. Dejalo vacío para ilimitado.', '#BE123C'); return;
+    }
+
+    decir('Guardando…', 'var(--ink3)');
+    const r = await PronetDB.guardarPlanLimites(plan, cambios);
+    if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error desconocido'), '#BE123C'); return; }
+
+    // Reflejar el cambio en PRONET_CONFIG sin esperar a la próxima sesión:
+    // si no, el admin guarda y la app sigue mostrando lo viejo.
+    const cfg = (window.PRONET_CONFIG?.PLANES || []).find(p => p.id === plan);
+    if (cfg) {
+      cfg.precio_mes      = cambios.precio_mes;
+      cfg.precio_anual    = cambios.precio_anual;
+      cfg.propuestas_mes  = cambios.propuestas_mes;
+      cfg.fotos_portfolio = cambios.fotos_portfolio;
+      cfg.loyalty_boost   = cambios.loyalty_boost;
+    }
+    decir('✅ Guardado', 'var(--green)');
+    setTimeout(() => decir('', ''), 2500);
+  }
+  window.guardarParamPlan = guardarParamPlan;
+
   function renderConfigAdmin() {
     const chk = document.getElementById('cfg-planes-pagos');
     const est = document.getElementById('cfg-planes-estado');
