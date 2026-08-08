@@ -7516,20 +7516,17 @@ document.addEventListener('focusin', (e) => {
     // Sin esto, quien se registraba como prestador quedaba con
     // prestador_id en null: esPrestador() daba false y la app lo trataba
     // como vecino, sin que nada fallara.
-    if (tipo === 'prestador' && usuarioActual && !usuarioActual.prestador_id) {
+    // El trigger de alta sólo crea la fila de `perfiles`. La de
+    // `prestadores` la crea este RPC, que es idempotente y el único lugar
+    // del sistema que inserta ahí.
+    //
+    // Los rubros NO se mandan desde acá: el RPC los lee del metadata del
+    // signup. Corregirlos con un UPDATE posterior no funcionaba —medido en
+    // tres altas seguidas, la ficha quedaba en 'General'— porque depende de
+    // que la sesión y el perfil ya estén resueltos en el instante justo.
+    if (tipo === 'prestador') {
       const ficha = await PronetDB.asegurarFichaPrestador().catch(() => ({ ok: false }));
-      // El id sale de la respuesta del RPC, no de releer el perfil: la
-      // primera versión hacía lo segundo y `prestador_id` volvía null —
-      // mi_perfil() todavía no reflejaba el cambio recién hecho, así que
-      // los rubros no se guardaban y el prestador quedaba en 'General'.
-      const pid = ficha?.prestador_id || null;
-      if (pid && rubros.length) {
-        // Sin rubros el prestador queda invisible: no entra en el broadcast
-        // ni aparece cuando el vecino filtra por categoría.
-        await PronetDB.actualizar('prestadores', pid, { rubro: rubros[0], rubros })
-          .catch(() => {});
-      }
-      if (pid) usuarioActual = await PronetDB.usuarioActual();
+      if (ficha?.ok) usuarioActual = await PronetDB.usuarioActual();
     }
 
     cerrarRegistro();
