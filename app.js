@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -403,6 +403,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-param-rubros')   { renderParamRubros(); }
     if (id === 's-param-zonas')    { renderParamZonas(); }
     if (id === 's-param-niveles')  { renderParamNiveles(); }
+    if (id === 's-param-ajustes')  { renderParamAjustes(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -6234,6 +6235,13 @@ document.addEventListener('focusin', (e) => {
           <input id="rb-${escHTML(r.slug)}-max" value="${escHTML(String(r.precio_max))}" inputmode="numeric"
                  style="width:82px;text-align:right;font-size:13px;font-weight:600;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink)">
         </div>
+        <div style="padding:7px 0;border-top:1px solid var(--border)">
+          <div style="font-size:12.5px;color:var(--ink);margin-bottom:4px">Especialidades</div>
+          <input id="rb-${escHTML(r.slug)}-esp" value="${escHTML((r.especialidades || []).join(', '))}"
+                 placeholder="Separadas por coma"
+                 style="width:100%;font-size:12.5px;padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink);box-sizing:border-box">
+          <div style="font-size:10.5px;color:var(--ink3);margin-top:3px">Las opciones que el prestador marca en su perfil</div>
+        </div>
         <div id="rb-${escHTML(r.slug)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>
         <div style="display:flex;gap:8px">
           <button onclick="guardarParamRubro('${escHTML(r.slug)}')"
@@ -6260,8 +6268,13 @@ document.addEventListener('focusin', (e) => {
     // Invertidos, el slider de "Publicar pedido" queda sin recorrido válido.
     if (min >= max) { decir('⚠️ El mínimo tiene que ser menor que el máximo', '#BE123C'); return; }
 
+    // Especialidades: texto separado por comas. Se deduplican y se limpian
+    // los vacíos que deja escribir "a,,b" o terminar con una coma suelta.
+    const espTxt = (document.getElementById('rb-' + slug + '-esp')?.value || '');
+    const especialidades = [...new Set(espTxt.split(',').map(s => s.trim()).filter(Boolean))];
+
     decir('Guardando…', 'var(--ink3)');
-    const r = await PronetDB.guardarRubro(slug, { precio_min: min, precio_max: max });
+    const r = await PronetDB.guardarRubro(slug, { precio_min: min, precio_max: max, especialidades });
     if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
     await cargarRubrosDeLaBase();
     decir('✅ Guardado', 'var(--green)');
@@ -6276,6 +6289,80 @@ document.addEventListener('focusin', (e) => {
     renderParamRubros();
   }
   window.toggleRubroActivo = toggleRubroActivo;
+
+  // ══ PARAMETRÍAS · AJUSTES NUMÉRICOS ════════════════════════════════
+  //
+  // Valores sueltos de config_app. La lista es EXPLÍCITA y no un volcado de
+  // la tabla: `config_app` también guarda `admin_pin` en texto plano, y una
+  // pantalla genérica clave/valor lo pondría en pantalla.
+  //
+  // `min`/`max` no son decoración: un 0 en "sugeridos" o en "reseñas antes
+  // de ver todas" deja secciones enteras vacías sin que nada falle.
+  const AJUSTES_CONFIG = [
+    { k: 'pedido_vencimiento_hs',   n: 'Vida de un pedido',        u: 'horas',       min: 24, max: 2160, d: 'Cuánto dura publicado antes de vencer. 168 = 7 días' },
+    { k: 'inactividad_cierre_dias', n: 'Cierre por inactividad',   u: 'días',        min: 1,  max: 90,   d: 'Días sin actividad para que el vecino pueda cerrar' },
+    { k: 'pedido_fotos_max',        n: 'Fotos por pedido',         u: 'fotos',       min: 1,  max: 10,   d: '' },
+    { k: 'adjunto_max_mb',          n: 'Adjunto máximo en chat',   u: 'MB',          min: 1,  max: 25,   d: '' },
+    { k: 'rating_top',              n: 'Nota para el filtro Top',  u: '★',           min: 1,  max: 5,    d: 'Calificación mínima para aparecer en "Top"' },
+    { k: 'sugeridos_pedido',        n: 'Prestadores sugeridos',    u: 'prestadores', min: 1,  max: 10,   d: 'Cuántos se ofrecen al publicar un pedido' },
+    { k: 'mapa_prestadores_max',    n: 'Pines en el mapa',         u: 'pines',       min: 1,  max: 50,   d: 'Más pines saturan el mapa y lo vuelven ilegible' },
+    { k: 'resenas_preview',         n: 'Reseñas antes de "ver todas"', u: 'reseñas', min: 1,  max: 20,   d: '' },
+    { k: 'rate_limit_pedidos_max',  n: 'Pedidos por ventana',      u: 'pedidos',     min: 1,  max: 50,   d: 'Tope anti-spam de publicaciones' },
+    { k: 'rate_limit_pedidos_ventana_min', n: 'Ventana del tope',  u: 'minutos',     min: 1,  max: 1440, d: '' },
+  ];
+
+  async function renderParamAjustes() {
+    const wrap = document.getElementById('param-ajustes-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando ajustes…</div>';
+
+    const vals = await PronetDB.leerConfigApp(AJUSTES_CONFIG.map(a => a.k)).catch(() => ({}));
+
+    wrap.innerHTML = AJUSTES_CONFIG.map(a => `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:9px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">${escHTML(a.n)}</div>
+            ${a.d ? `<div style="font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.4">${escHTML(a.d)}</div>` : ''}
+          </div>
+          <input id="aj-${escHTML(a.k)}" value="${escHTML(vals[a.k] ?? '')}" inputmode="decimal"
+                 style="width:78px;text-align:right;font-size:13px;font-weight:600;padding:7px 9px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;color:var(--ink)">
+          <span style="font-size:11px;color:var(--ink3);width:64px">${escHTML(a.u)}</span>
+        </div>
+        <div id="aj-${escHTML(a.k)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin-top:6px"></div>
+        <button onclick="guardarParamAjuste('${escHTML(a.k)}')"
+                style="width:100%;background:var(--blue);color:white;border:none;border-radius:10px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>
+      </div>`).join('') + `
+      <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">
+        Los cambios impactan en la próxima apertura de cada usuario, cuando la app vuelve a leer la configuración.
+      </div>`;
+  }
+
+  async function guardarParamAjuste(clave) {
+    const def = AJUSTES_CONFIG.find(a => a.k === clave);
+    const msg = document.getElementById('aj-' + clave + '-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+    const v = Number((document.getElementById('aj-' + clave)?.value || '').trim().replace(',', '.'));
+
+    if (!Number.isFinite(v)) { decir('⚠️ Tiene que ser un número', '#BE123C'); return; }
+    if (def && (v < def.min || v > def.max)) {
+      decir('⚠️ Tiene que estar entre ' + def.min + ' y ' + def.max + ' ' + def.u, '#BE123C'); return;
+    }
+
+    decir('Guardando…', 'var(--ink3)');
+    const r = await PronetDB.guardarConfigApp(clave, v);
+    if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
+
+    // Reflejarlo en memoria para que el admin vea el efecto sin recargar.
+    const mapa = { pedido_vencimiento_hs: 'PROPUESTA_EXPIRACION_HS', inactividad_cierre_dias: 'INACTIVIDAD_CIERRE_DIAS',
+                   pedido_fotos_max: 'PEDIDO_FOTOS_MAX', adjunto_max_mb: 'ADJUNTO_MAX_MB', rating_top: 'RATING_TOP',
+                   sugeridos_pedido: 'SUGERIDOS_PEDIDO', mapa_prestadores_max: 'MAPA_PRESTADORES_MAX', resenas_preview: 'RESENAS_PREVIEW' };
+    if (mapa[clave] && window.PRONET_CONFIG) window.PRONET_CONFIG[mapa[clave]] = v;
+
+    decir('✅ Guardado', 'var(--green)');
+    setTimeout(() => decir('', ''), 2500);
+  }
+  window.guardarParamAjuste = guardarParamAjuste;
 
   // ══ PARAMETRÍAS · NIVELES DE LOYALTY ═══════════════════════════════
   async function renderParamNiveles() {
@@ -10819,9 +10906,16 @@ document.addEventListener('focusin', (e) => {
     // Sincronizar límites operacionales desde config_app → PRONET_CONFIG
     const mapaCfgOp = {
       propuesta_expiracion_hs:  'PROPUESTA_EXPIRACION_HS',
+      pedido_vencimiento_hs:    'PROPUESTA_EXPIRACION_HS',  // nombre nuevo de la misma cosa
       inactividad_cierre_dias:  'INACTIVIDAD_CIERRE_DIAS',
       pedido_fotos_max:         'PEDIDO_FOTOS_MAX',
       adjunto_max_mb:           'ADJUNTO_MAX_MB',
+      // Umbrales de descubrimiento: definen qué ve el usuario y hasta ahora
+      // cambiarlos exigía un deploy.
+      rating_top:               'RATING_TOP',
+      sugeridos_pedido:         'SUGERIDOS_PEDIDO',
+      mapa_prestadores_max:     'MAPA_PRESTADORES_MAX',
+      resenas_preview:          'RESENAS_PREVIEW',
     };
     if (window.PRONET_CONFIG) {
       Object.entries(mapaCfgOp).forEach(([clave, key]) => {

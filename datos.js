@@ -650,6 +650,19 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Lee varias claves de config_app de una. Devuelve `{clave: valor}`.
+     *  Sólo trae las que se piden: pedir la tabla entera devolvería también
+     *  `admin_pin`, que está en texto plano. */
+    async leerConfigApp(claves) {
+      if (!remoto || !claves?.length) return {};
+      const { data, error } = await sb.from('config_app')
+        .select('clave, valor').in('clave', claves);
+      if (error) { console.warn('[PronetDB] leerConfigApp', error.message); return {}; }
+      const mapa = {};
+      (data || []).forEach(r => { mapa[r.clave] = r.valor; });
+      return mapa;
+    },
+
     /** Niveles del programa de puntos. Lectura pública. */
     async listarLoyaltyNiveles() {
       if (!remoto) return [];
