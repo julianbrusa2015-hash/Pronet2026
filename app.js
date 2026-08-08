@@ -1470,6 +1470,25 @@ document.addEventListener('focusin', (e) => {
   function claveVistos() {
     return 'pronet_pedidos_vistos_' + (usuarioActual?.id || 'anon');
   }
+
+  // ── Reseñas nuevas ──────────────────────────────────────────────────
+  // Mismo mecanismo que los pedidos vistos: una reseña no se "abre", así
+  // que se guarda cuándo fue la última vez que miró sus reseñas y se
+  // cuentan las posteriores. Es el único indicador de buena noticia junto
+  // a "te eligieron", y hasta ahora una reseña nueva no avisaba nada.
+  function claveResenasVistas() {
+    return 'pronet_resenas_vistas_' + (usuarioActual?.id || 'anon');
+  }
+  function marcaResenasVistas() {
+    const guardada = localStorage.getItem(claveResenasVistas());
+    if (guardada) return new Date(guardada);
+    const ahora = new Date();
+    localStorage.setItem(claveResenasVistas(), ahora.toISOString());
+    return ahora;
+  }
+  function marcarResenasComoVistas() {
+    if (usuarioActual) localStorage.setItem(claveResenasVistas(), new Date().toISOString());
+  }
   function marcaPedidosVistos() {
     const guardada = localStorage.getItem(claveVistos());
     if (guardada) return new Date(guardada);
@@ -1517,7 +1536,7 @@ document.addEventListener('focusin', (e) => {
     const rubroFicha = ficha?.rubro || '';
     const rubro = /^general$/i.test(rubroFicha.trim()) ? '' : rubroFicha;
 
-    const [chats, sinLeerPorChat, cupo, analitica, ranking, feed, misPropuestas] = await Promise.all([
+    const [chats, sinLeerPorChat, cupo, analitica, ranking, feed, misPropuestas, resenasNuevas] = await Promise.all([
       PronetDB.listarChats().catch(() => []),
       // Desglose por chat, no el total de mensajes: ver más abajo por qué.
       PronetDB.noLeidosPorChat().catch(() => ({})),
@@ -1537,6 +1556,8 @@ document.addEventListener('focusin', (e) => {
         ? window._sb.from('propuestas').select('pedido_id, estado').eq('prestador_id', pid)
             .then(r => r.data || []).catch(() => [])
         : Promise.resolve([]),
+      pid ? PronetDB.contarResenasNuevas(pid, marcaResenasVistas()).catch(() => 0)
+          : Promise.resolve(0),
     ]);
     if (gen !== _genInicio) return; // llegó un render más nuevo
 
@@ -1581,6 +1602,7 @@ document.addEventListener('focusin', (e) => {
     // indicador. Mandar a la lista completa obligaba a volver a buscar a
     // mano lo que el tablero acababa de señalar.
     if (elegido > 0)    items.push({ ic:'🟢', txt: '¡Te eligieron! ' + elegido + ' trabajo' + (elegido>1?'s':'') + ' en curso', accion: "irAChats('activo')" });
+    if (resenasNuevas > 0) items.push({ ic:'⭐', txt: resenasNuevas === 1 ? '1 reseña nueva' : resenasNuevas + ' reseñas nuevas', accion: 'verResenasNuevas()' });
     if (chatsSinLeer > 0) items.push({ ic:'💬', txt: chatsSinLeer === 1 ? '1 conversación sin leer' : chatsSinLeer + ' conversaciones sin leer', accion: "irAChats('no_leidos')" });
     if (paraCerrar > 0) items.push({ ic:'🏁', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "irAChats('terminado_por_vecino')" });
     if (enConsulta > 0) items.push({ ic:'💭', txt: enConsulta + ' vecino' + (enConsulta>1?'s':'') + ' consultando', accion: "irAChats('consulta')" });
@@ -1666,6 +1688,14 @@ document.addEventListener('focusin', (e) => {
     const pos = ranking.find(r => r.zona === (usuarioActual?.zona || zonaActual));
     const posTxt = pos ? '#' + pos.posicion : '—';
     const cupoTxt = cupo.limite == null ? '∞' : (cupo.usadas ?? 0) + '/' + cupo.limite;
+    // El bloque azul muestra LOGROS, no gestión: "1/10 propuestas" es un
+    // límite administrativo del plan, no algo de lo que enorgullecerse. El
+    // cupo se movió a Mi analítica, donde vive el resto de lo operativo.
+    const nResenas = ficha?.resenas || 0;
+    const ratingTxt = nResenas > 0 ? '⭐ ' + Number(ficha.rating || 0).toFixed(1) : '—';
+    const ratingLbl = nResenas > 0
+      ? (nResenas === 1 ? '1 reseña' : nResenas + ' reseñas')
+      : 'sin reseñas';
 
     // Bloque de métricas en azul de marca. Va ARRIBA de los pendientes: es lo
     // primero que identifica al prestador en su propio tablero.
@@ -1683,7 +1713,7 @@ document.addEventListener('focusin', (e) => {
       <div style="background:var(--blue);border-radius:14px;padding:14px 6px;margin-bottom:10px;display:grid;grid-template-columns:repeat(3,1fr)">
         ${metrica(posTxt, 'en tu rubro', false)}
         ${metrica(vistas, 'vistas del mes', true)}
-        ${metrica(cupoTxt, 'propuestas', false)}
+        ${metrica(ratingTxt, ratingLbl, false)}
       </div>`;
 
     const bloquePendientes = items.length ? `
@@ -7418,7 +7448,11 @@ document.addEventListener('focusin', (e) => {
       top.addEventListener('click', () => abrirDetallePedido(p.usuario_id ? p : { ...p, usuario_id: usuarioActual?.id }));
       top.appendChild(ico);top.appendChild(info);top.appendChild(badge);card.appendChild(top);
       const nProps=conteoProps[p.id]||0;
-      const pedidoAbierto=!['cerrado','calificado','terminado','cancelado'].includes(p.estado);
+      // toLowerCase() y no comparación directa: el RPC elegir_propuesta
+      // escribe 'Cerrado' con mayúscula y esta lista estaba en minúsculas,
+      // así que los pedidos cerrados daban "abierto" y se les mostraba
+      // "N propuestas recibidas · Ver y comparar" y el botón Renovar.
+      const pedidoAbierto=!['cerrado','calificado','terminado','cancelado'].includes((p.estado||'').toLowerCase());
       if(nProps>0&&pedidoAbierto){const pb=document.createElement('button');pb.textContent='📬 '+nProps+' propuesta'+(nProps!==1?'s':'')+' recibida'+(nProps!==1?'s':'')+' — Ver y comparar →';pb.style.cssText='width:100%;margin-top:10px;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-s);border:1.5px solid #C7D5FF;border-radius:10px;padding:9px;cursor:pointer;font-family:inherit';pb.addEventListener('click',(e)=>{e.stopPropagation();abrirDetallePedido(p.usuario_id ? p : { ...p, usuario_id: usuarioActual?.id });});card.appendChild(pb);}
 
       // Aviso de vencimiento + renovar. Se muestra cuando quedan menos de
@@ -7669,6 +7703,19 @@ document.addEventListener('focusin', (e) => {
     deltaEl('kpi-vistas-d', delta(vistas, vAnt));
     deltaEl('kpi-contactos-d', delta(contactos, cAnt));
     deltaEl('kpi-conv-d', convAnt === 0 ? '—' : (conv - convAnt >= 0 ? `▲ +${conv - convAnt}pts` : `▼ ${conv - convAnt}pts`));
+
+    // Cupo de propuestas del plan. Se muestra sólo si hay tope: con plan Pro
+    // (ilimitado) la fila no aporta nada.
+    puedeEnviarPropuesta().then(c => {
+      const fila = document.getElementById('an-cupo');
+      if (!fila) return;
+      if (c && c.limite != null) {
+        set('an-cupo-val', (c.usadas ?? 0) + ' de ' + c.limite);
+        fila.style.display = 'flex';
+      } else {
+        fila.style.display = 'none';
+      }
+    }).catch(() => {});
 
     // Actualizar tile hero de Mi perfil y menú-item de analítica
     set('perfil-vistas-mes', vistas.toLocaleString('es-AR') + ' vistas este mes');
@@ -9939,6 +9986,14 @@ document.addEventListener('focusin', (e) => {
 
   // ══ MENÚ PRESTADOR ═══════════════════════════════════════════════════
   function abrirCobertura(){goTo('s-publicar');pubNext(3);}
+  /** Abre las reseñas propias y corre la marca: al verlas dejan de ser
+   *  nuevas y el indicador del tablero se apaga en el próximo render. */
+  async function verResenasNuevas(){
+    marcarResenasComoVistas();
+    await abrirMisResenas();
+  }
+  window.verResenasNuevas = verResenasNuevas;
+
   async function abrirMisResenas(){
     if(!usuarioActual||!usuarioActual.prestador_id){alert('Tu perfil de prestador no está completo todavía.');return;}
     try{const yo=await PronetDB.obtener('prestadores',usuarioActual.prestador_id);if(yo)abrirPerfilPrestador(yo);else alert('No se encontró tu perfil.');}catch(e){alert('No se pudo cargar tu perfil.');}

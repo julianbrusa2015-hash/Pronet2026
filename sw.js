@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v142'; // v142: las 4 listas de rubros salen de un catalogo unico
+const CACHE_VERSION = 'pronet-v143'; // v143: indicador de resena nueva, calificacion en el bloque azul, cupo a analitica
 
 const SHELL = [
   './',

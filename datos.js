@@ -142,6 +142,18 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Reseñas recibidas por un prestador después de `desde`.
+     *  Cuenta sin traer las filas: el tablero sólo necesita el número. */
+    async contarResenasNuevas(prestadorId, desde) {
+      if (!remoto || !prestadorId || !desde) return 0;
+      const { count, error } = await sb.from('resenas')
+        .select('id', { count: 'exact', head: true })
+        .eq('prestador_id', prestadorId)
+        .gt('creado', new Date(desde).toISOString());
+      if (error) { console.warn('[PronetDB] contarResenasNuevas', error.message); return 0; }
+      return count || 0;
+    },
+
     /** Cuenta filas sin traerlas (`head: true` → sólo el header con el count).
      *  Para cualquier lugar que sólo necesita el número. */
     async contar(coleccion) {
