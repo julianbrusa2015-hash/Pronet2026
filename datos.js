@@ -650,6 +650,27 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Catálogo de rubros. Lectura pública: los chips del home se dibujan
+     *  antes de que haya sesión. `soloActivos` para todo lo que ofrece
+     *  elegir; el panel de admin los quiere todos. */
+    async listarRubros(soloActivos = true) {
+      if (!remoto) return [];
+      let q = sb.from('rubros').select('*').order('orden', { ascending: true });
+      if (soloActivos) q = q.eq('activo', true);
+      const { data, error } = await q;
+      if (error) { console.warn('[PronetDB] listarRubros', error.message); return []; }
+      return data || [];
+    },
+
+    /** Alta o edición de un rubro. Sólo admin. */
+    async guardarRubro(slug, campos) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { error } = await sb.from('rubros')
+        .upsert({ slug, ...campos }, { onConflict: 'slug' });
+      if (error) { console.warn('[PronetDB] guardarRubro', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
+    },
+
     /** Guarda los límites y precios de un plan. Sólo admin (policy
      *  `limites_admin_escribe`); si no lo es, RLS rechaza y se devuelve el
      *  error en vez de fingir que guardó. */

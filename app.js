@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features'];
+    's-param-planes','s-param-features','s-param-rubros'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -400,6 +400,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-moderacion') { renderModeracion(); renderConfigAdmin(); }
     if (id === 's-param-planes')   { renderParamPlanes(); }
     if (id === 's-param-features') { renderParamFeatures(); }
+    if (id === 's-param-rubros')   { renderParamRubros(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -1280,6 +1281,37 @@ document.addEventListener('focusin', (e) => {
     if (!rubro) return null;
     const norm = r => (r || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     return RUBROS.find(r => norm(r.n) === norm(rubro))?.slug || null;
+  }
+
+  /** Reemplaza el catálogo local con el de la base y repinta.
+   *
+   *  `RUBROS` en el código pasa a ser el RESPALDO: si la consulta falla o
+   *  la app abre sin conexión, los chips igual se dibujan. Es el mismo
+   *  criterio que ya usaban los planes con `planes_limites`.
+   *
+   *  De paso alimenta los rangos de precio y las especialidades, que vivían
+   *  en dos objetos aparte indexados por NOMBRE de rubro — con eso, agregar
+   *  un rubro desde el panel lo dejaba sin rango y sin especialidades. */
+  async function cargarRubrosDeLaBase() {
+    const filas = await PronetDB.listarRubros(true).catch(() => []);
+    if (!filas.length) return false;   // sin datos: se queda el respaldo
+
+    RUBROS.splice(0, RUBROS.length, ...filas.map(r => ({
+      n: r.nombre, slug: r.slug, emoji: r.emoji,
+      bg: r.bg, color: r.color, svg: r.svg || '',
+    })));
+    Object.keys(RUBRO_POR_SLUG).forEach(k => delete RUBRO_POR_SLUG[k]);
+    RUBROS.forEach(r => { RUBRO_POR_SLUG[r.slug] = r; });
+
+    filas.forEach(r => {
+      if (window.PRONET_CONFIG?.SLIDER_RANGOS) {
+        window.PRONET_CONFIG.SLIDER_RANGOS[r.nombre] = { min: r.precio_min, max: r.precio_max };
+      }
+      if (r.especialidades?.length) ESPECIALIDADES_POR_RUBRO[r.nombre] = r.especialidades;
+    });
+
+    pintarRubros();
+    return true;
   }
 
   /** Pinta las tres listas de rubros desde el catálogo. Se llama una vez al
@@ -6082,6 +6114,94 @@ document.addEventListener('focusin', (e) => {
   }
   window.guardarParamPlan = guardarParamPlan;
 
+  // ══ PARAMETRÍAS · RUBROS ═══════════════════════════════════════════
+  //
+  // Se puede editar el nombre, el rango de precio y la baja lógica.
+  // El emoji, el color y el SVG NO se editan acá a propósito: un ícono mal
+  // pegado rompe el render de los chips en todas las pantallas, y no hay
+  // forma razonable de validar un path SVG desde un input de texto. Para
+  // un rubro nuevo se usa un ícono genérico y se ajusta por SQL.
+  async function renderParamRubros() {
+    const wrap = document.getElementById('param-rubros-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando rubros…</div>';
+
+    const filas = await PronetDB.listarRubros(false).catch(() => []);
+    if (!filas.length) {
+      wrap.innerHTML = '<div style="padding:32px 18px;text-align:center;font-size:13px;color:#BE123C">⚠️ No se pudieron cargar los rubros.</div>';
+      return;
+    }
+
+    // Cuántos pedidos usa cada rubro: es lo que decide si dar de baja duele.
+    let uso = {};
+    try {
+      const peds = await PronetDB.listar('pedidos');
+      peds.forEach(p => { if (p.rubro) uso[p.rubro] = (uso[p.rubro] || 0) + 1; });
+    } catch (e) { /* el conteo es informativo, no bloquea la pantalla */ }
+
+    wrap.innerHTML = filas.map(r => `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:11px${r.activo ? '' : ';opacity:.6'}">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+          <span style="font-size:20px">${r.emoji || '📋'}</span>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:800;color:var(--ink)">${escHTML(r.nombre)}</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">
+              ${escHTML(r.slug)}${uso[r.nombre] ? ' · ' + uso[r.nombre] + ' pedido' + (uso[r.nombre] > 1 ? 's' : '') : ' · sin pedidos'}
+            </div>
+          </div>
+          ${r.activo ? '' : '<span style="font-size:10px;font-weight:700;background:var(--surface);color:var(--ink3);border-radius:6px;padding:3px 7px">Inactivo</span>'}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border)">
+          <span style="flex:1;font-size:12.5px;color:var(--ink)">Precio de referencia</span>
+          <input id="rb-${escHTML(r.slug)}-min" value="${escHTML(String(r.precio_min))}" inputmode="numeric"
+                 style="width:82px;text-align:right;font-size:13px;font-weight:600;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink)">
+          <span style="font-size:12px;color:var(--ink3)">a</span>
+          <input id="rb-${escHTML(r.slug)}-max" value="${escHTML(String(r.precio_max))}" inputmode="numeric"
+                 style="width:82px;text-align:right;font-size:13px;font-weight:600;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink)">
+        </div>
+        <div id="rb-${escHTML(r.slug)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>
+        <div style="display:flex;gap:8px">
+          <button onclick="guardarParamRubro('${escHTML(r.slug)}')"
+                  style="flex:1;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>
+          <button onclick="toggleRubroActivo('${escHTML(r.slug)}', ${r.activo ? 'false' : 'true'})"
+                  style="flex:1;background:${r.activo ? 'var(--surface)' : 'var(--green-s)'};color:${r.activo ? 'var(--ink2)' : 'var(--green)'};border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">
+            ${r.activo ? 'Dar de baja' : 'Reactivar'}
+          </button>
+        </div>
+      </div>`).join('') + `
+      <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">
+        Dar de baja un rubro lo saca de los listados pero <b>no toca los pedidos ya publicados</b>: siguen mostrando su nombre e ícono. No se borran porque los pedidos guardan el rubro como texto, sin vínculo con esta tabla.
+      </div>`;
+  }
+
+  async function guardarParamRubro(slug) {
+    const msg = document.getElementById('rb-' + slug + '-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+    const min = Number((document.getElementById('rb-' + slug + '-min')?.value || '').trim());
+    const max = Number((document.getElementById('rb-' + slug + '-max')?.value || '').trim());
+
+    if (!Number.isFinite(min) || !Number.isFinite(max)) { decir('⚠️ Los precios tienen que ser números', '#BE123C'); return; }
+    if (min < 0 || max < 0) { decir('⚠️ Los precios no pueden ser negativos', '#BE123C'); return; }
+    // Invertidos, el slider de "Publicar pedido" queda sin recorrido válido.
+    if (min >= max) { decir('⚠️ El mínimo tiene que ser menor que el máximo', '#BE123C'); return; }
+
+    decir('Guardando…', 'var(--ink3)');
+    const r = await PronetDB.guardarRubro(slug, { precio_min: min, precio_max: max });
+    if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
+    await cargarRubrosDeLaBase();
+    decir('✅ Guardado', 'var(--green)');
+    setTimeout(() => decir('', ''), 2500);
+  }
+  window.guardarParamRubro = guardarParamRubro;
+
+  async function toggleRubroActivo(slug, activar) {
+    const r = await PronetDB.guardarRubro(slug, { activo: activar });
+    if (!r?.ok) { alert('No se pudo cambiar el estado: ' + (r?.error || 'error')); return; }
+    await cargarRubrosDeLaBase();
+    renderParamRubros();
+  }
+  window.toggleRubroActivo = toggleRubroActivo;
+
   // ══ FUNCIONALIDADES · prender y apagar ═════════════════════════════
   //
   // Separado de las parametrías a propósito: esto no configura datos del
@@ -10503,6 +10623,12 @@ document.addEventListener('focusin', (e) => {
       .forEach(k => { if (k in FEATURES) FEATURES[k] = false; });
 
     aplicarFeatureFlags();
+
+    // Catálogo de rubros desde la base. No se espera: los chips ya están
+    // dibujados con el respaldo del código, y esto los reemplaza cuando
+    // llega. Bloquear el arranque por esto dejaría la pantalla en blanco
+    // si la consulta tarda.
+    cargarRubrosDeLaBase().catch(() => {});
 
     configCargada = true;
     reflejarPlan();
