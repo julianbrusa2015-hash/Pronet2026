@@ -6608,35 +6608,25 @@ document.addEventListener('focusin', (e) => {
       // Traer datos del prestador actual
       const miPerfil = await PronetDB.obtener('prestadores', usuarioActual.prestador_id);
       if (!miPerfil) { wrap.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Sin datos de ranking</div>'; return; }
-      const miRubro = miPerfil.rubro || '';
       const miZona = miPerfil.zona || 'Escobar';
-      // Traer todos los prestadores del mismo rubro
-      const todos = await PronetDB.listarPrestadores({ rubro: miRubro });
-      const ordenados = [...todos].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      // Encontrar la posición del prestador actual
-      const pos = ordenados.findIndex(p => p.id === usuarioActual.prestador_id) + 1;
-      // Generar cards
+      // Las dos posiciones salen de un solo RPC que las calcula con rank().
+      // Antes se traían todos los prestadores del rubro y todos los de la
+      // zona —dos consultas de tabla casi entera— para después buscarse a
+      // uno mismo en el array.
+      const r = await PronetDB.obtenerPosicionPrestador(usuarioActual.prestador_id);
       wrap.innerHTML = '';
-      if (pos > 0) {
+      const tarjeta = (pos, total, cat) => {
         const card = document.createElement('div');
         card.className = 'my-rank-card';
         card.innerHTML = '<div class="mr-pos">#' + pos + '</div>'
-          + '<div class="mr-cat">' + escHTML(miRubro) + '</div>'
-          + '<div class="mr-zona">' + escHTML(miZona) + '</div>';
+          + '<div class="mr-cat">' + escHTML(cat) + '</div>'
+          // El total no se mostraba porque calcularlo costaba otra pasada.
+          // "#3 de 18" dice mucho más que "#3" solo.
+          + '<div class="mr-zona">' + escHTML('de ' + total + ' · ' + miZona) + '</div>';
         wrap.appendChild(card);
-      }
-      // Ranking general (todos los rubros, misma zona)
-      const todosZona = await PronetDB.listarPrestadores({ zona: miZona });
-      const ordZona = [...todosZona].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      const posGeneral = ordZona.findIndex(p => p.id === usuarioActual.prestador_id) + 1;
-      if (posGeneral > 0) {
-        const card2 = document.createElement('div');
-        card2.className = 'my-rank-card';
-        card2.innerHTML = '<div class="mr-pos">#' + posGeneral + '</div>'
-          + '<div class="mr-cat">General</div>'
-          + '<div class="mr-zona">' + escHTML(miZona) + '</div>';
-        wrap.appendChild(card2);
-      }
+      };
+      if (r?.pos_rubro && r.rubro) tarjeta(r.pos_rubro, r.total_rubro, r.rubro);
+      if (r?.pos_zona)             tarjeta(r.pos_zona,  r.total_zona,  'General');
       if (!wrap.children.length) {
         wrap.innerHTML = '<div style="font-size:12px;color:var(--ink3)">Sin ranking disponible</div>';
       }
@@ -9798,7 +9788,9 @@ document.addEventListener('focusin', (e) => {
     props=props.filter(pr=>pr.pedido_id===pedido.id&&pr.estado!=='retirada');
     if(props.length===0){wrap.innerHTML='<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no recibiste propuestas.<br>Los prestadores de tu zona ya pueden ver tu pedido.</div>';return false;}
     let porId={};
-    try{const pr=await PronetDB.listarPrestadores({});pr.forEach(x=>{porId[x.id]=x;});}catch(e){}
+    // Sólo los prestadores que efectivamente propusieron. Antes pedía la
+    // tabla entera para armar un mapa del que se usaban dos o tres entradas.
+    try{const pr=await PronetDB.obtenerVarios('prestadores',props.map(p=>p.prestador_id));pr.forEach(x=>{porId[x.id]=x;});}catch(e){}
     const t=document.getElementById('pd-props-title'),s=document.getElementById('pd-props-sub'),f=document.getElementById('pd-props-foot');
     const hayElegida=props.some(pr=>pr.estado==='elegida');
     if(t) t.textContent=hayElegida?'✅ Prestador elegido':'📬 Propuestas recibidas ('+props.length+')';

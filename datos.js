@@ -1842,26 +1842,25 @@ const PronetDB = (() => {
     },
 
     /** Lista prestadores con filtros opcionales: {rubro, zona, premium, busqueda} */
+    /** Busca prestadores vía RPC `buscar_prestadores`.
+     *
+     *  Antes se armaba con `.or()` concatenando el texto del usuario, y eso
+     *  traía tres problemas: ILIKE **no** ignora acentos ("maria" nunca
+     *  encontró a "María"), el índice trigram no se aplicaba, y una coma en
+     *  la búsqueda partía el filtro de PostgREST en dos y rompía la
+     *  consulta. El RPC recibe el texto como parámetro y busca sobre la
+     *  misma expresión que indexa — ver supabase-busqueda-unaccent.sql. */
     async listarPrestadores(filtros = {}) {
-      if (remoto) {
-        let q = sb.from('prestadores').select('*').eq('activo', true);
-        if (filtros.rubro)   q = q.eq('rubro', filtros.rubro);
-        if (filtros.zona)    q = q.eq('zona', filtros.zona);
-        if (filtros.premium) q = q.eq('premium', true);
-        if (filtros.busqueda) {
-          // Buscar en nombre Y en rubro (sin tilde, case-insensitive)
-          q = q.or(
-            'nombre.ilike.%' + filtros.busqueda + '%,' +
-            'rubro.ilike.%' + filtros.busqueda + '%,' +
-            'subrubro.ilike.%' + filtros.busqueda + '%'
-          );
-        }
-        q = q.order('rating', { ascending: false });
-        const { data, error } = await q;
-        if (error) { console.warn('[PronetDB] listarPrestadores', error.message, '→ fallback local'); return []; }
-        return data || [];
-      }
-      return [];
+      if (!remoto) return [];
+      const { data, error } = await sb.rpc('buscar_prestadores', {
+        p_texto:   filtros.busqueda || null,
+        p_rubro:   filtros.rubro    || null,
+        p_zona:    filtros.zona     || null,
+        p_premium: filtros.premium ? true : null,
+        p_limite:  filtros.limite   || 100,
+      });
+      if (error) { console.warn('[PronetDB] listarPrestadores', error.message); return []; }
+      return data || [];
     },
 
     /** Renueva un pedido propio por otra ventana completa (7 días).
@@ -1876,6 +1875,20 @@ const PronetDB = (() => {
     },
 
     /** Obtiene la posición del prestador en el ranking por zona y rubro. */
+    /** Posición del prestador en su rubro y en su zona, calculada en la
+     *  base con rank(). Devuelve `{rubro, zona, pos_rubro, total_rubro,
+     *  pos_zona, total_zona}` o null.
+     *
+     *  Antes se traían TODOS los prestadores y se buscaba el propio con
+     *  findIndex(). Con un límite en la consulta eso rompe callado: el que
+     *  queda fuera del corte da -1 y la tarjeta simplemente no se dibuja. */
+    async obtenerPosicionPrestador(prestadorId) {
+      if (!remoto || !prestadorId) return null;
+      const { data, error } = await sb.rpc('posicion_prestador', { p_prestador_id: prestadorId });
+      if (error) { console.warn('[PronetDB] obtenerPosicionPrestador', error.message); return null; }
+      return (data && data[0]) || null;
+    },
+
     async obtenerRankingPrestador(prestadorId, rubro) {
       if (!remoto) return [];
       // Traer todos los prestadores del mismo rubro ordenados por rating DESC

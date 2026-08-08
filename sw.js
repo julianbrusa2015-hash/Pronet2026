@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v140'; // v140: el feed de pedidos se filtra en el servidor, no en el cliente
+const CACHE_VERSION = 'pronet-v141'; // v141: busqueda sin acentos con indice, y el ranking se calcula en la base
 
 const SHELL = [
   './',
