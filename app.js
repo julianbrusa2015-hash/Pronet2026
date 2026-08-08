@@ -7506,6 +7506,29 @@ document.addEventListener('focusin', (e) => {
     }
 
     usuarioActual = await PronetDB.usuarioActual();
+
+    // El trigger de alta sólo crea la fila de `perfiles`. La de
+    // `prestadores` la crea `asegurar_ficha_prestador()`, que es idempotente
+    // y el único lugar del sistema que inserta ahí — por eso se la llama en
+    // vez de repetir la lógica en el trigger, que abriría la puerta a filas
+    // dobles.
+    //
+    // Sin esto, quien se registraba como prestador quedaba con
+    // prestador_id en null: esPrestador() daba false y la app lo trataba
+    // como vecino, sin que nada fallara.
+    if (tipo === 'prestador' && usuarioActual && !usuarioActual.prestador_id) {
+      const ficha = await PronetDB.asegurarFichaPrestador().catch(() => ({ ok: false }));
+      if (ficha?.ok) {
+        usuarioActual = await PronetDB.usuarioActual();
+        // Los rubros elegidos en el formulario: sin ellos el prestador
+        // queda invisible para el broadcast y para el filtro por categoría.
+        if (usuarioActual?.prestador_id && rubros.length) {
+          await PronetDB.actualizar('prestadores', usuarioActual.prestador_id,
+            { rubro: rubros[0], rubros }).catch(() => {});
+        }
+      }
+    }
+
     cerrarRegistro();
     entrarApp();
   }

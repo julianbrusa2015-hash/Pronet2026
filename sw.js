@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v153'; // v153: los T&C se aceptan al registrarse, contra la cuenta y no el dispositivo
+const CACHE_VERSION = 'pronet-v154'; // v154: el alta escribe en el trigger real y crea la ficha del prestador
 
 const SHELL = [
   './',
