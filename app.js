@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros','s-param-zonas'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -402,6 +402,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-param-features') { renderParamFeatures(); }
     if (id === 's-param-rubros')   { renderParamRubros(); }
     if (id === 's-param-zonas')    { renderParamZonas(); }
+    if (id === 's-param-niveles')  { renderParamNiveles(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -3835,6 +3836,37 @@ document.addEventListener('focusin', (e) => {
   };
   function zonaParaFiltro() { return ZONA_DB[zonaActual] || zonaActual; }
 
+  /** Trae los niveles de loyalty desde la base a PRONET_CONFIG.
+   *
+   *  Los mismos umbrales estaban en config.js, dentro de
+   *  `acreditar_puntos()` y en un ternario para el emoji. La pantalla podía
+   *  mostrar una barra de progreso hacia "Oro" mientras la base ya había
+   *  guardado otro nivel, sin que nada fallara.
+   *
+   *  El `max` de cada nivel se DERIVA del mínimo del siguiente, no se
+   *  guarda: tenerlo aparte es justamente lo que permitía el desfase. */
+  async function cargarNivelesLoyalty() {
+    const filas = await PronetDB.listarLoyaltyNiveles().catch(() => []);
+    if (!filas.length || !window.PRONET_CONFIG) return false;
+    window.PRONET_CONFIG.LOYALTY_NIVELES = filas.map((n, i) => ({
+      nombre: n.nombre,
+      emoji:  n.emoji,
+      min:    n.min_puntos,
+      // El último nivel no tiene techo: se le da margen para que la barra
+      // de progreso no quede clavada en 100% apenas se entra.
+      max:    filas[i + 1] ? filas[i + 1].min_puntos : Math.round(n.min_puntos * 2.5) || 1000,
+    }));
+    return true;
+  }
+
+  /** Emoji de un nivel, desde el catálogo.
+   *  Antes era un ternario que no contemplaba Élite, así que el nivel más
+   *  alto se mostraba con la medalla de bronce. */
+  function emojiNivel(nombre) {
+    const n = (window.PRONET_CONFIG?.LOYALTY_NIVELES || []).find(x => x.nombre === nombre);
+    return n?.emoji || '🥉';
+  }
+
   /** Reemplaza el catálogo de zonas con el de la base y repinta el selector.
    *
    *  Barrio → zona madre y barrio → coordenada vivían en DOS objetos
@@ -6245,6 +6277,80 @@ document.addEventListener('focusin', (e) => {
   }
   window.toggleRubroActivo = toggleRubroActivo;
 
+  // ══ PARAMETRÍAS · NIVELES DE LOYALTY ═══════════════════════════════
+  async function renderParamNiveles() {
+    const wrap = document.getElementById('param-niveles-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando niveles…</div>';
+
+    const filas = await PronetDB.listarLoyaltyNiveles().catch(() => []);
+    if (!filas.length) {
+      wrap.innerHTML = '<div style="padding:32px 18px;text-align:center;font-size:13px;color:#BE123C">⚠️ No se pudieron cargar los niveles.</div>';
+      return;
+    }
+
+    // Cuánta gente hay en cada nivel: mover un umbral los reclasifica a todos.
+    let porNivel = {};
+    try {
+      const { data } = await window._sb.from('loyalty').select('nivel');
+      (data || []).forEach(l => { porNivel[l.nivel] = (porNivel[l.nivel] || 0) + 1; });
+    } catch (e) { /* informativo */ }
+
+    wrap.innerHTML = filas.map((n, i) => `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+          <span style="font-size:20px">${n.emoji}</span>
+          <div style="flex:1">
+            <div style="font-size:13.5px;font-weight:800;color:var(--ink)">${escHTML(n.nombre)}</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">
+              ${porNivel[n.nombre] ? porNivel[n.nombre] + ' usuario' + (porNivel[n.nombre] > 1 ? 's' : '') : 'sin usuarios'}
+              ${filas[i + 1] ? ' · hasta ' + (filas[i + 1].min_puntos - 1).toLocaleString('es-AR') + ' pts' : ' · sin techo'}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border)">
+          <span style="flex:1;font-size:12.5px;color:var(--ink)">Desde</span>
+          <input id="nv-${escHTML(n.nombre)}-min" value="${escHTML(String(n.min_puntos))}" inputmode="numeric"
+                 ${i === 0 ? 'disabled' : ''}
+                 style="width:100px;text-align:right;font-size:13px;font-weight:600;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink)${i === 0 ? ';background:var(--surface);color:var(--ink3)' : ''}">
+          <span style="font-size:12px;color:var(--ink3)">pts</span>
+        </div>
+        <div id="nv-${escHTML(n.nombre)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>
+        ${i === 0 ? '' : `<button onclick="guardarParamNivel('${escHTML(n.nombre)}')"
+                  style="width:100%;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>`}
+      </div>`).join('') + `
+      <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">
+        Mover un umbral <b>reclasifica a todos</b> de inmediato: alguien que estaba en Oro puede volver a Plata. El primer nivel arranca siempre en 0 y por eso no se edita.
+      </div>`;
+  }
+
+  async function guardarParamNivel(nombre) {
+    const msg = document.getElementById('nv-' + nombre + '-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+    const min = Number((document.getElementById('nv-' + nombre + '-min')?.value || '').trim());
+    if (!Number.isFinite(min) || min < 0) { decir('⚠️ Tiene que ser un número mayor o igual a 0', '#BE123C'); return; }
+
+    // Los umbrales tienen que quedar en orden estricto: si dos niveles
+    // empatan o se cruzan, nivel_para_puntos() elige por min_puntos desc y
+    // uno de los dos se vuelve inalcanzable, sin que nada falle.
+    const filas = await PronetDB.listarLoyaltyNiveles().catch(() => []);
+    const i = filas.findIndex(f => f.nombre === nombre);
+    const anterior = filas[i - 1], siguiente = filas[i + 1];
+    if (anterior && min <= anterior.min_puntos) {
+      decir('⚠️ Tiene que ser mayor que ' + anterior.nombre + ' (' + anterior.min_puntos + ')', '#BE123C'); return;
+    }
+    if (siguiente && min >= siguiente.min_puntos) {
+      decir('⚠️ Tiene que ser menor que ' + siguiente.nombre + ' (' + siguiente.min_puntos + ')', '#BE123C'); return;
+    }
+
+    decir('Guardando…', 'var(--ink3)');
+    const r = await PronetDB.guardarLoyaltyNivel(nombre, { min_puntos: min });
+    if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
+    await cargarNivelesLoyalty();
+    renderParamNiveles();
+  }
+  window.guardarParamNivel = guardarParamNivel;
+
   // ══ PARAMETRÍAS · ZONAS Y BARRIOS ══════════════════════════════════
   async function renderParamZonas() {
     const wrap = document.getElementById('param-zonas-lista');
@@ -6869,7 +6975,9 @@ document.addEventListener('focusin', (e) => {
       const loy = await PronetDB.obtenerLoyalty();
       const pts = (loy.puntos || 0).toLocaleString('es-AR');
       const niv = loy.nivel || 'Bronce';
-      const emoji = niv === 'Oro' ? '🥇' : niv === 'Plata' ? '🥈' : '🥉';
+      // Antes era un ternario sin caso para Élite: el nivel más alto salía
+      // con la medalla de bronce. Ahora sale del catálogo.
+      const emoji = emojiNivel(niv);
       if (tileEl) tileEl.textContent = pts + ' pts · Nivel ' + niv;
       if (menuEl) menuEl.textContent = pts + ' pts disponibles · Nivel ' + niv + ' ' + emoji;
     } catch (e) {
@@ -10749,6 +10857,7 @@ document.addEventListener('focusin', (e) => {
     // si la consulta tarda.
     cargarRubrosDeLaBase().catch(() => {});
     cargarZonasDeLaBase().catch(() => {});
+    cargarNivelesLoyalty().catch(() => {});
 
     configCargada = true;
     reflejarPlan();

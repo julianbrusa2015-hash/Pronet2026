@@ -650,6 +650,25 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Niveles del programa de puntos. Lectura pública. */
+    async listarLoyaltyNiveles() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('loyalty_niveles')
+        .select('*').order('orden', { ascending: true });
+      if (error) { console.warn('[PronetDB] listarLoyaltyNiveles', error.message); return []; }
+      return data || [];
+    },
+
+    /** Edita un nivel. Sólo admin. UPDATE, no upsert (ver guardarRubro). */
+    async guardarLoyaltyNivel(nombre, campos) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.from('loyalty_niveles')
+        .update(campos).eq('nombre', nombre).select('nombre');
+      if (error) { console.warn('[PronetDB] guardarLoyaltyNivel', error.message); return { ok: false, error: error.message }; }
+      if (!data || !data.length) return { ok: false, error: 'No se encontró el nivel o no tenés permiso' };
+      return { ok: true };
+    },
+
     /** Catálogo de zonas/barrios. Lectura pública: el selector de zona
      *  aparece antes de iniciar sesión. */
     async listarZonas(soloActivas = true) {

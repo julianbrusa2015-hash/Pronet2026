@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v149'; // v149: zonas y barrios salen de la base y son editables
+const CACHE_VERSION = 'pronet-v150'; // v150: los niveles de loyalty salen de la base, no de tres copias
 
 const SHELL = [
   './',
