@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v145'; // v145: parametria de planes editable desde el panel admin
+const CACHE_VERSION = 'pronet-v146'; // v146: los flags de funcionalidades pasan a ser globales, no por dispositivo
 
 const SHELL = [
   './',

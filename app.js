@@ -6082,6 +6082,88 @@ document.addEventListener('focusin', (e) => {
   }
   window.guardarParamPlan = guardarParamPlan;
 
+  // ══ FUNCIONALIDADES · prender y apagar ═════════════════════════════
+  //
+  // Separado de las parametrías a propósito: esto no configura datos del
+  // negocio, prende y apaga partes de la app.
+  //
+  // Los de NIVEL 1 no se exponen. Apagar `home`, `chat` o `bolsaTrabajo`
+  // deja la app inutilizable, y como el panel vive dentro de la app, el
+  // admin podría quedarse sin forma de volver a prenderlos.
+  const FEATURES_EDITABLES = [
+    { k: 'badgeVerificado',   n: 'Badge de verificado',    d: 'Escudo verde en los prestadores verificados' },
+    { k: 'suscripcionPro',    n: 'Planes y suscripciones', d: 'Pantalla de planes y todo el circuito de pago' },
+    { k: 'catalogoPrecios',   n: 'Catálogo de precios',    d: 'Precios referenciales en las fichas' },
+    { k: 'editarPerfilPro',   n: 'Perfil profesional',     d: 'Edición completa e historial de trabajos' },
+    { k: 'denuncias',         n: 'Denuncias y moderación', d: 'Reportar usuarios y panel de moderación' },
+    { k: 'loyalty',           n: 'PRONET Points',          d: 'Programa de puntos y canjes' },
+    { k: 'analyticsAvanzado', n: 'Analítica avanzada',     d: 'Métricas detalladas para el prestador' },
+    { k: 'tutorialOnboarding', n: 'Tutorial de bienvenida', d: 'Guía de 4 pasos en el primer ingreso' },
+    // `mercadoPlaza` NO va acá: ya tiene su propio interruptor en
+    // "Configuración de la app", que escribe en config_app.promarket_activo.
+    // Ponerlo también en esta lista daría dos switches para lo mismo
+    // guardando en claves distintas, y el que se aplicara último ganaría.
+  ];
+
+  async function renderParamFeatures() {
+    const wrap = document.getElementById('param-features-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+
+    const apagadas = await PronetDB.listarFeaturesApagadas().catch(() => []);
+    const off = new Set(apagadas);
+
+    wrap.innerHTML = `
+      <div style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:12px;padding:11px 13px;font-size:11.5px;color:var(--blue);line-height:1.5;margin-bottom:12px">
+        Estos interruptores afectan a <b>todos los usuarios</b>. Antes esta configuración se guardaba sólo en este dispositivo.
+      </div>
+      ${FEATURES_EDITABLES.map(f => `
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">${escHTML(f.n)}</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.4">${escHTML(f.d)}</div>
+          </div>
+          <div role="switch" tabindex="0" aria-checked="${off.has(f.k) ? 'false' : 'true'}"
+               aria-label="${escHTML(f.n)}"
+               id="ft-${escHTML(f.k)}" onclick="toggleParamFeature('${escHTML(f.k)}')"
+               style="width:46px;height:27px;border-radius:99px;flex-shrink:0;cursor:pointer;position:relative;transition:background .18s;background:${off.has(f.k) ? 'var(--border)' : 'var(--green)'}">
+            <div style="position:absolute;top:3px;left:${off.has(f.k) ? '3px' : '22px'};width:21px;height:21px;border-radius:50%;background:white;transition:left .18s;box-shadow:0 1px 3px rgba(0,0,0,.25)"></div>
+          </div>
+        </div>`).join('')}
+      <div id="ft-msg" style="font-size:12px;font-weight:600;text-align:center;min-height:18px;margin-top:6px"></div>
+      <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5;margin-top:10px">
+        Las funciones del núcleo (inicio, buscar, chat, pedidos, perfil) no se pueden apagar desde acá: sin ellas la app no funciona y no habría forma de volver a prenderlas.
+      </div>`;
+  }
+
+  async function toggleParamFeature(clave) {
+    const msg = document.getElementById('ft-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+
+    const apagadas = new Set(await PronetDB.listarFeaturesApagadas().catch(() => []));
+    const estabaApagada = apagadas.has(clave);
+    if (estabaApagada) apagadas.delete(clave); else apagadas.add(clave);
+
+    decir('Guardando…', 'var(--ink3)');
+    const r = await PronetDB.guardarFeaturesApagadas([...apagadas]);
+    if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
+
+    // Aplicar en vivo: sin esto el admin apaga algo y lo sigue viendo hasta
+    // recargar, y no sabe si guardó o no.
+    if (clave in FEATURES) FEATURES[clave] = estabaApagada;
+    aplicarFeatureFlags();
+    // El await importa: renderParamFeatures() reescribe el contenedor
+    // entero, así que poner el mensaje antes lo borraría.
+    await renderParamFeatures();
+    const msg2 = document.getElementById('ft-msg');
+    if (msg2) {
+      msg2.textContent = estabaApagada ? '✅ Activada para todos' : '✅ Desactivada para todos';
+      msg2.style.color = 'var(--green)';
+      setTimeout(() => { const m = document.getElementById('ft-msg'); if (m) m.textContent = ''; }, 2500);
+    }
+  }
+  window.toggleParamFeature = toggleParamFeature;
+
   function renderConfigAdmin() {
     const chk = document.getElementById('cfg-planes-pagos');
     const est = document.getElementById('cfg-planes-estado');
@@ -10405,6 +10487,21 @@ document.addEventListener('focusin', (e) => {
     // Si el admin lo desactivó, FEATURES.mercadoPlaza se baja para que
     // aplicarFeatureFlags() oculte el tab y bloquee goTo('s-mercado').
     FEATURES.mercadoPlaza = configApp.promarket_activo !== 'false';
+
+    // El resto de las funcionalidades apagadas por el admin.
+    //
+    // Hasta ahora el panel de niveles guardaba en localStorage, o sea POR
+    // DISPOSITIVO: un admin apagaba `loyalty` y se apagaba en su navegador
+    // mientras los usuarios lo seguían viendo. Era una preferencia local
+    // disfrazada de configuración. Ahora sale de config_app y alcanza a
+    // todos.
+    //
+    // Se guardan sólo las APAGADAS: el estado normal es "todo prendido",
+    // así que la clave queda vacía casi siempre y un flag nuevo en el
+    // código arranca encendido sin tener que tocar la base.
+    (configApp.features_off || '').split(',').map(s => s.trim()).filter(Boolean)
+      .forEach(k => { if (k in FEATURES) FEATURES[k] = false; });
+
     aplicarFeatureFlags();
 
     configCargada = true;
