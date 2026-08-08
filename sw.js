@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v154'; // v154: el alta escribe en el trigger real y crea la ficha del prestador
+const CACHE_VERSION = 'pronet-v155'; // v155: los rubros del alta se guardan con el id que devuelve el RPC
 
 const SHELL = [
   './',

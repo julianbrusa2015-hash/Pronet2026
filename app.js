@@ -7518,15 +7518,18 @@ document.addEventListener('focusin', (e) => {
     // como vecino, sin que nada fallara.
     if (tipo === 'prestador' && usuarioActual && !usuarioActual.prestador_id) {
       const ficha = await PronetDB.asegurarFichaPrestador().catch(() => ({ ok: false }));
-      if (ficha?.ok) {
-        usuarioActual = await PronetDB.usuarioActual();
-        // Los rubros elegidos en el formulario: sin ellos el prestador
-        // queda invisible para el broadcast y para el filtro por categoría.
-        if (usuarioActual?.prestador_id && rubros.length) {
-          await PronetDB.actualizar('prestadores', usuarioActual.prestador_id,
-            { rubro: rubros[0], rubros }).catch(() => {});
-        }
+      // El id sale de la respuesta del RPC, no de releer el perfil: la
+      // primera versión hacía lo segundo y `prestador_id` volvía null —
+      // mi_perfil() todavía no reflejaba el cambio recién hecho, así que
+      // los rubros no se guardaban y el prestador quedaba en 'General'.
+      const pid = ficha?.prestador_id || null;
+      if (pid && rubros.length) {
+        // Sin rubros el prestador queda invisible: no entra en el broadcast
+        // ni aparece cuando el vecino filtra por categoría.
+        await PronetDB.actualizar('prestadores', pid, { rubro: rubros[0], rubros })
+          .catch(() => {});
       }
+      if (pid) usuarioActual = await PronetDB.usuarioActual();
     }
 
     cerrarRegistro();
