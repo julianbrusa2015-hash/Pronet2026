@@ -10265,6 +10265,11 @@ document.addEventListener('focusin', (e) => {
         p.fotos_portfolio = row.fotos_portfolio;
         if (row.precio_mes   != null) p.precio_mes   = row.precio_mes;
         if (row.precio_anual != null) p.precio_anual = row.precio_anual;
+        // El boost que se le PROMETE al usuario tiene que salir de la misma
+        // fila que usa acreditar_puntos() para calcularlo. Si quedan en dos
+        // lados, la pantalla puede decir ×1.5 mientras la base acredita ×1.25
+        // y nadie se entera: el número prometido y el entregado divergen.
+        if (row.loyalty_boost != null) p.loyalty_boost = Number(row.loyalty_boost);
       });
     }
 
