@@ -5740,19 +5740,20 @@ document.addEventListener('focusin', (e) => {
   const TYC_LOGIN_KEY = 'pronet_tyc_aceptado';
   let tycAccionPendiente = null; // { method, ev }
 
+  /** Ejecuta la acción de login. Ya NO muestra el modal de T&C.
+   *
+   *  Ese modal aparecía antes de CADA login y guardaba en localStorage, o
+   *  sea por dispositivo: se repetía en cada teléfono nuevo y dos personas
+   *  que compartían uno compartían el consentimiento de la primera.
+   *
+   *  El consentimiento ahora se pide UNA vez, al crear la cuenta, y queda
+   *  en `perfiles.tyc_aceptado_en`. Pedirlo de nuevo a quien ya se registró
+   *  sería pedirle dos veces lo mismo.
+   *
+   *  La función se conserva —la llaman los botones de login del HTML y los
+   *  tests— pero ahora sólo delega. */
   function gateLogin(method, ev) {
-    if (localStorage.getItem(TYC_LOGIN_KEY)) {
-      ejecutarAccionLogin(method, ev);
-      return;
-    }
-    tycAccionPendiente = { method, ev };
-    const modal = document.getElementById('modal-tyc-login');
-    const c1 = document.getElementById('tyc-check-terminos');
-    const c2 = document.getElementById('tyc-check-edad');
-    if (c1) c1.checked = false;
-    if (c2) c2.checked = false;
-    actualizarBotonTyc();
-    if (modal) modal.style.display = 'flex';
+    ejecutarAccionLogin(method, ev);
   }
   window.gateLogin = gateLogin;
 
@@ -7467,9 +7468,28 @@ document.addEventListener('focusin', (e) => {
     if (pw.length < 8) { if (err) { err.textContent = 'La contraseña debe tener al menos 8 caracteres'; err.style.display='block'; } return; }
     if (nombre.trim().split(/\s+/).length < 2) { if (err) { err.textContent = 'Ingresá nombre y apellido'; err.style.display='block'; } return; }
 
+    // El consentimiento se pide acá y en ningún otro lado. Se guarda contra
+    // la CUENTA (perfiles.tyc_aceptado_en), no contra el dispositivo.
+    const okTyc  = document.getElementById('reg-tyc')?.checked;
+    const okEdad = document.getElementById('reg-edad')?.checked;
+    if (!okTyc || !okEdad) {
+      if (err) {
+        err.textContent = !okTyc
+          ? 'Tenés que aceptar los Términos y Condiciones'
+          : 'Tenés que declarar que sos mayor de 18 años';
+        err.style.display = 'block';
+      }
+      document.getElementById(!okTyc ? 'reg-tyc' : 'reg-edad')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    // Se toma ANTES de crear la cuenta: es el momento real del clic, no el
+    // de la respuesta del servidor.
+    const tycEn = new Date().toISOString();
+
     const btn = document.getElementById('reg-submit');
     if (btn) btn.innerHTML = 'Creando cuenta...';
-    const res = await PronetDB.registrar(email, pw, nombre, tipo, zonaActual, rubros);
+    const res = await PronetDB.registrar(email, pw, nombre, tipo, zonaActual, rubros, tycEn);
     if (btn) btn.innerHTML = 'Crear cuenta';
 
     if (!res.ok) {

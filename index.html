@@ -3047,12 +3047,26 @@
         <div class="sub-opts" id="reg-rubros" role="group" aria-label="Rubros"></div>
       </div>
 
+      <!-- El consentimiento se pide UNA vez, al crear la cuenta, y queda
+           guardado en el perfil. Antes era un modal ANTES del login que se
+           guardaba en localStorage: volvía a aparecer en cada dispositivo
+           nuevo y no quedaba registro de quién lo había aceptado. -->
+      <div style="background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:12px">
+        <label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;margin-bottom:9px">
+          <input type="checkbox" id="reg-tyc" name="reg-tyc" style="margin-top:2px;width:17px;height:17px;flex-shrink:0;accent-color:var(--blue)">
+          <span style="font-size:12px;color:var(--ink2);line-height:1.45">
+            Acepto los <span onclick="event.stopPropagation();cerrarRegistro();goTo('s-tyc')" style="color:var(--blue);font-weight:600;text-decoration:underline">Términos y Condiciones</span>
+          </span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer">
+          <input type="checkbox" id="reg-edad" name="reg-edad" style="margin-top:2px;width:17px;height:17px;flex-shrink:0;accent-color:var(--blue)">
+          <span style="font-size:12px;color:var(--ink2);line-height:1.45">Declaro que soy mayor de 18 años</span>
+        </label>
+      </div>
+
       <div id="reg-error" style="display:none;background:#FEF2F2;color:#DC2626;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px;text-align:center"></div>
 
       <button id="reg-submit" onclick="hacerRegistro()" style="width:100%;padding:14px;background:var(--blue);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">Crear cuenta</button>
-      <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--ink3)">
-        Al registrarte aceptás los <span style="color:var(--blue);font-weight:600">Términos y Condiciones</span>
-      </div>
     </div>
   </div>
 

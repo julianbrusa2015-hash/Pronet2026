@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v152'; // v152: iconos del manifest regenerados con el isotipo nuevo
+const CACHE_VERSION = 'pronet-v153'; // v153: los T&C se aceptan al registrarse, contra la cuenta y no el dispositivo
 
 const SHELL = [
   './',

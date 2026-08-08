@@ -2148,7 +2148,7 @@ const PronetDB = (() => {
      *  alta, que es lo que lee handle_new_user() para armar la ficha —
      *  sin esto el trigger caía en 'General' y la cuenta nacía invisible
      *  para las notificaciones y el filtro del vecino. */
-    async registrar(email, password, nombre, tipo, zona, rubros) {
+    async registrar(email, password, nombre, tipo, zona, rubros, tycEn) {
       if (!remoto) {
         // Modo local: guardar un "usuario" simulado
         const user = { id: 'local-' + Date.now(), email, nombre, tipo: tipo || 'cliente', zona: zona || 'Escobar' };
@@ -2159,6 +2159,11 @@ const PronetDB = (() => {
         email, password,
         options: { data: {
           nombre, tipo: tipo || 'cliente', zona: zona || 'Escobar',
+          // El consentimiento viaja en el metadata para que handle_new_user()
+          // lo escriba en la MISMA transacción que crea el perfil. Grabarlo
+          // después necesitaría una sesión, y con confirmación de email por
+          // medio todavía no la hay — el consentimiento se perdería.
+          ...(tycEn ? { tyc_aceptado_en: tycEn } : {}),
           ...(Array.isArray(rubros) && rubros.length
               ? { rubro: rubros[0], rubros }   // rubro = principal; rubros = todos
               : {}),
