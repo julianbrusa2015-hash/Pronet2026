@@ -145,56 +145,7 @@
         <button class="urg-btn" onclick="verUrgencias()">Ver ahora</button>
       </div>
       <div class="sec-label"><h3>Categorías</h3></div>
-      <div class="rubros">
-        <div class="rubro on" id="cat-todos" onclick="filtrarCategoria('todos',this)">
-          <div class="rubro-icon" style="background:#EEF2FF">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B5BFF" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-          </div>
-          <span>Todos</span>
-        </div>
-        <div class="rubro" id="cat-limpieza" onclick="filtrarCategoria('limpieza',this)">
-          <div class="rubro-icon" style="background:#FFF8EC">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C67D00" stroke-width="1.8"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>
-          </div>
-          <span>Limpieza</span>
-        </div>
-        <div class="rubro" id="cat-cuidado" onclick="filtrarCategoria('cuidado',this)">
-          <div class="rubro-icon" style="background:#FFF1F2">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E11D48" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <span>Cuidado</span>
-        </div>
-        <div class="rubro" id="cat-mascotas" onclick="filtrarCategoria('mascotas',this)">
-          <div class="rubro-icon" style="background:#EEF2FF">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B5BFF" stroke-width="1.8"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 2.344-2.5"/><path d="M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.855-1.45-2.239-2.5"/><path d="M8 14v.5"/><path d="M16 14v.5"/><path d="M11.25 16.25h1.5L12 17l-.75-.75z"/><path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.493-3.309m-9.243-6.082A8.801 8.801 0 0 1 12 5c.78 0 1.5.108 2.161.306"/></svg>
-          </div>
-          <span>Mascotas</span>
-        </div>
-        <div class="rubro" id="cat-electricistas" onclick="filtrarCategoria('electricistas',this)">
-          <div class="rubro-icon" style="background:#ECFDF5">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-          </div>
-          <span>Electricistas</span>
-        </div>
-        <div class="rubro" id="cat-jardineria" onclick="filtrarCategoria('jardineria',this)">
-          <div class="rubro-icon" style="background:#F0FDF4">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="1.8"><path d="M12 22V12"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/><path d="M12 3a4 4 0 0 1 0 8"/><path d="M12 3a4 4 0 0 0 0 8"/></svg>
-          </div>
-          <span>Jardinería</span>
-        </div>
-        <div class="rubro" id="cat-plomeria" onclick="filtrarCategoria('plomeria',this)">
-          <div class="rubro-icon" style="background:#EFF6FF">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="1.8"><path d="M12 2v6m0 0c-2 0-4 1-4 4v8h8v-8c0-3-2-4-4-4z"/><path d="M9 18h6"/><circle cx="12" cy="2" r="1"/></svg>
-          </div>
-          <span>Plomería</span>
-        </div>
-        <div class="rubro" id="cat-pintura" onclick="filtrarCategoria('pintura',this)">
-          <div class="rubro-icon" style="background:#FFF7ED">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="1.8"><path d="M2 13.5V20h4l9.5-9.5-4-4L2 16"/><path d="M14.5 2.5a2.121 2.121 0 0 1 3 3L16 7l-3-3 1.5-1.5z"/><path d="M20 19c0 1.1-.9 2-2 2s-2-.9-2-2c0-1.5 2-4 2-4s2 2.5 2 4z"/></svg>
-          </div>
-          <span>Pintura</span>
-        </div>
-      </div>
+      <div class="rubros"></div>
 
       <!-- Feed filtrado por categoría -->
       <div id="home-cat-header" style="padding:12px 18px 4px;display:flex;align-items:center;justify-content:space-between">
@@ -760,14 +711,9 @@
         <div class="step-label">Paso 1 de 5 · Rubro y servicio</div>
         <div class="form-group">
           <label id="lbl-grupo-1" class="form-label">¿Qué servicio ofrecés?</label>
-          <div role="group" aria-labelledby="lbl-grupo-1" class="rubro-opts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
-            <div class="form-opt on" onclick="selPubRubro(this)"><div class="opt-icon">⚡</div><div class="opt-lbl">Electricista</div></div>
-            <div class="form-opt" onclick="selPubRubro(this)"><div class="opt-icon">🧹</div><div class="opt-lbl">Limpieza</div></div>
-            <div class="form-opt" onclick="selPubRubro(this)"><div class="opt-icon">👶</div><div class="opt-lbl">Cuidado</div></div>
-            <div class="form-opt" onclick="selPubRubro(this)"><div class="opt-icon">🐶</div><div class="opt-lbl">Mascotas</div></div>
-            <div class="form-opt" onclick="selPubRubro(this)"><div class="opt-icon">🌿</div><div class="opt-lbl">Jardinería</div></div>
-            <div class="form-opt" onclick="selPubRubro(this)"><div class="opt-icon">🍳</div><div class="opt-lbl">Chef / Catering</div></div>
-          </div>
+          <!-- Lo pinta pintarRubros() desde el catálogo único (app.js). -->
+          <div role="group" aria-labelledby="lbl-grupo-1" class="rubro-opts" id="pub-rubro-opts"
+               style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px"></div>
         </div>
         <div class="form-group">
           <label for="pub-desc" class="form-label">Descripción breve</label>
@@ -2243,14 +2189,7 @@
       <!-- Vista: busco servicio -->
       <div id="pview-busco">
         <div class="ped-zona-bar" id="ped-filter-chips">
-          <div class="chip on" data-filtro="todos" onclick="filtrarMisPedidos(this,'todos')">📋 Todos</div>
-          <div class="chip" data-filtro="Electricistas" onclick="filtrarMisPedidos(this,'Electricistas')">⚡ Electricistas</div>
-          <div class="chip" data-filtro="Limpieza" onclick="filtrarMisPedidos(this,'Limpieza')">🧹 Limpieza</div>
-          <div class="chip" data-filtro="Cuidado" onclick="filtrarMisPedidos(this,'Cuidado')">👶 Cuidado</div>
-          <div class="chip" data-filtro="Mascotas" onclick="filtrarMisPedidos(this,'Mascotas')">🐶 Mascotas</div>
-          <div class="chip" data-filtro="Jardinería" onclick="filtrarMisPedidos(this,'Jardinería')">🌿 Jardinería</div>
-          <div class="chip" data-filtro="Plomería" onclick="filtrarMisPedidos(this,'Plomería')">🔧 Plomería</div>
-          <div class="chip" data-filtro="Chef" onclick="filtrarMisPedidos(this,'Chef')">🍳 Chef</div>
+          <!-- pintarRubros() -->
         </div>
 
         <div style="padding:12px 14px 6px;font-size:11px;color:var(--ink3)">Tus pedidos activos · <span style="color:var(--blue);font-weight:600" id="ped-count">2 pedidos</span></div>
@@ -2303,16 +2242,8 @@
         <div class="step-label">Paso 1 de 3 · Qué necesitás</div>
         <div class="form-group">
           <label id="lbl-grupo-14" class="form-label">¿Qué servicio necesitás?</label>
-          <div role="group" aria-labelledby="lbl-grupo-14" class="form-options" style="grid-template-columns:1fr 1fr">
-            <div class="form-opt on" onclick="selFormOpt(this,'.form-options')"><div class="opt-icon">⚡</div><div class="opt-lbl">Electricistas</div></div>
-            <div class="form-opt" onclick="selFormOpt(this,'.form-options')"><div class="opt-icon">🧹</div><div class="opt-lbl">Limpieza</div></div>
-            <div class="form-opt" onclick="selFormOpt(this,'.form-options')"><div class="opt-icon">👶</div><div class="opt-lbl">Cuidado</div></div>
-            <div class="form-opt" onclick="selFormOpt(this,'.form-options')"><div class="opt-icon">🐶</div><div class="opt-lbl">Mascotas</div></div>
-            <div class="form-opt" onclick="selFormOpt(this,'.form-options')"><div class="opt-icon">🌿</div><div class="opt-lbl">Jardinería</div></div>
-            <div class="form-opt" onclick="selFormOpt(this,'.form-options')"><div class="opt-icon">🔧</div><div class="opt-lbl">Plomería</div></div>
-            <div class="form-opt" onclick="selFormOpt(this,'.form-options')"><div class="opt-icon">🎨</div><div class="opt-lbl">Pintura</div></div>
-            <div class="form-opt" onclick="selFormOpt(this,'.form-options')"><div class="opt-icon">🍳</div><div class="opt-lbl">Chef</div></div>
-          </div>
+          <!-- Lo pinta pintarRubros() desde el catálogo único (app.js). -->
+          <div role="group" aria-labelledby="lbl-grupo-14" class="form-options" id="np-rubro-opts" style="grid-template-columns:1fr 1fr"></div>
         </div>
         <div class="form-group">
           <label for="np-titulo" class="form-label">Título del pedido</label>

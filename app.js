@@ -1232,25 +1232,99 @@ document.addEventListener('focusin', (e) => {
   }
   window.irAChecklistItem = irAChecklistItem;
 
-  // Slugs de categoría (sin tilde, usados en los onclick del home) que no
-  // coinciden con el nombre real del rubro guardado en la base al
-  // capitalizarlos ingenuamente (ej: 'jardineria' -> 'Jardineria', pero el
-  // rubro real es 'Jardinería'). Sin este mapeo el filtro no encuentra
-  // ningún prestador para esos rubros.
-  const CAT_SLUG_A_RUBRO = { jardineria: 'Jardinería', plomeria: 'Plomería' };
+  // ── Catálogo único de rubros ────────────────────────────────────────
+  //
+  // Había TRES listas escritas a mano en el HTML y cada una omitía un
+  // rubro distinto: los chips de Inicio no tenían Chef, el filtro de Mis
+  // pedidos no tenía Pintura, y sólo Publicar pedido estaba completa.
+  // Resultado: se podía publicar un pedido de Chef y después no encontrar
+  // chefs desde Inicio, o publicar uno de Pintura y no poder filtrarlo en
+  // la propia lista. Ya había pasado antes con Plomería y Pintura.
+  //
+  // Ahora las tres se generan de acá. Agregar un rubro es agregar una
+  // entrada; no hay forma de que una pantalla quede atrás.
+  //
+  // `slug` es el id del chip (sin tildes, va en la URL y en los onclick) y
+  // `n` el nombre real guardado en la base — no se pueden derivar uno del
+  // otro: 'jardineria' capitalizado da 'Jardineria', no 'Jardinería'.
+  const RUBROS = [
+    { n: 'Limpieza',      slug: 'limpieza',      emoji: '🧹', bg: '#FFF8EC', color: '#C67D00',
+      svg: '<path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/>' },
+    { n: 'Cuidado',       slug: 'cuidado',       emoji: '👶', bg: '#FFF1F2', color: '#E11D48',
+      svg: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
+    { n: 'Mascotas',      slug: 'mascotas',      emoji: '🐶', bg: '#EEF2FF', color: '#2B5BFF',
+      svg: '<path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 2.344-2.5"/><path d="M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.855-1.45-2.239-2.5"/><path d="M8 14v.5"/><path d="M16 14v.5"/><path d="M11.25 16.25h1.5L12 17l-.75-.75z"/><path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.493-3.309m-9.243-6.082A8.801 8.801 0 0 1 12 5c.78 0 1.5.108 2.161.306"/>' },
+    { n: 'Electricistas', slug: 'electricistas', emoji: '⚡', bg: '#ECFDF5', color: '#059669',
+      svg: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
+    { n: 'Jardinería',    slug: 'jardineria',    emoji: '🌿', bg: '#F0FDF4', color: '#16A34A',
+      svg: '<path d="M12 22V12"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/><path d="M12 3a4 4 0 0 1 0 8"/><path d="M12 3a4 4 0 0 0 0 8"/>' },
+    { n: 'Plomería',      slug: 'plomeria',      emoji: '🔧', bg: '#EFF6FF', color: '#1D4ED8',
+      svg: '<path d="M12 2v6m0 0c-2 0-4 1-4 4v8h8v-8c0-3-2-4-4-4z"/><path d="M9 18h6"/><circle cx="12" cy="2" r="1"/>' },
+    { n: 'Pintura',       slug: 'pintura',       emoji: '🎨', bg: '#FFF7ED', color: '#EA580C',
+      svg: '<path d="M2 13.5V20h4l9.5-9.5-4-4L2 16"/><path d="M14.5 2.5a2.121 2.121 0 0 1 3 3L16 7l-3-3 1.5-1.5z"/><path d="M20 19c0 1.1-.9 2-2 2s-2-.9-2-2c0-1.5 2-4 2-4s2 2.5 2 4z"/>' },
+    { n: 'Chef',          slug: 'chef',          emoji: '🍳', bg: '#FEF2F2', color: '#DC2626',
+      svg: '<path d="M6 13h12v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6z"/><path d="M7 13a5 5 0 0 1 .6-8.9A3 3 0 0 1 12 3a3 3 0 0 1 4.4 1.1A5 5 0 0 1 17 13"/>' },
+  ];
+
+  const RUBRO_POR_SLUG = Object.fromEntries(RUBROS.map(r => [r.slug, r]));
   function rubroDeCat(cat) {
-    return CAT_SLUG_A_RUBRO[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
+    return RUBRO_POR_SLUG[cat]?.n || (cat.charAt(0).toUpperCase() + cat.slice(1));
   }
-  /** Inverso de rubroDeCat — devuelve el slug de cat para un rubro del prestador */
+  /** Inverso de rubroDeCat — el slug de categoría para un rubro guardado.
+   *  Sale del catálogo y no del DOM: antes recorría los chips renderizados,
+   *  así que devolvía null si se lo llamaba antes de que existieran. */
   function catDeRubro(rubro) {
     if (!rubro) return null;
-    const norm = r => r.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    const chips = document.querySelectorAll('.rubro[id^="cat-"]');
-    for (const chip of chips) {
-      const slug = chip.id.replace('cat-', '');
-      if (norm(rubroDeCat(slug)) === norm(rubro)) return slug;
+    const norm = r => (r || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return RUBROS.find(r => norm(r.n) === norm(rubro))?.slug || null;
+  }
+
+  /** Pinta las tres listas de rubros desde el catálogo. Se llama una vez al
+   *  arrancar; el HTML sólo aporta los contenedores vacíos. */
+  function pintarRubros() {
+    const chips = document.querySelector('.rubros');
+    if (chips) {
+      const ico = (bg, color, svg) =>
+        '<div class="rubro-icon" style="background:' + bg + '">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.8">' + svg + '</svg></div>';
+      chips.innerHTML =
+        '<div class="rubro on" id="cat-todos" onclick="filtrarCategoria(\'todos\',this)">' +
+          ico('#EEF2FF', '#2B5BFF', '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>') +
+          '<span>Todos</span></div>' +
+        RUBROS.map(r =>
+          '<div class="rubro" id="cat-' + r.slug + '" onclick="filtrarCategoria(\'' + r.slug + '\',this)">' +
+          ico(r.bg, r.color, r.svg) + '<span>' + escHTML(r.n) + '</span></div>'
+        ).join('');
     }
-    return null;
+
+    const filtroMis = document.getElementById('ped-filter-chips');
+    if (filtroMis) {
+      filtroMis.innerHTML =
+        '<div class="chip on" data-filtro="todos" onclick="filtrarMisPedidos(this,\'todos\')">📋 Todos</div>' +
+        RUBROS.map(r =>
+          '<div class="chip" data-filtro="' + escHTML(r.n) + '" onclick="filtrarMisPedidos(this,\'' + escHTML(r.n) + '\')">' +
+          r.emoji + ' ' + escHTML(r.n) + '</div>'
+        ).join('');
+    }
+
+    // Las dos grillas de rubro: la del vecino al publicar un pedido y la del
+    // prestador al darse de alta. La segunda decía "Electricista" en
+    // singular y "Chef / Catering", y el alta guarda el label TAL CUAL — un
+    // prestador que entrara por ahí quedaba con un rubro que no coincide con
+    // ningún pedido ni con ningún filtro, invisible sin que nada falle. Es
+    // el mismo problema que 'General', por otra puerta.
+    const grillas = [
+      { id: 'np-rubro-opts',  onclick: r => "selFormOpt(this,'#np-rubro-opts')" },
+      { id: 'pub-rubro-opts', onclick: r => 'selPubRubro(this)' },
+    ];
+    for (const g of grillas) {
+      const cont = document.getElementById(g.id);
+      if (!cont) continue;
+      cont.innerHTML = RUBROS.map((r, i) =>
+        '<div class="form-opt' + (i === 0 ? ' on' : '') + '" onclick="' + g.onclick(r) + '">' +
+        '<div class="opt-icon">' + r.emoji + '</div><div class="opt-lbl">' + escHTML(r.n) + '</div></div>'
+      ).join('');
+    }
   }
 
   async function renderHomeFeed(cat) {
@@ -10485,6 +10559,9 @@ document.addEventListener('focusin', (e) => {
     actualizar();
   }
   iniciarMonitorConexion();
+  // Las cuatro listas de rubros salen del catálogo único. El HTML sólo trae
+  // los contenedores vacíos, así que esto tiene que correr sí o sí al iniciar.
+  pintarRubros();
 
   // Fix teclado iOS en PWA: ocultar nav mientras el teclado esta abierto en s-chat
   if (window.visualViewport) {
