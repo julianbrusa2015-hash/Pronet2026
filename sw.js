@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v147'; // v147: los rubros salen de la base y son editables
+const CACHE_VERSION = 'pronet-v148'; // v148: fix del guardado de rubros (upsert fallaba por NOT NULL)
 
 const SHELL = [
   './',

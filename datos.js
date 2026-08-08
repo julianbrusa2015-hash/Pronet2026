@@ -662,12 +662,29 @@ const PronetDB = (() => {
       return data || [];
     },
 
-    /** Alta o edición de un rubro. Sólo admin. */
+    /** Edita un rubro existente. Sólo admin.
+     *
+     *  UPDATE y no upsert: el upsert de PostgREST es INSERT … ON CONFLICT,
+     *  así que intenta el INSERT primero y falla contra el NOT NULL de
+     *  `nombre` cuando sólo se mandan los campos editados. Para crear un
+     *  rubro nuevo está `crearRubro`, que exige la fila completa. */
     async guardarRubro(slug, campos) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
-      const { error } = await sb.from('rubros')
-        .upsert({ slug, ...campos }, { onConflict: 'slug' });
+      const { data, error } = await sb.from('rubros')
+        .update(campos).eq('slug', slug).select('slug');
       if (error) { console.warn('[PronetDB] guardarRubro', error.message); return { ok: false, error: error.message }; }
+      // Sin filas devueltas el UPDATE no encontró nada (o RLS lo filtró):
+      // sin este chequeo el panel diría "guardado" sin haber guardado.
+      if (!data || !data.length) return { ok: false, error: 'No se encontró el rubro o no tenés permiso' };
+      return { ok: true };
+    },
+
+    /** Alta de un rubro. Exige nombre y slug; el resto tiene default. */
+    async crearRubro(rubro) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      if (!rubro?.slug || !rubro?.nombre) return { ok: false, error: 'Faltan slug y nombre' };
+      const { error } = await sb.from('rubros').insert(rubro);
+      if (error) { console.warn('[PronetDB] crearRubro', error.message); return { ok: false, error: error.message }; }
       return { ok: true };
     },
 
@@ -676,8 +693,12 @@ const PronetDB = (() => {
      *  error en vez de fingir que guardó. */
     async guardarPlanLimites(plan, cambios) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
-      const { error } = await sb.from('planes_limites').update(cambios).eq('plan', plan);
+      const { data, error } = await sb.from('planes_limites')
+        .update(cambios).eq('plan', plan).select('plan');
       if (error) { console.warn('[PronetDB] guardarPlanLimites', error.message); return { ok: false, error: error.message }; }
+      // Un UPDATE que RLS filtra no devuelve error, sólo cero filas. Sin
+      // este chequeo el panel diría "✅ Guardado" sin haber guardado nada.
+      if (!data || !data.length) return { ok: false, error: 'No se pudo guardar: sin permisos de administrador' };
       return { ok: true };
     },
 
