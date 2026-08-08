@@ -83,6 +83,75 @@ const PronetDB = (() => {
       return leerLocal(coleccion);
     },
 
+    /** Pedidos abiertos de una zona, filtrados EN EL SERVIDOR.
+     *
+     *  `listar('pedidos')` traía la tabla entera y el cliente descartaba en
+     *  JS. Medido el 2026-08-06: 67 filas transferidas para usar 13 — los
+     *  cerrados y vencidos se acumulan para siempre mientras el conjunto
+     *  útil se mantiene chico, así que el desperdicio sólo crece.
+     *
+     *  Devuelve `{ pedidos, total }`. `total` es el count real del servidor,
+     *  no `pedidos.length`: los contadores de la app ("Ver los 18") tienen
+     *  que seguir diciendo la verdad aunque el límite recorte la lista.
+     *
+     *  @param {string[]=} zonas         Zonas concretas (no la zona-madre).
+     *  @param {string=}   excluirUsuario Su dueño no puede ofertar.
+     *  @param {number=}   limite        Techo de seguridad, no paginación. */
+    async listarPedidosDisponibles({ zonas = null, excluirUsuario = null, limite = 200 } = {}) {
+      if (!remoto) {
+        const todos = leerLocal('pedidos')
+          .filter(p => (p.estado || 'Publicado') === 'Publicado')
+          .filter(p => !excluirUsuario || p.usuario_id !== excluirUsuario)
+          .filter(p => !zonas?.length || zonas.includes(p.zona || 'Escobar'));
+        return { pedidos: todos.slice(0, limite), total: todos.length };
+      }
+      let q = sb.from('pedidos')
+        .select('*', { count: 'exact' })
+        .eq('estado', 'Publicado')
+        .order('creado', { ascending: false })
+        .limit(limite);
+      if (zonas?.length)   q = q.in('zona', zonas);
+      if (excluirUsuario)  q = q.neq('usuario_id', excluirUsuario);
+      const { data, error, count } = await q;
+      if (error) {
+        console.warn('[PronetDB] listarPedidosDisponibles', error.message);
+        return { pedidos: [], total: 0 };
+      }
+      return { pedidos: data || [], total: count ?? (data || []).length };
+    },
+
+    /** Filas de una colección por una lista de ids. Evita el patrón de
+     *  traerse la tabla entera para después buscar con `.find()`. */
+    async obtenerVarios(coleccion, ids) {
+      const unicos = [...new Set((ids || []).filter(Boolean))];
+      if (!unicos.length) return [];
+      if (!remoto) return leerLocal(coleccion).filter(r => unicos.includes(r.id));
+      const { data, error } = await sb.from(coleccion).select('*').in('id', unicos);
+      if (error) { console.warn('[PronetDB] obtenerVarios', coleccion, error.message); return []; }
+      return data || [];
+    },
+
+    /** Propuestas enviadas por un prestador. */
+    async listarPropuestasDePrestador(prestadorId) {
+      if (!prestadorId) return [];
+      if (!remoto) return leerLocal('propuestas').filter(p => p.prestador_id === prestadorId);
+      const { data, error } = await sb.from('propuestas')
+        .select('*').eq('prestador_id', prestadorId)
+        .order('creado', { ascending: false });
+      if (error) { console.warn('[PronetDB] listarPropuestasDePrestador', error.message); return []; }
+      return data || [];
+    },
+
+    /** Cuenta filas sin traerlas (`head: true` → sólo el header con el count).
+     *  Para cualquier lugar que sólo necesita el número. */
+    async contar(coleccion) {
+      if (!remoto) return leerLocal(coleccion).length;
+      const { count, error } = await sb.from(coleccion)
+        .select('id', { count: 'exact', head: true });
+      if (error) { console.warn('[PronetDB] contar', coleccion, error.message); return 0; }
+      return count || 0;
+    },
+
     /** Crea un registro. Devuelve el registro con id y fecha asignados. */
     async crear(coleccion, datos) {
       if (remoto) {

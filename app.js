@@ -1139,7 +1139,9 @@ document.addEventListener('focusin', (e) => {
   // ── Checklist de bienvenida ──────────────────────────────────────────
   const CHECKLIST_VECINO = [
     { id: 'perfil',    label: 'Completá tu perfil',         check: () => !!(usuarioActual?.nombre && usuarioActual?.zona) },
-    { id: 'pedido',    label: 'Publicá tu primer pedido',   check: async () => { const p = await PronetDB.listar('pedidos').catch(()=>[]); return p.some(x=>x.usuario_id===usuarioActual?.id); } },
+    // listarMios() y no listar(): la pregunta es "¿tengo alguno?", y traer
+    // los pedidos de todo el barrio para responderla no escala.
+    { id: 'pedido',    label: 'Publicá tu primer pedido',   check: async () => { const p = await PronetDB.listarMios('pedidos').catch(()=>[]); return p.length > 0; } },
     { id: 'elegir',    label: 'Elegí un prestador',         check: async () => { const c = await PronetDB.listarMisChats().catch(()=>[]); return c.some(x=>x.vecino_id===usuarioActual?.id && ['activo','terminado_prestador','terminado_por_vecino','calificado'].includes(x.estado)); } },
     { id: 'resena',    label: 'Dejá tu primera reseña',     check: async () => { const r = await PronetDB.listar('resenas').catch(()=>[]); return r.some(x=>x.vecino_id===usuarioActual?.id); } },
   ];
@@ -1441,7 +1443,7 @@ document.addEventListener('focusin', (e) => {
     const rubroFicha = ficha?.rubro || '';
     const rubro = /^general$/i.test(rubroFicha.trim()) ? '' : rubroFicha;
 
-    const [chats, sinLeerPorChat, cupo, analitica, ranking, pedidos, misPropuestas] = await Promise.all([
+    const [chats, sinLeerPorChat, cupo, analitica, ranking, feed, misPropuestas] = await Promise.all([
       PronetDB.listarChats().catch(() => []),
       // Desglose por chat, no el total de mensajes: ver más abajo por qué.
       PronetDB.noLeidosPorChat().catch(() => ({})),
@@ -1450,7 +1452,10 @@ document.addEventListener('focusin', (e) => {
       pid && rubro
         ? PronetDB.obtenerRankingPrestador(pid, rubro).catch(() => [])
         : Promise.resolve([]),
-      PronetDB.listar('pedidos').catch(() => []),
+      PronetDB.listarPedidosDisponibles({
+        zonas: zonasDelFiltro(),
+        excluirUsuario: usuarioActual?.id || null,
+      }).catch(() => ({ pedidos: [], total: 0 })),
       // Las propuestas propias, con su estado. Alimentan dos cosas: el
       // contador de "esperando respuesta" y la exclusión de los pedidos
       // donde ya oferté (más abajo). Antes eran dos consultas.
@@ -1508,16 +1513,17 @@ document.addEventListener('focusin', (e) => {
     if (enEspera > 0)   items.push({ ic:'🕐', txt: enEspera + ' propuesta' + (enEspera>1?'s':'') + ' esperando respuesta', accion: "abrirMisPropuestas('pendiente')" });
 
     // ── Pedidos disponibles de su zona ──
-    // Es la base de los indicadores de más abajo, del total del acceso a
-    // Pedidos y del relleno cuando no hay pendientes. NO se filtra por
-    // rubro: el filtro fino vive en esa pantalla.
-    const zonaF = zonaParaFiltro();
-    const disponibles = pedidos.filter(p => {
-      if ((p.estado || 'Publicado') !== 'Publicado') return false;
-      if (usuarioActual && p.usuario_id === usuarioActual.id) return false;
-      if (!zonaF) return true;
-      return (ZONA_DB[p.zona || 'Escobar'] || p.zona || 'Escobar') === zonaF;
-    });
+    // Base de los indicadores, del total del acceso a Pedidos y del relleno
+    // cuando no hay pendientes. Ya viene filtrado por el servidor (abierto,
+    // de la zona, sin los propios); NO se filtra por rubro, que es el filtro
+    // fino de la pantalla Pedidos.
+    //
+    // `total` es el count real del servidor. Los indicadores se calculan
+    // sobre el array, que está topeado en 200: si alguna vez una zona
+    // superara ese número, los contadores quedarían cortos y hay que pasar a
+    // contar con un RPC en vez de sobre las filas.
+    const disponibles = feed.pedidos;
+    const totalDisponibles = feed.total;
     // Los del rubro propio primero; dentro de cada grupo, los más nuevos.
     // Sólo se usan cuando el tablero no tiene nada pendiente que mostrar.
     const recientes = disponibles.slice().sort((a, b) => {
@@ -1651,15 +1657,15 @@ document.addEventListener('focusin', (e) => {
           <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 8px">
             <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Oportunidades para vos</span>
             <span role="button" tabindex="0" onclick="goTo('s-pedidos')"
-                  style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Ver los ${disponibles.length} →</span>
+                  style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Ver los ${totalDisponibles} →</span>
           </div>
           <div id="inicio-recientes"></div>` : `
           <div role="button" tabindex="0" onclick="goTo('s-pedidos')"
                style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
             <span style="font-size:16px">💼</span>
             <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">${
-              disponibles.length
-                ? 'Ver los ' + disponibles.length + ' pedidos disponibles'
+              totalDisponibles
+                ? 'Ver los ' + totalDisponibles + ' pedidos disponibles'
                 : 'Ver pedidos disponibles'}</span>
             <span style="color:var(--blue);font-size:15px">›</span>
           </div>`}
@@ -1767,15 +1773,16 @@ document.addEventListener('focusin', (e) => {
     const rubroFicha = ficha?.rubro || '';
     const rubro = /^general$/i.test(rubroFicha.trim()) ? '' : rubroFicha;
 
-    let pedidos = await PronetDB.listar('pedidos').catch(() => []);
-    pedidos = pedidos.filter(p => (p.estado || 'Publicado') === 'Publicado');
-    // Un prestador no oferta sus propios pedidos.
-    if (usuarioActual) pedidos = pedidos.filter(p => p.usuario_id !== usuarioActual.id);
+    // "Publicado", ajeno y —si el chip de zona está puesto— de la zona: todo
+    // eso lo resuelve el servidor. Antes viajaba la tabla completa y se
+    // descartaba acá. Los demás chips sí filtran en el cliente: operan sobre
+    // un conjunto ya chico y cambiar de chip no debería costar otra consulta.
+    const feed = await PronetDB.listarPedidosDisponibles({
+      zonas: filtrosPresto.zona ? zonasDelFiltro() : null,
+      excluirUsuario: usuarioActual?.id || null,
+    }).catch(() => ({ pedidos: [], total: 0 }));
+    let pedidos = feed.pedidos;
 
-    if (filtrosPresto.zona) {
-      const zf = zonaParaFiltro();
-      if (zf) pedidos = pedidos.filter(p => (ZONA_DB[p.zona || 'Escobar'] || p.zona || 'Escobar') === zf);
-    }
     if (filtrosPresto.rubro && rubro) {
       pedidos = pedidos.filter(p => matchRubro(p.rubro, rubro));
     }
@@ -1859,20 +1866,12 @@ document.addEventListener('focusin', (e) => {
     const wrap = document.getElementById('home-feed-container');
     if (!wrap) return;
     wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando pedidos...</div>';
-    let pedidos = await PronetDB.listar('pedidos');
-    // Solo pedidos publicados
-    pedidos = pedidos.filter(p => (p.estado || 'Publicado') === 'Publicado');
-    // Excluir los pedidos propios (un prestador no oferta sus propios pedidos)
-    if (usuarioActual) pedidos = pedidos.filter(p => p.usuario_id !== usuarioActual.id);
-    // Filtrar por zona (comparando zona-madre en ambos lados)
-    const zonaFiltro = zonaParaFiltro();
-    if (zonaFiltro) {
-      pedidos = pedidos.filter(p => {
-        const zonaPedido = p.zona || 'Escobar';
-        const madrePedido = ZONA_DB[zonaPedido] || zonaPedido;
-        return madrePedido === zonaFiltro;
-      });
-    }
+    // Publicados, ajenos y de la zona: filtrado en el servidor.
+    const feedCat = await PronetDB.listarPedidosDisponibles({
+      zonas: zonasDelFiltro(),
+      excluirUsuario: usuarioActual?.id || null,
+    }).catch(() => ({ pedidos: [], total: 0 }));
+    let pedidos = feedCat.pedidos;
     // Filtrar por rubro/categoría
     if (cat && cat !== 'todos') {
       pedidos = pedidos.filter(p => matchRubro(p.rubro, rubroDeCat(cat)));
@@ -3695,6 +3694,20 @@ document.addEventListener('focusin', (e) => {
     'Garín':            'Garín',
   };
   function zonaParaFiltro() { return ZONA_DB[zonaActual] || zonaActual; }
+
+  /** Las zonas CONCRETAS que cuelgan de la zona-madre activa.
+   *
+   *  El filtro por zona comparaba zona-madre en JS, y para eso había que
+   *  traerse la tabla entera. Con la lista de hijas se filtra en el servidor
+   *  con `.in('zona', ...)` y viaja sólo lo que se usa. */
+  function zonasDelFiltro() {
+    const madre = zonaParaFiltro();
+    if (!madre) return null;
+    const zonas = Object.keys(ZONA_DB).filter(z => ZONA_DB[z] === madre);
+    // La madre puede no figurar como clave de sí misma en el mapa.
+    if (!zonas.includes(madre)) zonas.push(madre);
+    return zonas;
+  }
 
   function abrirZonaModal() {
     document.getElementById('zona-modal').classList.add('show');
@@ -7258,7 +7271,7 @@ document.addEventListener('focusin', (e) => {
       if(usuarioActual){
         pedidos=await PronetDB.listarMios('pedidos');
         try{const props=await PronetDB.listar('propuestas');props.forEach(pr=>{if(pr.estado!=='retirada') conteoProps[pr.pedido_id]=(conteoProps[pr.pedido_id]||0)+1;});}catch(e){}
-      } else { pedidos=await PronetDB.listar('pedidos'); }
+      } else { pedidos=(await PronetDB.listarPedidosDisponibles({ limite: 50 })).pedidos; }
     } catch(e) {
       wrap.innerHTML = '<div style="padding:16px 14px;text-align:center;font-size:13px;color:#BE123C">⚠️ Error al cargar pedidos</div>';
       return;
@@ -9875,7 +9888,12 @@ document.addEventListener('focusin', (e) => {
     const wrap=document.getElementById('mp-lista');if(!wrap)return;
     wrap.innerHTML='<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     let mias=[],pedidos=[];
-    try{const[props,peds]=await Promise.all([PronetDB.listar('propuestas'),PronetDB.listar('pedidos')]);mias=props.filter(pr=>pr.prestador_id===usuarioActual.prestador_id);pedidos=peds;}catch(e){wrap.innerHTML='<div style="padding:24px;text-align:center;color:#BE123C">⚠️ No se pudieron cargar tus propuestas.</div>';return;}
+    // Sólo mis propuestas, y sólo los pedidos que ellas referencian. Antes
+    // traía las DOS tablas completas para quedarse con un puñado de filas.
+    try{
+      mias = await PronetDB.listarPropuestasDePrestador(usuarioActual.prestador_id);
+      pedidos = await PronetDB.obtenerVarios('pedidos', mias.map(pr => pr.pedido_id));
+    }catch(e){wrap.innerHTML='<div style="padding:24px;text-align:center;color:#BE123C">⚠️ No se pudieron cargar tus propuestas.</div>';return;}
     if(mias.length===0){wrap.innerHTML='<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no enviaste propuestas.</div>';return;}
     const totalMias=mias.length;
     let bannerFiltro='';
@@ -10328,8 +10346,10 @@ document.addEventListener('focusin', (e) => {
     el.textContent = '⏳ Verificando Supabase...';
     el.style.color = 'rgba(255,255,255,.5)';
     try {
-      const lista = await PronetDB.listar('pedidos');
-      el.textContent = '🟢 Datos: SUPABASE (' + lista.length + ' pedido' + (lista.length !== 1 ? 's' : '') + ')';
+      // contar() y no listar(): esto sólo muestra un número, no hace falta
+      // traerse las filas para saber cuántas hay.
+      const n = await PronetDB.contar('pedidos');
+      el.textContent = '🟢 Datos: SUPABASE (' + n + ' pedido' + (n !== 1 ? 's' : '') + ')';
       el.style.color = '#39FF14';
     } catch (e) {
       el.textContent = '🔴 SUPABASE sin respuesta';
