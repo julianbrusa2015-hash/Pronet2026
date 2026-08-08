@@ -21,6 +21,9 @@ test.describe('C1 · Acceso y sesión', () => {
 
     // Cada una de estas está en PANTALLA_ACCION (app.js) y debe frenar al invitado.
     for (const pantalla of ['s-miperfil', 's-nuevo-pedido', 's-chats']) {
+      // Ver nota en busqueda-y-analitica.spec.js: el SW puede recargar entre
+      // iteraciones y dejar window.goTo indefinido por un instante.
+      await page.waitForFunction(() => typeof window.goTo === 'function', { timeout: 8000 });
       await page.evaluate((p) => window.goTo(p), pantalla);
       await page.waitForTimeout(300);
       await expect(page.locator('#gate-modal'),

@@ -152,6 +152,10 @@ test.describe('C10 · Moderación — no accesible para prestador', () => {
   test('otras pantallas admin tampoco son accesibles', async ({ page }) => {
     await abrir(page);
     for (const pantalla of ['s-loyalty-admin', 's-catalogo']) {
+      // El guard va DENTRO del loop: el Service Worker puede recargar la
+      // página entre iteraciones y ahí window.goTo desaparece hasta que
+      // app.js vuelve a evaluarse. Era la causa del flake.
+      await page.waitForFunction(() => typeof window.goTo === 'function', { timeout: 8000 });
       await page.evaluate((p) => window.goTo(p), pantalla);
       await page.waitForTimeout(400);
       await expect(

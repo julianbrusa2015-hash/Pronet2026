@@ -232,6 +232,13 @@ async function abrir(page) {
   // válida la app nunca lo remueve (solo lo hace si el token falla), así que
   // como señal de "listo" sirve para invitados pero cuelga para logueados.
   await sesionRestaurada(page);
+  // La sesión puede estar restaurada y app.js todavía no haber expuesto sus
+  // funciones — o el Service Worker haber recargado la página justo después.
+  // Sin esta espera, cualquier page.evaluate(() => window.goTo(...)) que venga
+  // a continuación falla con "window.goTo is not a function", de forma
+  // intermitente. Es la causa de varios flakes de esta suite.
+  await page.waitForFunction(() => typeof window.goTo === 'function', { timeout: 10000 })
+    .catch(() => {});   // que no reviente acá: el test dirá qué falló de verdad
 }
 
 /** Navega por la API de la app en vez de clickear el nav, que cambia según rol.

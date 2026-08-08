@@ -158,17 +158,17 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
     // Esperar que el home del prestador cargue
     await expect(page.locator('#s-home')).toHaveClass(/active/, { timeout: 10000 });
 
-    // Clicar la categoría "Electricistas" para filtrar y forzar recarga del feed
-    const btnElectricistas = page.locator('#s-home .rubro, #s-home button')
-      .filter({ hasText: /electricista/i }).first();
-    if (await btnElectricistas.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await btnElectricistas.click();
-      await page.waitForTimeout(2000);
-    }
+    // El pedido se busca en la pantalla Pedidos, no en Inicio.
+    // Inicio es un TABLERO: sólo lista pedidos cuando el prestador no tiene
+    // nada pendiente, así que buscarlos ahí fallaba o no según el estado de
+    // la cuenta. Los chips de rubro tampoco están en Inicio para el
+    // prestador — su filtro fino vive acá.
+    await page.locator('#nb-pedidos').click();
+    await expect(page.locator('#s-pedidos')).toHaveClass(/active/, { timeout: 10000 });
 
-    // Buscar el pedido Test E2E en el feed filtrado
-    await expect(page.locator('#home-feed-container .card').first()).toBeVisible({ timeout: 15000 });
-    const cards = page.locator('#home-feed-container .card');
+    // Buscar el pedido Test E2E en la lista del prestador
+    await expect(page.locator('#presto-lista .card').first()).toBeVisible({ timeout: 15000 });
+    const cards = page.locator('#presto-lista .card');
     const n = await cards.count();
     let found = false;
     for (let i = 0; i < n; i++) {
@@ -179,7 +179,7 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
         break;
       }
     }
-    expect(found, 'No se encontró el pedido Test E2E en el feed de Electricistas').toBe(true);
+    expect(found, 'No se encontró el pedido Test E2E en la lista de Pedidos del prestador').toBe(true);
 
     // Detalle del pedido
     await expect(page.locator('#s-detalle-pedido')).toHaveClass(/active/, { timeout: 8000 });
