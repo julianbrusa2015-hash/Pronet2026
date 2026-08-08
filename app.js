@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -401,6 +401,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-param-planes')   { renderParamPlanes(); }
     if (id === 's-param-features') { renderParamFeatures(); }
     if (id === 's-param-rubros')   { renderParamRubros(); }
+    if (id === 's-param-zonas')    { renderParamZonas(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -3834,6 +3835,48 @@ document.addEventListener('focusin', (e) => {
   };
   function zonaParaFiltro() { return ZONA_DB[zonaActual] || zonaActual; }
 
+  /** Reemplaza el catálogo de zonas con el de la base y repinta el selector.
+   *
+   *  Barrio → zona madre y barrio → coordenada vivían en DOS objetos
+   *  distintos indexados por nombre (`ZONA_DB` y `MKT_ZONA_COORD`), más las
+   *  opciones escritas a mano en el modal. Agregar un barrio pedía tocar
+   *  los tres: olvidarse de uno lo dejaba sin coordenada (invisible en el
+   *  mapa) o sin zona madre (fuera de los filtros), sin que nada fallara.
+   *
+   *  Igual que con los rubros, lo del código queda como respaldo. */
+  async function cargarZonasDeLaBase() {
+    const filas = await PronetDB.listarZonas(true).catch(() => []);
+    if (!filas.length) return false;
+
+    Object.keys(ZONA_DB).forEach(k => delete ZONA_DB[k]);
+    Object.keys(MKT_ZONA_COORD).forEach(k => delete MKT_ZONA_COORD[k]);
+    filas.forEach(z => {
+      ZONA_DB[z.nombre] = z.madre;
+      if (z.lat != null && z.lng != null) {
+        MKT_ZONA_COORD[z.nombre] = { lat: Number(z.lat), lng: Number(z.lng) };
+      }
+    });
+    pintarZonas(filas);
+    return true;
+  }
+
+  /** Dibuja las opciones del selector de zona desde el catálogo. */
+  function pintarZonas(filas) {
+    const lista = document.getElementById('zona-list');
+    if (!lista) return;
+    lista.innerHTML = filas.map(z => {
+      // "Barrio privado" sólo si el barrio no ES la zona madre: "Escobar"
+      // dentro de Escobar es la ciudad, no un country.
+      const sub = z.nombre === z.madre ? 'Ciudad' : escHTML(z.madre) + ' · Barrio privado';
+      return '<div class="zona-option' + (z.nombre === zonaActual ? ' active' : '') +
+             '" onclick="selectZona(this,\'' + escHTML(z.nombre).replace(/'/g, '&#39;') + '\')">' +
+             '<div class="zo-icon">' + (z.nombre === z.madre ? '🏙️' : '🏘️') + '</div>' +
+             '<div style="flex:1"><div class="zo-name">' + escHTML(z.nombre) + '</div>' +
+             '<div class="zo-sub">' + sub + '</div></div>' +
+             '<div class="zo-check"></div></div>';
+    }).join('');
+  }
+
   /** Las zonas CONCRETAS que cuelgan de la zona-madre activa.
    *
    *  El filtro por zona comparaba zona-madre en JS, y para eso había que
@@ -6201,6 +6244,82 @@ document.addEventListener('focusin', (e) => {
     renderParamRubros();
   }
   window.toggleRubroActivo = toggleRubroActivo;
+
+  // ══ PARAMETRÍAS · ZONAS Y BARRIOS ══════════════════════════════════
+  async function renderParamZonas() {
+    const wrap = document.getElementById('param-zonas-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando zonas…</div>';
+
+    const filas = await PronetDB.listarZonas(false).catch(() => []);
+    if (!filas.length) {
+      wrap.innerHTML = '<div style="padding:32px 18px;text-align:center;font-size:13px;color:#BE123C">⚠️ No se pudieron cargar las zonas.</div>';
+      return;
+    }
+
+    // Cuánto se usa cada zona: decide si dar de baja duele.
+    const uso = {};
+    try {
+      const peds = await PronetDB.listar('pedidos');
+      peds.forEach(p => { if (p.zona) uso[p.zona] = (uso[p.zona] || 0) + 1; });
+    } catch (e) { /* informativo */ }
+
+    const madres = [...new Set(filas.map(z => z.madre))];
+
+    wrap.innerHTML = filas.map(z => `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:10px${z.activo ? '' : ';opacity:.6'}">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+          <span style="font-size:18px">${z.nombre === z.madre ? '🏙️' : '🏘️'}</span>
+          <div style="flex:1">
+            <div style="font-size:13.5px;font-weight:800;color:var(--ink)">${escHTML(z.nombre)}</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">${uso[z.nombre] ? uso[z.nombre] + ' pedido' + (uso[z.nombre] > 1 ? 's' : '') : 'sin pedidos'}</div>
+          </div>
+          ${z.activo ? '' : '<span style="font-size:10px;font-weight:700;background:var(--surface);color:var(--ink3);border-radius:6px;padding:3px 7px">Inactiva</span>'}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border)">
+          <span style="flex:1;font-size:12.5px;color:var(--ink)">Se agrupa en</span>
+          <select id="zn-${escHTML(z.nombre)}-madre"
+                  style="font-size:12.5px;font-weight:600;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink);background:white">
+            ${madres.map(m => `<option value="${escHTML(m)}"${m === z.madre ? ' selected' : ''}>${escHTML(m)}</option>`).join('')}
+          </select>
+        </div>
+        <div id="zn-${escHTML(z.nombre)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>
+        <div style="display:flex;gap:8px">
+          <button onclick="guardarParamZona('${escHTML(z.nombre).replace(/'/g, '&#39;')}')"
+                  style="flex:1;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>
+          <button onclick="toggleZonaActiva('${escHTML(z.nombre).replace(/'/g, '&#39;')}', ${z.activo ? 'false' : 'true'})"
+                  style="flex:1;background:${z.activo ? 'var(--surface)' : 'var(--green-s)'};color:${z.activo ? 'var(--ink2)' : 'var(--green)'};border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">
+            ${z.activo ? 'Dar de baja' : 'Reactivar'}
+          </button>
+        </div>
+      </div>`).join('') + `
+      <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">
+        La <b>zona madre</b> es con la que se agrupa al filtrar: un pedido de Puertos del Lago le aparece a un prestador que cubre Escobar. Las coordenadas del mapa se editan por SQL — un valor mal puesto manda el pin a otra provincia.
+      </div>`;
+  }
+
+  async function guardarParamZona(nombre) {
+    const msg = document.getElementById('zn-' + nombre + '-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+    const madre = document.getElementById('zn-' + nombre + '-madre')?.value;
+    if (!madre) { decir('⚠️ Elegí una zona madre', '#BE123C'); return; }
+
+    decir('Guardando…', 'var(--ink3)');
+    const r = await PronetDB.guardarZona(nombre, { madre });
+    if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
+    await cargarZonasDeLaBase();
+    decir('✅ Guardado', 'var(--green)');
+    setTimeout(() => decir('', ''), 2500);
+  }
+  window.guardarParamZona = guardarParamZona;
+
+  async function toggleZonaActiva(nombre, activar) {
+    const r = await PronetDB.guardarZona(nombre, { activo: activar });
+    if (!r?.ok) { alert('No se pudo cambiar el estado: ' + (r?.error || 'error')); return; }
+    await cargarZonasDeLaBase();
+    renderParamZonas();
+  }
+  window.toggleZonaActiva = toggleZonaActiva;
 
   // ══ FUNCIONALIDADES · prender y apagar ═════════════════════════════
   //
@@ -10629,6 +10748,7 @@ document.addEventListener('focusin', (e) => {
     // llega. Bloquear el arranque por esto dejaría la pantalla en blanco
     // si la consulta tarda.
     cargarRubrosDeLaBase().catch(() => {});
+    cargarZonasDeLaBase().catch(() => {});
 
     configCargada = true;
     reflejarPlan();

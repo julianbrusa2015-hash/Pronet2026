@@ -650,6 +650,29 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Catálogo de zonas/barrios. Lectura pública: el selector de zona
+     *  aparece antes de iniciar sesión. */
+    async listarZonas(soloActivas = true) {
+      if (!remoto) return [];
+      let q = sb.from('zonas').select('*').order('orden', { ascending: true });
+      if (soloActivas) q = q.eq('activo', true);
+      const { data, error } = await q;
+      if (error) { console.warn('[PronetDB] listarZonas', error.message); return []; }
+      return data || [];
+    },
+
+    /** Edita una zona existente. UPDATE y no upsert, por el mismo motivo
+     *  que en `guardarRubro`: el upsert intentaría insertar con los campos
+     *  obligatorios en null. */
+    async guardarZona(nombre, campos) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.from('zonas')
+        .update(campos).eq('nombre', nombre).select('nombre');
+      if (error) { console.warn('[PronetDB] guardarZona', error.message); return { ok: false, error: error.message }; }
+      if (!data || !data.length) return { ok: false, error: 'No se encontró la zona o no tenés permiso' };
+      return { ok: true };
+    },
+
     /** Catálogo de rubros. Lectura pública: los chips del home se dibujan
      *  antes de que haya sesión. `soloActivos` para todo lo que ofrece
      *  elegir; el panel de admin los quiere todos. */
