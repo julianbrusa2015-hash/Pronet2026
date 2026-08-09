@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v161'; // v161: verificación de prestadores
+const CACHE_VERSION = 'pronet-v162'; // v162: altas de parametría + pantalla propia
 
 const SHELL = [
   './',

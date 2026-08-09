@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -399,7 +399,10 @@ document.addEventListener('focusin', (e) => {
     // Entrar por la barra inferior arranca sin filtro; irAChats() ya dejó el
     // suyo puesto antes de llamar acá, así que no se pisa.
     if (id === 's-chats') { if (!chatsFiltroPendiente) chatsFiltroPendiente = 'todos'; renderChats(); }
-    if (id === 's-moderacion') { renderModeracion(); renderConfigAdmin(); }
+    // Los toggles de configuración se mudaron con las parametrías, así que
+    // renderConfigAdmin() se llama desde ahí y no desde moderación.
+    if (id === 's-moderacion') { renderModeracion(); }
+    if (id === 's-parametrias') { renderConfigAdmin(); }
     if (id === 's-param-planes')   { renderParamPlanes(); }
     if (id === 's-param-features') { renderParamFeatures(); }
     if (id === 's-param-rubros')   { renderParamRubros(); }
@@ -6647,6 +6650,175 @@ document.addEventListener('focusin', (e) => {
     renderParamNiveles();
   }
   window.guardarParamNivel = guardarParamNivel;
+
+  // ══ PARAMETRÍAS · ALTA DE FILAS ════════════════════════════════════
+  //
+  // Hasta acá las tres pantallas sólo editaban lo que ya existía: sumar un
+  // rubro, un barrio o un nivel pedía SQL. Esto cierra el ABM.
+  //
+  // Planes quedó AFUERA a propósito. `planes_limites` guarda precios y
+  // límites, pero el comportamiento del plan —badge en la búsqueda,
+  // desempate en el ranking, acceso a estadísticas— vive en el array fijo
+  // `PRONET_CONFIG.PLANES` de config.js, y la pantalla de suscripción se
+  // arma desde ahí. Una fila nueva en la tabla no la mostraría el checkout,
+  // no la vendería MercadoPago, y esta misma pantalla la filtraría. Un plan
+  // nuevo es un cambio de código, no un alta de datos: un botón acá sería
+  // un botón que miente.
+
+  /** Pasa "Puertos del Lago" → "puertos-del-lago". El slug es la clave con
+   *  la que se cruzan rubro de pedido y rubro de prestador. */
+  function slugificar(txt) {
+    return (txt || '').toLowerCase().trim()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')   // saca tildes
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  const ALTA_FORMS = {
+    rubro: {
+      contenedor: 'param-rubro-alta',
+      titulo: 'Nuevo rubro',
+      // El SVG y los colores no se piden: un path inválido rompe el render
+      // de los chips en todas las pantallas y no hay forma razonable de
+      // validarlo desde un input. Con emoji alcanza para que se vea bien.
+      campos: [
+        { id: 'nombre', lbl: 'Nombre',  tipo: 'text', ancho: '150px', ph: 'Cerrajería' },
+        { id: 'emoji',  lbl: 'Ícono',   tipo: 'text', ancho: '60px',  ph: '🔑' },
+        { id: 'min',    lbl: 'Precio de referencia · desde', tipo: 'num', ancho: '96px', ph: '30000' },
+        { id: 'max',    lbl: 'Precio de referencia · hasta', tipo: 'num', ancho: '96px', ph: '500000' },
+        { id: 'esp',    lbl: 'Especialidades', tipo: 'text', ancho: '150px', ph: 'Separadas por coma' },
+      ],
+      nota: 'El slug se arma solo con el nombre. El ícono de color se ajusta después por SQL.',
+      async guardar(v) {
+        if (!v.nombre) return { ok: false, error: 'Falta el nombre' };
+        const min = Number(v.min || 30000), max = Number(v.max || 500000);
+        if (!Number.isFinite(min) || !Number.isFinite(max)) return { ok: false, error: 'Los precios tienen que ser números' };
+        if (min >= max) return { ok: false, error: 'El mínimo tiene que ser menor que el máximo' };
+        return PronetDB.crearRubro({
+          slug: slugificar(v.nombre), nombre: v.nombre,
+          emoji: v.emoji || '📋', precio_min: min, precio_max: max,
+          especialidades: (v.esp || '').split(',').map(s => s.trim()).filter(Boolean),
+          activo: true,
+        });
+      },
+      refrescar: () => { cargarRubrosDeLaBase?.(); renderParamRubros(); },
+    },
+
+    zona: {
+      contenedor: 'param-zona-alta',
+      titulo: 'Nueva zona o barrio',
+      campos: [
+        { id: 'nombre', lbl: 'Nombre',    tipo: 'text', ancho: '150px', ph: 'Puertos · Acacias' },
+        { id: 'madre',  lbl: 'Agrupa con', tipo: 'madre', ancho: '150px' },
+        { id: 'lat',    lbl: 'Latitud',   tipo: 'text', ancho: '110px', ph: '-34.3521' },
+        { id: 'lng',    lbl: 'Longitud',  tipo: 'text', ancho: '110px', ph: '-58.7935' },
+      ],
+      nota: 'Sin coordenadas la zona funciona igual, pero no se dibuja en el mapa de ProMarket.',
+      async guardar(v) {
+        if (!v.nombre) return { ok: false, error: 'Falta el nombre' };
+        if (!v.madre)  return { ok: false, error: 'Elegí con qué zona se agrupa' };
+        const num = (s) => { const n = Number(s); return s && Number.isFinite(n) ? n : null; };
+        return PronetDB.crearZona({
+          nombre: v.nombre, madre: v.madre,
+          lat: num(v.lat), lng: num(v.lng),
+          orden: 500,           // al final; el orden fino se ajusta después
+          activo: true,
+        });
+      },
+      refrescar: () => { cargarZonasDeLaBase?.(); renderParamZonas(); },
+    },
+
+    nivel: {
+      contenedor: 'param-nivel-alta',
+      titulo: 'Nuevo nivel',
+      campos: [
+        { id: 'nombre', lbl: 'Nombre', tipo: 'text', ancho: '150px', ph: 'Diamante' },
+        { id: 'emoji',  lbl: 'Ícono',  tipo: 'text', ancho: '60px',  ph: '💎' },
+        { id: 'min',    lbl: 'Desde (puntos)', tipo: 'num', ancho: '110px', ph: '10000' },
+      ],
+      nota: 'El orden se calcula por los puntos: el nivel se ubica solo donde corresponde.',
+      async guardar(v) {
+        if (!v.nombre) return { ok: false, error: 'Falta el nombre' };
+        const min = Number(v.min);
+        if (!Number.isFinite(min) || min < 0) return { ok: false, error: 'Los puntos tienen que ser un número positivo' };
+        // Dos niveles con el mismo umbral dejarían la clasificación
+        // indefinida: no habría forma de decir a cuál pertenece alguien.
+        const actuales = await PronetDB.listarLoyaltyNiveles().catch(() => []);
+        if (actuales.some(n => n.min_puntos === min)) {
+          return { ok: false, error: 'Ya hay un nivel que arranca en esos puntos' };
+        }
+        // `orden` va provisorio: crearLoyaltyNivel() renumera todo por puntos.
+        return PronetDB.crearLoyaltyNivel({
+          nombre: v.nombre, emoji: v.emoji || '🏅', min_puntos: min, orden: 999,
+        });
+      },
+      refrescar: () => { cargarNivelesLoyalty?.(); renderParamNiveles(); },
+    },
+  };
+
+  function abrirAltaParam(tipo) {
+    const cfg = ALTA_FORMS[tipo];
+    const cont = document.getElementById(cfg?.contenedor);
+    if (!cfg || !cont) return;
+    // Segundo toque: cierra. Evita tener que buscar el botón Cancelar.
+    if (cont.style.display !== 'none') { cont.style.display = 'none'; cont.innerHTML = ''; return; }
+
+    const fila = (c) => {
+      if (c.tipo === 'madre') {
+        // Las madres salen de las zonas que ya hay: escribirlas a mano es
+        // como se generan los grupos huérfanos que no filtran nada.
+        const madres = [...new Set(Object.values(ZONA_DB || {}))].sort();
+        return '<div class="pa-row"><span class="pa-lbl">' + escHTML(c.lbl) + '</span>' +
+          '<select id="alta-' + tipo + '-' + c.id + '" class="pa-in" style="width:' + c.ancho + '">' +
+          '<option value="">Elegir…</option>' +
+          madres.map(m => '<option value="' + escHTML(m) + '">' + escHTML(m) + '</option>').join('') +
+          '</select></div>';
+      }
+      return '<div class="pa-row"><span class="pa-lbl">' + escHTML(c.lbl) + '</span>' +
+        '<input id="alta-' + tipo + '-' + c.id + '" class="pa-in" style="width:' + c.ancho + '"' +
+        (c.tipo === 'num' ? ' inputmode="numeric"' : '') +
+        ' placeholder="' + escHTML(c.ph || '') + '" autocomplete="off"></div>';
+    };
+
+    cont.innerHTML =
+      '<div class="param-alta-card">' +
+        '<div style="font-size:13.5px;font-weight:800;color:var(--ink);margin-bottom:4px">' + escHTML(cfg.titulo) + '</div>' +
+        cfg.campos.map(fila).join('') +
+        '<div style="font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.5">' + escHTML(cfg.nota) + '</div>' +
+        '<div id="alta-' + tipo + '-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button onclick="guardarAltaParam(\'' + tipo + '\')" style="flex:1;background:var(--blue);color:white;border:none;border-radius:10px;padding:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Crear</button>' +
+          '<button onclick="abrirAltaParam(\'' + tipo + '\')" style="flex:1;background:var(--surface);color:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    cont.style.display = 'block';
+    document.getElementById('alta-' + tipo + '-' + cfg.campos[0].id)?.focus();
+  }
+  window.abrirAltaParam = abrirAltaParam;
+
+  async function guardarAltaParam(tipo) {
+    const cfg = ALTA_FORMS[tipo];
+    const msg = document.getElementById('alta-' + tipo + '-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+    decir('', '');
+
+    const v = {};
+    cfg.campos.forEach(c => {
+      v[c.id] = (document.getElementById('alta-' + tipo + '-' + c.id)?.value || '').trim();
+    });
+
+    const r = await cfg.guardar(v);
+    if (!r?.ok) { decir('⚠️ ' + (r?.error || 'No se pudo crear'), '#BE123C'); return; }
+
+    decir('✅ Creado', 'var(--green)');
+    // El catálogo en memoria también se recarga: si no, la fila nueva existe
+    // en la base pero no aparece en los selectores hasta recargar la app.
+    await cfg.refrescar();
+    const cont = document.getElementById(cfg.contenedor);
+    if (cont) { cont.style.display = 'none'; cont.innerHTML = ''; }
+    showToast && showToast('✅ ' + cfg.titulo.replace('Nuevo ', '').replace('Nueva ', '') + ' creado');
+  }
+  window.guardarAltaParam = guardarAltaParam;
 
   // ══ ADMIN · VERIFICACIÓN DE PRESTADORES ════════════════════════════
   //

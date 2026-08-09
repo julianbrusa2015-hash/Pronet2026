@@ -882,7 +882,10 @@ const PronetDB = (() => {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       if (!rubro?.slug || !rubro?.nombre) return { ok: false, error: 'Faltan slug y nombre' };
       const { error } = await sb.from('rubros').insert(rubro);
-      if (error) { console.warn('[PronetDB] crearRubro', error.message); return { ok: false, error: error.message }; }
+      if (error) {
+        console.warn('[PronetDB] crearRubro', error.message);
+        return { ok: false, error: this._errorAlta(error, 'un rubro') };
+      }
       return { ok: true };
     },
 
@@ -897,6 +900,64 @@ const PronetDB = (() => {
       // Un UPDATE que RLS filtra no devuelve error, sólo cero filas. Sin
       // este chequeo el panel diría "✅ Guardado" sin haber guardado nada.
       if (!data || !data.length) return { ok: false, error: 'No se pudo guardar: sin permisos de administrador' };
+      return { ok: true };
+    },
+
+    /** Traduce los dos rechazos esperables de un alta de parametría. Sin
+     *  esto el panel muestra el texto crudo de Postgres ("new row violates
+     *  row-level security policy for table…"), que no le dice nada a quien
+     *  está cargando un barrio. */
+    _errorAlta(error, queEs) {
+      if (error.code === '23505') return 'Ya existe ' + queEs + ' con ese nombre';
+      if (error.code === '42501') return 'No se pudo crear: sin permisos de administrador';
+      return error.message;
+    },
+
+    /** Alta de zona. `nombre` es la clave primaria y `madre` el grupo con el
+     *  que se filtra, así que los dos son obligatorios. Sin lat/lng la zona
+     *  existe igual pero no se dibuja en el mapa de ProMarket. */
+    async crearZona(zona) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      if (!zona?.nombre || !zona?.madre) return { ok: false, error: 'Faltan nombre y zona madre' };
+      const { error } = await sb.from('zonas').insert(zona);
+      if (error) {
+        console.warn('[PronetDB] crearZona', error.message);
+        return { ok: false, error: this._errorAlta(error, 'una zona') };
+      }
+      return { ok: true };
+    },
+
+    /** Alta de nivel de loyalty.
+     *
+     *  `orden` se renumera para TODOS después de insertar, en vez de
+     *  calcularle un número al nuevo. Si sólo se le asignara uno, un nivel
+     *  intermedio quedaría mal: con Bronce=1, Plata=2, Oro=3, Élite=4, un
+     *  Platino de 3.000 puntos calculado como "los que tiene debajo × 10"
+     *  daría 30 y se mostraría ÚLTIMO, después de Élite. El orden tiene que
+     *  salir de los puntos, que es lo que de verdad ordena los niveles. */
+    async crearLoyaltyNivel(nivel) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      if (!nivel?.nombre) return { ok: false, error: 'Falta el nombre' };
+      const { error } = await sb.from('loyalty_niveles').insert(nivel);
+      if (error) {
+        console.warn('[PronetDB] crearLoyaltyNivel', error.message);
+        return { ok: false, error: this._errorAlta(error, 'un nivel') };
+      }
+      await this.renumerarNiveles();
+      return { ok: true };
+    },
+
+    /** Deja `orden` alineado con `min_puntos`. Sólo escribe las filas que
+     *  cambian: son cinco, pero no hay razón para tocar las que ya están. */
+    async renumerarNiveles() {
+      if (!remoto) return { ok: true };
+      const filas = await this.listarLoyaltyNiveles();
+      const ordenadas = [...filas].sort((a, b) => a.min_puntos - b.min_puntos);
+      for (let i = 0; i < ordenadas.length; i++) {
+        if (ordenadas[i].orden !== i + 1) {
+          await sb.from('loyalty_niveles').update({ orden: i + 1 }).eq('nombre', ordenadas[i].nombre);
+        }
+      }
       return { ok: true };
     },
 

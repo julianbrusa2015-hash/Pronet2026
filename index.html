@@ -1087,6 +1087,14 @@
           </div>
           <div class="m-chev" style="color:#EF4444">›</div>
         </div>
+        <div id="menu-parametrias" data-admin-only="true" class="menu-item" onclick="goTo('s-parametrias')" style="background:linear-gradient(135deg,#EEF2FF,#E0E7FF)">
+          <div class="m-icon" style="background:#1A3ACC;color:white">🗂️</div>
+          <div class="m-txt">
+            <div class="m-title" style="color:#1A3ACC">Parametrías</div>
+            <div class="m-sub">Planes, rubros, zonas, niveles y funcionalidades</div>
+          </div>
+          <div class="m-chev" style="color:#1A3ACC">›</div>
+        </div>
         <div id="menu-loyalty-admin" data-admin-only="true" class="menu-item" data-feature="loyalty" onclick="goTo('s-loyalty-admin')" style="background:var(--blue-s)">
           <div class="m-icon" style="background:var(--blue-d);color:white">⭐</div>
           <div class="m-txt">
@@ -2010,7 +2018,7 @@
     <div class="screen admin-screen" id="s-param-planes">
       <div class="admin-hero">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <button onclick="goTo('s-moderacion')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <button onclick="goTo('s-parametrias')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style="flex:1">
@@ -2028,15 +2036,17 @@
     <div class="screen admin-screen" id="s-param-rubros">
       <div class="admin-hero">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <button onclick="goTo('s-moderacion')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <button onclick="goTo('s-parametrias')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style="flex:1">
             <h2>🧰 Rubros</h2>
             <p>Servicios que se pueden pedir y ofrecer</p>
           </div>
+          <button onclick="abrirAltaParam('rubro')" class="param-nuevo-btn" aria-label="Nuevo rubro">+ Nuevo</button>
         </div>
       </div>
+      <div id="param-rubro-alta" style="display:none;padding:12px 14px 0"></div>
       <div id="param-rubros-lista" style="padding:12px 14px 90px">
         <div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando rubros…</div>
       </div>
@@ -2084,7 +2094,7 @@
     <div class="screen admin-screen" id="s-param-ajustes">
       <div class="admin-hero">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <button onclick="goTo('s-moderacion')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <button onclick="goTo('s-parametrias')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style="flex:1">
@@ -2102,15 +2112,17 @@
     <div class="screen admin-screen" id="s-param-niveles">
       <div class="admin-hero">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <button onclick="goTo('s-moderacion')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <button onclick="goTo('s-parametrias')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style="flex:1">
             <h2>🏅 Niveles de puntos</h2>
             <p>Cuántos puntos hacen falta para cada nivel</p>
           </div>
+          <button onclick="abrirAltaParam('nivel')" class="param-nuevo-btn" aria-label="Nuevo nivel">+ Nuevo</button>
         </div>
       </div>
+      <div id="param-nivel-alta" style="display:none;padding:12px 14px 0"></div>
       <div id="param-niveles-lista" style="padding:12px 14px 90px">
         <div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando niveles…</div>
       </div>
@@ -2120,15 +2132,17 @@
     <div class="screen admin-screen" id="s-param-zonas">
       <div class="admin-hero">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <button onclick="goTo('s-moderacion')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <button onclick="goTo('s-parametrias')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style="flex:1">
             <h2>📍 Zonas y barrios</h2>
             <p>Dónde opera PRONET y cómo se agrupan</p>
           </div>
+          <button onclick="abrirAltaParam('zona')" class="param-nuevo-btn" aria-label="Nueva zona">+ Nueva</button>
         </div>
       </div>
+      <div id="param-zona-alta" style="display:none;padding:12px 14px 0"></div>
       <div id="param-zonas-lista" style="padding:12px 14px 90px">
         <div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando zonas…</div>
       </div>
@@ -2138,7 +2152,7 @@
     <div class="screen admin-screen" id="s-param-features">
       <div class="admin-hero">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <button onclick="goTo('s-moderacion')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <button onclick="goTo('s-parametrias')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style="flex:1">
@@ -4292,8 +4306,26 @@
       </div>
     </div>
 
-    <!-- Parametrías: datos del negocio editables sin deploy -->
-    <div style="padding:20px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--border);margin-top:16px">
+  </div><!-- /moderacion -->
+
+  <!-- ══ PARAMETRÍAS ══════════════════════════════════════════════════════
+       Pantalla propia, al mismo nivel que el Panel de Moderación y no
+       adentro: moderar es una tarea del día a día, configurar el negocio es
+       otra cosa y se hace cada tanto. Mezclarlas obligaba a scrollear toda
+       la lista de denuncias para llegar a un precio. -->
+  <div class="screen" id="s-parametrias">
+
+    <div class="mod-hero" style="background:linear-gradient(135deg,#1A3ACC,#2B5BFF)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <button onclick="goTo('s-miperfil')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:white">🗂️ Parametrías</div>
+      </div>
+      <div style="font-size:12px;color:rgba(255,255,255,.65)">Datos del negocio editables sin deploy · Solo equipo PRONET</div>
+    </div>
+
+    <div style="padding:20px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">
       🗂️ Parametrías
     </div>
     <div style="padding:0 14px">
@@ -4419,7 +4451,7 @@
       </div>
     </div>
 
-  </div><!-- /moderacion -->
+  </div><!-- /parametrias -->
 
   <!-- ══ PANEL ADMIN PRONET POINTS ══════════════════════════════════════ -->
   <div class="screen" id="s-loyalty-admin">
