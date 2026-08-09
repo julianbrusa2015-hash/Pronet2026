@@ -5,6 +5,9 @@
 // tienen su propia copia de estas funciones. No se refactorizaron para no
 // tocar suites que hoy pasan; los specs nuevos usan este módulo.
 
+// Una sola fuente de verdad para "¿hay Service Worker en los tests?".
+const BLOQUEA_SW = require('../playwright.config.js').use?.serviceWorkers === 'block';
+
 const CUENTAS = {
   vecino:    { email: process.env.TEST_VECINO_EMAIL    || 'vecino_test@pronet.test',    pw: process.env.TEST_VECINO_PW    || 'Test1234!' },
   prestador: { email: process.env.TEST_PRESTADOR_EMAIL || 'prestador_test@pronet.test', pw: process.env.TEST_PRESTADOR_PW  || '12345678' },
@@ -36,6 +39,11 @@ async function esperarDOM(page) {
  *  No falla si el SW no llega: se sigue igual (catch vacío) para no romper
  *  entornos donde no esté registrado. */
 async function esperarSWListo(page) {
+  // Con serviceWorkers:'block' en playwright.config.js el controller no llega
+  // NUNCA, y como el waitForFunction traga su error con el catch, cada llamada
+  // se comía 20 s en silencio — la suite entera se volvía lentísima sin que
+  // ningún test fallara. Se lee la config en vez de duplicar la decisión acá.
+  if (BLOQUEA_SW) return;
   await page.waitForFunction(
     () => !('serviceWorker' in navigator) || !!navigator.serviceWorker.controller,
     { timeout: 20000 }
