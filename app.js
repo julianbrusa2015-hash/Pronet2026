@@ -4150,12 +4150,22 @@ document.addEventListener('focusin', (e) => {
    *  traerse la tabla entera. Con la lista de hijas se filtra en el servidor
    *  con `.in('zona', ...)` y viaja sólo lo que se usa. */
   function zonasDelFiltro() {
-    const madre = zonaParaFiltro();
-    if (!madre) return null;
-    const zonas = Object.keys(ZONA_DB).filter(z => ZONA_DB[z] === madre);
-    // La madre puede no figurar como clave de sí misma en el mapa.
-    if (!zonas.includes(madre)) zonas.push(madre);
-    return zonas;
+    const raiz = zonaParaFiltro();
+    if (!raiz) return null;
+    // Camina TODOS los niveles, no uno. Desde que las zonas tienen tres
+    // (Escobar → Puertos del Lago → Araucarias), quedarse en el primer salto
+    // dejaba al prestador de Puertos sin ver los pedidos de sus barrios: el
+    // pedido dice "Araucarias", cuya madre es "Puertos del Lago" y no
+    // "Escobar", así que no entraba en la lista.
+    const resultado = new Set([raiz]);
+    let creció = true;
+    while (creció) {
+      creció = false;
+      Object.keys(ZONA_DB).forEach(z => {
+        if (!resultado.has(z) && resultado.has(ZONA_DB[z])) { resultado.add(z); creció = true; }
+      });
+    }
+    return [...resultado];
   }
 
   function abrirZonaModal() {
@@ -5919,23 +5929,33 @@ document.addEventListener('focusin', (e) => {
    *  en la base convivían publicaciones que decían "Escobar" con otras que
    *  decían "Nordelta": no se podía saber cuál era cuál ni filtrar bien. */
   async function pmPintarZonas(zonaSel, barrioSel) {
-    const zonas = await PronetDB.listarZonas().catch(() => []);
+    const zonas = await PronetDB.listarZonasArbol().catch(() => []);
     const selZ = document.getElementById('pm-zona');
     const selB = document.getElementById('pm-barrio');
     if (!selZ || !selB) return;
 
-    const madres = [...new Set(zonas.map(z => z.madre))].sort();
+    // Nivel 1 y no "los valores distintos de madre": con tres niveles,
+    // Puertos del Lago es madre de sus barrios y aparecería como zona.
+    const zonasRaiz = zonas.filter(z => z.nivel === 1);
     selZ.innerHTML = '<option value="">Seleccioná tu zona…</option>' +
-      madres.map(m => '<option value="' + escHTML(m) + '">' + escHTML(m) + '</option>').join('');
-    if (zonaSel && madres.includes(zonaSel)) selZ.value = zonaSel;
+      zonasRaiz.map(z => '<option value="' + escHTML(z.nombre) + '">' + escHTML(z.nombre) + '</option>').join('');
+    if (zonaSel && zonasRaiz.some(z => z.nombre === zonaSel)) selZ.value = zonaSel;
 
-    pmPintarBarrios(zonas, selZ.value, barrioSel);
-    // El catálogo se guarda para que el cambio de zona no vuelva a pedirlo.
     pmZonasCache = zonas;
+    pmPintarBarrios(zonas, selZ.value, barrioSel);
   }
 
   let pmZonasCache = [];
 
+  /** Los lugares de una zona, agrupados por comunidad.
+   *
+   *  Una lista plana con las 9 comunidades y los 13 barrios de Puertos
+   *  mezclados serían 22 opciones sin jerarquía, donde "Araucarias" no dice
+   *  nada por sí sola. Agrupadas, el vecino ve "Puertos del Lago" como
+   *  encabezado y sus barrios adentro.
+   *
+   *  Las comunidades sin barrios (Nordelta, CUBE…) van como opción suelta:
+   *  ahí la comunidad ES el lugar. */
   function pmPintarBarrios(zonas, zona, barrioSel) {
     const selB = document.getElementById('pm-barrio');
     if (!selB) return;
@@ -5943,13 +5963,24 @@ document.addEventListener('focusin', (e) => {
       selB.innerHTML = '<option value="">Elegí primero la zona…</option>';
       return;
     }
-    // La zona madre también figura como barrio de sí misma en el catálogo
-    // (Escobar/Escobar). Se deja: es la opción de quien no está en un barrio
-    // cerrado y no tiene otra cosa que poner.
-    const hijos = zonas.filter(z => z.madre === zona);
-    selB.innerHTML = '<option value="">Seleccioná tu barrio…</option>' +
-      hijos.map(z => '<option value="' + escHTML(z.nombre) + '">' + escHTML(z.nombre) + '</option>').join('');
-    if (barrioSel && hijos.some(z => z.nombre === barrioSel)) selB.value = barrioSel;
+    const deLaZona = zonas.filter(z => z.zona === zona);
+    const comunidades = deLaZona.filter(z => z.nivel === 2);
+
+    const opcion = (n) => '<option value="' + escHTML(n) + '">' + escHTML(n) + '</option>';
+    const html = comunidades.map(c => {
+      const barrios = deLaZona.filter(z => z.nivel === 3 && z.comunidad === c.nombre);
+      if (!barrios.length) return opcion(c.nombre);
+      // La comunidad también se ofrece: alguien puede estar en Puertos sin
+      // querer decir en qué barrio.
+      return '<optgroup label="' + escHTML(c.nombre) + '">' +
+             opcion(c.nombre) + barrios.map(b => opcion(b.nombre)).join('') +
+             '</optgroup>';
+    }).join('');
+
+    selB.innerHTML = '<option value="">Seleccioná tu barrio…</option>' + html;
+    if (barrioSel && selB.querySelector('option[value="' + barrioSel.replace(/"/g, '\\"') + '"]')) {
+      selB.value = barrioSel;
+    }
   }
 
   function pmCambioZona() {

@@ -845,6 +845,20 @@ const PronetDB = (() => {
       return data;
     },
 
+    /** Zonas con su nivel y sus ancestros ya calculados (vista
+     *  `zonas_arbol`): 1 zona, 2 comunidad, 3 barrio.
+     *
+     *  Se usa donde hace falta distinguir niveles. `listarZonas()` sigue
+     *  sirviendo para lo plano — el selector del mapa, por ejemplo. */
+    async listarZonasArbol(soloActivas = true) {
+      if (!remoto) return [];
+      let q = sb.from('zonas_arbol').select('*').order('orden', { ascending: true });
+      if (soloActivas) q = q.eq('activo', true);
+      const { data, error } = await q;
+      if (error) { console.warn('[PronetDB] listarZonasArbol', error.message); return []; }
+      return data || [];
+    },
+
     async listarZonas(soloActivas = true) {
       if (!remoto) return [];
       let q = sb.from('zonas').select('*').order('orden', { ascending: true });
