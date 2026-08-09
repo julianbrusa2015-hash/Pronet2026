@@ -11312,17 +11312,25 @@ document.addEventListener('focusin', (e) => {
     if (bannerCerrado) bannerCerrado.style.display = 'flex';
     if (footer) footer.style.display = 'none';
 
-    // Notificar al prestador
+    // La CAMPANITA ya la escribe dejar_resena() en la base, junto con la
+    // reseña. Antes se mandaba desde acá y estaba condicionada a que
+    // `prestadorActual` existiera: si no —se llegaba a calificar después de
+    // recargar, se navegaba distinto— la reseña se guardaba y el aviso se
+    // perdía sin dejar rastro. En los datos: 7 reseñas, 1 aviso.
+    //
+    // Lo que SÍ queda acá es el push, que necesita la Edge Function y no se
+    // puede disparar desde Postgres.
     if (prestadorActual) {
       const destinatarioId = await PronetDB.usuarioIdDePrestador(prestadorActual.id).catch(() => null);
       if (destinatarioId) {
         PronetDB.notificar({
+          soloPush: true,          // la campanita ya la escribió dejar_resena
           destino: 'usuario',
           usuario_id: destinatarioId,
           tipo: 'resena',
           titulo: '⭐ Recibiste una reseña de ' + puntos + ' estrella' + (puntos > 1 ? 's' : ''),
           cuerpo: textoFinal.slice(0, PRONET_CONFIG.NOTIF_CUERPO_MAX) || 'Un vecino calificó tu trabajo',
-          url: '/#s-miperfil',
+          url: '#s-miperfil',
         }).catch(() => {});
 
         // Loyalty: los puntos por reseña (prestador +100, vecino +50, y el
