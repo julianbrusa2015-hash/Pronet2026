@@ -4345,6 +4345,27 @@ document.addEventListener('focusin', (e) => {
     return `📍 A ${minutos} min caminando · ${distStr}`;
   }
 
+  // Recomendaciones por publicación, cargadas junto con cada página del feed.
+  const mktRecosCache = new Map();
+
+  // El promedio recién se muestra a partir de acá. Con menos, un número como
+  // "5.0" sale de uno o dos votos y aparenta una precisión que no tiene.
+  const MKT_MIN_PARA_PROMEDIO = 5;
+
+  /** "⭐ 3 vecinos lo recomiendan". Con cero no devuelve nada: un
+   *  "0 recomendaciones" se lee como una advertencia sobre algo que
+   *  simplemente es nuevo. */
+  function mktRecomiendanHTML(pubId) {
+    const r = mktRecosCache.get(pubId);
+    if (!r || !r.recomiendan) return '';
+    const txt = r.recomiendan === 1
+      ? '1 vecino lo recomienda'
+      : r.recomiendan + ' vecinos lo recomiendan';
+    const prom = r.puntajes >= MKT_MIN_PARA_PROMEDIO ? ' · ' + r.promedio + ' de 5' : '';
+    return '<div style="display:flex;align-items:center;gap:5px;margin:6px 0 0;font-size:12px;color:var(--green);font-weight:600">' +
+           '<span style="color:#F5A623">★</span>' + escHTML(txt + prom) + '</div>';
+  }
+
   function mktCardHTML(p) {
     const nombre    = p.perfiles?.nombre || 'Vecino';
     const iniciales = mktIniciales(nombre);
@@ -4372,6 +4393,7 @@ document.addEventListener('focusin', (e) => {
             <div class="mkt-post-title">${escHTML(p.titulo)}</div>
             <div class="mkt-post-price">${p.precio_convenir ? 'A convenir' : (p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar')}</div>
           </div>
+          ${mktRecomiendanHTML(p.id)}
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
           ${p.detalles && p.detalles.length ? `<details style="margin:8px 0 0">
             <summary style="font-size:12px;color:var(--blue);font-weight:600;cursor:pointer">Ver detalles</summary>
@@ -4521,6 +4543,10 @@ document.addEventListener('focusin', (e) => {
     // El puntaje también se limpia: si quedara puesto, el próximo comentario
     // saldría con la nota del anterior sin que nadie la haya elegido.
     mktSetPuntaje(0);
+    // Y se refresca el agregado, para que al volver al feed la tarjeta no
+    // siga mostrando el conteo de antes de este comentario.
+    const frescas = await PronetDB.listarRecomendaciones([mktComentariosPubId]).catch(() => null);
+    if (frescas?.has(mktComentariosPubId)) mktRecosCache.set(mktComentariosPubId, frescas.get(mktComentariosPubId));
     // Actualizar contador en el card del feed
     const cntEl = document.querySelector(`[onclick*="${mktComentariosPubId}"] span`);
     // Recargar lista
@@ -4560,6 +4586,10 @@ document.addEventListener('focusin', (e) => {
       mktHayMas = false;
       return;
     }
+    // Las recomendaciones se traen para toda la página de una vez, antes de
+    // dibujar: una consulta por tarjeta serían diez por scroll.
+    const recos = await PronetDB.listarRecomendaciones(posts.map(p => p.id)).catch(() => new Map());
+    recos.forEach((v, k) => mktRecosCache.set(k, v));
     cont.insertAdjacentHTML('beforeend', posts.map(mktCardHTML).join(''));
     mktOffset  += posts.length;
     mktHayMas   = posts.length === 10;

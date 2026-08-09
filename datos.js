@@ -1496,6 +1496,22 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Recomendaciones de varias publicaciones de una sola consulta.
+     *
+     *  Devuelve un Map id → { recomiendan, puntajes, promedio }. Va aparte
+     *  del feed y no embebido: `publicaciones_recomendaciones` es una vista
+     *  agregada y no tiene FK, así que PostgREST no la puede traer como
+     *  relación de `publicaciones`. Una consulta más por página es barato;
+     *  una por tarjeta no lo sería. */
+    async listarRecomendaciones(ids) {
+      const vacio = new Map();
+      if (!remoto || !ids?.length) return vacio;
+      const { data, error } = await sb.from('publicaciones_recomendaciones')
+        .select('*').in('publicacion_id', ids);
+      if (error) { console.warn('[PronetDB] listarRecomendaciones', error.message); return vacio; }
+      return new Map((data || []).map(r => [r.publicacion_id, r]));
+    },
+
     /** Crea un comentario en una publicación.
      *
      *  `puntaje` es opcional: null significa "comentó sin puntuar", que no es
