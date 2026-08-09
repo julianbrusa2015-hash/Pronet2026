@@ -436,18 +436,27 @@
   .c-zona { font-size: 11px; color: var(--ink3); }
 
   /* ── Urgencias strip ── */
+  /* Una línea, no una tarjeta. Antes ocupaba 93px con título y subtítulo en
+     dos renglones; sumado al banner y al carrusel, el vecino no llegaba a
+     ver un solo prestador sin scrollear. El subtítulo se oculta en pantalla
+     angosta: la banda tiene que llamar la atención, no explicarse. */
   .urgencias {
     margin: 8px 14px; background: #FFF1F2; border: 1.5px solid #FECDD3;
-    border-radius: 12px; padding: 12px 14px;
-    display: flex; align-items: center; justify-content: space-between;
+    border-radius: 12px; padding: 9px 12px;
+    display: flex; align-items: center; gap: 8px;
   }
-  .urg-txt h4 { font-size: 13px; font-weight: 700; color: #BE123C; }
-  .urg-txt p { font-size: 11px; color: #BE123C; margin-top: 2px; }
+  .urg-txt { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; }
+  .urg-txt h4 { font-size: 12.5px; font-weight: 700; color: #BE123C; white-space: nowrap; }
+  .urg-txt p  {
+    font-size: 11px; color: #BE123C; opacity: .8; margin: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .urg-btn {
-    background: #BE123C; color: white; border: none; border-radius: 10px;
-    padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
+    background: #BE123C; color: white; border: none; border-radius: 9px;
+    padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
     font-family: 'Inter', sans-serif; flex-shrink: 0;
   }
+  @media (max-width: 380px) { .urg-txt p { display: none; } }
 
   /* ── BUSCAR SCREEN ── */
   .search-header {
@@ -1974,8 +1983,12 @@
   }
   /* Relación fija: sin esto, cada imagen define su propia altura y el
      carrusel salta de tamaño en cada rotación. */
+  /* 16:5 y no 16:7: a 347px de ancho la diferencia es 176px contra 110px de
+     alto, y ese espacio es el que decide si el vecino llega a ver un
+     prestador sin scrollear. Sigue siendo una franja cómoda para una
+     creatividad publicitaria. */
   .ads-slide img {
-    display: block; width: 100%; aspect-ratio: 16 / 7;
+    display: block; width: 100%; aspect-ratio: 16 / 5;
     object-fit: cover;
   }
   .ads-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }

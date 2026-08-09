@@ -3443,21 +3443,21 @@ document.addEventListener('focusin', (e) => {
     const sub = document.getElementById('home-banner-sub');
     if (!title || !sub) return;
     const tipo = usuarioActual ? usuarioActual.tipo : 'invitado';
+    // El banner pasó a una sola línea, así que el subtítulo dejó de ser una
+    // frase y es sólo la acción. Lo que se decía ahí ("recibí propuestas",
+    // "conseguí clientes") se movió al título, que es lo único que se lee.
     if (esPrestador()) {
-      // Prestador: invitarlo a completar su perfil / ver pedidos
       if (icon) icon.textContent = '💼';
       title.textContent = 'Mirá los pedidos disponibles';
-      sub.textContent = 'Ofertá y conseguí nuevos clientes en tu zona →';
+      sub.textContent = 'Ofertá →';
     } else if (tipo === 'cliente') {
-      // Vecino logueado: invitarlo a publicar un pedido
       if (icon) icon.textContent = '📋';
-      title.textContent = '¿Necesitás un servicio?';
-      sub.textContent = 'Publicá tu pedido gratis y recibí propuestas →';
+      title.textContent = 'Publicá tu pedido gratis';
+      sub.textContent = 'Publicar →';
     } else {
-      // Invitado: invitarlo a registrarse
       if (icon) icon.textContent = '🚀';
       title.textContent = 'Sumate a PRONET gratis';
-      sub.textContent = 'Registrate para publicar pedidos y contactar prestadores →';
+      sub.textContent = 'Registrarme →';
     }
   }
 
