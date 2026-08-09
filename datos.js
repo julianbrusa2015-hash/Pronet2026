@@ -758,6 +758,75 @@ const PronetDB = (() => {
 
     /** Catálogo de zonas/barrios. Lectura pública: el selector de zona
      *  aparece antes de iniciar sesión. */
+    // ══ VERIFICACIÓN DE PRESTADORES ══════════════════════════════════════
+    // Datos declarados (nombre completo, DNI, dirección) que el admin revisa
+    // para encender el sello. Tabla aparte de `prestadores` porque esa es de
+    // lectura pública — ver supabase-verificacion-prestador.sql.
+
+    /** La solicitud del prestador actual, o null si nunca cargó nada. */
+    async obtenerVerificacion() {
+      if (!remoto) return null;
+      const { data, error } = await sb.from('prestadores_verificacion')
+        .select('*').maybeSingle();   // el RLS ya la acota a la propia
+      if (error) { console.warn('[PronetDB] obtenerVerificacion', error.message); return null; }
+      return data;
+    },
+
+    /** Crea o actualiza la solicitud propia.
+     *
+     *  Devuelve `{ ok, error }` en vez de tirar: los dos rechazos esperables
+     *  —DNI repetido y solicitud ya resuelta— tienen que llegar a la UI con
+     *  un mensaje que se entienda, no como "algo falló". */
+    async guardarVerificacion(prestadorId, { nombre_completo, direccion, dni }) {
+      if (!remoto) return { ok: false, error: 'sin conexión' };
+      const fila = {
+        prestador_id: prestadorId,
+        nombre_completo, direccion, dni,
+        estado: 'pendiente',
+        actualizado: new Date().toISOString(),
+      };
+      const { data, error } = await sb.from('prestadores_verificacion')
+        .upsert(fila, { onConflict: 'prestador_id' })
+        .select();
+      if (error) {
+        // 23505 = unique_violation sobre idx_verificacion_dni.
+        if (error.code === '23505') {
+          return { ok: false, error: 'Ese DNI ya está registrado en otra cuenta.' };
+        }
+        console.warn('[PronetDB] guardarVerificacion', error.message);
+        return { ok: false, error: error.message };
+      }
+      // El RLS filtra sin dar error: cero filas significa que la solicitud ya
+      // fue resuelta y la policy de edición no la alcanza.
+      if (!data?.length) {
+        return { ok: false, error: 'Tu solicitud ya fue revisada. Escribinos a soporte para cambiarla.' };
+      }
+      return { ok: true, fila: data[0] };
+    },
+
+    /** Solicitudes a revisar. Sólo devuelve algo si quien pregunta es admin. */
+    async listarVerificaciones(estado = 'pendiente') {
+      if (!remoto) return [];
+      let q = sb.from('prestadores_verificacion')
+        .select('*, prestadores(nombre, rubro, zona)')
+        .order('creado', { ascending: true });
+      if (estado) q = q.eq('estado', estado);
+      const { data, error } = await q;
+      if (error) { console.warn('[PronetDB] listarVerificaciones', error.message); return []; }
+      return data || [];
+    },
+
+    /** Aprueba o rechaza. Va por RPC para que el estado de la solicitud y la
+     *  bandera pública del prestador no puedan quedar desfasados. */
+    async resolverVerificacion(prestadorId, aprobar, motivo = null) {
+      if (!remoto) return { ok: false, error: 'sin conexión' };
+      const { data, error } = await sb.rpc('resolver_verificacion', {
+        p_prestador_id: prestadorId, p_aprobar: aprobar, p_motivo: motivo,
+      });
+      if (error) { console.warn('[PronetDB] resolverVerificacion', error.message); return { ok: false, error: error.message }; }
+      return data;
+    },
+
     async listarZonas(soloActivas = true) {
       if (!remoto) return [];
       let q = sb.from('zonas').select('*').order('orden', { ascending: true });

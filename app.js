@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -407,6 +407,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-param-niveles')  { renderParamNiveles(); }
     if (id === 's-param-ajustes')  { renderParamAjustes(); }
     if (id === 's-servicios-fijos'){ renderServiciosFijos(); }
+    if (id === 's-verificaciones') { renderVerificaciones(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -5508,12 +5509,101 @@ document.addEventListener('focusin', (e) => {
   };
   let fotoPerfilNueva = null; // URL subida pendiente de guardar
 
+  // ══ VERIFICACIÓN DE IDENTIDAD ════════════════════════════════════════
+  //
+  // Etapa 1: datos declarados (nombre completo, DNI, dirección). Sin foto
+  // del documento — se descartó a propósito el 2026-08-09 por fricción y
+  // por las obligaciones de custodia que traen las imágenes de documentos.
+  //
+  // Un DNI que escribe el propio prestador no prueba identidad. Lo que
+  // aporta es que el índice único impide abrir cinco fichas con el mismo
+  // documento, y que ante una denuncia hay a quién identificar. Por eso el
+  // sello lo enciende el ADMIN, no el formulario.
+
+  const ESTADO_VERIF = {
+    pendiente:  { txt: 'En revisión', bg: '#FEF3C7', color: '#92400E' },
+    verificado: { txt: '✓ Verificado', bg: 'var(--green-s)', color: 'var(--green)' },
+    rechazado:  { txt: 'Rechazado',   bg: '#FFF1F2', color: '#BE123C' },
+  };
+
+  async function pintarVerificacion() {
+    const sol = await PronetDB.obtenerVerificacion().catch(() => null);
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
+    set('edit-verif-nombre', sol?.nombre_completo);
+    set('edit-verif-dni',    sol?.dni);
+    set('edit-verif-dir',    sol?.direccion);
+
+    const chip   = document.getElementById('edit-verif-estado');
+    const btn    = document.getElementById('edit-verif-btn');
+    const motivo = document.getElementById('edit-verif-motivo');
+    const ayuda  = document.getElementById('edit-verif-ayuda');
+    if (motivo) motivo.style.display = 'none';
+
+    const est = ESTADO_VERIF[sol?.estado];
+    if (chip) {
+      chip.textContent = est ? est.txt : '';
+      chip.style.display = est ? '' : 'none';
+      if (est) { chip.style.background = est.bg; chip.style.color = est.color; }
+    }
+
+    // Ya resuelta: los campos quedan de sólo lectura. La policy de la base
+    // tampoco deja editarlos, así que un input habilitado sólo prometería
+    // algo que el servidor va a rechazar.
+    const resuelta = sol && sol.estado !== 'pendiente';
+    ['edit-verif-nombre','edit-verif-dni','edit-verif-dir'].forEach(id => {
+      const e = document.getElementById(id); if (e) e.readOnly = !!resuelta;
+    });
+    if (btn) {
+      btn.style.display = resuelta ? 'none' : '';
+      btn.textContent = sol ? 'Actualizar datos' : 'Enviar para verificar';
+    }
+    if (sol?.estado === 'rechazado' && motivo) {
+      motivo.textContent = sol.motivo_rechazo
+        ? 'Rechazado: ' + sol.motivo_rechazo
+        : 'Los datos no pudieron validarse. Escribinos a soporte.';
+      motivo.style.display = 'block';
+    }
+    if (ayuda && sol?.estado === 'verificado') {
+      ayuda.textContent = 'Tu identidad está verificada. Los vecinos ven el sello en tu perfil.';
+    }
+  }
+
+  async function guardarVerificacionUI() {
+    const err = document.getElementById('edit-verif-error');
+    const fallar = (m) => { if (err) { err.textContent = m; err.style.display = 'block'; } };
+    if (err) err.style.display = 'none';
+
+    const nombre = (document.getElementById('edit-verif-nombre')?.value || '').trim();
+    const dni    = (document.getElementById('edit-verif-dni')?.value || '').replace(/\D/g, '');
+    const dir    = (document.getElementById('edit-verif-dir')?.value || '').trim();
+
+    if (nombre.split(/\s+/).filter(Boolean).length < 2) return fallar('Escribí nombre y apellido, como figuran en el DNI.');
+    // 7 a 8 dígitos cubre los DNI argentinos vigentes; el rango evita el
+    // typo de tipear el CUIT (11 dígitos) en este campo.
+    if (dni.length < 7 || dni.length > 8) return fallar('El DNI tiene que tener 7 u 8 dígitos, sin puntos.');
+    if (dir.length < 6) return fallar('Completá tu dirección.');
+
+    const btn = document.getElementById('edit-verif-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+
+    const r = await PronetDB.guardarVerificacion(usuarioActual.prestador_id, {
+      nombre_completo: nombre, direccion: dir, dni,
+    });
+    if (btn) btn.disabled = false;
+
+    if (!r.ok) { await pintarVerificacion(); return fallar(r.error); }
+    showToast && showToast('✅ Datos enviados. Te avisamos cuando estén revisados.');
+    await pintarVerificacion();
+  }
+  window.guardarVerificacionUI = guardarVerificacionUI;
+
   async function cargarEdicionPrestador() {
     const esPrestador = usuarioActual && usuarioActual.prestador_id;
     // Las secciones de prestador se ocultan para clientes
-    ['edit-desc-field','edit-esp-field','edit-pagos-field'].forEach(fid => {
+    ['edit-desc-field','edit-esp-field','edit-pagos-field','edit-verif-field'].forEach(fid => {
       const f = document.getElementById(fid); if (f) f.style.display = esPrestador ? '' : 'none';
     });
+    if (esPrestador) pintarVerificacion();
     fotoPerfilNueva = null;
     const av = document.getElementById('edit-avatar');
     if (av) {
@@ -6557,6 +6647,91 @@ document.addEventListener('focusin', (e) => {
     renderParamNiveles();
   }
   window.guardarParamNivel = guardarParamNivel;
+
+  // ══ ADMIN · VERIFICACIÓN DE PRESTADORES ════════════════════════════
+  //
+  // Es la mitad que le da sentido al formulario del prestador: sin alguien
+  // que mire, el sello seguiría significando "completó campos".
+
+  let filtroVerif = 'pendiente';
+
+  function filtrarVerif(estado, el) {
+    filtroVerif = estado;
+    el?.parentElement?.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    el?.classList.add('on');
+    renderVerificaciones();
+  }
+  window.filtrarVerif = filtrarVerif;
+
+  async function renderVerificaciones() {
+    const wrap = document.getElementById('verif-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+
+    const filas = await PronetDB.listarVerificaciones(filtroVerif).catch(() => []);
+    if (!filas.length) {
+      wrap.innerHTML = '<div style="padding:40px 14px;text-align:center;font-size:13px;color:var(--ink3)">' +
+        (filtroVerif === 'pendiente' ? 'No hay solicitudes esperando.' : 'Nada por acá.') + '</div>';
+      actualizarBadgeVerif();
+      return;
+    }
+
+    wrap.innerHTML = filas.map(f => {
+      const p = f.prestadores || {};
+      const fecha = f.creado ? new Date(f.creado).toLocaleDateString('es-AR') : '';
+      const dato = (lbl, val) =>
+        '<div style="display:flex;gap:8px;margin-top:5px">' +
+          '<div style="font-size:11px;color:var(--ink3);min-width:74px">' + lbl + '</div>' +
+          '<div style="font-size:12.5px;color:var(--ink);font-weight:600;flex:1">' + escHTML(val || '—') + '</div>' +
+        '</div>';
+
+      // Los botones sólo tienen sentido sobre lo pendiente: una vez resuelta,
+      // la fila queda como registro de quién revisó y cuándo.
+      const acciones = f.estado !== 'pendiente' ? '' :
+        '<div style="display:flex;gap:8px;margin-top:12px">' +
+          '<button onclick="resolverVerifUI(\'' + f.prestador_id + '\',true)" style="flex:1;padding:10px;background:var(--green);color:white;border:none;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">✓ Verificar</button>' +
+          '<button onclick="resolverVerifUI(\'' + f.prestador_id + '\',false)" style="flex:1;padding:10px;background:white;color:#BE123C;border:1.5px solid #FECDD3;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Rechazar</button>' +
+        '</div>';
+
+      return '<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px">' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<div style="flex:1;font-size:14px;font-weight:700;color:var(--ink)">' + escHTML(p.nombre || 'Prestador') + '</div>' +
+          '<div style="font-size:10.5px;color:var(--ink3)">' + fecha + '</div>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--ink3);margin-top:2px">' +
+          escHTML(p.rubro || 'Sin rubro') + ' · ' + escHTML(p.zona || 'Sin zona') + '</div>' +
+        '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">' +
+          dato('Nombre', f.nombre_completo) + dato('DNI', f.dni) + dato('Dirección', f.direccion) +
+        '</div>' +
+        (f.motivo_rechazo ? '<div style="margin-top:8px;font-size:11.5px;color:#BE123C">Motivo: ' + escHTML(f.motivo_rechazo) + '</div>' : '') +
+        acciones +
+      '</div>';
+    }).join('');
+    actualizarBadgeVerif();
+  }
+
+  /** Cuántas esperan. Se pinta en la fila del panel para que no haya que
+   *  entrar a la pantalla para saber si hay trabajo pendiente. */
+  async function actualizarBadgeVerif() {
+    const badge = document.getElementById('verif-badge');
+    if (!badge) return;
+    const pend = await PronetDB.listarVerificaciones('pendiente').catch(() => []);
+    badge.textContent = pend.length;
+    badge.style.display = pend.length ? '' : 'none';
+  }
+
+  async function resolverVerifUI(prestadorId, aprobar) {
+    let motivo = null;
+    if (!aprobar) {
+      motivo = prompt('¿Por qué se rechaza? (lo va a leer el prestador)');
+      if (motivo === null) return;   // canceló
+    }
+    const r = await PronetDB.resolverVerificacion(prestadorId, aprobar, motivo);
+    if (!r?.ok) { showToast && showToast('⚠️ ' + (r?.error || 'No se pudo resolver')); return; }
+    showToast && showToast(aprobar ? '✅ Prestador verificado' : '❌ Solicitud rechazada');
+    renderVerificaciones();
+  }
+  window.resolverVerifUI = resolverVerifUI;
 
   // ══ PARAMETRÍAS · ZONAS Y BARRIOS ══════════════════════════════════
   async function renderParamZonas() {

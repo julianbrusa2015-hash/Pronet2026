@@ -2055,6 +2055,31 @@
       </div>
     </div>
 
+    <!-- ══ ADMIN · VERIFICACIÓN DE PRESTADORES ════════════════════════ -->
+    <div class="screen admin-screen" id="s-verificaciones">
+      <div class="admin-hero">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <button onclick="goTo('s-moderacion')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style="flex:1">
+            <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:white">🪪 Verificaciones</div>
+            <div style="font-size:11.5px;color:rgba(255,255,255,.65);margin-top:2px">Aprobar acá enciende el sello en el perfil público</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-row" style="background:white;border-bottom:1px solid var(--border);padding:8px 14px">
+        <div class="chip on" onclick="filtrarVerif('pendiente',this)">🟡 Pendientes</div>
+        <div class="chip" onclick="filtrarVerif('verificado',this)">✅ Verificados</div>
+        <div class="chip" onclick="filtrarVerif('rechazado',this)">❌ Rechazados</div>
+      </div>
+
+      <div id="verif-lista" style="padding:12px 14px 90px">
+        <div style="padding:40px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>
+      </div>
+    </div>
+
     <!-- ══ PARAMETRÍAS · AJUSTES NUMÉRICOS ════════════════════════════ -->
     <div class="screen admin-screen" id="s-param-ajustes">
       <div class="admin-hero">
@@ -4250,6 +4275,23 @@
       <div style="padding:60px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando denuncias...</div>
     </div>
 
+    <!-- Verificaciones: tarea operativa, no parametría — por eso va con las
+         denuncias y no en el bloque de configuración. -->
+    <div style="padding:20px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--border);margin-top:16px">
+      🛡️ Identidad
+    </div>
+    <div style="padding:0 14px">
+      <div role="button" tabindex="0" onclick="goTo('s-verificaciones')" style="background:white;border:1px solid var(--border);border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;margin-bottom:8px">
+        <span style="font-size:19px">🪪</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--ink)">Verificaciones</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">Prestadores esperando el sello</div>
+        </div>
+        <span id="verif-badge" style="display:none;background:#FEF3C7;color:#92400E;font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px"></span>
+        <span style="color:var(--ink3);font-size:15px">›</span>
+      </div>
+    </div>
+
     <!-- Parametrías: datos del negocio editables sin deploy -->
     <div style="padding:20px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--border);margin-top:16px">
       🗂️ Parametrías
@@ -4623,6 +4665,42 @@
             <div class="pago-opt" data-pago="MercadoPago" onclick="togglePago(this)"><div class="pago-ico">📲</div><div><div class="pago-lbl">QR / MercadoPago</div></div><div class="pago-check"></div></div>
             <div class="pago-opt" data-pago="Tarjeta" onclick="togglePago(this)"><div class="pago-ico">💳</div><div><div class="pago-lbl">Tarjeta de crédito / débito</div></div><div class="pago-check"></div></div>
           </div>
+        </div>
+
+        <!-- Verificación de identidad (sólo prestador).
+             Etapa 1: datos declarados, sin foto de documento. El badge lo
+             enciende el admin tras revisar — ver supabase-verificacion-prestador.sql -->
+        <div class="ob-field" style="margin-top:20px" id="edit-verif-field">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-size:15px">🛡️</span>
+            <label class="ob-label" style="margin:0">Verificación de identidad</label>
+            <span id="edit-verif-estado" style="font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px"></span>
+          </div>
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;line-height:1.5" id="edit-verif-ayuda">
+            Los vecinos te dejan entrar a su casa. Estos datos no se publican:
+            los ve sólo el equipo de PRONET para darte el sello de verificado.
+          </div>
+
+          <div class="ob-field">
+            <label for="edit-verif-nombre" class="ob-label">Nombre completo, como figura en el DNI</label>
+            <input class="ob-input" id="edit-verif-nombre" autocomplete="name" placeholder="María Elena González">
+          </div>
+          <div class="ob-field" style="margin-top:10px">
+            <label for="edit-verif-dni" class="ob-label">Número de DNI</label>
+            <input class="ob-input" id="edit-verif-dni" inputmode="numeric" placeholder="30123456" maxlength="12">
+          </div>
+          <div class="ob-field" style="margin-top:10px">
+            <label for="edit-verif-dir" class="ob-label">Dirección</label>
+            <input class="ob-input" id="edit-verif-dir" autocomplete="street-address" placeholder="Calle, número, barrio">
+          </div>
+
+          <div id="edit-verif-error" style="display:none;font-size:11px;color:#BE123C;margin-top:8px;font-weight:600"></div>
+          <div id="edit-verif-motivo" style="display:none;font-size:11.5px;color:#BE123C;margin-top:8px;padding:10px 12px;background:#FFF1F2;border:1px solid #FECDD3;border-radius:10px;line-height:1.5"></div>
+
+          <button id="edit-verif-btn" onclick="guardarVerificacionUI()"
+                  style="margin-top:12px;width:100%;padding:12px;background:var(--blue);color:white;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+            Enviar para verificar
+          </button>
         </div>
 
         <!-- Cambiar contraseña -->
