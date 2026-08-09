@@ -4729,12 +4729,27 @@ document.addEventListener('focusin', (e) => {
     // mercado cuelga de una publicación, y el resto del pedido viaja en el
     // texto. Usar la primera del grupo sin filtrar abriría el chat sobre
     // algo que quedó afuera del pedido por falta de stock.
-    await mktConsultar(items[0].id);
+    await mktConsultar(items[0].id, { silencioso: true });
     if (!chatMercadoActualId) { showToast && showToast('⚠️ No se pudo abrir el chat'); return; }
 
     const r = await PronetDB.enviarMensajeMercado(chatMercadoActualId, texto);
     if (!r.ok) { showToast && showToast('⚠️ No se pudo enviar el pedido'); return; }
     await cargarMensajesMercado();
+
+    // Aviso propio: el genérico decía "quiere consultarte", igual que una
+    // pregunta suelta, y el vendedor no podía distinguir un pedido sin
+    // abrirlo. Acá se le dice qué es y cuánto, que es lo que necesita para
+    // decidir si lo atiende ahora.
+    const unidades = items.reduce((s, i) => s + i.cant, 0);
+    PronetDB.notificar({
+      destino: 'usuario',
+      usuario_id: autorId,
+      tipo: 'pedido_mercado',
+      titulo: '🛒 ' + (usuarioActual.nombre || 'Un vecino') + ' te hizo un pedido',
+      cuerpo: unidades + (unidades === 1 ? ' producto' : ' productos') +
+              (sub ? ' · ' + pesos(sub) : '') + ' · Coordinen la entrega por el chat',
+      url: '#s-mis-consultas-mkt',
+    }).catch(() => {});
 
     // Sólo se vacía lo de ESE vendedor: lo de los demás sigue esperando.
     carrito = carrito.filter(i => i.autor_id !== autorId);
@@ -5245,7 +5260,13 @@ document.addEventListener('focusin', (e) => {
   }
   window.renderMapaMercado = renderMapaMercado;
 
-  async function mktConsultar(pubId) {
+  /** Abre (o crea) el chat de mercado con el autor de una publicación.
+   *
+   *  `silencioso` evita el aviso genérico de "quiere consultarte": lo usa el
+   *  carrito, que después manda uno propio diciendo que es un PEDIDO. Sin
+   *  esto el vendedor recibiría dos notificaciones y la primera diría algo
+   *  que no es. */
+  async function mktConsultar(pubId, { silencioso = false } = {}) {
     // nombre/autorId/título salen del cache del feed, no de parámetros
     // interpolados en el onclick — ver nota de seguridad en mktAbrirComentarios.
     const pubCache = mktPostsCache.get(pubId) || {};
@@ -5293,6 +5314,7 @@ document.addEventListener('focusin', (e) => {
       }
     });
     PronetDB.marcarLeidosMercado(chatMercadoActualId);
+    if (silencioso) return;
     // Notificar al autor que alguien abrió una consulta
     const nombreConsultante = usuarioActual.nombre || 'Un vecino';
     PronetDB.notificar({
@@ -9201,7 +9223,7 @@ document.addEventListener('focusin', (e) => {
     lista.innerHTML = notis.map(n => {
       const hace = tiempoRelativo(new Date(n.creado));
       const leida = n.leida;
-      const icono = { pedido:'📋', propuesta:'📬', mensaje:'💬', cancelacion:'❌', terminado:'✅', resena:'⭐', verificacion:'🪪', general:'🔔' }[n.tipo] || '🔔';
+      const icono = { pedido:'📋', propuesta:'📬', mensaje:'💬', cancelacion:'❌', terminado:'✅', resena:'⭐', verificacion:'🪪', pedido_mercado:'🛒', general:'🔔' }[n.tipo] || '🔔';
       return '<div class="notif-item' + (leida ? '' : ' unread') + '" data-id="' + n.id + '" data-url="' + escHTML(n.url||'')+'" data-type="'+n.tipo+'" style="cursor:' + (n.url?'pointer':'default') + '">' +
         (leida ? '' : '<div class="notif-unread-dot"></div>') +
         '<div class="notif-avatar" style="background:#EEF2FF;color:#2B5BFF">' + icono + '</div>' +
