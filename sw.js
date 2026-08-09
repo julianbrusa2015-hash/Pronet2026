@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v176'; // v176: carrito en Mercado
+const CACHE_VERSION = 'pronet-v177'; // v177: stock desde Mis publicaciones + fix
 
 const SHELL = [
   './',

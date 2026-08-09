@@ -5499,7 +5499,11 @@ document.addEventListener('focusin', (e) => {
   }
 
   function misPubsCardHTML(p) {
-    const cat = MKT_CAT_LABELS[p.categoria] || p.categoria;
+    // mktCatLabel y no MKT_CAT_LABELS: ese objeto se borró al dividir Entre
+    // Vecinos y quedó esta referencia suelta, que reventaba la pantalla
+    // entera con un ReferenceError. `node --check` no lo ve — es un error
+    // de ejecución, no de sintaxis.
+    const cat = mktCatLabel(p.categoria);
     const precio = p.precio_convenir ? 'A convenir' : (p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar');
     const foto = p.foto_url
       ? `<img src="${escHTML(p.foto_url)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;flex-shrink:0">`
@@ -5510,6 +5514,15 @@ document.addEventListener('focusin', (e) => {
     const accionBtn = p.activa
       ? `<button onclick="toggleMiPublicacion('${p.id}',false)" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:'Inter',sans-serif">Desactivar</button>`
       : `<button onclick="toggleMiPublicacion('${p.id}',true)" style="background:var(--blue);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:white;cursor:pointer;font-family:'Inter',sans-serif">Reactivar</button>`;
+
+    // Stock: sólo tiene sentido en productos —un servicio no se agota— y
+    // sólo si la publicación está activa. Va acá, de un toque, porque
+    // marcar "se acabó" es algo que pasa de golpe y en el momento: mandar
+    // al vendedor a la pantalla de edición para eso es demasiado camino.
+    const esProducto = catPorSlug(p.categoria)?.tipo === 'producto';
+    const stockBtn = (!esProducto || !p.activa) ? '' : (p.disponible === false
+      ? `<button onclick="toggleStockPublicacion('${p.id}',true)" style="background:#FEF3C7;border:1.5px solid #FDE68A;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#92400E;cursor:pointer;font-family:'Inter',sans-serif">Sin stock · Reponer</button>`
+      : `<button onclick="toggleStockPublicacion('${p.id}',false)" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:'Inter',sans-serif">Marcar sin stock</button>`);
     return `
       <div id="mispub-${escHTML(p.id)}" style="display:flex;gap:12px;padding:12px;background:white;border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
         ${foto}
@@ -5519,6 +5532,7 @@ document.addEventListener('focusin', (e) => {
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             ${estadoBadge}
             ${accionBtn}
+            ${stockBtn}
             <button onclick="editarMiPublicacion('${p.id}')" style="background:none;border:1.5px solid var(--blue);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Inter',sans-serif">Editar</button>
           </div>
         </div>
@@ -5539,6 +5553,20 @@ document.addEventListener('focusin', (e) => {
     renderMisPublicaciones();
   }
   window.toggleMiPublicacion = toggleMiPublicacion;
+
+  async function toggleStockPublicacion(id, disponible) {
+    const card = document.getElementById('mispub-' + id);
+    if (card) card.style.opacity = '0.5';
+    const res = await PronetDB.cambiarDisponibilidad(id, disponible);
+    if (!res.ok) {
+      if (card) card.style.opacity = '';
+      showToast && showToast('⚠️ No se pudo actualizar: ' + (res.error || ''));
+      return;
+    }
+    showToast && showToast(disponible ? '✅ Marcada con stock' : '📦 Marcada sin stock');
+    renderMisPublicaciones();
+  }
+  window.toggleStockPublicacion = toggleStockPublicacion;
 
   // ── Consultas recibidas ProMarket (vista autor) ───────────────────────
 

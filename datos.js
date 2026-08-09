@@ -1270,6 +1270,26 @@ const PronetDB = (() => {
     },
 
     /** Edita campos de una publicación propia. foto_url=undefined la deja sin cambios. */
+    /** Marca una publicación con o sin stock.
+     *
+     *  Método aparte y NO `editarPublicacion({disponible})`: esa función
+     *  desestructura campos fijos y escribe siempre categoría, título,
+     *  precio y detalles. Llamarla con un solo campo dejaría el resto en
+     *  null — borraría la publicación en vez de marcarla. */
+    async cambiarDisponibilidad(id, disponible) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
+      const { data, error } = await sb.from('publicaciones')
+        .update({ disponible: !!disponible })
+        .eq('id', id).eq('autor_id', uid).select('id');
+      if (error) { console.warn('[PronetDB] cambiarDisponibilidad', error.message); return { ok: false, error: error.message }; }
+      // RLS filtra sin dar error: cero filas significa que la publicación no
+      // es de quien pregunta.
+      if (!data?.length) return { ok: false, error: 'No es tu publicación' };
+      return { ok: true };
+    },
+
     async editarPublicacion(id, { categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url }) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const uid = await this.usuarioIdActual();
@@ -1304,7 +1324,7 @@ const PronetDB = (() => {
       const uid = await this.usuarioIdActual();
       if (!uid) return [];
       const { data, error } = await sb.from('publicaciones')
-        .select('id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, activa, creado')
+        .select('id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, activa, disponible, creado')
         .eq('autor_id', uid)
         .order('creado', { ascending: false });
       if (error) { console.warn('[PronetDB] listarMisPublicaciones', error.message); return []; }
