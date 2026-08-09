@@ -4543,7 +4543,65 @@ document.addEventListener('focusin', (e) => {
 
   const pesos = (n) => '$' + Number(n || 0).toLocaleString('es-AR');
 
-  function renderCarrito() {
+  /** Vuelve a leer las publicaciones del carrito y sincroniza lo que cambió
+   *  desde que se agregaron.
+   *
+   *  El carrito guarda una FOTO del producto al momento de sumarlo: precio,
+   *  título, stock. Entre eso y el envío del pedido pueden pasar días, y sin
+   *  esto el vecino manda un pedido con el precio viejo o de algo que ya no
+   *  hay — y el vendedor recibe un pedido que no puede cumplir.
+   *
+   *  Devuelve null si no se pudo consultar: en ese caso NO se toca nada. Sin
+   *  conexión, vaciar el carrito sería el peor comportamiento posible. */
+  async function revalidarCarrito() {
+    if (!carrito.length) return { quitados: [], sinStock: [], cambios: [] };
+    const filas = await PronetDB.obtenerVarios('publicaciones', carrito.map(i => i.id)).catch(() => null);
+    if (!filas) return null;
+
+    const porId = new Map(filas.map(f => [f.id, f]));
+    const quitados = [], sinStock = [], cambios = [];
+
+    carrito = carrito.filter(i => {
+      const f = porId.get(i.id);
+      // Borrada o dada de baja: no hay forma de pedirla, se saca.
+      if (!f || !f.activa) { quitados.push(i.titulo); return false; }
+
+      const precioNuevo = f.precio_convenir ? 0 : (f.precio || 0);
+      if (precioNuevo !== i.precio || !!f.precio_convenir !== !!i.convenir) {
+        cambios.push({ titulo: f.titulo, antes: i.precio, ahora: precioNuevo, convenir: !!f.precio_convenir });
+        i.precio = precioNuevo;
+        i.convenir = !!f.precio_convenir;
+      }
+      i.titulo = f.titulo;          // el vendedor pudo renombrarla
+      i.foto_url = f.foto_url || null;
+      // Sin stock NO se saca: se muestra marcado. Que desaparezca sin más
+      // deja al vecino sin entender qué pasó con lo que había elegido.
+      i.sinStock = f.disponible === false;
+      if (i.sinStock) sinStock.push(i.titulo);
+      return true;
+    });
+
+    guardarCarrito();
+    return { quitados, sinStock, cambios };
+  }
+
+  /** El aviso de lo que cambió. Sin esto la revalidación sería silenciosa y
+   *  el vecino vería números distintos sin explicación. */
+  function avisoCambiosHTML(r) {
+    if (!r) {
+      return '<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:12px;color:#92400E;line-height:1.5">' +
+             'No pudimos confirmar precios ni stock. Revisá con el vendedor antes de pedir.</div>';
+    }
+    const partes = [];
+    if (r.quitados.length) partes.push('Se sacaron del carrito porque ya no están publicados: <b>' + r.quitados.map(escHTML).join(', ') + '</b>.');
+    if (r.sinStock.length) partes.push('Sin stock por ahora: <b>' + r.sinStock.map(escHTML).join(', ') + '</b>. No van en el pedido.');
+    if (r.cambios.length) partes.push('Cambió el precio de <b>' + r.cambios.map(c => escHTML(c.titulo)).join(', ') + '</b>.');
+    if (!partes.length) return '';
+    return '<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:12px;color:#92400E;line-height:1.55">' +
+           partes.join('<br>') + '</div>';
+  }
+
+  async function renderCarrito() {
     const wrap = document.getElementById('carrito-lista');
     if (!wrap) return;
     const vaciarBtn = document.getElementById('carrito-vaciar');
@@ -4561,22 +4619,35 @@ document.addEventListener('focusin', (e) => {
     }
     if (vaciarBtn) vaciarBtn.style.display = '';
 
+    // Se revalida ANTES de dibujar: mostrar el precio viejo y corregirlo un
+    // segundo después sería peor que esperar.
+    wrap.innerHTML = '<div style="padding:40px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Revisando precios y stock…</div>';
+    const revision = await revalidarCarrito();
+
+    // La revalidación pudo dejarlo vacío (todo dado de baja).
+    if (!carrito.length) { renderCarrito(); return; }
+
     // Un bloque por vendedor: cada uno es un pedido con su propia entrega y
     // su propio chat. Mezclarlos en un total único prometería una compra
     // conjunta que no existe — son personas distintas.
-    wrap.innerHTML = carritoPorVendedor().map(v => {
-      const sub = v.items.reduce((s, i) => s + (i.precio || 0) * i.cant, 0);
-      const hayAConvenir = v.items.some(i => i.convenir);
+    wrap.innerHTML = avisoCambiosHTML(revision) + carritoPorVendedor().map(v => {
+      const pedibles = v.items.filter(i => !i.sinStock);
+      // El subtotal cuenta sólo lo que se puede pedir: sumar algo agotado
+      // sería prometer un precio por algo que no va a llegar.
+      const sub = pedibles.reduce((s, i) => s + (i.precio || 0) * i.cant, 0);
+      const hayAConvenir = pedibles.some(i => i.convenir);
 
       const items = v.items.map(i =>
-        '<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border)">' +
+        '<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border)' +
+          (i.sinStock ? ';opacity:.55' : '') + '">' +
           (i.foto_url
             ? '<img src="' + escHTML(i.foto_url) + '" alt="" style="width:52px;height:52px;border-radius:9px;object-fit:cover;flex-shrink:0">'
             : '<div style="width:52px;height:52px;border-radius:9px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🛍️</div>') +
           '<div style="flex:1;min-width:0">' +
             '<div style="font-size:13px;font-weight:700;color:var(--ink);line-height:1.3">' + escHTML(i.titulo) + '</div>' +
             '<div style="font-size:12px;color:var(--ink2);margin-top:2px">' +
-              (i.convenir ? 'A convenir' : pesos(i.precio)) + '</div>' +
+              (i.sinStock ? '<span style="color:#92400E;font-weight:700">Sin stock</span>'
+                          : (i.convenir ? 'A convenir' : pesos(i.precio))) + '</div>' +
           '</div>' +
           '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">' +
             '<button onclick="cambiarCantidad(\'' + escHTML(i.id) + '\',-1)" aria-label="Quitar uno" style="width:28px;height:28px;border:1px solid var(--border);background:var(--white);border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;color:var(--ink2)">−</button>' +
@@ -4597,8 +4668,14 @@ document.addEventListener('focusin', (e) => {
             (hayAConvenir ? ' <span style="font-size:11px;font-weight:600;color:var(--ink3)">+ a convenir</span>' : '') +
           '</span>' +
         '</div>' +
-        '<button onclick="pedirAVendedor(\'' + escHTML(v.autor_id) + '\')" style="width:100%;margin-top:11px;background:var(--blue);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">' +
-          'Pedir a ' + escHTML((v.nombre || '').split(' ')[0]) + ' →</button>' +
+        (pedibles.length
+          ? '<button onclick="pedirAVendedor(\'' + escHTML(v.autor_id) + '\')" style="width:100%;margin-top:11px;background:var(--blue);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">' +
+            'Pedir a ' + escHTML((v.nombre || '').split(' ')[0]) + ' →</button>'
+          // Sin nada pedible el botón se deshabilita en vez de desaparecer:
+          // así queda claro POR QUÉ no se puede, que es la pregunta que se
+          // hace el vecino.
+          : '<button disabled style="width:100%;margin-top:11px;background:var(--surface);color:var(--ink3);border:1px solid var(--border);border-radius:11px;padding:11px;font-size:13px;font-weight:700;font-family:inherit;cursor:not-allowed">' +
+            'Sin stock por ahora</button>') +
       '</div>';
     }).join('') +
     '<div style="background:var(--blue-s);border:1px solid #C7D5FF;border-radius:12px;padding:11px 13px;font-size:11.5px;color:var(--ink2);line-height:1.55">' +
@@ -4616,18 +4693,31 @@ document.addEventListener('focusin', (e) => {
     const grupo = carritoPorVendedor().find(v => v.autor_id === autorId);
     if (!grupo) return;
 
-    const lineas = grupo.items.map(i =>
+    // Se revalida otra vez acá y no sólo al abrir la pantalla: entre que se
+    // dibujó y se tocó el botón pueden pasar minutos, y el pedido es lo que
+    // el vendedor va a leer como compromiso.
+    await revalidarCarrito();
+    const grupoFresco = carritoPorVendedor().find(v => v.autor_id === autorId);
+    const items = (grupoFresco?.items || []).filter(i => !i.sinStock);
+    if (!items.length) {
+      showToast && showToast('⚠️ Ese vendedor se quedó sin stock');
+      renderCarrito();
+      return;
+    }
+
+    const lineas = items.map(i =>
       '• ' + i.cant + '× ' + i.titulo + ' — ' + (i.convenir ? 'a convenir' : pesos(i.precio * i.cant))
     ).join('\n');
-    const sub = grupo.items.reduce((s, i) => s + (i.precio || 0) * i.cant, 0);
+    const sub = items.reduce((s, i) => s + (i.precio || 0) * i.cant, 0);
     const texto = '🛒 *Pedido*\n' + lineas +
       (sub ? '\n\nTotal: ' + pesos(sub) : '') +
       '\n\n¿Cómo coordinamos la entrega?';
 
-    // Se abre el chat sobre la PRIMERA publicación del grupo: el chat de
+    // Se abre el chat sobre la primera publicación PEDIBLE: el chat de
     // mercado cuelga de una publicación, y el resto del pedido viaja en el
-    // texto del mensaje.
-    await mktConsultar(grupo.items[0].id);
+    // texto. Usar la primera del grupo sin filtrar abriría el chat sobre
+    // algo que quedó afuera del pedido por falta de stock.
+    await mktConsultar(items[0].id);
     if (!chatMercadoActualId) { showToast && showToast('⚠️ No se pudo abrir el chat'); return; }
 
     const r = await PronetDB.enviarMensajeMercado(chatMercadoActualId, texto);
