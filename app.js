@@ -8141,7 +8141,7 @@ document.addEventListener('focusin', (e) => {
     lista.innerHTML = notis.map(n => {
       const hace = tiempoRelativo(new Date(n.creado));
       const leida = n.leida;
-      const icono = { pedido:'📋', propuesta:'📬', mensaje:'💬', cancelacion:'❌', terminado:'✅', resena:'⭐', general:'🔔' }[n.tipo] || '🔔';
+      const icono = { pedido:'📋', propuesta:'📬', mensaje:'💬', cancelacion:'❌', terminado:'✅', resena:'⭐', verificacion:'🪪', general:'🔔' }[n.tipo] || '🔔';
       return '<div class="notif-item' + (leida ? '' : ' unread') + '" data-id="' + n.id + '" data-url="' + escHTML(n.url||'')+'" data-type="'+n.tipo+'" style="cursor:' + (n.url?'pointer':'default') + '">' +
         (leida ? '' : '<div class="notif-unread-dot"></div>') +
         '<div class="notif-avatar" style="background:#EEF2FF;color:#2B5BFF">' + icono + '</div>' +
