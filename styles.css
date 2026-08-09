@@ -1991,6 +1991,22 @@
     display: block; width: 100%; aspect-ratio: 16 / 5;
     object-fit: cover;
   }
+  /* Tarjetas propias del carrusel (CTA y Urgencias). Comparten la relación
+     16:5 de las imágenes para que el carrusel no cambie de alto al rotar. */
+  .ads-propia { aspect-ratio: 16 / 5; position: relative; }
+  .ads-propia-in {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    gap: 11px; padding: 0 16px; text-align: left;
+  }
+  .ads-propia-ico { font-size: 26px; flex-shrink: 0; }
+  .ads-propia-tit { font-size: 15px; font-weight: 800; line-height: 1.25; }
+  .ads-propia-sub {
+    font-size: 12px; opacity: .8; margin-top: 3px; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ads-propia-fle { font-size: 22px; opacity: .7; flex-shrink: 0; }
+
   .ads-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
   .ads-dot {
     width: 6px; height: 6px; border-radius: 50%;

@@ -1519,13 +1519,12 @@ document.addEventListener('focusin', (e) => {
   function cromoHomePrestador(esTablero) {
     if (!esTablero) moverChecklist(null); // vecino: vuelve a su lugar original
     const v = esTablero ? 'none' : '';
-    // Por id donde existe. La banda de urgencias tiene el suyo
-    // (#home-urgencias): apuntar al <h4> interno y subir con closest()
-    // dejaba el botón "Ver ahora" huérfano en pantalla.
-    ['home-cat-header', 'home-banner', 'home-urgencias'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = v;
-    });
+    // `home-banner` y `home-urgencias` ya NO están en esta lista: pasaron a
+    // ser slides del carrusel y quedan ocultos para todos. Estaban acá con
+    // `display = ''`, que le borraba el `none` del HTML y los volvía a
+    // mostrar apilados encima del carrusel — duplicados.
+    const el = document.getElementById('home-cat-header');
+    if (el) el.style.display = v;
     // Buscador: el prestador no busca prestadores, filtra pedidos — y eso
     // vive en la pantalla Pedidos. Se le libera esa franja.
     const barra = document.getElementById('home-search-bar');
@@ -3312,9 +3311,16 @@ document.addEventListener('focusin', (e) => {
     if (!caja || !track) return;
 
     const banners = await PronetDB.listarBannersVigentes().catch(() => []);
-    if (!banners.length) { caja.style.display = 'none'; detenerAds(); return; }
+    // Las tarjetas propias —el CTA que cambia según el usuario y Urgencias—
+    // van como slides del carrusel y no como bloques apilados arriba. Antes
+    // sumaban 148px de alto propio y empujaban el feed fuera de la pantalla;
+    // acá ocupan cero espacio extra y además rotan, que es lo que hace que
+    // se vean.
+    const propias = slidesPropias();
+    const total = propias.length + banners.length;
+    if (!total) { caja.style.display = 'none'; detenerAds(); return; }
 
-    track.innerHTML = banners.map((b, i) => {
+    track.innerHTML = propias.join('') + banners.map((b, i) => {
       // <button> y no <div>: es un elemento clickeable, y así se llega con
       // el teclado y lo anuncia el lector de pantalla sin agregar nada.
       const alt = 'Publicidad ' + (i + 1) + ' de ' + banners.length;
@@ -3331,14 +3337,18 @@ document.addEventListener('focusin', (e) => {
              '<img src="' + escHTML(b.imagen_url) + '" alt=""' + carga + '></button>';
     }).join('');
 
-    dots.innerHTML = banners.length > 1
-      ? banners.map((_, i) =>
+    dots.innerHTML = total > 1
+      ? Array.from({ length: total }, (_, i) =>
           '<button class="ads-dot' + (i === 0 ? ' on' : '') + '" data-i="' + i +
-          '" aria-label="Ir a la publicidad ' + (i + 1) + '"></button>').join('')
+          '" aria-label="Ir al aviso ' + (i + 1) + '"></button>').join('')
       : '';
 
     track.querySelectorAll('.ads-slide').forEach(el => {
-      el.addEventListener('click', () => abrirBanner(el.dataset.id, el.dataset.enlace));
+      // Las propias llevan `data-accion`; las de publicidad, `data-id`.
+      const accion = el.dataset.accion;
+      el.addEventListener('click', accion === 'cta'      ? () => bannerAction()
+                                 : accion === 'urgencia' ? () => verUrgencias()
+                                 : () => abrirBanner(el.dataset.id, el.dataset.enlace));
     });
     dots.querySelectorAll('.ads-dot').forEach(d => {
       d.addEventListener('click', () => irASlide(Number(d.dataset.i)));
@@ -3364,7 +3374,48 @@ document.addEventListener('focusin', (e) => {
     track.onpointercancel = () => { _adsPausado = false; };
 
     caja.style.display = 'block';
-    arrancarAds(banners.length);
+    arrancarAds(total);
+  }
+
+  /** Las tarjetas propias del carrusel: el CTA que cambia según el usuario y
+   *  la banda de Urgencias.
+   *
+   *  Antes vivían como bloques apilados arriba del feed (#home-banner y
+   *  #home-urgencias, ahora ocultos). Sumaban 148px de alto propio y, con el
+   *  carrusel y el buscador, empujaban la primera tarjeta de prestador fuera
+   *  de la pantalla. Como slides no ocupan alto extra y encima rotan.
+   *
+   *  Para el prestador no se arma ninguna: su Inicio es el tablero, y estos
+   *  dos bloques ya estaban ocultos para él. */
+  function slidesPropias() {
+    if (esPrestador()) return [];
+    const tipo = usuarioActual ? usuarioActual.tipo : 'invitado';
+    const cta = tipo === 'cliente'
+      ? { icono: '📋', titulo: 'Publicá tu pedido gratis', sub: 'Recibí propuestas de prestadores de tu zona' }
+      : { icono: '🚀', titulo: 'Sumate a PRONET gratis',   sub: 'Publicá pedidos y contactá prestadores' };
+
+    const tarjeta = (accion, fondo, color, icono, titulo, sub) =>
+      '<button class="ads-slide ads-propia" data-accion="' + accion + '"' +
+      ' style="background:' + fondo + '" aria-label="' + escHTML(titulo) + '">' +
+        '<div class="ads-propia-in">' +
+          '<div class="ads-propia-ico">' + icono + '</div>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div class="ads-propia-tit" style="color:' + color + '">' + escHTML(titulo) + '</div>' +
+            '<div class="ads-propia-sub" style="color:' + color + '">' + escHTML(sub) + '</div>' +
+          '</div>' +
+          '<span class="ads-propia-fle" style="color:' + color + '">›</span>' +
+        '</div></button>';
+
+    const slides = [
+      tarjeta('cta', 'linear-gradient(135deg,#0D0F1A,#1A3ACC)', '#fff',
+              cta.icono, cta.titulo, cta.sub),
+    ];
+    // Urgencias sólo si la feature está prendida, igual que el bloque viejo.
+    if (!document.getElementById('home-urgencias')?.hasAttribute('data-feature-off')) {
+      slides.push(tarjeta('urgencia', 'linear-gradient(135deg,#BE123C,#F43F5E)', '#fff',
+              '⚡', 'Urgencias', 'Prestadores con atención inmediata en tu zona'));
+    }
+    return slides;
   }
 
   /** Qué slide se está viendo: el que tiene el centro más cerca del centro

@@ -114,7 +114,7 @@
            promo de mentira. Cuando haya publicidad real conviene invertirlo
            —el espacio de arriba es el que se vende— y alcanza con volver a
            intercambiar estos dos bloques. -->
-      <div id="home-banner" style="margin:8px 14px 0;background:linear-gradient(135deg,#0D0F1A,#1A3ACC);border-radius:13px;padding:10px 13px;display:flex;align-items:center;gap:9px;cursor:pointer" onclick="bannerAction()">
+      <div id="home-banner" style="display:none;margin:8px 14px 0;background:linear-gradient(135deg,#0D0F1A,#1A3ACC);border-radius:13px;padding:10px 13px;align-items:center;gap:9px;cursor:pointer" onclick="bannerAction()">
         <div style="font-size:18px;flex-shrink:0" id="home-banner-icon">🚀</div>
         <div style="flex:1;min-width:0;font-size:12.5px;font-weight:700;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="home-banner-title">¿Sos prestador? Registrate gratis</div>
         <div style="font-size:11px;color:rgba(255,255,255,.7);flex-shrink:0;font-weight:600" id="home-banner-sub">Ver →</div>
@@ -150,8 +150,13 @@
         </div>
       </div>
 
-      <!-- Urgencias (dinámico) -->
-      <div class="urgencias" style="margin-top:12px" id="home-urgencias">
+      <!-- Urgencias y el banner contextual ahora viven como SLIDES del
+           carrusel (ver slidesPropias en app.js): apilados sumaban 148px y
+           empujaban el feed fuera de la pantalla. Los nodos quedan en el DOM
+           ocultos porque cromoHomePrestador y renderUrgencias los siguen
+           tocando por id, y sacarlos obligaría a repartir esos cambios por
+           varios lugares para no ganar nada. -->
+      <div class="urgencias" style="display:none;margin-top:12px" id="home-urgencias">
         <div class="urg-txt">
           <h4 id="urg-title">⚡ Urgencias</h4>
           <p id="urg-sub">Prestadores con atención inmediata en tu zona</p>
