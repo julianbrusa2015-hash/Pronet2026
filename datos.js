@@ -918,6 +918,85 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
+    // ══ BANNERS PUBLICITARIOS ════════════════════════════════════════════
+
+    /** Los que se muestran en el carrusel: activos y dentro de su vigencia.
+     *
+     *  La fecha la filtra el SERVIDOR, no el cliente. Si dependiera del reloj
+     *  del teléfono, alguien con la fecha mal vería pauta vencida — y una
+     *  promoción vencida en pantalla es un problema con quien la pagó. */
+    async listarBannersVigentes() {
+      if (!remoto) return [];
+      const ahora = new Date().toISOString();
+      const { data, error } = await sb.from('banners')
+        .select('id, imagen_url, enlace')
+        .eq('activo', true)
+        .or('desde.is.null,desde.lte.' + ahora)
+        .or('hasta.is.null,hasta.gte.' + ahora)
+        .order('orden', { ascending: true });
+      if (error) { console.warn('[PronetDB] listarBannersVigentes', error.message); return []; }
+      return data || [];
+    },
+
+    /** Todos, incluidos los apagados y vencidos. Para el panel. */
+    async listarBanners() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('banners').select('*')
+        .order('orden', { ascending: true });
+      if (error) { console.warn('[PronetDB] listarBanners', error.message); return []; }
+      return data || [];
+    },
+
+    async crearBanner(banner) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      if (!banner?.nombre || !banner?.imagen_url) return { ok: false, error: 'Faltan nombre e imagen' };
+      const { error } = await sb.from('banners').insert(banner);
+      if (error) {
+        console.warn('[PronetDB] crearBanner', error.message);
+        return { ok: false, error: this._errorAlta(error, 'un banner') };
+      }
+      return { ok: true };
+    },
+
+    async guardarBanner(id, campos) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.from('banners').update(campos).eq('id', id).select('id');
+      if (error) { console.warn('[PronetDB] guardarBanner', error.message); return { ok: false, error: error.message }; }
+      if (!data?.length) return { ok: false, error: 'No se pudo guardar: sin permisos de administrador' };
+      return { ok: true };
+    },
+
+    async borrarBanner(id) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.from('banners').delete().eq('id', id).select('id');
+      if (error) { console.warn('[PronetDB] borrarBanner', error.message); return { ok: false, error: error.message }; }
+      if (!data?.length) return { ok: false, error: 'No se pudo borrar: sin permisos de administrador' };
+      return { ok: true };
+    },
+
+    /** Sube la imagen al bucket y devuelve su URL pública. */
+    async subirImagenBanner(archivo) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const ext = (archivo.name.split('.').pop() || 'jpg').toLowerCase();
+      const ruta = 'b-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+      const { error } = await sb.storage.from('banners')
+        .upload(ruta, archivo, { cacheControl: '3600', upsert: false });
+      if (error) {
+        console.warn('[PronetDB] subirImagenBanner', error.message);
+        return { ok: false, error: /policy|denied/i.test(error.message)
+          ? 'Sin permisos de administrador para subir imágenes' : error.message };
+      }
+      const { data } = sb.storage.from('banners').getPublicUrl(ruta);
+      return { ok: true, url: data.publicUrl };
+    },
+
+    /** Suma un click. Silencioso a propósito: es una métrica, y si falla no
+     *  tiene por qué interrumpirle la navegación a nadie. */
+    async clickBanner(id) {
+      if (!remoto || !id) return;
+      try { await sb.rpc('click_banner', { p_banner_id: id }); } catch (e) { /* métrica */ }
+    },
+
     /** Traduce los dos rechazos esperables de un alta de parametría. Sin
      *  esto el panel muestra el texto crudo de Postgres ("new row violates
      *  row-level security policy for table…"), que no le dice nada a quien

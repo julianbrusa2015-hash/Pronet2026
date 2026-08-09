@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -411,6 +411,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-param-ajustes')  { renderParamAjustes(); }
     if (id === 's-servicios-fijos'){ renderServiciosFijos(); }
     if (id === 's-verificaciones') { renderVerificaciones(); }
+    if (id === 's-param-banners')  { renderParamBanners(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -1391,6 +1392,7 @@ document.addEventListener('focusin', (e) => {
     const wrap = document.getElementById('home-feed-container');
     if (!wrap) return;
     setBannerContextual();
+    pintarBanners();   // Carrusel de publicidad (sirve para vecino y prestador)
     renderChecklist(); // Checklist de primeros pasos
 
     // ── Vista PRESTADOR: tablero de actividad, no un listado ──
@@ -3290,6 +3292,150 @@ document.addEventListener('focusin', (e) => {
   }
 
   // Ajusta el banner del Home según el tipo de usuario
+  // ══ CARRUSEL DE PUBLICIDAD ═════════════════════════════════════════
+  //
+  // Rota solo y se puede deslizar. El movimiento se hace con scrollTo()
+  // sobre un contenedor con scroll-snap, no con transform + un índice
+  // propio: así el deslizar del dedo y la rotación automática comparten la
+  // misma fuente de verdad —la posición del scroll— y no pueden quedar
+  // desfasados, que es el bug clásico de los carruseles hechos a mano.
+
+  let _adsTimer = null;
+  let _adsPausado = false;
+  let _adsObserver = null;
+
+  async function pintarBanners() {
+    const caja  = document.getElementById('home-ads');
+    const track = document.getElementById('home-ads-track');
+    const dots  = document.getElementById('home-ads-dots');
+    if (!caja || !track) return;
+
+    const banners = await PronetDB.listarBannersVigentes().catch(() => []);
+    if (!banners.length) { caja.style.display = 'none'; detenerAds(); return; }
+
+    track.innerHTML = banners.map((b, i) => {
+      // <button> y no <div>: es un elemento clickeable, y así se llega con
+      // el teclado y lo anuncia el lector de pantalla sin agregar nada.
+      const alt = 'Publicidad ' + (i + 1) + ' de ' + banners.length;
+      // Sin `loading="lazy"`, a propósito. Adentro de un contenedor con
+      // scroll horizontal hay motores que nunca consideran visibles a las
+      // imágenes y no las bajan NI deslizando hasta ellas: quedaba el hueco
+      // del banner en blanco aunque la URL respondiera 200 (verificado el
+      // 2026-08-09). Son pocas y están arriba de todo, así que se cargan
+      // todas; lo que hay que cuidar es que pesen poco.
+      const carga = i === 0 ? ' fetchpriority="high"' : '';
+      return '<button class="ads-slide" data-id="' + escHTML(b.id) + '"' +
+             (b.enlace ? ' data-enlace="' + escHTML(b.enlace) + '"' : '') +
+             ' aria-label="' + alt + '">' +
+             '<img src="' + escHTML(b.imagen_url) + '" alt=""' + carga + '></button>';
+    }).join('');
+
+    dots.innerHTML = banners.length > 1
+      ? banners.map((_, i) =>
+          '<button class="ads-dot' + (i === 0 ? ' on' : '') + '" data-i="' + i +
+          '" aria-label="Ir a la publicidad ' + (i + 1) + '"></button>').join('')
+      : '';
+
+    track.querySelectorAll('.ads-slide').forEach(el => {
+      el.addEventListener('click', () => abrirBanner(el.dataset.id, el.dataset.enlace));
+    });
+    dots.querySelectorAll('.ads-dot').forEach(d => {
+      d.addEventListener('click', () => irASlide(Number(d.dataset.i)));
+    });
+
+    // El punto activo se sincroniza con un IntersectionObserver y NO con el
+    // evento 'scroll': hay contextos donde ese evento no se dispara para un
+    // scroll programático —verificado acá el 2026-08-09, scrollLeft pasaba
+    // de 0 a 715 sin un solo disparo— y los puntos quedaban clavados en el
+    // primero. El observer mira qué slide está a la vista, que es la
+    // pregunta real, y sirve igual para el dedo que para la rotación.
+    if (_adsObserver) _adsObserver.disconnect();
+    _adsObserver = new IntersectionObserver((entradas) => {
+      entradas.forEach(e => {
+        if (!e.isIntersecting || e.intersectionRatio < 0.6) return;
+        marcarPunto([...track.children].indexOf(e.target));
+      });
+    }, { root: track, threshold: [0.6] });
+    [...track.children].forEach(el => _adsObserver.observe(el));
+    // Mientras lo está tocando no se le mueve solo de abajo del dedo.
+    track.onpointerdown  = () => { _adsPausado = true; };
+    track.onpointerup    = () => { _adsPausado = false; };
+    track.onpointercancel = () => { _adsPausado = false; };
+
+    caja.style.display = 'block';
+    arrancarAds(banners.length);
+  }
+
+  /** Qué slide se está viendo: el que tiene el centro más cerca del centro
+   *  del carrusel.
+   *
+   *  Dividir scrollLeft por el ancho del contenedor NO sirve: hay `gap`
+   *  entre slides, así que el slide i no arranca en i·ancho sino un poco más
+   *  a la derecha, y el desfasaje se acumula. Con 5 slides ya erraba de
+   *  slide y el punto activo se quedaba pegado en el primero. */
+  function slideVisible(track) {
+    const centro = track.getBoundingClientRect().left + track.clientWidth / 2;
+    let mejor = 0, dist = Infinity;
+    [...track.children].forEach((el, i) => {
+      const r = el.getBoundingClientRect();
+      const d = Math.abs((r.left + r.width / 2) - centro);
+      if (d < dist) { dist = d; mejor = i; }
+    });
+    return mejor;
+  }
+
+  function marcarPunto(i) {
+    document.querySelectorAll('#home-ads-dots .ads-dot')
+      .forEach((d, j) => d.classList.toggle('on', j === i));
+  }
+
+  function irASlide(i) {
+    const track = document.getElementById('home-ads-track');
+    const el = track?.children[i];
+    if (!track || !el) return;
+    // Posición REAL del slide, no una multiplicación: ver slideVisible().
+    const destino = el.getBoundingClientRect().left
+                  - track.getBoundingClientRect().left + track.scrollLeft;
+    track.scrollTo({ left: destino, behavior: 'smooth' });
+    // Se marca acá y no sólo desde el observer: cuando el movimiento lo
+    // pedimos nosotros ya sabemos a qué slide vamos, y así el punto queda
+    // bien aunque el navegador no emita eventos de scroll ni de
+    // intersección — que es exactamente lo que pasa en algunos contextos.
+    marcarPunto(i);
+  }
+
+  function arrancarAds(total) {
+    detenerAds();
+    if (total < 2) return;
+    // Quien pidió menos animación no debería tener algo moviéndose solo.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    _adsTimer = setInterval(() => {
+      const track = document.getElementById('home-ads-track');
+      // Si la pantalla no está visible el ancho es 0 y el cálculo se rompe;
+      // además rotar en una pantalla que nadie mira sólo gasta batería.
+      if (!track || !track.clientWidth || _adsPausado) return;
+      irASlide((slideVisible(track) + 1) % total);
+    }, 5000);
+  }
+
+  function detenerAds() {
+    if (_adsTimer) { clearInterval(_adsTimer); _adsTimer = null; }
+  }
+
+  function abrirBanner(id, enlace) {
+    PronetDB.clickBanner(id);
+    if (!enlace) return;
+    // '#s-algo' navega dentro de la app; cualquier otra cosa es un sitio
+    // externo y se abre aparte, sin sacar al usuario de PRONET.
+    if (enlace.startsWith('#')) {
+      const pantalla = enlace.slice(1);
+      if (typeof goTo === 'function') goTo(pantalla);
+    } else {
+      // noopener: sin esto la página destino puede manipular la nuestra.
+      window.open(enlace, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   function setBannerContextual() {
     const icon = document.getElementById('home-banner-icon');
     const title = document.getElementById('home-banner-title');
@@ -6665,6 +6811,166 @@ document.addEventListener('focusin', (e) => {
     renderParamNiveles();
   }
   window.guardarParamNivel = guardarParamNivel;
+
+  // ══ PARAMETRÍAS · BANNERS PUBLICITARIOS ════════════════════════════
+
+  /** Un banner vencido o futuro sigue existiendo, pero no se muestra. Que
+   *  el panel lo diga evita el "lo cargué y no aparece". */
+  function estadoBanner(b) {
+    const ahora = Date.now();
+    if (!b.activo)                                 return { txt: 'Apagado',  bg: 'var(--surface)', color: 'var(--ink3)' };
+    if (b.hasta && new Date(b.hasta) < ahora)      return { txt: 'Vencido',  bg: '#FFF1F2', color: '#BE123C' };
+    if (b.desde && new Date(b.desde) > ahora)      return { txt: 'Programado', bg: '#FEF3C7', color: '#92400E' };
+    return { txt: 'Al aire', bg: 'var(--green-s)', color: 'var(--green)' };
+  }
+
+  const soloFecha = (iso) => iso ? iso.slice(0, 10) : '';
+
+  async function renderParamBanners() {
+    const wrap = document.getElementById('param-banners-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+
+    const filas = await PronetDB.listarBanners().catch(() => []);
+    if (!filas.length) {
+      wrap.innerHTML = '<div style="padding:40px 18px;text-align:center;font-size:13px;color:var(--ink3);line-height:1.6">' +
+        'Todavía no hay publicidad cargada.<br>El carrusel no se muestra hasta que haya al menos una.</div>';
+      return;
+    }
+
+    wrap.innerHTML = filas.map(b => {
+      const est = estadoBanner(b);
+      return '<div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:11px">' +
+        '<img src="' + escHTML(b.imagen_url) + '" alt="" style="display:block;width:100%;aspect-ratio:16/7;object-fit:cover;background:var(--surface)">' +
+        '<div style="padding:12px 13px">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+            '<div style="flex:1;font-size:13.5px;font-weight:800;color:var(--ink)">' + escHTML(b.nombre) + '</div>' +
+            '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:' + est.bg + ';color:' + est.color + '">' + est.txt + '</span>' +
+          '</div>' +
+          '<div style="font-size:11px;color:var(--ink3);margin-bottom:8px">' +
+            '👆 ' + (b.clicks || 0) + ' click' + (b.clicks === 1 ? '' : 's') +
+            (b.enlace ? ' · ' + escHTML(b.enlace) : ' · sin enlace') +
+          '</div>' +
+          '<div class="pa-row"><span class="pa-lbl">Orden</span>' +
+            '<input id="bn-' + b.id + '-orden" class="pa-in" style="width:70px;text-align:right" inputmode="numeric" value="' + escHTML(String(b.orden)) + '"></div>' +
+          '<div class="pa-row"><span class="pa-lbl">Desde</span>' +
+            '<input id="bn-' + b.id + '-desde" class="pa-in" style="width:140px" type="date" value="' + soloFecha(b.desde) + '"></div>' +
+          '<div class="pa-row"><span class="pa-lbl">Hasta</span>' +
+            '<input id="bn-' + b.id + '-hasta" class="pa-in" style="width:140px" type="date" value="' + soloFecha(b.hasta) + '"></div>' +
+          '<div id="bn-' + b.id + '-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<button onclick="guardarBannerUI(\'' + b.id + '\')" style="flex:1;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>' +
+            '<button onclick="toggleBannerUI(\'' + b.id + '\',' + (b.activo ? 'false' : 'true') + ')" style="flex:1;background:' + (b.activo ? 'var(--surface)' : 'var(--green-s)') + ';color:' + (b.activo ? 'var(--ink2)' : 'var(--green)') + ';border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">' + (b.activo ? 'Apagar' : 'Prender') + '</button>' +
+            '<button onclick="borrarBannerUI(\'' + b.id + '\')" aria-label="Borrar" style="background:white;color:#BE123C;border:1.5px solid #FECDD3;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑</button>' +
+          '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  /** Las fechas del <input type="date"> vienen sin hora. "Hasta el 31" tiene
+   *  que incluir el 31 entero, no cortar a las 00:00 de ese día. */
+  function fechaDesde(v) { return v ? new Date(v + 'T00:00:00').toISOString() : null; }
+  function fechaHasta(v) { return v ? new Date(v + 'T23:59:59').toISOString() : null; }
+
+  async function guardarBannerUI(id) {
+    const msg = document.getElementById('bn-' + id + '-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+    const orden = Number((document.getElementById('bn-' + id + '-orden')?.value || '').trim());
+    if (!Number.isFinite(orden)) { decir('⚠️ El orden tiene que ser un número', '#BE123C'); return; }
+    const desde = document.getElementById('bn-' + id + '-desde')?.value || '';
+    const hasta = document.getElementById('bn-' + id + '-hasta')?.value || '';
+    if (desde && hasta && desde > hasta) { decir('⚠️ "Desde" no puede ser posterior a "Hasta"', '#BE123C'); return; }
+
+    const r = await PronetDB.guardarBanner(id, {
+      orden, desde: fechaDesde(desde), hasta: fechaHasta(hasta),
+    });
+    if (!r.ok) { decir('⚠️ ' + r.error, '#BE123C'); return; }
+    decir('✅ Guardado', 'var(--green)');
+    renderParamBanners();
+  }
+  window.guardarBannerUI = guardarBannerUI;
+
+  async function toggleBannerUI(id, activo) {
+    const r = await PronetDB.guardarBanner(id, { activo });
+    if (!r.ok) { showToast && showToast('⚠️ ' + r.error); return; }
+    renderParamBanners();
+  }
+  window.toggleBannerUI = toggleBannerUI;
+
+  async function borrarBannerUI(id) {
+    if (!confirm('¿Borrar esta publicidad? No se puede deshacer.')) return;
+    const r = await PronetDB.borrarBanner(id);
+    if (!r.ok) { showToast && showToast('⚠️ ' + r.error); return; }
+    showToast && showToast('🗑 Publicidad borrada');
+    renderParamBanners();
+  }
+  window.borrarBannerUI = borrarBannerUI;
+
+  function abrirAltaBanner() {
+    const cont = document.getElementById('param-banner-alta');
+    if (!cont) return;
+    if (cont.style.display !== 'none') { cont.style.display = 'none'; cont.innerHTML = ''; return; }
+    cont.innerHTML =
+      '<div class="param-alta-card">' +
+        '<div style="font-size:13.5px;font-weight:800;color:var(--ink);margin-bottom:4px">Nueva publicidad</div>' +
+        '<div class="pa-row"><span class="pa-lbl">Nombre (interno)</span>' +
+          '<input id="nb-nombre" class="pa-in" style="width:150px" placeholder="Coffee House marzo"></div>' +
+        '<div class="pa-row"><span class="pa-lbl">Enlace al tocar</span>' +
+          '<input id="nb-enlace" class="pa-in" style="width:150px" placeholder="https://… o #s-mercado"></div>' +
+        '<div class="pa-row"><span class="pa-lbl">Desde</span>' +
+          '<input id="nb-desde" class="pa-in" style="width:140px" type="date"></div>' +
+        '<div class="pa-row"><span class="pa-lbl">Hasta</span>' +
+          '<input id="nb-hasta" class="pa-in" style="width:140px" type="date"></div>' +
+        '<div style="padding:7px 0">' +
+          '<div style="font-size:12.5px;color:var(--ink);margin-bottom:5px">Imagen</div>' +
+          '<input id="nb-img" type="file" accept="image/*" style="font-size:12px;width:100%">' +
+          '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.5">Se recorta a 16:7, así que lo importante tiene que estar centrado. Ideal 1200×525.</div>' +
+        '</div>' +
+        '<div id="nb-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button id="nb-crear" onclick="crearBannerUI()" style="flex:1;background:var(--blue);color:white;border:none;border-radius:10px;padding:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Crear</button>' +
+          '<button onclick="abrirAltaBanner()" style="flex:1;background:var(--surface);color:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    cont.style.display = 'block';
+  }
+  window.abrirAltaBanner = abrirAltaBanner;
+
+  async function crearBannerUI() {
+    const msg = document.getElementById('nb-msg');
+    const btn = document.getElementById('nb-crear');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+
+    const nombre = (document.getElementById('nb-nombre')?.value || '').trim();
+    const enlace = (document.getElementById('nb-enlace')?.value || '').trim();
+    const desde  = document.getElementById('nb-desde')?.value || '';
+    const hasta  = document.getElementById('nb-hasta')?.value || '';
+    const file   = document.getElementById('nb-img')?.files?.[0];
+
+    if (!nombre) return decir('⚠️ Poné un nombre para reconocerla acá', '#BE123C');
+    if (!file)   return decir('⚠️ Falta la imagen', '#BE123C');
+    // 3 MB: más que eso tarda en cargar justo arriba de todo, que es donde
+    // más se nota.
+    if (file.size > 3 * 1024 * 1024) return decir('⚠️ La imagen no puede pesar más de 3 MB', '#BE123C');
+    if (desde && hasta && desde > hasta) return decir('⚠️ "Desde" no puede ser posterior a "Hasta"', '#BE123C');
+
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Subiendo…'; }
+    const sub = await PronetDB.subirImagenBanner(file);
+    if (!sub.ok) { if (btn) { btn.disabled = false; btn.textContent = 'Crear'; } return decir('⚠️ ' + sub.error, '#BE123C'); }
+
+    const r = await PronetDB.crearBanner({
+      nombre, imagen_url: sub.url, enlace: enlace || null,
+      desde: fechaDesde(desde), hasta: fechaHasta(hasta),
+      orden: 100, activo: true,
+    });
+    if (btn) { btn.disabled = false; btn.textContent = 'Crear'; }
+    if (!r.ok) return decir('⚠️ ' + r.error, '#BE123C');
+
+    showToast && showToast('✅ Publicidad creada');
+    abrirAltaBanner();          // cierra el formulario
+    renderParamBanners();
+  }
+  window.crearBannerUI = crearBannerUI;
 
   // ══ PARAMETRÍAS · ALTA DE FILAS ════════════════════════════════════
   //
