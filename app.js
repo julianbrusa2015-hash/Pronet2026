@@ -1440,7 +1440,6 @@ document.addEventListener('focusin', (e) => {
         + ' · ' + (zonaActual || 'Escobar') + ' · '
         + prestadores.length + ' prestador' + (prestadores.length !== 1 ? 'es' : '');
     }
-    pintarActividad();
     if (prestadores.length === 0) {
       // El mensaje tiene que nombrar el motivo real: decir "no hay en esta
       // categoría" cuando en verdad no hubo coincidencias de búsqueda manda
@@ -1454,36 +1453,15 @@ document.addEventListener('focusin', (e) => {
     prestadores.forEach(p => wrap.appendChild(crearCardPrestador(p)));
   }
 
-  /** "Hay N vecinos buscando…" en el inicio del vecino.
-   *
-   *  Un agregado, no un listado: desde el 2026-08-09 un vecino no lee los
-   *  pedidos ajenos (supabase-visibilidad-pedidos.sql), y esto es lo que
-   *  reemplaza a mostrárselos para que vea que la app tiene movimiento.
-   *
-   *  Se cachea por zona: renderHomeCat() corre en cada cambio de chip y no
-   *  hace falta volver a preguntar por un número que se mueve poco. */
-  const _actividadCache = new Map();
-  async function pintarActividad() {
-    const caja = document.getElementById('home-actividad');
-    const txt  = document.getElementById('home-actividad-txt');
-    if (!caja || !txt) return;
-    // Al prestador no le dice nada: él ve los pedidos de verdad.
-    if (usuarioActual?.prestador_id) { caja.style.display = 'none'; return; }
-
-    const zona = zonaActual || null;
-    const clave = zona || '__todas';
-    let n = _actividadCache.get(clave);
-    if (n === undefined) {
-      n = await PronetDB.contarPedidosActivos(zona).catch(() => 0);
-      _actividadCache.set(clave, n);
-    }
-    if (!n) { caja.style.display = 'none'; return; }
-
-    txt.textContent = n === 1
-      ? 'Hay 1 vecino buscando un servicio en ' + (zona || 'Escobar')
-      : 'Hay ' + n + ' vecinos buscando servicios en ' + (zona || 'Escobar');
-    caja.style.display = 'flex';
-  }
+  // Acá vivía "Hay N vecinos buscando servicios en…", que se quitó el
+  // 2026-08-09 el mismo día que se agregó. El dato era correcto pero estaba
+  // apuntado al lector equivocado: a un vecino no le sirve saber cuántos
+  // otros buscan lo mismo —si acaso, es competencia por los mismos
+  // prestadores—. A quien le diría algo es al prestador, que es justo quien
+  // no lo veía porque ve los pedidos de verdad.
+  //
+  // El RPC contar_pedidos_activos() queda en la base: devuelve sólo un
+  // número y no expone nada, por si más adelante se muestra en otro lado.
 
   /** Compara rubros ignorando singular/plural y mayúsculas */
   function matchRubro(rubroA, rubroB) {

@@ -175,8 +175,11 @@ const PronetDB = (() => {
      *  vecino no lee los pedidos ajenos: contarlos con `count` devolvería
      *  siempre lo que ese usuario puede ver, no la actividad real.
      *
-     *  Es un agregado a propósito — muestra que la app tiene movimiento sin
-     *  exponer los pedidos de a uno. Ver supabase-visibilidad-pedidos.sql. */
+     *  HOY NO SE USA. Alimentaba el "Hay N vecinos buscando servicios" del
+     *  Inicio, que se sacó porque el dato estaba apuntado al lector
+     *  equivocado (a un vecino no le sirve saber cuántos otros buscan lo
+     *  mismo). Se deja porque el RPC existe en la base y devuelve sólo un
+     *  número: si mañana se muestra en otro lado, está listo. */
     async contarPedidosActivos(zona = null) {
       if (!remoto) {
         return leerLocal('pedidos')
