@@ -313,7 +313,9 @@ document.addEventListener('focusin', (e) => {
     // Si va a Publicar, siempre arrancar en paso 1
     if (id === 's-publicar') { pubNext(1); }
     // Si va a Nuevo Pedido, siempre arrancar en paso 1
-    if (id === 's-nuevo-pedido') { npNext(1); }
+    // Entrar al alta limpia el destinatario: si viene de recontratar, lo
+    // vuelve a setear después de este goTo.
+    if (id === 's-nuevo-pedido') { npNext(1); quitarRecontratar(); }
     if (id === 's-mis-publicaciones') { renderMisPublicaciones(); }
     if (id === 's-mis-consultas-mkt') { renderMisConsultasMkt(); }
     if (id === 's-mis-consultas-enviadas') { renderMisConsultasEnviadas(); }
@@ -1587,6 +1589,7 @@ document.addEventListener('focusin', (e) => {
       PronetDB.listarPedidosDisponibles({
         zonas: zonasDelFiltro(),
         excluirUsuario: usuarioActual?.id || null,
+        miPrestadorId: usuarioActual?.prestador_id || null,
       }).catch(() => ({ pedidos: [], total: 0 })),
       // Las propuestas propias, con su estado. Alimentan dos cosas: el
       // contador de "esperando respuesta" y la exclusión de los pedidos
@@ -1923,6 +1926,7 @@ document.addEventListener('focusin', (e) => {
     const feed = await PronetDB.listarPedidosDisponibles({
       zonas: filtrosPresto.zona ? zonasDelFiltro() : null,
       excluirUsuario: usuarioActual?.id || null,
+      miPrestadorId: usuarioActual?.prestador_id || null,
     }).catch(() => ({ pedidos: [], total: 0 }));
     let pedidos = feed.pedidos;
 
@@ -2013,6 +2017,7 @@ document.addEventListener('focusin', (e) => {
     const feedCat = await PronetDB.listarPedidosDisponibles({
       zonas: zonasDelFiltro(),
       excluirUsuario: usuarioActual?.id || null,
+      miPrestadorId: usuarioActual?.prestador_id || null,
     }).catch(() => ({ pedidos: [], total: 0 }));
     let pedidos = feedCat.pedidos;
     // Filtrar por rubro/categoría
@@ -8013,6 +8018,8 @@ document.addEventListener('focusin', (e) => {
       ? (document.getElementById('np-frec-periodo')?.value || 'semana')
       : null;
 
+    const dirigidoA = recontratarDestino?.prestadorId || null;
+
     const pedido = await PronetDB.crear('pedidos', {
       titulo: titulo,
       descripcion: desc,
@@ -8024,6 +8031,8 @@ document.addEventListener('focusin', (e) => {
       modalidad: modalidad,
       frecuencia_veces: frecVeces,
       frecuencia_periodo: frecPeriodo,
+      // Recontratación: si hay destinatario, el pedido no va al feed.
+      dirigido_a: dirigidoA,
       presupuesto_min: precioMin,
       presupuesto_max: precioMax,
       usuario_id: usuarioActual ? usuarioActual.id : null,
@@ -8037,16 +8046,28 @@ document.addEventListener('focusin', (e) => {
         pedido.fotos = urls;
       }
     }
-    // Push a los prestadores del rubro (no bloquea el flujo si falla)
+    // Aviso a quien corresponda (no bloquea el flujo si falla).
+    // Un pedido dirigido no se anuncia al rubro: sólo lo puede ver una
+    // persona, avisarle al resto es ruido y una promesa que no se cumple.
     if (pedido && PronetDB.esRemoto()) {
-      PronetDB.notificar({
-        destino: 'prestadores_rubro',
-        rubro: pedido.rubro,
-        tipo: 'pedido',
-        titulo: '🔔 Nuevo pedido en tu rubro',
-        cuerpo: (pedido.titulo || 'Un vecino necesita tu servicio') + ' · ' + (pedido.zona || ''),
-        url: '/#s-pedidos',
-      }).catch((e) => { console.warn('[Push] notificar pedido:', e); });
+      const aviso = dirigidoA
+        ? {
+            destino: 'prestador',
+            prestador_id: pedido.dirigido_a,
+            tipo: 'pedido',
+            titulo: '🔁 Te pidieron otro trabajo',
+            cuerpo: (pedido.titulo || 'Un vecino te volvió a elegir') + ' · ' + (pedido.zona || ''),
+            url: '/#s-pedidos',
+          }
+        : {
+            destino: 'prestadores_rubro',
+            rubro: pedido.rubro,
+            tipo: 'pedido',
+            titulo: '🔔 Nuevo pedido en tu rubro',
+            cuerpo: (pedido.titulo || 'Un vecino necesita tu servicio') + ' · ' + (pedido.zona || ''),
+            url: '/#s-pedidos',
+          };
+      PronetDB.notificar(aviso).catch((e) => { console.warn('[Push] notificar pedido:', e); });
     }
     renderPedidosGuardados();
     // ── Actualizar pantalla de confirmación con datos reales ──
@@ -8295,6 +8316,54 @@ document.addEventListener('focusin', (e) => {
     el.closest(scope || '.form-options').querySelectorAll('.form-opt').forEach(o => o.classList.remove('on'));
     el.classList.add('on');
   }
+
+  // ══ RECONTRATACIÓN ═════════════════════════════════════════════════
+  //
+  // Otro trabajo con la misma persona. No reusa el chat: `resenas` tiene
+  // UNIQUE (chat_id), así que dos trabajos en un mismo chat dejan el
+  // segundo sin poder calificarse. Cada trabajo tiene su chat; lo que se
+  // mantiene es la relación.
+  //
+  // El pedido nace DIRIGIDO: no va al feed. El vecino ya eligió, y publicar
+  // abierto haría que le compitan a alguien que ya le resolvió un problema.
+  let recontratarDestino = null;   // { prestadorId, nombre }
+
+  /** Muestra el acceso a recontratar sólo si el trabajo de este chat ya
+   *  terminó y quien mira es el vecino. Antes de eso es ruido. */
+  function reflejarRecontratar(chat) {
+    const caja = document.getElementById('chat-recontratar');
+    if (!caja) return;
+    const soyVecino = !!usuarioActual && chat?.vecino_id === usuarioActual.id;
+    const termino = ['terminado_por_vecino', 'terminado_prestador', 'calificado'].includes(chat?.estado);
+    if (!soyVecino || !termino || !chat?.prestador_id) { caja.style.display = 'none'; return; }
+
+    recontratarDestino = {
+      prestadorId: chat.prestador_id,
+      nombre: chat.prestadores?.nombre || chat.contraparte_nombre || 'esta persona',
+    };
+    const txt = document.getElementById('chat-recontratar-txt');
+    if (txt) txt.textContent = 'Pedirle otro trabajo a ' + recontratarDestino.nombre;
+    caja.style.display = 'block';
+  }
+
+  /** Abre el alta de pedido con el destinatario fijado. */
+  function abrirRecontratar() {
+    if (!recontratarDestino) return;
+    goTo('s-nuevo-pedido');
+    const banner = document.getElementById('np-dirigido-banner');
+    const nom    = document.getElementById('np-dirigido-nombre');
+    if (nom) nom.textContent = recontratarDestino.nombre;
+    if (banner) banner.style.display = 'flex';
+  }
+  window.abrirRecontratar = abrirRecontratar;
+
+  /** Cancela el direccionamiento: el pedido vuelve a ser abierto. */
+  function quitarRecontratar() {
+    recontratarDestino = null;
+    const banner = document.getElementById('np-dirigido-banner');
+    if (banner) banner.style.display = 'none';
+  }
+  window.quitarRecontratar = quitarRecontratar;
 
   /** Puntual / servicio fijo. Muestra la frecuencia sólo cuando hace falta:
    *  preguntarle "cada cuánto" a quien pidió una destapación es ruido. */
@@ -9062,6 +9131,7 @@ document.addEventListener('focusin', (e) => {
     // Mostrar link de denuncia solo para el vecino del chat
     const denLink = document.getElementById('chat-denuncia-link');
     if (denLink && soyVecino) denLink.style.display = 'block';
+    reflejarRecontratar(chat);
     const show = id => { const el = document.getElementById(id); if (el) el.style.display = 'flex'; };
     const showBlock = id => { const el = document.getElementById(id); if (el) el.style.display = 'block'; };
     switch (estado) {

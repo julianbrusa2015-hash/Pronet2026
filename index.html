@@ -1345,6 +1345,20 @@
         </div>
       </div>
 
+      <!-- Recontratación: aparece sólo cuando el trabajo de este chat ya
+           terminó y quien mira es el vecino. Antes de eso sería ruido. -->
+      <div id="chat-recontratar" style="display:none;padding:10px 14px;background:var(--green-s);border-bottom:1px solid var(--border)">
+        <div role="button" tabindex="0" onclick="abrirRecontratar()"
+             style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <span style="font-size:17px">🔁</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--green)" id="chat-recontratar-txt">Pedirle otro trabajo</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:1px">Se lo mandás sólo a esta persona</div>
+          </div>
+          <span style="color:var(--green);font-size:15px">›</span>
+        </div>
+      </div>
+
       <!-- Mensajes reales -->
       <div class="chat-body" id="chat-body">
         <div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)" id="chat-empty">
@@ -2373,6 +2387,17 @@
     <div class="screen" id="s-nuevo-pedido">
 
       <!-- PASO 1 -->
+      <!-- Recontratación: el pedido va sólo a esta persona. Se puede
+           cancelar, y ahí vuelve a ser un pedido abierto. -->
+      <div id="np-dirigido-banner" style="display:none;align-items:center;gap:10px;margin:12px 16px 0;padding:11px 13px;background:var(--green-s);border:1px solid #9FE1CB;border-radius:12px">
+        <span style="font-size:17px">🔁</span>
+        <div style="flex:1">
+          <div style="font-size:12.5px;font-weight:700;color:var(--green)">Sólo para <span id="np-dirigido-nombre">esta persona</span></div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px">No se publica en el listado general</div>
+        </div>
+        <button onclick="quitarRecontratar()" style="background:white;border:1px solid #9FE1CB;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--green);cursor:pointer;font-family:inherit">Quitar</button>
+      </div>
+
       <div id="np-1" style="position:relative">
         <div class="nprop-header">
           <div class="back-btn" onclick="goTo('s-pedidos')" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>

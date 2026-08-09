@@ -97,12 +97,13 @@ const PronetDB = (() => {
      *  @param {string[]=} zonas         Zonas concretas (no la zona-madre).
      *  @param {string=}   excluirUsuario Su dueño no puede ofertar.
      *  @param {number=}   limite        Techo de seguridad, no paginación. */
-    async listarPedidosDisponibles({ zonas = null, excluirUsuario = null, limite = 200 } = {}) {
+    async listarPedidosDisponibles({ zonas = null, excluirUsuario = null, limite = 200, miPrestadorId = null } = {}) {
       if (!remoto) {
         const todos = leerLocal('pedidos')
           .filter(p => (p.estado || 'Publicado') === 'Publicado')
           .filter(p => !excluirUsuario || p.usuario_id !== excluirUsuario)
-          .filter(p => !zonas?.length || zonas.includes(p.zona || 'Escobar'));
+          .filter(p => !zonas?.length || zonas.includes(p.zona || 'Escobar'))
+          .filter(p => !p.dirigido_a || p.dirigido_a === miPrestadorId);
         return { pedidos: todos.slice(0, limite), total: todos.length };
       }
       let q = sb.from('pedidos')
@@ -112,6 +113,12 @@ const PronetDB = (() => {
         .limit(limite);
       if (zonas?.length)   q = q.in('zona', zonas);
       if (excluirUsuario)  q = q.neq('usuario_id', excluirUsuario);
+      // Los pedidos dirigidos sólo los ve su destinatario. Sin este filtro,
+      // una recontratación aparecería en el feed de todos y el vecino
+      // recibiría propuestas de gente que no pidió.
+      q = miPrestadorId
+        ? q.or('dirigido_a.is.null,dirigido_a.eq.' + miPrestadorId)
+        : q.is('dirigido_a', null);
       const { data, error, count } = await q;
       if (error) {
         console.warn('[PronetDB] listarPedidosDisponibles', error.message);
@@ -290,7 +297,7 @@ const PronetDB = (() => {
     },
 
     /** Dispara una notificación vía la Edge Function y la persiste en la tabla notificaciones.
-     *  opciones = { destino:'usuario'|'prestadores_rubro', usuario_id?, rubro?, tipo?, titulo, cuerpo?, url? } */
+     *  opciones = { destino:'usuario'|'prestador'|'prestadores_rubro', usuario_id?, prestador_id?, rubro?, tipo?, titulo, cuerpo?, url? } */
     async notificar(opciones) {
       if (!remoto) return { ok: false, error: 'Push requiere modo remoto' };
       try {
@@ -308,6 +315,18 @@ const PronetDB = (() => {
           });
           if (error)      console.warn('[PronetDB] notificar_usuario', error.message);
           else if (!r?.ok) console.warn('[PronetDB] notificar_usuario', r?.error);
+        } else if (opciones.destino === 'prestador' && opciones.prestador_id) {
+          // Recontratación: el pedido es dirigido, así que avisa a una sola
+          // ficha. El RPC resuelve el usuario (no se puede desde el cliente).
+          const { data: r, error } = await sb.rpc('notificar_prestador', {
+            p_prestador_id: opciones.prestador_id,
+            p_tipo:         opciones.tipo || 'general',
+            p_titulo:       opciones.titulo,
+            p_cuerpo:       opciones.cuerpo || null,
+            p_url:          opciones.url || null,
+          });
+          if (error)       console.warn('[PronetDB] notificar_prestador', error.message);
+          else if (!r?.ok) console.warn('[PronetDB] notificar_prestador', r?.error);
         } else if (opciones.destino === 'prestadores_rubro' && opciones.rubro) {
           // Los destinatarios los resuelve el RPC desde `prestadores` (rubro +
           // activo). Antes salían de push_suscripciones, así que la campanita

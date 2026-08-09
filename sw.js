@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v157'; // v157: servicios fijos
+const CACHE_VERSION = 'pronet-v158'; // v158: recontratación (pedido dirigido)
 
 const SHELL = [
   './',
