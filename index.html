@@ -358,22 +358,28 @@
         <!-- Fila de chips oculta: se mantiene por compatibilidad con pmSelCat/pm-cat-row -->
         <div style="display:none" id="pm-cat-row"></div>
 
-        <!-- Zona -->
+        <!-- Zona → Barrio → Lote. Antes había un solo desplegable que
+             mezclaba zonas y barrios en la misma lista, y por eso en la base
+             convivían publicaciones que decían "Escobar" con otras que
+             decían "Nordelta": no había forma de saber cuál era cuál ni de
+             filtrar bien. Las opciones salen del catálogo `zonas`, no
+             escritas a mano. -->
         <label class="ob-label" for="pm-zona">Zona <span style="color:#E53E3E">*</span></label>
-        <select class="ob-input" id="pm-zona" name="pm-zona" style="margin-bottom:16px">
+        <select class="ob-input" id="pm-zona" name="pm-zona" onchange="pmCambioZona()" style="margin-bottom:16px">
           <option value="">Seleccioná tu zona…</option>
-          <option value="Puertos del Lago">Puertos del Lago</option>
-          <option value="El Cantón">El Cantón</option>
-          <option value="San Matías">San Matías</option>
-          <option value="El Naudir">El Naudir</option>
-          <option value="CUBE">CUBE</option>
-          <option value="El Cazador">El Cazador</option>
-          <option value="Nordelta">Nordelta</option>
-          <option value="Escobar Centro">Escobar Centro</option>
-          <option value="Escobar">Escobar</option>
-          <option value="Matheu / Garín">Matheu / Garín</option>
-          <option value="Garín">Garín</option>
         </select>
+
+        <label class="ob-label" for="pm-barrio">Barrio <span style="color:#E53E3E">*</span></label>
+        <select class="ob-input" id="pm-barrio" name="pm-barrio" style="margin-bottom:16px">
+          <option value="">Elegí primero la zona…</option>
+        </select>
+
+        <label class="ob-label" for="pm-lote">Lote o número</label>
+        <input class="ob-input" id="pm-lote" name="pm-lote" type="text"
+          placeholder="Ej: 340" maxlength="40" style="margin-bottom:4px">
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:16px;line-height:1.5">
+          No se publica. Se lo pasás al comprador por el chat cuando coordinan la entrega.
+        </div>
 
         <!-- Título -->
         <label class="ob-label" for="pm-titulo">Título</label>

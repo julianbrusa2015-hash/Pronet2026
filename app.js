@@ -4876,7 +4876,7 @@ document.addEventListener('focusin', (e) => {
             <summary style="font-size:12px;color:var(--blue);font-weight:600;cursor:pointer">Ver detalles</summary>
             <ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--ink2)">${p.detalles.map(d => `<li>${escHTML(d)}</li>`).join('')}</ul>
           </details>` : ''}
-          ${p.zona ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">📍 ${escHTML(p.zona)}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</div>` : ''}
+          ${(p.barrio || p.zona) ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">📍 ${escHTML(p.barrio || p.zona)}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</div>` : ''}
           <div style="display:flex;align-items:center;gap:12px;margin:10px 0 8px">
             <button id="like-btn-${escHTML(p.id)}" onclick="mktToggleLike('${escHTML(p.id)}')"
               data-liked="${liked ? '1' : '0'}"
@@ -5913,6 +5913,50 @@ document.addEventListener('focusin', (e) => {
     if (anterior && sel.querySelector('option[value="' + anterior + '"]')) sel.value = anterior;
   }
 
+  /** Zona → Barrio, encadenados y sacados del catálogo `zonas`.
+   *
+   *  Antes era un único desplegable con zonas y barrios mezclados, y por eso
+   *  en la base convivían publicaciones que decían "Escobar" con otras que
+   *  decían "Nordelta": no se podía saber cuál era cuál ni filtrar bien. */
+  async function pmPintarZonas(zonaSel, barrioSel) {
+    const zonas = await PronetDB.listarZonas().catch(() => []);
+    const selZ = document.getElementById('pm-zona');
+    const selB = document.getElementById('pm-barrio');
+    if (!selZ || !selB) return;
+
+    const madres = [...new Set(zonas.map(z => z.madre))].sort();
+    selZ.innerHTML = '<option value="">Seleccioná tu zona…</option>' +
+      madres.map(m => '<option value="' + escHTML(m) + '">' + escHTML(m) + '</option>').join('');
+    if (zonaSel && madres.includes(zonaSel)) selZ.value = zonaSel;
+
+    pmPintarBarrios(zonas, selZ.value, barrioSel);
+    // El catálogo se guarda para que el cambio de zona no vuelva a pedirlo.
+    pmZonasCache = zonas;
+  }
+
+  let pmZonasCache = [];
+
+  function pmPintarBarrios(zonas, zona, barrioSel) {
+    const selB = document.getElementById('pm-barrio');
+    if (!selB) return;
+    if (!zona) {
+      selB.innerHTML = '<option value="">Elegí primero la zona…</option>';
+      return;
+    }
+    // La zona madre también figura como barrio de sí misma en el catálogo
+    // (Escobar/Escobar). Se deja: es la opción de quien no está en un barrio
+    // cerrado y no tiene otra cosa que poner.
+    const hijos = zonas.filter(z => z.madre === zona);
+    selB.innerHTML = '<option value="">Seleccioná tu barrio…</option>' +
+      hijos.map(z => '<option value="' + escHTML(z.nombre) + '">' + escHTML(z.nombre) + '</option>').join('');
+    if (barrioSel && hijos.some(z => z.nombre === barrioSel)) selB.value = barrioSel;
+  }
+
+  function pmCambioZona() {
+    pmPintarBarrios(pmZonasCache, document.getElementById('pm-zona')?.value, null);
+  }
+  window.pmCambioZona = pmCambioZona;
+
   async function abrirPublicarMercado() {
     if (!usuarioActual) {
       mostrarGate && mostrarGate({ titulo: 'Publicar en Entre Vecinos', sub: 'Necesitás una cuenta para publicar.' });
@@ -5947,8 +5991,13 @@ document.addEventListener('focusin', (e) => {
     const convenirChk = document.getElementById('pm-precio-convenir');
     if (convenirChk) { convenirChk.checked = false; pmTogglePrecioConvenir(convenirChk); }
     pmResetDetalles();
-    const zonaEl = document.getElementById('pm-zona');
-    if (zonaEl) zonaEl.value = zonaActual && MKT_ZONA_COORD[zonaActual] ? zonaActual : '';
+    // La zona activa del usuario suele ser su barrio, así que se propone
+    // como barrio y su madre como zona — el caso normal queda precargado.
+    const suZona = zonaActual || '';
+    const suMadre = (await PronetDB.listarZonas().catch(() => []))
+      .find(z => z.nombre === suZona)?.madre || '';
+    await pmPintarZonas(suMadre, suZona);
+    const loteEl = document.getElementById('pm-lote'); if (loteEl) loteEl.value = '';
     const catSel = document.getElementById('pm-categoria');
     if (catSel) catSel.value = '';
     const tit = document.getElementById('pm-screen-titulo'); if (tit) tit.textContent = 'Nueva publicación';
@@ -6043,8 +6092,10 @@ document.addEventListener('focusin', (e) => {
       pmTogglePrecioConvenir(convenirChk);
     }
     pmResetDetalles(pub.detalles);
-    const zonaEl = document.getElementById('pm-zona');
-    if (zonaEl) zonaEl.value = pub.zona || '';
+    // Los barrios dependen de la zona, así que se pintan juntos: asignar el
+    // barrio antes de que su lista exista lo dejaría vacío.
+    await pmPintarZonas(pub.zona || '', pub.barrio || '');
+    const loteEl = document.getElementById('pm-lote'); if (loteEl) loteEl.value = pub.lote || '';
     // La sección sale de la categoría guardada: si la publicación es de
     // Mercado, el formulario tiene que abrir en Mercado. Va ANTES de pintar,
     // porque pmPintarCategorias sólo lista las de la sección activa y si no
@@ -6178,11 +6229,14 @@ document.addEventListener('focusin', (e) => {
     const precioConvenir = !!document.getElementById('pm-precio-convenir')?.checked;
     const detalles = pmLeerDetalles();
     const zona   = document.getElementById('pm-zona')?.value;
+    const barrio = document.getElementById('pm-barrio')?.value;
+    const lote   = (document.getElementById('pm-lote')?.value || '').trim();
     const categoria = document.getElementById('pm-categoria')?.value;
     const editando = !!pmEditandoId;
 
     if (!titulo)    { showToast && showToast('⚠️ Escribí un título para tu publicación'); return; }
     if (!zona)      { showToast && showToast('⚠️ Seleccioná tu zona para publicar'); return; }
+    if (!barrio)    { showToast && showToast('⚠️ Elegí tu barrio: es lo que le dice al comprador si le queda cerca'); return; }
     if (!categoria) { showToast && showToast('⚠️ Seleccioná una categoría'); return; }
 
     btn.disabled = true;
@@ -6203,10 +6257,10 @@ document.addEventListener('focusin', (e) => {
     let res;
     if (editando) {
       res = await PronetDB.editarPublicacion(pmEditandoId, { categoria, titulo, descripcion: desc || null,
-                                                              precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona });
+                                                              precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona, barrio, lote: lote || null });
     } else {
       res = await PronetDB.crearPublicacion({ categoria, titulo, descripcion: desc || null,
-                                             precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona });
+                                             precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona, barrio, lote: lote || null });
     }
 
     btn.disabled = false;

@@ -1085,7 +1085,9 @@ const PronetDB = (() => {
     async listarPublicaciones({ categoria = null, busqueda = null, zona = null, offset = 0, categorias = null } = {}) {
       if (!remoto) return [];
       let q = sb.from('publicaciones')
-        .select(`id, autor_id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, creado,
+        // `lote` NO se trae en el feed: es la dirección del vendedor y no se
+        // muestra en la tarjeta. Viaja sólo cuando hay pedido, en el chat.
+        .select(`id, autor_id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, creado,
                  disponible, likes_count, comentarios_count, perfiles:autor_id (nombre, zona)`)
         .eq('activa', true)
         .order('creado', { ascending: false })
@@ -1106,14 +1108,15 @@ const PronetDB = (() => {
     },
 
     /** Crea una publicación nueva. El autor_id lo pone RLS (auth.uid()). */
-    async crearPublicacion({ categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona }) {
+    async crearPublicacion({ categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, lote }) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const uid = await this.usuarioIdActual();
       if (!uid) return { ok: false, error: 'Sin sesión' };
       const { data, error } = await sb.from('publicaciones')
         .insert({ autor_id: uid, categoria, titulo, descripcion: descripcion || null,
                   precio: precio || null, precio_convenir: !!precio_convenir, detalles: detalles || [],
-                  foto_url: foto_url || null, zona: zona || null })
+                  foto_url: foto_url || null, zona: zona || null,
+                  barrio: barrio || null, lote: lote || null })
         .select('id').single();
       if (error) return { ok: false, error: error.message };
       // Best-effort: notificar suscriptores con alertas que coincidan
@@ -1290,12 +1293,17 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
-    async editarPublicacion(id, { categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url }) {
+    async editarPublicacion(id, { categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, lote }) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const uid = await this.usuarioIdActual();
       if (!uid) return { ok: false, error: 'Sin sesión' };
       const campos = { categoria, titulo, descripcion: descripcion || null, precio: precio ?? null, precio_convenir: !!precio_convenir, detalles: detalles || [] };
       if (foto_url !== undefined) campos.foto_url = foto_url;
+      // Ubicación: sólo se pisa si vino. Un editar que no toca la zona no
+      // debería borrarla.
+      if (zona   !== undefined) campos.zona   = zona || null;
+      if (barrio !== undefined) campos.barrio = barrio || null;
+      if (lote   !== undefined) campos.lote   = lote || null;
       const { error } = await sb.from('publicaciones').update(campos).eq('id', id).eq('autor_id', uid);
       if (error) return { ok: false, error: error.message };
       return { ok: true };
@@ -1324,7 +1332,7 @@ const PronetDB = (() => {
       const uid = await this.usuarioIdActual();
       if (!uid) return [];
       const { data, error } = await sb.from('publicaciones')
-        .select('id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, activa, disponible, creado')
+        .select('id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, activa, disponible, zona, barrio, lote, creado')
         .eq('autor_id', uid)
         .order('creado', { ascending: false });
       if (error) { console.warn('[PronetDB] listarMisPublicaciones', error.message); return []; }

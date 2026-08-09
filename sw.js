@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v181'; // v181: el vendedor se entera del pedido
+const CACHE_VERSION = 'pronet-v182'; // v182: zona, barrio y lote en las publicaciones
 
 const SHELL = [
   './',
