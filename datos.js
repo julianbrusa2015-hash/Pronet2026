@@ -171,6 +171,23 @@ const PronetDB = (() => {
       return count || 0;
     },
 
+    /** Cuántos pedidos abiertos hay. Va por RPC porque desde el 2026-08-09 un
+     *  vecino no lee los pedidos ajenos: contarlos con `count` devolvería
+     *  siempre lo que ese usuario puede ver, no la actividad real.
+     *
+     *  Es un agregado a propósito — muestra que la app tiene movimiento sin
+     *  exponer los pedidos de a uno. Ver supabase-visibilidad-pedidos.sql. */
+    async contarPedidosActivos(zona = null) {
+      if (!remoto) {
+        return leerLocal('pedidos')
+          .filter(p => (p.estado || 'Publicado') === 'Publicado' && !p.dirigido_a)
+          .filter(p => !zona || (p.zona || 'Escobar') === zona).length;
+      }
+      const { data, error } = await sb.rpc('contar_pedidos_activos', { p_zona: zona });
+      if (error) { console.warn('[PronetDB] contarPedidosActivos', error.message); return 0; }
+      return data || 0;
+    },
+
     /** Crea un registro. Devuelve el registro con id y fecha asignados. */
     async crear(coleccion, datos) {
       if (remoto) {

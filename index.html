@@ -150,6 +150,14 @@
       <div class="sec-label"><h3>Categorías</h3></div>
       <div class="rubros"></div>
 
+      <!-- Actividad de la zona. Es un agregado a propósito: desde que un
+           vecino no lee los pedidos ajenos, esto es lo que le muestra que
+           la app tiene movimiento. Sólo aparece si hay pedidos. -->
+      <div id="home-actividad" style="display:none;margin:10px 18px 0;padding:9px 12px;background:var(--blue-s);border:1px solid #C7D5FF;border-radius:11px;align-items:center;gap:9px">
+        <span style="font-size:15px">💼</span>
+        <div style="flex:1;font-size:12px;color:var(--ink2)" id="home-actividad-txt"></div>
+      </div>
+
       <!-- Feed filtrado por categoría -->
       <div id="home-cat-header" style="padding:12px 18px 4px;display:flex;align-items:center;justify-content:space-between">
         <div style="font-size:12px;color:var(--ink3)" id="home-cat-meta">Todos los servicios · Puertos del Lago</div>

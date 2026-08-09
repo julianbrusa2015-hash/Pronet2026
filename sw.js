@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v159'; // v159: favicon regenerado + SVG
+const CACHE_VERSION = 'pronet-v160'; // v160: visibilidad de pedidos + contador
 
 const SHELL = [
   './',

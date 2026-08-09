@@ -138,6 +138,48 @@ test.describe('C12 · Roles — vecino', () => {
   });
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// C14 · Visibilidad de pedidos entre vecinos
+//
+// Un pedido es "necesito que alguien entre a mi casa a arreglar esto", con
+// descripción libre —donde la gente escribe referencias de dirección— y fotos
+// del interior. Hasta el 2026-08-09 la policy era `using (true)`: alcanzaba con
+// registrarse con cualquier mail para leer eso de todo Escobar.
+//
+// Se verifica contra la API, no contra la UI: la protección tiene que estar en
+// RLS. El filtro de `dirigido_a` vivió una semana sólo en datos.js y por eso
+// parecía cerrado sin estarlo.
+// ══════════════════════════════════════════════════════════════════════════════
+test.describe('C14 · Visibilidad de pedidos', () => {
+  test.use({ storageState: sesion('vecino') });
+
+  test('un vecino sin ficha de prestador sólo lee sus propios pedidos', async ({ page }) => {
+    await abrir(page);
+    const r = await page.evaluate(async () => {
+      const sb = window._sb;
+      const { data: { user } } = await sb.auth.getUser();
+      const { data: miPrestadorId } = await sb.rpc('mi_prestador_id');
+      const { data } = await sb.from('pedidos').select('id, usuario_id');
+      return {
+        esPrestador: !!miPrestadorId,
+        ajenos: (data || []).filter(p => p.usuario_id !== user.id).length,
+      };
+    });
+    // Si la cuenta de prueba se vuelve prestador el test dejaría de probar lo
+    // que dice — mejor que avise a que pase en verde por el motivo equivocado.
+    test.skip(r.esPrestador, 'vecino_test tiene ficha de prestador: no sirve para este caso');
+    expect(r.ajenos).toBe(0);
+  });
+
+  test('el contador público informa actividad sin exponer los pedidos', async ({ page }) => {
+    await abrir(page);
+    const total = await page.evaluate(async () =>
+      (await window._sb.rpc('contar_pedidos_activos')).data);
+    expect(typeof total).toBe('number');
+    expect(total).toBeGreaterThanOrEqual(0);
+  });
+});
+
 test.describe('C12 · Roles — doble perfil', () => {
   // Se saltea si no hay cuenta configurada: TEST_DOBLE_EMAIL / TEST_DOBLE_PW.
   test.skip(!CUENTAS.doble.email, 'Sin cuenta de doble perfil configurada (TEST_DOBLE_EMAIL)');
