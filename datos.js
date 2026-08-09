@@ -1488,7 +1488,7 @@ const PronetDB = (() => {
     async listarComentarios(pubId, limit = 30) {
       if (!remoto) return [];
       const { data, error } = await sb.from('comentarios_publicaciones')
-        .select('id, texto, creado, autor_id, perfiles:autor_id (nombre)')
+        .select('id, texto, creado, autor_id, puntaje, perfiles:autor_id (nombre)')
         .eq('publicacion_id', pubId)
         .order('creado', { ascending: true })
         .limit(limit);
@@ -1496,13 +1496,21 @@ const PronetDB = (() => {
       return data || [];
     },
 
-    /** Crea un comentario en una publicación. */
-    async crearComentario(pubId, texto) {
+    /** Crea un comentario en una publicación.
+     *
+     *  `puntaje` es opcional: null significa "comentó sin puntuar", que no es
+     *  lo mismo que cero. Se normaliza acá para que un 0 o un valor fuera de
+     *  rango no llegue nunca a la base — el check lo rechazaría con un error
+     *  de Postgres en la cara del usuario. */
+    async crearComentario(pubId, texto, puntaje = null) {
       if (!remoto) return { ok: false };
       const uid = await this.usuarioIdActual();
       if (!uid) return { ok: false, error: 'Sin sesión' };
+      const n = Number(puntaje);
+      const estrellas = Number.isInteger(n) && n >= 1 && n <= 5 ? n : null;
       const { error } = await sb.from('comentarios_publicaciones')
-        .insert({ publicacion_id: pubId, autor_id: uid, texto: texto.trim().slice(0, 500) });
+        .insert({ publicacion_id: pubId, autor_id: uid, puntaje: estrellas,
+                  texto: texto.trim().slice(0, 500) });
       if (error) return { ok: false, error: error.message };
       return { ok: true };
     },

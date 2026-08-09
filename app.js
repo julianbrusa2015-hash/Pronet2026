@@ -4441,10 +4441,38 @@ document.addEventListener('focusin', (e) => {
     if (tit) tit.textContent = mktPostsCache.get(pubId)?.titulo || '';
     const inp = document.getElementById('com-input');
     if (inp) inp.value = '';
+    mktSetPuntaje(0);   // que no herede la nota de la publicación anterior
     goTo('s-comentarios-pub');
     await mktCargarComentarios();
   }
   window.mktAbrirComentarios = mktAbrirComentarios;
+
+  // Puntaje del comentario que se está escribiendo. 0 = sin puntuar, que es
+  // el estado inicial y un valor válido: puntuar es opcional.
+  let mktPuntajeNuevo = 0;
+
+  function mktSetPuntaje(n) {
+    // Tocar la misma estrella dos veces la apaga: es la forma de arrepentirse
+    // sin buscar un botón.
+    mktPuntajeNuevo = (n === mktPuntajeNuevo) ? 0 : n;
+    document.querySelectorAll('#com-estrellas .com-star').forEach(b => {
+      b.classList.toggle('on', Number(b.dataset.n) <= mktPuntajeNuevo);
+      b.setAttribute('aria-pressed', Number(b.dataset.n) === mktPuntajeNuevo ? 'true' : 'false');
+    });
+    const lbl = document.getElementById('com-estrellas-lbl');
+    if (lbl) lbl.textContent = mktPuntajeNuevo
+      ? mktPuntajeNuevo + ' de 5'
+      : 'Puntuar es opcional';
+    const quitar = document.getElementById('com-estrellas-limpiar');
+    if (quitar) quitar.style.display = mktPuntajeNuevo ? '' : 'none';
+  }
+  window.mktSetPuntaje = mktSetPuntaje;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#com-estrellas .com-star').forEach(b => {
+      b.addEventListener('click', () => mktSetPuntaje(Number(b.dataset.n)));
+    });
+  });
 
   async function mktCargarComentarios() {
     const lista = document.getElementById('com-lista');
@@ -4470,6 +4498,7 @@ document.addEventListener('focusin', (e) => {
             <div style="font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.3">${escHTML(nombre)}</div>
             <div style="font-size:11.5px;color:var(--ink3);margin-top:2px">${escHTML(tiempo)}</div>
           </div>
+          ${c.puntaje ? `<div class="stars" style="flex-shrink:0" aria-label="${c.puntaje} de 5">${estrellasHTML(c.puntaje, '13px')}</div>` : ''}
           ${esPropio ? `<button onclick="mktBorrarComentario('${escHTML(c.id)}')" aria-label="Borrar comentario" style="background:none;border:none;font-size:13px;color:var(--ink3);cursor:pointer;padding:4px;font-family:inherit;flex-shrink:0">✕</button>` : ''}
         </div>
         <div style="font-size:13.5px;color:var(--ink);line-height:1.55;word-break:break-word;margin-top:10px">${escHTML(c.texto)}</div>
@@ -4485,10 +4514,13 @@ document.addEventListener('focusin', (e) => {
     if (!texto) return;
     const btn = document.getElementById('com-enviar-btn');
     if (btn) btn.disabled = true;
-    const res = await PronetDB.crearComentario(mktComentariosPubId, texto);
+    const res = await PronetDB.crearComentario(mktComentariosPubId, texto, mktPuntajeNuevo || null);
     if (btn) btn.disabled = false;
     if (!res.ok) { showToast('⚠️ No se pudo enviar el comentario'); return; }
     if (inp) inp.value = '';
+    // El puntaje también se limpia: si quedara puesto, el próximo comentario
+    // saldría con la nota del anterior sin que nadie la haya elegido.
+    mktSetPuntaje(0);
     // Actualizar contador en el card del feed
     const cntEl = document.querySelector(`[onclick*="${mktComentariosPubId}"] span`);
     // Recargar lista
