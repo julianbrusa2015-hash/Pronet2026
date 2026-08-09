@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v158'; // v158: recontratación (pedido dirigido)
+const CACHE_VERSION = 'pronet-v159'; // v159: favicon regenerado + SVG
 
 const SHELL = [
   './',
@@ -15,6 +15,7 @@ const SHELL = [
   './config.js',
   './manifest.json',
   './iconos/favicon.ico',
+  './iconos/pronet-isotipo.svg',
   './iconos/icon-192.png',
   './iconos/icon-512.png',
   './iconos/icon-512-maskable.png',
