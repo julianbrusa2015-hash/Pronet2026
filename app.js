@@ -4799,6 +4799,23 @@ document.addEventListener('focusin', (e) => {
            ' style="background:var(--blue-s);border:1px solid #C7D5FF;border-radius:9px;padding:8px 12px;font-size:14px;cursor:pointer;font-family:inherit;margin-right:8px">🛒</button>';
   }
 
+  /** Botón principal de la tarjeta.
+   *
+   *  En una publicación PROPIA no se ofrece "Consultar": antes se mostraba
+   *  igual y al tocarlo saltaba "No podés consultar tu propia publicación",
+   *  que es una puerta que se abre para cerrarse en la cara. Peor todavía
+   *  cuando alguien tiene varias publicaciones mezcladas con las ajenas en
+   *  el mismo feed — es fácil tocar la equivocada y no entender el mensaje.
+   *  El botón de carrito ya se ocultaba así; esto los empareja. */
+  function accionPrincipalHTML(p) {
+    const esMia = usuarioActual && p.autor_id === usuarioActual.id;
+    if (esMia) {
+      return '<button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px;background:var(--surface);color:var(--ink2);border:1px solid var(--border)"' +
+             ' onclick="goTo(\'s-mis-publicaciones\')">Tu publicación</button>';
+    }
+    return '<button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar(\'' + escHTML(p.id) + '\')">💬 Consultar</button>';
+  }
+
   function mktCardHTML(p) {
     const nombre    = p.perfiles?.nombre || 'Vecino';
     const iniciales = mktIniciales(nombre);
@@ -4847,7 +4864,7 @@ document.addEventListener('focusin', (e) => {
             </button>
             <div style="flex:1"></div>
             ${botonCarritoHTML(p)}
-            <button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar('${escHTML(p.id)}')">💬 Consultar</button>
+            ${accionPrincipalHTML(p)}
           </div>
           <div style="text-align:right"><span onclick="abrirReportarPub('${escHTML(p.id)}','${escHTML(p.autor_id)}')" style="font-size:11px;color:var(--ink3);cursor:pointer">⚑ Reportar</span></div>
         </div>
@@ -5810,24 +5827,53 @@ document.addEventListener('focusin', (e) => {
    *  Al prestador sólo se le ofrecen las de Servicios: el mismo criterio que
    *  en el feed. Si pudiera publicar un producto tendría en Entre Vecinos una
    *  sección que después no ve. */
+  // Sección elegida en el formulario de publicar. El prestador sólo publica
+  // servicios, así que para él no cambia nunca.
+  let pmTipo = 'servicio';
+
+  /** Deja las pestañas mostrando la sección activa. Se llama siempre desde
+   *  pmPintarCategorias para que el botón marcado y la lista de categorías
+   *  no puedan quedar desfasados. */
+  function pmSincronizarTabs() {
+    document.querySelectorAll('#pm-tipo .mkt-sec').forEach((b, i) => {
+      const suyo = i === 0 ? 'servicio' : 'producto';
+      b.classList.toggle('on', suyo === pmTipo);
+      b.setAttribute('aria-selected', suyo === pmTipo ? 'true' : 'false');
+    });
+  }
+
+  function pmSetTipo(tipo) {
+    if (tipo === pmTipo) return;
+    pmTipo = tipo;
+    // La categoría elegida era de la otra sección: dejarla puesta guardaría
+    // la publicación en el lado que no es.
+    const sel = document.getElementById('pm-categoria');
+    if (sel) sel.value = '';
+    pmPintarCategorias();
+  }
+  window.pmSetTipo = pmSetTipo;
+
+  /** Llena el selector con las categorías de la sección activa.
+   *
+   *  Antes traía las 16 juntas en dos optgroups: elegir dónde se publica
+   *  quedaba escondido dentro de una lista larga, y era fácil terminar
+   *  publicando un producto entre los servicios sin darse cuenta. */
   async function pmPintarCategorias() {
     if (!mktCatsCargadas) { await cargarMktCategorias(); mktCatsCargadas = true; }
     const sel = document.getElementById('pm-categoria');
     if (!sel) return;
     const anterior = sel.value;
 
-    const grupo = (tipo, etiqueta) => {
-      const cats = catsDeTipo(tipo);
-      if (!cats.length) return '';
-      return '<optgroup label="' + escHTML(etiqueta) + '">' +
-        cats.map(c => '<option value="' + escHTML(c.slug) + '">' +
-                      escHTML(c.emoji + ' ' + c.nombre) + '</option>').join('') +
-        '</optgroup>';
-    };
+    // El prestador no elige: para él Entre Vecinos es sólo Servicios.
+    const wrap = document.getElementById('pm-tipo-wrap');
+    if (esPrestador()) { pmTipo = 'servicio'; if (wrap) wrap.style.display = 'none'; }
+    else if (wrap) wrap.style.display = '';
 
+    pmSincronizarTabs();
     sel.innerHTML = '<option value="">Seleccioná una categoría…</option>' +
-      grupo('servicio', 'Servicios del Barrio') +
-      (esPrestador() ? '' : grupo('producto', 'Mercado del Barrio'));
+      catsDeTipo(pmTipo).map(c =>
+        '<option value="' + escHTML(c.slug) + '">' +
+        escHTML(c.emoji + ' ' + c.nombre) + '</option>').join('');
 
     // Al editar, la categoría ya elegida tiene que seguir seleccionada.
     if (anterior && sel.querySelector('option[value="' + anterior + '"]')) sel.value = anterior;
@@ -5849,6 +5895,7 @@ document.addEventListener('focusin', (e) => {
     }
     pmEditandoId = null;
     pmFotoUrlActual = null;
+    pmTipo = 'servicio';   // toda publicación nueva arranca en Servicios
     await pmPintarCategorias();
     // Limpiar el form antes de abrir
     pmFotoArchivo = null;
@@ -5964,8 +6011,11 @@ document.addEventListener('focusin', (e) => {
     pmResetDetalles(pub.detalles);
     const zonaEl = document.getElementById('pm-zona');
     if (zonaEl) zonaEl.value = pub.zona || '';
-    // El selector arranca vacío: sin llenarlo antes, asignar la categoría
-    // guardada no encuentra la opción y el campo queda en blanco.
+    // La sección sale de la categoría guardada: si la publicación es de
+    // Mercado, el formulario tiene que abrir en Mercado. Va ANTES de pintar,
+    // porque pmPintarCategorias sólo lista las de la sección activa y si no
+    // la opción guardada no existiría y el campo quedaría vacío.
+    pmTipo = catPorSlug(pub.categoria)?.tipo || 'servicio';
     await pmPintarCategorias();
     const catSelEdit = document.getElementById('pm-categoria');
     if (catSelEdit) catSelEdit.value = pub.categoria || '';

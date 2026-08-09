@@ -336,10 +336,22 @@
         </div>
         <input type="file" id="pm-foto-input" accept="image/*" style="display:none" onchange="pmPrevisualizarFoto(this)">
 
+        <!-- Sección: primero se elige DÓNDE se publica y recién después la
+             categoría. Antes el desplegable traía las 16 juntas en dos
+             grupos, y elegir el lugar quedaba escondido dentro de una lista
+             larga. Al prestador no se le muestra: sólo publica Servicios. -->
+        <div id="pm-tipo-wrap" style="margin-bottom:14px">
+          <label class="ob-label" style="display:block;margin-bottom:6px">¿Dónde lo publicás? <span style="color:#E53E3E">*</span></label>
+          <div class="mkt-secciones" id="pm-tipo" role="tablist" aria-label="Sección donde publicar" style="margin:0">
+            <button type="button" class="mkt-sec on" role="tab" aria-selected="true"  onclick="pmSetTipo('servicio')">🛠️ Servicios</button>
+            <button type="button" class="mkt-sec"    role="tab" aria-selected="false" onclick="pmSetTipo('producto')">🛒 Mercado</button>
+          </div>
+        </div>
+
         <!-- Categoría -->
         <label class="ob-label" for="pm-categoria">Categoría <span style="color:#E53E3E">*</span></label>
-        <!-- Las opciones las llena pmPintarCategorias() desde el catálogo,
-             agrupadas por sección. Al prestador sólo le ofrece Servicios. -->
+        <!-- Las opciones las llena pmPintarCategorias() con las de la
+             sección elegida arriba, no con las 16. -->
         <select class="ob-input" id="pm-categoria" name="pm-categoria" style="margin-bottom:16px">
           <option value="">Seleccioná una categoría…</option>
         </select>
