@@ -246,7 +246,12 @@
             🛒
             <span id="mkt-carrito-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--blue);color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;border-radius:9px;align-items:center;justify-content:center;padding:0 4px">0</span>
           </button>
-          <button id="mkt-btn-publicar" onclick="abrirPublicarMercado()" style="display:none;background:var(--blue);border:none;border-radius:10px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:700;color:#fff;font-family:'Inter',sans-serif">+ Publicar</button>
+          <!-- El "+ Publicar" del appbar salió: con el bloque DESTACADO
+               arriba del feed y el FAB flotante ya había TRES accesos a lo
+               mismo en una pantalla, y éste además le competía el lugar al
+               carrito en una barra angosta. El id se mantiene oculto porque
+               renderMercado todavía lo referencia. -->
+          <button id="mkt-btn-publicar" style="display:none"></button>
           <div class="avatar-sm" id="mkt-avatar" onclick="goTo('s-miperfil')">JL</div>
         </div>
       </div>
@@ -296,6 +301,24 @@
       <div id="mkt-mapa-cont" style="display:none;position:relative">
         <div id="mkt-mapa-div" style="width:100%;height:calc(100svh - 220px);min-height:300px"></div>
         <div id="mkt-mapa-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface);font-size:13px;color:var(--ink3)">⏳ Cargando mapa...</div>
+      </div>
+
+      <!-- Invitación a publicar. Va acá, arriba del feed y no escondida en
+           un botón chico: la mitad del valor de Entre Vecinos es que la
+           gente publique, y el que entra a mirar no piensa que puede vender.
+           El texto cubre las dos secciones sin nombrarlas — "lo que tenés"
+           es Mercado, "lo que sabés hacer" es Servicios. -->
+      <div id="mkt-cta-publicar" style="margin:4px 14px 14px;background:linear-gradient(135deg,#1A3ACC,#2B5BFF);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1.5" style="position:absolute;right:-10px;bottom:-16px;width:110px;height:110px;pointer-events:none" aria-hidden="true">
+          <path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>
+          <path d="M12 12.6c1-1.1 2.8-.4 2.8 1 0 1.3-1.6 2.2-2.8 3.3-1.2-1.1-2.8-2-2.8-3.3 0-1.4 1.8-2.1 2.8-1z"/>
+        </svg>
+        <div style="position:relative">
+          <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;color:rgba(255,255,255,.6)">DESTACADO</div>
+          <div style="font-size:17px;font-weight:800;color:#fff;line-height:1.3;margin-top:5px">Publicá lo que tenés<br>o lo que sabés hacer</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.72);margin-top:5px">Tu vecino lo está buscando</div>
+          <button onclick="abrirPublicarMercado()" style="margin-top:13px;background:none;border:1.5px solid rgba(255,255,255,.55);border-radius:11px;padding:9px 15px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit">Publicar ahora ↗</button>
+        </div>
       </div>
 
       <!-- Feed -->
