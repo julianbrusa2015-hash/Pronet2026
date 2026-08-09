@@ -4455,21 +4455,24 @@ document.addEventListener('focusin', (e) => {
       lista.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Todavía no hay comentarios.<br>¡Sé el primero!</div>';
       return;
     }
+    // Tarjeta y no fila con separador: el comentario de un vecino sobre algo
+    // que compró es contenido con peso propio —es lo que decide a otro a
+    // comprar— y una lista con líneas divisorias lo hace ver como un log.
     lista.innerHTML = items.map(c => {
       const nombre = c.perfiles?.nombre || 'Vecino';
       const ini    = mktIniciales(nombre);
       const tiempo = mktTiempoRelativo(c.creado);
       const esPropio = c.autor_id === usuarioActual?.id || esAdmin();
-      return `<div style="display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)">
-        <div class="c-av" style="width:34px;height:34px;flex-shrink:0;font-size:12px;background:var(--blue-s);color:var(--blue)">${escHTML(ini)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:2px">
-            <span style="font-size:13px;font-weight:700;color:var(--ink)">${escHTML(nombre)}</span>
-            <span style="font-size:11px;color:var(--ink3)">${escHTML(tiempo)}</span>
-            ${esPropio ? `<span onclick="mktBorrarComentario('${escHTML(c.id)}')" style="margin-left:auto;font-size:11px;color:var(--ink3);cursor:pointer">✕</span>` : ''}
+      return `<div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="c-av" style="width:40px;height:40px;flex-shrink:0;font-size:13px;border-radius:50%;background:var(--blue-s);color:var(--blue)">${escHTML(ini)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.3">${escHTML(nombre)}</div>
+            <div style="font-size:11.5px;color:var(--ink3);margin-top:2px">${escHTML(tiempo)}</div>
           </div>
-          <div style="font-size:13px;color:var(--ink);line-height:1.5;word-break:break-word">${escHTML(c.texto)}</div>
+          ${esPropio ? `<button onclick="mktBorrarComentario('${escHTML(c.id)}')" aria-label="Borrar comentario" style="background:none;border:none;font-size:13px;color:var(--ink3);cursor:pointer;padding:4px;font-family:inherit;flex-shrink:0">✕</button>` : ''}
         </div>
+        <div style="font-size:13.5px;color:var(--ink);line-height:1.55;word-break:break-word;margin-top:10px">${escHTML(c.texto)}</div>
       </div>`;
     }).join('');
   }

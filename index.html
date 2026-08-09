@@ -582,7 +582,9 @@
           <div id="com-pub-titulo" style="font-family:'Sora',sans-serif;font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px"></div>
         </div>
       </div>
-      <div id="com-lista" style="overflow-y:auto;flex:1;padding-bottom:80px"></div>
+      <!-- Fondo gris: los comentarios son tarjetas blancas y necesitan algo
+           contra qué recortarse; sobre blanco se leían como una lista plana. -->
+      <div id="com-lista" style="overflow-y:auto;flex:1;padding:12px 14px 80px;background:var(--surface)"></div>
       <!-- Input fijo abajo -->
       <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 14px 20px;background:var(--white);border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
         <input id="com-input" type="text" placeholder="Escribí un comentario..." maxlength="500"

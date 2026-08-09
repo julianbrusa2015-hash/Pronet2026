@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v166'; // v166: carrusel de publicidad
+const CACHE_VERSION = 'pronet-v167'; // v167: comentarios de ProMarket como tarjeta
 
 const SHELL = [
   './',
