@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -404,6 +404,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-param-zonas')    { renderParamZonas(); }
     if (id === 's-param-niveles')  { renderParamNiveles(); }
     if (id === 's-param-ajustes')  { renderParamAjustes(); }
+    if (id === 's-servicios-fijos'){ renderServiciosFijos(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -6291,6 +6292,87 @@ document.addEventListener('focusin', (e) => {
   }
   window.toggleRubroActivo = toggleRubroActivo;
 
+  // ══ SERVICIOS FIJOS ════════════════════════════════════════════════
+  //
+  // El mismo registro se llama distinto según quién lo mire: el vecino ve
+  // "mis servicios fijos" y el prestador "mis clientes fijos". Para el
+  // prestador no es una lista de acuerdos, es su base de ingreso previsible
+  // — algo que hoy no ve en ningún lado.
+  //
+  // No administra fechas ni visitas a propósito: es el registro de QUÉ se
+  // acordó con quién, no la ejecución. Eso sigue pasando por el chat.
+  function frecuenciaTexto(veces, periodo) {
+    const n = Number(veces) || 1;
+    return (n === 1 ? '1 vez' : n + ' veces') + ' por ' + (periodo === 'mes' ? 'mes' : 'semana');
+  }
+
+  async function renderServiciosFijos() {
+    const wrap = document.getElementById('sf-lista');
+    const tit  = document.getElementById('sf-titulo');
+    if (!wrap) return;
+    const soyPrestador = !!usuarioActual?.prestador_id && modoRol !== 'vecino';
+    if (tit) tit.textContent = soyPrestador ? 'Mis clientes fijos' : 'Mis servicios fijos';
+    wrap.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+
+    const filas = await PronetDB.listarServiciosFijos(true).catch(() => []);
+    if (!filas.length) {
+      wrap.innerHTML = `
+        <div style="padding:40px 24px;text-align:center">
+          <div style="font-size:38px;margin-bottom:10px">🔁</div>
+          <div style="font-size:15px;font-weight:700;color:var(--ink)">${soyPrestador ? 'Todavía no tenés clientes fijos' : 'Todavía no tenés servicios fijos'}</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:6px;line-height:1.5">
+            ${soyPrestador
+              ? 'Cuando un vecino te elija para un trabajo que se repite, va a aparecer acá.'
+              : 'Al publicar un pedido elegí <b>Servicio fijo</b> — como el jardinero o el piletero — y cuando elijas a alguien queda registrado acá.'}
+          </div>
+        </div>`;
+      return;
+    }
+
+    wrap.innerHTML = filas.map(s => {
+      const otro = soyPrestador ? (s.vecino_nombre || 'Vecino') : (s.prestadores?.nombre || 'Prestador');
+      const ini  = otro.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const precio = s.precio
+        ? '$' + Number(s.precio).toLocaleString('es-AR') + ' por ' + (s.precio_unidad === 'mes' ? 'mes' : 'visita')
+        : 'Precio a convenir';
+      return `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:11px">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--blue-s);color:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">${escHTML(ini)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:800;color:var(--ink)">${escHTML(otro)}</div>
+            <div style="font-size:11.5px;color:var(--ink3);margin-top:2px">${escHTML(s.rubro || 'Servicio')}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:11px">
+          <div style="flex:1;background:var(--surface);border-radius:10px;padding:9px 11px">
+            <div style="font-size:10.5px;color:var(--ink3)">Frecuencia</div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--ink);margin-top:2px">${escHTML(frecuenciaTexto(s.frecuencia_veces, s.frecuencia_periodo))}</div>
+          </div>
+          <div style="flex:1;background:var(--surface);border-radius:10px;padding:9px 11px">
+            <div style="font-size:10.5px;color:var(--ink3)">Precio</div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--ink);margin-top:2px">${escHTML(precio)}</div>
+          </div>
+        </div>
+        <button onclick="terminarServicioFijoUI('${escHTML(s.id)}', '${escHTML(otro).replace(/'/g, '&#39;')}')"
+                style="width:100%;margin-top:10px;background:var(--surface);color:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">
+          Dar de baja
+        </button>
+      </div>`;
+    }).join('') + `
+      <div style="font-size:11.5px;color:var(--ink3);line-height:1.5;padding:4px 2px">
+        Esto es el registro de lo que acordaron. Las fechas y los cambios se siguen coordinando por chat.
+      </div>`;
+  }
+
+  async function terminarServicioFijoUI(id, nombre) {
+    if (!confirm('¿Dar de baja el servicio fijo con ' + nombre + '?\n\nDeja de figurar en la lista. No afecta los trabajos ya hechos.')) return;
+    const r = await PronetDB.terminarServicioFijo(id);
+    if (!r?.ok) { showToast && showToast('⚠️ ' + (r?.error || 'No se pudo dar de baja')); return; }
+    renderServiciosFijos();
+  }
+  window.terminarServicioFijoUI = terminarServicioFijoUI;
+
   // ══ PARAMETRÍAS · AJUSTES NUMÉRICOS ════════════════════════════════
   //
   // Valores sueltos de config_app. La lista es EXPLÍCITA y no un volcado de
@@ -7919,6 +8001,18 @@ document.addEventListener('focusin', (e) => {
       precioMax = parseInt((document.getElementById('np-precio-max')?.value || '').replace(/\D/g, ''), 10) || null;
     }
 
+    // Puntual o servicio fijo. Si es fijo, la frecuencia viaja con el pedido:
+    // es lo que el prestador necesita para cotizar por visita, y lo que
+    // después queda registrado en el servicio fijo al elegir la propuesta.
+    const modEl = document.querySelector('#np-modalidad-group .form-opt.on');
+    const modalidad = modEl?.dataset.mod === 'recurrente' ? 'recurrente' : 'puntual';
+    const frecVeces = modalidad === 'recurrente'
+      ? Math.min(7, Math.max(1, parseInt(document.getElementById('np-frec-veces')?.value, 10) || 1))
+      : null;
+    const frecPeriodo = modalidad === 'recurrente'
+      ? (document.getElementById('np-frec-periodo')?.value || 'semana')
+      : null;
+
     const pedido = await PronetDB.crear('pedidos', {
       titulo: titulo,
       descripcion: desc,
@@ -7927,6 +8021,9 @@ document.addEventListener('focusin', (e) => {
       zona: zonaActual,
       estado: 'Publicado',
       urgencia: urgencia,
+      modalidad: modalidad,
+      frecuencia_veces: frecVeces,
+      frecuencia_periodo: frecPeriodo,
       presupuesto_min: precioMin,
       presupuesto_max: precioMax,
       usuario_id: usuarioActual ? usuarioActual.id : null,
@@ -8198,6 +8295,16 @@ document.addEventListener('focusin', (e) => {
     el.closest(scope || '.form-options').querySelectorAll('.form-opt').forEach(o => o.classList.remove('on'));
     el.classList.add('on');
   }
+
+  /** Puntual / servicio fijo. Muestra la frecuencia sólo cuando hace falta:
+   *  preguntarle "cada cuánto" a quien pidió una destapación es ruido. */
+  function selModalidadPedido(el) {
+    el.closest('#np-modalidad-group').querySelectorAll('.form-opt').forEach(o => o.classList.remove('on'));
+    el.classList.add('on');
+    const wrap = document.getElementById('np-frecuencia-wrap');
+    if (wrap) wrap.style.display = el.dataset.mod === 'recurrente' ? 'block' : 'none';
+  }
+  window.selModalidadPedido = selModalidadPedido;
 
   function selUrgencia(el) {
     el.closest('.form-group').querySelectorAll('.form-opt').forEach(o => o.classList.remove('on'));

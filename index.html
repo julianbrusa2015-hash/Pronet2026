@@ -1041,6 +1041,17 @@
           </div>
           <div class="m-chev" id="menu-push-estado">›</div>
         </div>
+        <!-- Visible para los dos roles: el vecino ve sus servicios fijos y
+             el prestador sus clientes fijos. El título de la pantalla cambia
+             solo según quién entre. -->
+        <div class="menu-item" id="menu-servicios-fijos" onclick="goTo('s-servicios-fijos')">
+          <div class="m-icon" style="background:#ECFDF5">🔁</div>
+          <div class="m-txt">
+            <div class="m-title" id="menu-sf-title">Mis servicios fijos</div>
+            <div class="m-sub" id="menu-sf-sub">Acuerdos que se repiten</div>
+          </div>
+          <div class="m-chev">›</div>
+        </div>
         <div class="menu-item" data-solo-prestador="true" id="menu-mis-pedidos" onclick="abrirMisPropuestas()">
           <div class="m-icon" style="background:#EEF2FF">📨</div>
           <div class="m-txt">
@@ -2006,6 +2017,19 @@
       </div>
     </div>
 
+    <!-- ══ SERVICIOS FIJOS ════════════════════════════════════════════ -->
+    <div class="screen" id="s-servicios-fijos">
+      <div class="pub-header">
+        <button class="back-btn" onclick="goTo('s-miperfil')" aria-label="Volver" style="background:none;border:none;padding:8px;margin:-8px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h2 id="sf-titulo">Mis servicios fijos</h2>
+      </div>
+      <div id="sf-lista" style="padding:14px 16px 90px">
+        <div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>
+      </div>
+    </div>
+
     <!-- ══ PARAMETRÍAS · AJUSTES NUMÉRICOS ════════════════════════════ -->
     <div class="screen admin-screen" id="s-param-ajustes">
       <div class="admin-hero">
@@ -2384,6 +2408,40 @@
           <label for="f-tu-direccion" class="form-label">¿Dónde necesitás el servicio?</label>
           <input id="f-tu-direccion" name="f-tu-direccion" class="ob-input" placeholder="Tu dirección" value="Mitre 1245, Escobar">
         </div>
+        <!-- Puntual o fijo. Va ANTES de la urgencia porque cambia lo que el
+             prestador cotiza: en un puntual cotiza el trabajo entero, en un
+             servicio fijo cotiza por visita. Sin declararlo, las propuestas
+             que recibe el vecino no son comparables entre sí. -->
+        <div class="form-group">
+          <label id="lbl-grupo-mod" class="form-label">¿Es un trabajo puntual o algo que se repite?</label>
+          <div role="group" aria-labelledby="lbl-grupo-mod" style="display:flex;flex-direction:column;gap:8px" id="np-modalidad-group">
+            <div class="form-opt on" data-mod="puntual" style="display:flex;align-items:center;gap:12px;text-align:left" onclick="selModalidadPedido(this)">
+              <div style="font-size:22px">🔧</div>
+              <div><div style="font-size:13px;font-weight:600;color:var(--ink)">Trabajo puntual</div><div style="font-size:11px;color:var(--ink3)">Una vez, para algo concreto</div></div>
+            </div>
+            <div class="form-opt" data-mod="recurrente" style="display:flex;align-items:center;gap:12px;text-align:left" onclick="selModalidadPedido(this)">
+              <div style="font-size:22px">🔁</div>
+              <div><div style="font-size:13px;font-weight:600;color:var(--ink)">Servicio fijo</div><div style="font-size:11px;color:var(--ink3)">Se repite, como el jardinero o el piletero</div></div>
+            </div>
+          </div>
+          <div id="np-frecuencia-wrap" style="display:none;margin-top:10px;background:var(--surface);border-radius:12px;padding:12px 14px">
+            <div style="font-size:12.5px;color:var(--ink);margin-bottom:8px">¿Cada cuánto?</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input id="np-frec-veces" type="number" min="1" max="7" value="1" inputmode="numeric"
+                     style="width:64px;text-align:center;font-size:14px;font-weight:600;padding:8px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;color:var(--ink)">
+              <span style="font-size:12.5px;color:var(--ink2)">vez/veces por</span>
+              <select id="np-frec-periodo"
+                      style="font-size:13px;font-weight:600;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;color:var(--ink);background:white">
+                <option value="semana">semana</option>
+                <option value="mes">mes</option>
+              </select>
+            </div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.45">
+              Los prestadores van a cotizar <b>por visita</b>. Cuando elijas a uno, queda registrado como servicio fijo.
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label id="lbl-grupo-15" class="form-label">¿Cuándo lo necesitás?</label>
           <div role="group" aria-labelledby="lbl-grupo-15" style="display:flex;flex-direction:column;gap:8px" id="np-urgencia-group">

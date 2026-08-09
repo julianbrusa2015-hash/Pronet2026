@@ -663,6 +663,44 @@ const PronetDB = (() => {
       return mapa;
     },
 
+    /** Servicios fijos del usuario. La RLS ya filtra por rol: el vecino ve
+     *  los suyos y el prestador los suyos, con la misma consulta. */
+    async listarServiciosFijos(soloActivos = true) {
+      if (!remoto) return [];
+      // Sólo se embebe `prestadores`, que tiene FK real. El nombre del
+      // vecino se trae aparte de perfiles_publicos: `vecino_id` apunta a
+      // auth.users, no a perfiles, así que un embed contra perfiles no
+      // resuelve y rompe la consulta entera.
+      let q = sb.from('servicios_fijos')
+        .select('*, prestadores(nombre, foto_url)')
+        .order('creado', { ascending: false });
+      if (soloActivos) q = q.eq('estado', 'activo');
+      const { data, error } = await q;
+      if (error) { console.warn('[PronetDB] listarServiciosFijos', error.message); return []; }
+      const filas = data || [];
+
+      const uids = [...new Set(filas.map(f => f.vecino_id).filter(Boolean))];
+      if (uids.length) {
+        const { data: prfs } = await sb.from('perfiles_publicos').select('id, nombre').in('id', uids);
+        const mapa = {};
+        (prfs || []).forEach(p => { mapa[p.id] = p.nombre; });
+        filas.forEach(f => { f.vecino_nombre = mapa[f.vecino_id] || 'Vecino'; });
+      }
+      return filas;
+    },
+
+    /** Da de baja un servicio fijo. Cualquiera de las dos partes puede:
+     *  un acuerdo se termina de cualquier lado. */
+    async terminarServicioFijo(id) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.from('servicios_fijos')
+        .update({ estado: 'terminado', terminado_en: new Date().toISOString() })
+        .eq('id', id).select('id');
+      if (error) { console.warn('[PronetDB] terminarServicioFijo', error.message); return { ok: false, error: error.message }; }
+      if (!data || !data.length) return { ok: false, error: 'No se encontró o no tenés permiso' };
+      return { ok: true };
+    },
+
     /** Niveles del programa de puntos. Lectura pública. */
     async listarLoyaltyNiveles() {
       if (!remoto) return [];
