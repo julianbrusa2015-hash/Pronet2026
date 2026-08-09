@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v169'; // v169: cuántos recomiendan en ProMarket
+const CACHE_VERSION = 'pronet-v170'; // v170: Entre Vecinos — Servicios y Mercado
 
 const SHELL = [
   './',

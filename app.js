@@ -4292,12 +4292,61 @@ document.addEventListener('focusin', (e) => {
   }
 
   // ── ProMarket — feed real ──────────────────────────────────────────
-  const MKT_CAT_LABELS = {
-    gastronomia: '🍕 Gastronomía',
-    productos:   '🛍️ Productos',
-    comercios:   '🏪 Comercios',
-    anuncios:    '📢 Anuncios',
-  };
+  // ══ SECCIONES DE PROMARKET ═════════════════════════════════════════
+  //
+  // Servicios del Barrio y Mercado del Barrio. Se compran distinto —un
+  // producto se elige por la foto y el precio, un servicio por la persona—
+  // así que mezclarlos obligaba a la tarjeta y a los filtros a servir a los
+  // dos y servían mal a ambos.
+  //
+  // OJO con la confusión que esto invita: el "Servicios" de acá NO es el
+  // servicio del prestador. La diferencia no es la categoría sino la
+  // mecánica — el prestador se contrata con un pedido y propuestas que se
+  // comparan; esto es un vecino ofreciendo algo que se contrata directo
+  // (el caso testigo: alguien que ofrece masajes a sus vecinos).
+  //
+  // El catálogo vive en `mkt_categorias` y se edita desde Parametrías. Esto
+  // es sólo el respaldo para el arranque y el modo offline.
+  let MKT_CATEGORIAS = [
+    { slug: 'belleza',         nombre: 'Belleza',           emoji: '💇', tipo: 'servicio' },
+    { slug: 'eventos',         nombre: 'Eventos',           emoji: '🎉', tipo: 'servicio' },
+    { slug: 'exterior',        nombre: 'Exterior',          emoji: '🌳', tipo: 'servicio' },
+    { slug: 'fotografia',      nombre: 'Fotografía',        emoji: '📷', tipo: 'servicio' },
+    { slug: 'hogar',           nombre: 'Hogar',             emoji: '🏠', tipo: 'servicio' },
+    { slug: 'mascotas',        nombre: 'Mascotas',          emoji: '🐾', tipo: 'servicio' },
+    { slug: 'salud-bienestar', nombre: 'Salud y bienestar', emoji: '💆', tipo: 'servicio' },
+    { slug: 'profesionales',   nombre: 'Profesionales',     emoji: '💼', tipo: 'servicio' },
+    { slug: 'talleres-clases', nombre: 'Talleres y clases', emoji: '🎓', tipo: 'servicio' },
+    { slug: 'vehiculos',       nombre: 'Vehículos',         emoji: '🚗', tipo: 'servicio' },
+    { slug: 'otros-servicios', nombre: 'Otros servicios',   emoji: '✨', tipo: 'servicio' },
+    { slug: 'comidas-bebidas', nombre: 'Comidas y bebidas', emoji: '🍕', tipo: 'producto' },
+    { slug: 'cocina-bazar',    nombre: 'Cocina y bazar',    emoji: '🍳', tipo: 'producto' },
+    { slug: 'decoracion',      nombre: 'Decoración',        emoji: '🖼️', tipo: 'producto' },
+    { slug: 'indumentaria',    nombre: 'Indumentaria',      emoji: '👕', tipo: 'producto' },
+    { slug: 'otros-productos', nombre: 'Otros productos',   emoji: '📦', tipo: 'producto' },
+  ];
+
+  const catsDeTipo = (tipo) => MKT_CATEGORIAS.filter(c => c.tipo === tipo);
+  const slugsDeTipo = (tipo) => catsDeTipo(tipo).map(c => c.slug);
+  const catPorSlug = (slug) => MKT_CATEGORIAS.find(c => c.slug === slug);
+
+  /** Etiqueta con emoji para la tarjeta. Si la categoría no está en el
+   *  catálogo se muestra el slug crudo: es feo, pero delata el problema en
+   *  vez de mostrar una tarjeta sin categoría. */
+  function mktCatLabel(slug) {
+    const c = catPorSlug(slug);
+    return c ? c.emoji + ' ' + c.nombre : (slug || '');
+  }
+
+  // Se carga una vez por sesión: el catálogo cambia poco y lo piden el feed,
+  // la pantalla de publicar y el panel.
+  let mktCatsCargadas = false;
+
+  /** Reemplaza el catálogo con el de la base, como hacen rubros y zonas. */
+  async function cargarMktCategorias() {
+    const filas = await PronetDB.listarMktCategorias().catch(() => []);
+    if (filas.length) MKT_CATEGORIAS = filas;
+  }
 
   let mktFiltroActivo   = 'todos';
   let mktBusqueda       = '';
@@ -4312,6 +4361,58 @@ document.addEventListener('focusin', (e) => {
   // de la card pasen solo el id (uuid, no controlado por el usuario) en vez
   // de interpolar título/nombre (texto libre) directo en el atributo onclick.
   const mktPostsCache = new Map();
+
+  // Sección activa. El prestador arranca —y se queda— en 'servicio'.
+  let mktTipoActivo = 'servicio';
+
+  /** Muestra u oculta el selector de sección y pinta los chips de la
+   *  sección activa.
+   *
+   *  Al prestador no se le muestra el selector: para él ProMarket es sólo
+   *  Servicios del Barrio. */
+  function mktPintarSecciones() {
+    const soloServicios = esPrestador();
+    if (soloServicios) mktTipoActivo = 'servicio';
+
+    const sel = document.getElementById('mkt-secciones');
+    if (sel) {
+      sel.style.display = soloServicios ? 'none' : 'flex';
+      sel.querySelectorAll('.mkt-sec').forEach((b, i) => {
+        const suyo = i === 0 ? 'servicio' : 'producto';
+        b.classList.toggle('on', suyo === mktTipoActivo);
+        b.setAttribute('aria-selected', suyo === mktTipoActivo ? 'true' : 'false');
+      });
+    }
+
+    const chips = document.getElementById('mkt-chips');
+    if (chips) {
+      chips.innerHTML =
+        '<div class="chip' + (mktFiltroActivo === 'todos' ? ' on' : '') +
+        '" onclick="filtrarMercado(this,\'todos\')">Todos</div>' +
+        catsDeTipo(mktTipoActivo).map(c =>
+          '<div class="chip' + (mktFiltroActivo === c.slug ? ' on' : '') +
+          '" onclick="filtrarMercado(this,\'' + escHTML(c.slug) + '\')">' +
+          escHTML(c.emoji + ' ' + c.nombre) + '</div>').join('');
+    }
+
+    // El buscador nombra lo que hay en la sección: buscar "productos" en
+    // Servicios pide algo que ahí no existe.
+    const busc = document.getElementById('mkt-buscador');
+    if (busc) busc.placeholder = mktTipoActivo === 'servicio'
+      ? 'Buscá un servicio de tu barrio…'
+      : 'Buscá productos de tu barrio…';
+  }
+
+  function mktSetTipo(tipo) {
+    if (tipo === mktTipoActivo) return;
+    mktTipoActivo = tipo;
+    // El chip puntual no sobrevive al cambio: pertenecía a la otra sección
+    // y dejarlo puesto daría un feed vacío sin explicación.
+    mktFiltroActivo = 'todos';
+    mktPintarSecciones();
+    renderMercado(true);
+  }
+  window.mktSetTipo = mktSetTipo;
 
   function mktIniciales(nombre) {
     if (!nombre) return '?';
@@ -4369,7 +4470,7 @@ document.addEventListener('focusin', (e) => {
   function mktCardHTML(p) {
     const nombre    = p.perfiles?.nombre || 'Vecino';
     const iniciales = mktIniciales(nombre);
-    const catLabel  = MKT_CAT_LABELS[p.categoria] || p.categoria;
+    const catLabel  = mktCatLabel(p.categoria);
     const tiempo    = mktTiempoRelativo(p.creado);
     const liked     = mktMisLikes.has(p.id);
     const likes     = p.likes_count || 0;
@@ -4565,13 +4666,22 @@ document.addEventListener('focusin', (e) => {
     if (!cont || mktCargando) return;
     const btnPub = document.getElementById('mkt-btn-publicar');
     if (btnPub) btnPub.style.display = usuarioActual ? '' : 'none';
+    // Antes de traer nada: el catálogo puede haber cambiado desde el panel, y
+    // las pestañas y chips salen de él.
+    if (!mktCatsCargadas) { await cargarMktCategorias(); mktCatsCargadas = true; }
+    mktPintarSecciones();
     if (reset) {
       mktOffset  = 0;
       mktHayMas  = true;
       cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     }
     mktCargando = true;
-    const posts = await PronetDB.listarPublicaciones({ categoria: mktFiltroActivo, busqueda: mktBusqueda, zona: mktZonaActiva, offset: mktOffset }).catch(() => []);
+    // `categorias` acota a la sección activa: sin eso, "Todos" en Servicios
+    // mostraría también los productos.
+    const posts = await PronetDB.listarPublicaciones({
+      categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
+      busqueda: mktBusqueda, zona: mktZonaActiva, offset: mktOffset,
+    }).catch(() => []);
     mktCargando = false;
     if (reset) { cont.innerHTML = ''; mktUltimoResultCount = posts.length; }
     posts.forEach(p => mktPostsCache.set(p.id, p));
@@ -4828,7 +4938,7 @@ document.addEventListener('focusin', (e) => {
       usuario_id: autorId,
       tipo: 'consulta_mercado',
       titulo: `💬 ${nombreConsultante} quiere consultarte`,
-      cuerpo: pubTitulo ? pubTitulo.slice(0, 80) : 'Nueva consulta en ProMarket',
+      cuerpo: pubTitulo ? pubTitulo.slice(0, 80) : 'Nueva consulta en Entre Vecinos',
     }).catch(() => {});
   }
   window.mktConsultar = mktConsultar;
@@ -4945,7 +5055,7 @@ document.addEventListener('focusin', (e) => {
         destino: 'usuario',
         usuario_id: chatMercadoContraparteId,
         tipo: 'mensaje_mercado',
-        titulo: '💬 Nueva consulta en ProMarket',
+        titulo: '💬 Nueva consulta en Entre Vecinos',
         cuerpo: txt.slice(0, 100),
       }).catch(() => {});
     }
@@ -5039,7 +5149,7 @@ document.addEventListener('focusin', (e) => {
     const llamarEl = document.getElementById('contacto-llamar');
     if (llamarEl) llamarEl.href = 'tel:' + tel;
     const waEl = document.getElementById('contacto-whatsapp');
-    if (waEl) waEl.href = 'https://wa.me/' + tel.replace('+', '') + '?text=' + encodeURIComponent('Hola! Te escribo por tu publicación en ProMarket');
+    if (waEl) waEl.href = 'https://wa.me/' + tel.replace('+', '') + '?text=' + encodeURIComponent('Hola! Te escribo por tu publicación en Entre Vecinos');
     modal.style.display = 'flex';
   }
   window.abrirModalContacto = abrirModalContacto;
@@ -5272,7 +5382,7 @@ document.addEventListener('focusin', (e) => {
     lista.innerHTML = '<div style="padding:32px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     const alertas = await PronetDB.listarMisAlertas().catch(() => []);
     if (!alertas.length) {
-      lista.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--ink3)">Todavía no guardaste ninguna alerta.<br>Buscá algo en ProMarket y tocá "🔔 Avisame" si no hay resultados.</div>';
+      lista.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--ink3)">Todavía no guardaste ninguna alerta.<br>Buscá algo en Entre Vecinos y tocá "🔔 Avisame" si no hay resultados.</div>';
       return;
     }
     lista.innerHTML = alertas.map(mktAlertaCardHTML).join('');
@@ -5334,9 +5444,37 @@ document.addEventListener('focusin', (e) => {
     return { ok: false, motivo: 'sin_creditos', usadas, limite: 3 };
   }
 
+  /** Llena el selector de categoría desde el catálogo, agrupado por sección.
+   *
+   *  Al prestador sólo se le ofrecen las de Servicios: el mismo criterio que
+   *  en el feed. Si pudiera publicar un producto tendría en Entre Vecinos una
+   *  sección que después no ve. */
+  async function pmPintarCategorias() {
+    if (!mktCatsCargadas) { await cargarMktCategorias(); mktCatsCargadas = true; }
+    const sel = document.getElementById('pm-categoria');
+    if (!sel) return;
+    const anterior = sel.value;
+
+    const grupo = (tipo, etiqueta) => {
+      const cats = catsDeTipo(tipo);
+      if (!cats.length) return '';
+      return '<optgroup label="' + escHTML(etiqueta) + '">' +
+        cats.map(c => '<option value="' + escHTML(c.slug) + '">' +
+                      escHTML(c.emoji + ' ' + c.nombre) + '</option>').join('') +
+        '</optgroup>';
+    };
+
+    sel.innerHTML = '<option value="">Seleccioná una categoría…</option>' +
+      grupo('servicio', 'Servicios del Barrio') +
+      (esPrestador() ? '' : grupo('producto', 'Mercado del Barrio'));
+
+    // Al editar, la categoría ya elegida tiene que seguir seleccionada.
+    if (anterior && sel.querySelector('option[value="' + anterior + '"]')) sel.value = anterior;
+  }
+
   async function abrirPublicarMercado() {
     if (!usuarioActual) {
-      mostrarGate && mostrarGate({ titulo: 'Publicar en ProMarket', sub: 'Necesitás una cuenta para publicar.' });
+      mostrarGate && mostrarGate({ titulo: 'Publicar en Entre Vecinos', sub: 'Necesitás una cuenta para publicar.' });
       return;
     }
     const cupo = await puedePublicarMercado();
@@ -5350,6 +5488,7 @@ document.addEventListener('focusin', (e) => {
     }
     pmEditandoId = null;
     pmFotoUrlActual = null;
+    await pmPintarCategorias();
     // Limpiar el form antes de abrir
     pmFotoArchivo = null;
     const prev = document.getElementById('pm-foto-preview');
@@ -5464,6 +5603,9 @@ document.addEventListener('focusin', (e) => {
     pmResetDetalles(pub.detalles);
     const zonaEl = document.getElementById('pm-zona');
     if (zonaEl) zonaEl.value = pub.zona || '';
+    // El selector arranca vacío: sin llenarlo antes, asignar la categoría
+    // guardada no encuentra la opción y el campo queda en blanco.
+    await pmPintarCategorias();
     const catSelEdit = document.getElementById('pm-categoria');
     if (catSelEdit) catSelEdit.value = pub.categoria || '';
     const tit = document.getElementById('pm-screen-titulo'); if (tit) tit.textContent = 'Editar publicación';

@@ -1079,7 +1079,7 @@ const PronetDB = (() => {
 
     /** Lista publicaciones activas, opcionalmente filtradas por categoría.
      *  Orden cronológico inverso, paginado de 10 en 10. */
-    async listarPublicaciones({ categoria = null, busqueda = null, zona = null, offset = 0 } = {}) {
+    async listarPublicaciones({ categoria = null, busqueda = null, zona = null, offset = 0, categorias = null } = {}) {
       if (!remoto) return [];
       let q = sb.from('publicaciones')
         .select(`id, autor_id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, creado,
@@ -1088,7 +1088,11 @@ const PronetDB = (() => {
         .order('creado', { ascending: false })
         .range(offset, offset + 9);
       if (zona) q = q.eq('zona', zona);
+      // `categorias` acota a una sección (todas las de Servicios, o las de
+      // Mercado); `categoria` es el chip puntual dentro de esa sección. El
+      // chip gana, pero igual pertenece a la sección activa.
       if (categoria && categoria !== 'todos') q = q.eq('categoria', categoria);
+      else if (categorias?.length)            q = q.in('categoria', categorias);
       if (busqueda && busqueda.trim()) {
         const term = `%${busqueda.trim()}%`;
         q = q.or(`titulo.ilike.${term},descripcion.ilike.${term}`);
@@ -1494,6 +1498,37 @@ const PronetDB = (() => {
         .limit(limit);
       if (error) { console.warn('[PronetDB] listarComentarios', error.message); return []; }
       return data || [];
+    },
+
+    /** Categorías de ProMarket. `tipo` decide la sección: 'servicio' o
+     *  'producto'. Lectura pública — el feed se ve sin sesión. */
+    async listarMktCategorias(soloActivas = true) {
+      if (!remoto) return [];
+      let q = sb.from('mkt_categorias').select('*').order('orden', { ascending: true });
+      if (soloActivas) q = q.eq('activo', true);
+      const { data, error } = await q;
+      if (error) { console.warn('[PronetDB] listarMktCategorias', error.message); return []; }
+      return data || [];
+    },
+
+    async crearMktCategoria(cat) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      if (!cat?.slug || !cat?.nombre) return { ok: false, error: 'Faltan slug y nombre' };
+      const { error } = await sb.from('mkt_categorias').insert(cat);
+      if (error) {
+        console.warn('[PronetDB] crearMktCategoria', error.message);
+        return { ok: false, error: this._errorAlta(error, 'una categoría') };
+      }
+      return { ok: true };
+    },
+
+    async guardarMktCategoria(slug, campos) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.from('mkt_categorias')
+        .update(campos).eq('slug', slug).select('slug');
+      if (error) { console.warn('[PronetDB] guardarMktCategoria', error.message); return { ok: false, error: error.message }; }
+      if (!data?.length) return { ok: false, error: 'No se pudo guardar: sin permisos de administrador' };
+      return { ok: true };
     },
 
     /** Recomendaciones de varias publicaciones de una sola consulta.

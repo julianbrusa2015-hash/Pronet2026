@@ -234,7 +234,7 @@
           <div class="back-btn" onclick="goTo('s-home')" aria-label="Volver">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </div>
-          <div class="logo" style="font-size:17px">ProMarket</div>
+          <div class="logo" style="font-size:17px">Entre Vecinos</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <button id="mkt-toggle-mapa" onclick="toggleMapaMercado()" title="Ver mapa"
@@ -247,13 +247,15 @@
         </div>
       </div>
 
-      <div class="filter-row">
-        <div class="chip on" onclick="filtrarMercado(this,'todos')">Todos</div>
-        <div class="chip" onclick="filtrarMercado(this,'gastronomia')">🍕 Gastronomía</div>
-        <div class="chip" onclick="filtrarMercado(this,'productos')">🛍️ Productos</div>
-        <div class="chip" onclick="filtrarMercado(this,'comercios')">🏪 Comercios</div>
-        <div class="chip" onclick="filtrarMercado(this,'anuncios')">📢 Anuncios</div>
+      <!-- Las dos secciones. Para el prestador no se muestra: él sólo ve
+           Servicios del Barrio (ver mktPintarSecciones en app.js). -->
+      <div id="mkt-secciones" class="mkt-secciones" role="tablist" aria-label="Sección de ProMarket">
+        <button class="mkt-sec on" role="tab" aria-selected="true"  onclick="mktSetTipo('servicio')">🛠️ Servicios</button>
+        <button class="mkt-sec"    role="tab" aria-selected="false" onclick="mktSetTipo('producto')">🛒 Mercado</button>
       </div>
+
+      <!-- Chips de categoría: cambian según la sección activa -->
+      <div class="filter-row" id="mkt-chips"></div>
 
       <div style="padding:0 14px 8px;display:flex;align-items:center;gap:8px">
         <div style="position:relative;flex:1">
@@ -332,20 +334,13 @@
 
         <!-- Categoría -->
         <label class="ob-label" for="pm-categoria">Categoría <span style="color:#E53E3E">*</span></label>
+        <!-- Las opciones las llena pmPintarCategorias() desde el catálogo,
+             agrupadas por sección. Al prestador sólo le ofrece Servicios. -->
         <select class="ob-input" id="pm-categoria" name="pm-categoria" style="margin-bottom:16px">
           <option value="">Seleccioná una categoría…</option>
-          <option value="gastronomia">🍕 Gastronomía</option>
-          <option value="productos">🛍️ Productos</option>
-          <option value="comercios">🏪 Comercios</option>
-          <option value="anuncios">📢 Anuncios</option>
         </select>
         <!-- Fila de chips oculta: se mantiene por compatibilidad con pmSelCat/pm-cat-row -->
-        <div style="display:none" id="pm-cat-row">
-          <div class="chip on" data-cat="gastronomia"></div>
-          <div class="chip" data-cat="productos"></div>
-          <div class="chip" data-cat="comercios"></div>
-          <div class="chip" data-cat="anuncios"></div>
-        </div>
+        <div style="display:none" id="pm-cat-row"></div>
 
         <!-- Zona -->
         <label class="ob-label" for="pm-zona">Zona <span style="color:#E53E3E">*</span></label>
@@ -1175,7 +1170,7 @@
       <!-- ── Sección ProMarket ───────────────────────────────────── -->
       <div id="seccion-promarket-perfil" data-feature="mercadoPlaza" style="display:none">
         <div style="padding:18px 14px 6px;display:flex;align-items:center;gap:8px">
-          <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase">ProMarket</div>
+          <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase">Entre Vecinos</div>
           <div style="flex:1;height:1px;background:var(--border)"></div>
           <div style="font-size:10px;color:var(--ink3);font-weight:600" id="pm-perfil-estado-lbl"></div>
         </div>
@@ -1215,7 +1210,7 @@
           <div class="menu-item" onclick="goTo('s-mercado')">
             <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🛒</div>
             <div class="m-txt">
-              <div class="m-title">Ir al feed ProMarket</div>
+              <div class="m-title">Ir a Entre Vecinos</div>
               <div class="m-sub">Ver todas las publicaciones</div>
             </div>
             <div class="m-chev">›</div>
@@ -4870,7 +4865,9 @@
     </button>
     <button class="nav-btn" id="nb-mercado" onclick="goTo('s-mercado')" data-feature="mercadoPlaza">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>
-      <span>ProMarket</span>
+      <!-- "Vecinos" y no "Entre Vecinos": el nombre completo no entra en una
+           pestaña de cinco. El título largo está dentro de la pantalla. -->
+      <span>Vecinos</span>
     </button>
     <button class="nav-btn" id="nb-perfil" onclick="goTo('s-miperfil')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
