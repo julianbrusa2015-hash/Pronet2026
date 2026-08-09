@@ -990,25 +990,9 @@
         <div style="color:var(--blue);font-size:16px">›</div>
       </div>
 
-      <!-- Acceso rápido — Points y Analítica, mismo estilo sutil que el resto del menú -->
-      <div class="menu-list" style="margin:14px 14px 0">
-        <div class="menu-item" data-feature="loyalty" onclick="goTo('s-loyalty')">
-          <div class="m-icon" style="background:var(--blue-s);color:var(--blue)">⭐</div>
-          <div class="m-txt">
-            <div class="m-title">PRONET Points</div>
-            <div class="m-sub" id="mp-points-tile">Cargando...</div>
-          </div>
-          <div class="m-chev">›</div>
-        </div>
-        <div class="menu-item" data-solo-prestador="true" data-feature="analyticsAvanzado" onclick="goTo('s-analytics')">
-          <div class="m-icon" style="background:#EEF2FF;color:#2B5BFF">📊</div>
-          <div class="m-txt">
-            <div class="m-title">Analítica</div>
-            <div class="m-sub" id="perfil-vistas-mes">— vistas este mes</div>
-          </div>
-          <div class="m-chev">›</div>
-        </div>
-      </div>
+      <!-- Points y Analítica se movieron a la sección "Tu actividad", más
+           abajo: sueltos acá arriba quedaban fuera de todo grupo, sin decir
+           de qué eran parte. -->
 
       <!-- Acceso rápido Admin — visible sin scrollear -->
       <div data-solo-prestador="true" style="padding:14px 14px 0;display:flex;gap:8px;flex-wrap:wrap">
@@ -1059,17 +1043,32 @@
         </div>
       </div>
 
+      <!-- ── Tu actividad ────────────────────────────────────────────
+           Antes esto se llamaba "PRONET" y era una bolsa de doce ítems de
+           naturalezas distintas: contenido propio, configuración, cobros y
+           administración, todo junto. El rótulo tampoco ayudaba —toda la app
+           es PRONET—, y por eso Parametrías era imposible de encontrar: era
+           el sexto de doce en un grupo sin nombre útil.
+           Ahora cada rótulo contesta "qué hay acá adentro". -->
       <div style="padding:18px 14px 6px">
-        <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase">PRONET</div>
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase">Tu actividad</div>
       </div>
       <div class="menu-list">
-        <div class="menu-item" id="menu-push" style="display:none" onclick="togglePushNotif()">
-          <div class="m-icon" style="background:#FFF7ED">🔔</div>
+        <div class="menu-item" data-feature="loyalty" onclick="goTo('s-loyalty')">
+          <div class="m-icon" style="background:var(--blue-s);color:var(--blue)">⭐</div>
           <div class="m-txt">
-            <div class="m-title">Notificaciones push</div>
-            <div class="m-sub" id="menu-push-sub">Enterate al instante de propuestas y pedidos</div>
+            <div class="m-title">PRONET Points</div>
+            <div class="m-sub" id="mp-points-tile">Cargando...</div>
           </div>
-          <div class="m-chev" id="menu-push-estado">›</div>
+          <div class="m-chev">›</div>
+        </div>
+        <div class="menu-item" data-solo-prestador="true" data-feature="analyticsAvanzado" onclick="goTo('s-analytics')">
+          <div class="m-icon" style="background:#EEF2FF;color:#2B5BFF">📊</div>
+          <div class="m-txt">
+            <div class="m-title">Analítica</div>
+            <div class="m-sub" id="perfil-vistas-mes">— vistas este mes</div>
+          </div>
+          <div class="m-chev">›</div>
         </div>
         <!-- Visible para los dos roles: el vecino ve sus servicios fijos y
              el prestador sus clientes fijos. El título de la pantalla cambia
@@ -1098,38 +1097,6 @@
           </div>
           <div class="m-chev">›</div>
         </div>
-        <div id="menu-moderacion" data-admin-only="true" class="menu-item" data-feature="denuncias" onclick="goTo('s-moderacion')" style="background:linear-gradient(135deg,#FFF1F2,#FEE2E2)">
-          <div class="m-icon" style="background:#EF4444;color:white">🛡️</div>
-          <div class="m-txt">
-            <div class="m-title" style="color:#BE123C">Panel de Moderación</div>
-            <div class="m-sub" id="mp-denuncias-sub">Cargando...</div>
-          </div>
-          <div class="m-chev" style="color:#EF4444">›</div>
-        </div>
-        <div id="menu-parametrias" data-admin-only="true" class="menu-item" onclick="goTo('s-parametrias')" style="background:linear-gradient(135deg,#EEF2FF,#E0E7FF)">
-          <div class="m-icon" style="background:#1A3ACC;color:white">🗂️</div>
-          <div class="m-txt">
-            <div class="m-title" style="color:#1A3ACC">Parametrías</div>
-            <div class="m-sub">Planes, rubros, zonas, niveles y funcionalidades</div>
-          </div>
-          <div class="m-chev" style="color:#1A3ACC">›</div>
-        </div>
-        <div id="menu-loyalty-admin" data-admin-only="true" class="menu-item" data-feature="loyalty" onclick="goTo('s-loyalty-admin')" style="background:var(--blue-s)">
-          <div class="m-icon" style="background:var(--blue-d);color:white">⭐</div>
-          <div class="m-txt">
-            <div class="m-title" style="color:var(--blue-d)">Admin PRONET Points</div>
-            <div class="m-sub" id="mp-canjes-sub">Canjes y beneficios · Panel Admin</div>
-          </div>
-          <div class="m-chev" style="color:var(--blue-d)">›</div>
-        </div>
-        <div id="menu-catalogo" data-admin-only="true" class="menu-item" data-feature="catalogoPrecios" onclick="goTo('s-catalogo')" style="background:linear-gradient(135deg,#F5F3FF,#EDE9FE)">
-          <div class="m-icon" style="background:#7C3AED;color:white;font-size:14px">📚</div>
-          <div class="m-txt">
-            <div class="m-title" style="color:#5B21B6">Catálogo de servicios</div>
-            <div class="m-sub">Precios referenciales · Panel Admin</div>
-          </div>
-          <div class="m-chev" style="color:#7C3AED">›</div>
-        </div>
         <div class="menu-item" data-solo-prestador="true" onclick="abrirMisResenas()">
           <div class="m-icon" style="background:#FFF8EC">⭐</div>
           <div class="m-txt">
@@ -1147,6 +1114,24 @@
           <div class="notif-dot" id="mp-mensajes-dot"></div>
           <div class="m-chev">›</div>
         </div>
+      </div>
+
+      <!-- ── Tu cuenta ───────────────────────────────────────────────
+           Ajustes del usuario: cómo lo avisan, dónde trabaja, qué paga. Es
+           lo que se toca una vez y no se vuelve a mirar, así que va después
+           de lo que sí se usa seguido. -->
+      <div style="padding:18px 14px 6px">
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase">Tu cuenta</div>
+      </div>
+      <div class="menu-list">
+        <div class="menu-item" id="menu-push" style="display:none" onclick="togglePushNotif()">
+          <div class="m-icon" style="background:#FFF7ED">🔔</div>
+          <div class="m-txt">
+            <div class="m-title">Notificaciones push</div>
+            <div class="m-sub" id="menu-push-sub">Enterate al instante de propuestas y pedidos</div>
+          </div>
+          <div class="m-chev" id="menu-push-estado">›</div>
+        </div>
         <div class="menu-item" data-solo-prestador="true" onclick="abrirCobertura()">
           <div class="m-icon" style="background:#F5F3FF">🗺️</div>
           <div class="m-txt">
@@ -1162,6 +1147,50 @@
             <div class="m-sub" id="perfil-suscripcion-menu-sub">Plan Base · MercadoPago</div>
           </div>
           <div class="m-chev">›</div>
+        </div>
+      </div>
+
+      <!-- ── Administración ──────────────────────────────────────────
+           El contenedor lleva data-admin-only para que el RÓTULO también
+           desaparezca: con el atributo sólo en los ítems, el usuario común
+           veía el título de una sección vacía. -->
+      <div data-admin-only="true">
+        <div style="padding:18px 14px 6px">
+          <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase">Administración</div>
+        </div>
+        <div class="menu-list">
+          <div id="menu-moderacion" class="menu-item" data-feature="denuncias" onclick="goTo('s-moderacion')" style="background:linear-gradient(135deg,#FFF1F2,#FEE2E2)">
+            <div class="m-icon" style="background:#EF4444;color:white">🛡️</div>
+            <div class="m-txt">
+              <div class="m-title" style="color:#BE123C">Panel de Moderación</div>
+              <div class="m-sub" id="mp-denuncias-sub">Cargando...</div>
+            </div>
+            <div class="m-chev" style="color:#EF4444">›</div>
+          </div>
+          <div id="menu-parametrias" class="menu-item" onclick="goTo('s-parametrias')" style="background:linear-gradient(135deg,#EEF2FF,#E0E7FF)">
+            <div class="m-icon" style="background:#1A3ACC;color:white">🗂️</div>
+            <div class="m-txt">
+              <div class="m-title" style="color:#1A3ACC">Parametrías</div>
+              <div class="m-sub">Planes, rubros, zonas, niveles y funcionalidades</div>
+            </div>
+            <div class="m-chev" style="color:#1A3ACC">›</div>
+          </div>
+          <div id="menu-loyalty-admin" class="menu-item" data-feature="loyalty" onclick="goTo('s-loyalty-admin')" style="background:var(--blue-s)">
+            <div class="m-icon" style="background:var(--blue-d);color:white">⭐</div>
+            <div class="m-txt">
+              <div class="m-title" style="color:var(--blue-d)">Admin PRONET Points</div>
+              <div class="m-sub" id="mp-canjes-sub">Canjes y beneficios · Panel Admin</div>
+            </div>
+            <div class="m-chev" style="color:var(--blue-d)">›</div>
+          </div>
+          <div id="menu-catalogo" class="menu-item" data-feature="catalogoPrecios" onclick="goTo('s-catalogo')" style="background:linear-gradient(135deg,#F5F3FF,#EDE9FE)">
+            <div class="m-icon" style="background:#7C3AED;color:white;font-size:14px">📚</div>
+            <div class="m-txt">
+              <div class="m-title" style="color:#5B21B6">Catálogo de servicios</div>
+              <div class="m-sub">Precios referenciales · Panel Admin</div>
+            </div>
+            <div class="m-chev" style="color:#7C3AED">›</div>
+          </div>
         </div>
       </div>
 
