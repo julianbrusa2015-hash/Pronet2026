@@ -29,9 +29,20 @@ DECLARE
   v_motivo          text;
   v_con_credito_ok  boolean := false;
   v_creditos_post   int;
+  v_cat             text;
   i                 int;
 BEGIN
   DELETE FROM publicaciones WHERE autor_id = p_usuario_id AND titulo LIKE 'TEST_CUPO_%';
+
+  -- La categoría sale de la tabla, no hardcodeada: `publicaciones.categoria`
+  -- tiene FK contra mkt_categorias, y el slug fijo que había acá ('productos')
+  -- dejó de existir al dividir Entre Vecinos en Servicios y Mercado. El test
+  -- se caía por la FK, no por el cupo — que es lo único que viene a probar.
+  SELECT slug INTO v_cat FROM mkt_categorias
+   WHERE activo AND tipo = 'producto' ORDER BY orden, slug LIMIT 1;
+  IF v_cat IS NULL THEN
+    RETURN jsonb_build_object('skip', true, 'reason', 'no hay categorías de producto activas');
+  END IF;
 
   SELECT es_pro_marketplace, pro_marketplace_hasta
     INTO v_legacy_activo, v_legacy_hasta
@@ -40,7 +51,13 @@ BEGIN
     RETURN jsonb_build_object('skip', true, 'reason', 'suscriptor legacy de ProMarket — ilimitado por grandfathering');
   END IF;
 
-  v_plan := plan_de_usuario(p_usuario_id);
+  -- Misma expresión que el trigger (supabase-fix-cupo-etapa-fundadora.sql), no
+  -- `plan_de_usuario` crudo: si el test resuelve el plan por su cuenta termina
+  -- siendo una tercera copia de la regla de límites, y verifica contra lo que
+  -- él cree en vez de contra lo que la app hace. Fue justo lo que pasó — el
+  -- test seguía esperando 3/año después de que el trigger pasara a la etapa
+  -- fundadora.
+  v_plan := plan_para_limites(coalesce(plan_de_usuario(p_usuario_id), 'base'));
 
   -- ── Plan Pro: ilimitado, nada que bloquear ──
   IF v_plan = 'pro' THEN
@@ -57,13 +74,13 @@ BEGIN
 
     FOR i IN 1..v_faltante LOOP
       INSERT INTO publicaciones (autor_id, categoria, titulo, zona, creado)
-      VALUES (p_usuario_id, 'productos', 'TEST_CUPO_' || i, 'Escobar Centro',
+      VALUES (p_usuario_id, v_cat, 'TEST_CUPO_' || i, 'Escobar Centro',
               v_inicio + (i * interval '1 hour'));
     END LOOP;
 
     BEGIN
       INSERT INTO publicaciones (autor_id, categoria, titulo, zona)
-      VALUES (p_usuario_id, 'productos', 'TEST_CUPO_BLOCK', 'Escobar Centro');
+      VALUES (p_usuario_id, v_cat, 'TEST_CUPO_BLOCK', 'Escobar Centro');
     EXCEPTION WHEN check_violation THEN
       v_bloqueada := true;
       GET STACKED DIAGNOSTICS v_motivo = MESSAGE_TEXT;
@@ -95,7 +112,7 @@ BEGIN
 
   FOR i IN 1..v_faltante LOOP
     INSERT INTO publicaciones (autor_id, categoria, titulo, zona, creado)
-    VALUES (p_usuario_id, 'productos', 'TEST_CUPO_' || i, 'Escobar Centro',
+    VALUES (p_usuario_id, v_cat, 'TEST_CUPO_' || i, 'Escobar Centro',
             v_inicio + (i * interval '1 day'));
   END LOOP;
 
@@ -103,7 +120,7 @@ BEGIN
   UPDATE perfiles SET promarket_creditos = 0 WHERE id = p_usuario_id;
   BEGIN
     INSERT INTO publicaciones (autor_id, categoria, titulo, zona)
-    VALUES (p_usuario_id, 'productos', 'TEST_CUPO_BLOCK', 'Escobar Centro');
+    VALUES (p_usuario_id, v_cat, 'TEST_CUPO_BLOCK', 'Escobar Centro');
   EXCEPTION WHEN check_violation THEN
     v_bloqueada := true;
     GET STACKED DIAGNOSTICS v_motivo = MESSAGE_TEXT;
@@ -113,7 +130,7 @@ BEGIN
   UPDATE perfiles SET promarket_creditos = 1 WHERE id = p_usuario_id;
   BEGIN
     INSERT INTO publicaciones (autor_id, categoria, titulo, zona)
-    VALUES (p_usuario_id, 'productos', 'TEST_CUPO_CREDITO', 'Escobar Centro');
+    VALUES (p_usuario_id, v_cat, 'TEST_CUPO_CREDITO', 'Escobar Centro');
     v_con_credito_ok := true;
   EXCEPTION WHEN check_violation THEN
     v_con_credito_ok := false;

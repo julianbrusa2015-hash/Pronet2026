@@ -246,13 +246,66 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
     const btnElegir = page.locator('.prop-select-btn').filter({ hasText: /elegir/i });
     const btnChatear = page.locator('.prop-select-btn').filter({ hasText: /chatear/i });
 
-    if (await btnElegir.count() > 0) {
+    const eligio = await btnElegir.count() > 0;
+    if (eligio) {
       await btnElegir.first().click();
-      await expect(page.locator('#s-chat')).toHaveClass(/active/, { timeout: 15000 });
     } else {
       await btnChatear.first().click();
-      await expect(page.locator('#s-chat')).toHaveClass(/active/, { timeout: 15000 });
     }
+    await expect(page.locator('#s-chat')).toHaveClass(/active/, { timeout: 15000 });
+
+    // ── Que el chat se ABRA no alcanza ──────────────────────────────────────
+    // Con el bug de elegir_propuesta la pantalla llegaba hasta acá igual de
+    // contenta: propuesta 'elegida', pedido 'Cerrado' y el chat abierto. Lo
+    // único que quedaba viejo era `chats_trabajo.estado`, y ese campo es el
+    // que maneja TODOS los carteles (actualizarBannersChat hace un switch
+    // sobre él). El trabajo quedaba sin forma de avanzar y el test en verde.
+    // El log importa: si el flujo cae siempre en "Chatear", la verificación de
+    // abajo no corre nunca y el test pasa sin probar el circuito que vino a
+    // cubrir. Mejor verlo en la salida que suponerlo.
+    console.log('[ciclo C] camino:', eligio ? 'Elegir → se verifica el chat' : 'Chatear (consulta) → no aplica');
+    if (!eligio) return; // "Chatear" es una consulta: el chat no pasa a activo
+
+    const estado = await page.evaluate(async () => {
+      const { data } = await window._sb
+        .from('chats_trabajo')
+        .select('estado, propuestas!inner(estado), pedidos!inner(titulo)')
+        .eq('propuestas.estado', 'elegida')
+        .like('pedidos.titulo', '%Test E2E%')
+        .order('ultimo_evento_at', { ascending: false })
+        .limit(1);
+      return data?.[0]?.estado ?? null;
+    });
+
+    expect(estado, 'no se encontró el chat de la propuesta elegida').not.toBeNull();
+    expect(estado, 'la propuesta quedó elegida pero el chat no se activó').toBe('activo');
   });
 
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// D. La reseña le avisa al prestador
+// ══════════════════════════════════════════════════════════════════════════════
+// Chequeo de contrato, no de comportamiento: ejercitar `dejar_resena` de verdad
+// exige un chat terminado y deja atrás una reseña, una notificación y el rating
+// del prestador movido. Lo que hay que impedir es que el aviso vuelva a ser un
+// paso del cliente — así estuvo, y 6 de 7 reseñas no avisaron nunca.
+// El detalle de qué mira está en supabase-test-aviso-resena.sql.
+test.describe('D · Reseña — el aviso vive en el RPC', () => {
+  test('fn_test_aviso_resena: dejar_resena inserta la campanita y no hay lógica duplicada', async ({ page }) => {
+    await page.goto('/');
+    await login(page, VECINO.email, VECINO.pw);
+
+    const { data, error } = await page.evaluate(async () => {
+      const r = await window._sb.rpc('fn_test_aviso_resena');
+      return { data: r.data, error: r.error?.message ?? null };
+    });
+
+    if (error) {
+      throw new Error('RPC falló: ' + error + ' — ¿se corrió supabase-test-aviso-resena.sql?');
+    }
+    expect(data.versiones, 'no se encontró public.dejar_resena').toBeGreaterThan(0);
+    expect(data.error, JSON.stringify(data)).toBeNull();
+    expect(data.pass).toBe(true);
+  });
 });

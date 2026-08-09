@@ -186,36 +186,36 @@ test.describe('B-08 · CTA convertirse en prestador', () => {
 // ═══════════════════════════════════════════════════════════════════
 test.describe('F.1 · Feed prestador filtrado por rubro', () => {
 
-  test('Al entrar como prestador, catActiva es el rubro del perfil', async ({ page }) => {
+  // Este test verificaba que el chip de rubro del prestador quedara activo en
+  // Inicio. Dejó de aplicar cuando Inicio del prestador pasó a ser un tablero:
+  // cromoHomePrestador() esconde los chips y el buscador, porque el listado de
+  // pedidos vive en la pantalla Pedidos. El test no falló — se auto-salteaba
+  // ("ningún chip de rubro activo") y pasaba meses sin probar nada.
+  //
+  // Ahora verifica el contrato actual, que ya se rompió una vez: el bloque de
+  // cromo que se apaga y el que se enciende. Cuando `home-banner` volvió a
+  // display:'' aparecieron banners duplicados encima del carrusel y nadie se
+  // enteró hasta verlo a ojo.
+  test('Inicio del prestador es el tablero: sin chips de rubro ni buscador', async ({ page }) => {
     test.setTimeout(90000);
     let loginOk = false;
     try { await loginPrestador(page); loginOk = true; } catch (e) { console.log('[F.1] login falló:', e.message.slice(0, 80)); }
     if (!loginOk) { test.skip(); return; }
-    // catActiva vive en el scope cerrado de app.js (no está en window).
-    // En lugar de leer la variable interna, verificamos el DOM:
-    // si el prestador tiene rubro que matchea una categoría, activarHomePrestador()
-    // agrega clase 'on' al chip correspondiente y quita 'on' de #cat-todos.
-    // Esperar hasta 8s por si activarHomePrestador aún no terminó.
-    await page.waitForFunction(
-      () => {
-        // Hay un chip 'on' distinto de todos (todos es el default)
-        const activo = document.querySelector('.rubro.on');
-        return activo !== null;
-      },
-      { timeout: 8000 }
-    ).catch(() => {});
-    const chipOnId = await page.evaluate(() => {
-      const chip = document.querySelector('.rubro.on');
-      return chip ? chip.id : null;
-    });
-    if (!chipOnId || chipOnId === 'cat-todos') {
-      console.log('[F.1] ningún chip de rubro activo — prestador_test sin rubro o sin match');
-      test.skip();
-      return;
+
+    // El tablero se pinta async (trae ficha, chats, analítica). #slot-checklist
+    // sólo lo escribe renderInicioPrestador, así que sirve de señal de "ya está".
+    await expect(page.locator('#slot-checklist')).toBeAttached({ timeout: 15000 });
+
+    // toBeAttached antes de toBeHidden a propósito: un elemento que no existe
+    // también está "hidden", así que borrarlo del HTML dejaría este test en
+    // verde sin probar nada. Tienen que estar Y estar apagados.
+    for (const sel of ['#s-home .rubros', '#home-search-bar', '#home-cat-header',
+                       // Estos dos pasaron a ser slides del carrusel: si vuelven
+                       // a verse, están duplicados encima de él.
+                       '#home-banner', '#home-urgencias']) {
+      await expect(page.locator(sel), sel).toBeAttached();
+      await expect(page.locator(sel), sel).toBeHidden();
     }
-    // Hay un chip de rubro específico activo — prestador entró con filtro por rubro
-    expect(chipOnId).not.toBe('cat-todos');
-    console.log('[F.1] chip activo:', chipOnId);
   });
 
   test('Feed de prestador no muestra vista de vecino', async ({ page }) => {

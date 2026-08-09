@@ -1,0 +1,310 @@
+/* ============================================
+   ENTRE VECINOS — Design Tokens
+   Pronet · Puertos del Lago
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+
+  /* --- Tipografía --- */
+  --ev-font: 'DM Sans', sans-serif;
+
+  /* --- Azules Pronet --- */
+  --ev-blue-dark:   #0D3B72;
+  --ev-blue-mid:    #1A56A0;
+  --ev-blue:        #2066B8;
+  --ev-blue-light:  #4A90D9;
+  --ev-blue-pale:   #7EC0F5;
+  --ev-blue-tint:   #C8E0F9;
+  --ev-blue-bg:     #E6F1FB;
+
+  /* --- Acento naranja --- */
+  --ev-orange:       #FF6B35;
+  --ev-orange-hover: #E55A25;
+
+  /* --- Semánticos --- */
+  --ev-green:   #2D9E6B;
+  --ev-online:  #52D9A0;
+
+  /* --- Mapa SVG --- */
+  --ev-map-bg:        #2A4A6B;
+  --ev-map-block:     #243F58;
+  --ev-map-street:    #3A5F80;
+  --ev-map-street-sec:#2E5270;
+  --ev-map-lake:      #1A3D5C;
+  --ev-map-tree:      #1E5C3A;
+
+  /* --- App shell --- */
+  --ev-app-bg:      #F4F6FA;
+  --ev-card-bg:     #FFFFFF;
+  --ev-card-border: rgba(0,0,0,0.06);
+
+  /* --- Overlay banner --- */
+  --ev-overlay: linear-gradient(
+    110deg,
+    rgba(8,28,64,0.88) 0%,
+    rgba(8,28,64,0.65) 45%,
+    rgba(8,28,64,0.15) 100%
+  );
+
+  /* --- Border radius --- */
+  --ev-radius-sm:  8px;
+  --ev-radius-md:  12px;
+  --ev-radius-lg:  16px;
+  --ev-radius-xl:  20px;
+  --ev-radius-pill:20px;
+  --ev-radius-app: 40px;
+}
+
+
+/* ============================================
+   COMPONENTES
+   ============================================ */
+
+/* --- Banner hero --- */
+.ev-banner {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  border-radius: var(--ev-radius-xl);
+  overflow: hidden;
+  font-family: var(--ev-font);
+}
+
+.ev-banner__map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ev-banner__overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--ev-overlay);
+}
+
+.ev-banner__content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 44px 52px;
+}
+
+.ev-banner__bottom {
+  position: absolute;
+  bottom: 22px;
+  left: 28px;
+  right: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* --- Logo --- */
+.ev-logo-entre {
+  font-family: var(--ev-font);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ev-blue-pale);
+  letter-spacing: 6px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.ev-logo-vecinos {
+  font-family: var(--ev-font);
+  font-size: 64px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -2px;
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+.ev-logo-vecinos--sm {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+}
+
+/* --- Divider acento --- */
+.ev-divider {
+  width: 44px;
+  height: 3px;
+  background: var(--ev-orange);
+  border-radius: 2px;
+  margin-bottom: 18px;
+}
+
+/* --- Tagline --- */
+.ev-tagline {
+  font-family: var(--ev-font);
+  font-size: 16px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.82);
+  line-height: 1.55;
+  margin-bottom: 30px;
+}
+
+/* --- Botón CTA principal --- */
+.ev-btn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ev-orange);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--ev-radius-sm);
+  padding: 13px 24px;
+  font-family: var(--ev-font);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  width: fit-content;
+  letter-spacing: 0.3px;
+  transition: background 0.15s ease;
+}
+
+.ev-btn-cta:hover {
+  background: var(--ev-orange-hover);
+}
+
+/* --- Location pill --- */
+.ev-loc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--ev-radius-pill);
+  padding: 5px 14px;
+  color: var(--ev-blue-tint);
+  font-family: var(--ev-font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  margin-bottom: 22px;
+  width: fit-content;
+}
+
+.ev-loc-pill__dot {
+  width: 7px;
+  height: 7px;
+  background: var(--ev-orange);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* --- Badge "by PRONET" --- */
+.ev-pronet-badge {
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.20);
+  border-radius: var(--ev-radius-pill);
+  padding: 5px 14px;
+  color: rgba(255,255,255,0.65);
+  font-family: var(--ev-font);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+}
+
+/* --- Vecinos activos count --- */
+.ev-online-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255,255,255,0.70);
+  font-family: var(--ev-font);
+  font-size: 11px;
+}
+
+.ev-online-count__dot {
+  width: 6px;
+  height: 6px;
+  background: var(--ev-online);
+  border-radius: 50%;
+}
+
+/* --- App shell --- */
+.ev-app {
+  width: 375px;
+  font-family: var(--ev-font);
+  background: var(--ev-app-bg);
+  border-radius: var(--ev-radius-app);
+  overflow: hidden;
+  border: 8px solid #1a1a2e;
+}
+
+/* --- Header app --- */
+.ev-header {
+  background: var(--ev-blue-dark);
+  padding: 16px 20px 24px;
+}
+
+.ev-search-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.12);
+  border-radius: var(--ev-radius-md);
+  padding: 10px 14px;
+  gap: 8px;
+  color: rgba(255,255,255,0.50);
+  font-size: 13px;
+}
+
+/* --- Category icon --- */
+.ev-cat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+/* --- Listing card --- */
+.ev-listing-card {
+  background: var(--ev-card-bg);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 0.5px solid var(--ev-card-border);
+}
+
+.ev-listing-card__name  { font-size: 12px; font-weight: 600; color: var(--ev-blue-dark); }
+.ev-listing-card__seller{ font-size: 10px; color: #888888; }
+.ev-listing-card__price { font-size: 13px; font-weight: 700; color: var(--ev-orange); }
+
+/* --- Featured card --- */
+.ev-featured-card {
+  background: var(--ev-blue-mid);
+  border-radius: var(--ev-radius-lg);
+  padding: 16px;
+}
+
+/* --- Tab bar --- */
+.ev-tab-bar {
+  background: var(--ev-card-bg);
+  border-top: 0.5px solid var(--ev-card-border);
+  padding: 10px 0 16px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.ev-tab-item        { color: #bbbbbb; }
+.ev-tab-item.active { color: var(--ev-blue-dark); }
+
+
+/* ============================================
+   PINS SVG — referencia de valores
+   ============================================
+   Pin naranja activo:  circle r=12, fill=#FF6B35
+                        + pulso: circle r=18, opacity=0.4
+   Pin azul estándar:   circle r=10, fill=#4A90D9
+   Pin verde nuevo:     circle r=9,  fill=#2D9E6B
+   Centro del pin:      circle r=4-5, fill=white
+   Cola del pin:        line, stroke=color pin, stroke-width=2-2.5
+   ============================================ */

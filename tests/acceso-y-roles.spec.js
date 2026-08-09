@@ -171,13 +171,10 @@ test.describe('C14 · Visibilidad de pedidos', () => {
     expect(r.ajenos).toBe(0);
   });
 
-  test('el contador público informa actividad sin exponer los pedidos', async ({ page }) => {
-    await abrir(page);
-    const total = await page.evaluate(async () =>
-      (await window._sb.rpc('contar_pedidos_activos')).data);
-    expect(typeof total).toBe('number');
-    expect(total).toBeGreaterThanOrEqual(0);
-  });
+  // Acá vivía un test del contador público de actividad. La función sigue en la
+  // base, pero el contador se sacó de la pantalla de Inicio: el test pasaba en
+  // verde midiendo un RPC que ningún usuario alcanza. Si el contador vuelve,
+  // vuelve el test.
 });
 
 test.describe('C12 · Roles — doble perfil', () => {

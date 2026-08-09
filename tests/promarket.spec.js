@@ -439,13 +439,23 @@ test.describe('PM-8 · Publicación extra', () => {
 test.describe('PM-8bis · Cupo de publicaciones — trigger real en DB', () => {
   test.use({ storageState: sesionVecino });
 
-  test('fn_test_cupo_publicacion_mercado: bloquea sin créditos y consume 1 al haberlo', async ({ page }) => {
+  test('fn_test_cupo_publicacion_mercado: el trigger bloquea al pasarse del cupo del plan vigente', async ({ page }) => {
     await abrir(page);
+    await apiLista(page);
 
     const resultado = await page.evaluate(async () => {
       const uid = (await window._sb.auth.getUser()).data.user?.id;
       const { data, error } = await window._sb.rpc('fn_test_cupo_publicacion_mercado', { p_usuario_id: uid });
-      return { data, error: error?.message };
+      // El plan que el CLIENTE usaría para decidir si deja publicar. Si no
+      // coincide con el que aplicó el trigger, la app promete algo que la base
+      // rechaza — el bug que dejó a los vecinos con "comprá créditos" después
+      // de 3 publicaciones estando en etapa fundadora.
+      const api = window._planesAPI;
+      return {
+        data,
+        error: error?.message,
+        planCliente: api.planParaLimites(api.planActual()),
+      };
     });
 
     if (resultado.error) {
@@ -461,6 +471,15 @@ test.describe('PM-8bis · Cupo de publicaciones — trigger real en DB', () => {
       test.skip();
       return;
     }
+
+    // Lo que ayer nadie chequeaba: que ambos lados apliquen el mismo plan.
+    // Mientras coincidan, lo que la app habilita es lo que la base acepta.
+    // El toBeOneOf primero para que la comparación no pase en verde comparando
+    // dos undefined el día que alguno de los dos deje de devolver el plan.
+    expect(['base', 'plus', 'pro']).toContain(resultado.planCliente);
+    expect(['base', 'plus', 'pro']).toContain(r.plan);
+    expect(r.plan, 'el trigger aplicó un plan distinto al que usa el cliente')
+      .toBe(resultado.planCliente);
 
     expect(r.error, JSON.stringify(r)).toBeNull();
     expect(r.pass).toBe(true);

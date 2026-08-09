@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entre Vecinos — Banner</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f1923; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 32px; }
+
+    .banner {
+      position: relative;
+      width: 100%;
+      max-width: 860px;
+      height: 480px;
+      border-radius: 20px;
+      overflow: hidden;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .map-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, rgba(8,28,64,0.88) 0%, rgba(8,28,64,0.65) 45%, rgba(8,28,64,0.15) 100%);
+    }
+    .content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 44px 52px;
+    }
+    .loc-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 20px;
+      padding: 5px 14px;
+      color: #C8E0F9;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      margin-bottom: 22px;
+      width: fit-content;
+    }
+    .pin-dot { width: 7px; height: 7px; background: #FF6B35; border-radius: 50%; }
+    .logo-entre {
+      font-size: 14px;
+      font-weight: 500;
+      color: #7EC0F5;
+      letter-spacing: 6px;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    .logo-vecinos {
+      font-size: 64px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 14px;
+    }
+    .divider {
+      width: 44px;
+      height: 3px;
+      background: #FF6B35;
+      border-radius: 2px;
+      margin-bottom: 18px;
+    }
+    .tagline {
+      font-size: 16px;
+      color: rgba(255,255,255,0.82);
+      line-height: 1.55;
+      margin-bottom: 30px;
+    }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #FF6B35;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 24px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      width: fit-content;
+      letter-spacing: 0.3px;
+      transition: background 0.15s ease;
+    }
+    .cta:hover { background: #E55A25; }
+    .bottom-bar {
+      position: absolute;
+      bottom: 22px;
+      left: 28px;
+      right: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pronet-badge {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.20);
+      color: rgba(255,255,255,0.65);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      padding: 5px 14px;
+      border-radius: 20px;
+    }
+    .vecinos-count {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.70);
+      font-size: 11px;
+    }
+    .online-dot { width: 6px; height: 6px; background: #52D9A0; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+
+    <!-- MAPA SVG ILUSTRATIVO — reemplazable por Google Maps iframe o Static Maps API -->
+    <svg class="map-bg" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <!-- Fondo terreno -->
+      <rect width="900" height="480" fill="#2a4a6b"/>
+
+      <!-- Lago -->
+      <path d="M520,20 C560,10 640,30 700,60 C760,90 820,130 860,180 C890,220 900,270 890,320 C875,380 840,430 790,460 C750,480 700,480 660,470 C610,455 570,420 540,380 C510,340 490,290 495,240 C500,190 510,140 520,100 C528,70 515,35 520,20 Z" fill="#1a3d5c"/>
+      <path d="M600,80 C640,70 700,90 740,120 C780,150 810,190 820,240 C825,270 815,300 795,320 C770,345 735,355 700,350 C660,342 625,318 605,285 C585,252 580,210 590,175 C600,145 580,95 600,80 Z" fill="#1e4a6e" opacity="0.6"/>
+
+      <!-- Calles principales -->
+      <rect x="0" y="210" width="530" height="14" fill="#3a5f80" rx="2"/>
+      <rect x="480" y="0" width="14" height="215" fill="#3a5f80" rx="2"/>
+      <!-- Calles secundarias horizontales -->
+      <rect x="0" y="120" width="490" height="8" fill="#2e5270" rx="1"/>
+      <rect x="0" y="320" width="510" height="8" fill="#2e5270" rx="1"/>
+      <!-- Calles secundarias verticales -->
+      <rect x="100" y="0" width="8" height="480" fill="#2e5270" rx="1"/>
+      <rect x="240" y="0" width="8" height="480" fill="#2e5270" rx="1"/>
+      <rect x="370" y="0" width="8" height="480" fill="#2e5270" rx="1"/>
+
+      <!-- Manzanas -->
+      <rect x="10"  y="30"  width="75"  height="75" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="10"  y="135" width="75"  height="65" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="10"  y="230" width="75"  height="75" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="10"  y="335" width="75"  height="80" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="115" y="30"  width="115" height="75" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="115" y="135" width="115" height="65" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="115" y="230" width="115" height="75" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="115" y="335" width="115" height="80" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="255" y="30"  width="100" height="75" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="255" y="135" width="100" height="65" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="255" y="230" width="100" height="75" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="255" y="335" width="100" height="80" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="385" y="30"  width="80"  height="75" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="385" y="135" width="80"  height="65" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="385" y="230" width="80"  height="75" rx="6" fill="#243f58" opacity="0.9"/>
+      <rect x="385" y="335" width="80"  height="80" rx="6" fill="#243f58" opacity="0.9"/>
+
+      <!-- Árboles / plazas -->
+      <circle cx="50"  cy="217" r="10" fill="#1e5c3a" opacity="0.7"/>
+      <circle cx="195" cy="217" r="10" fill="#1e5c3a" opacity="0.8"/>
+      <circle cx="210" cy="217" r="8"  fill="#1e5c3a" opacity="0.7"/>
+      <circle cx="320" cy="217" r="10" fill="#1e5c3a" opacity="0.8"/>
+      <circle cx="335" cy="217" r="8"  fill="#1e5c3a" opacity="0.6"/>
+      <circle cx="450" cy="217" r="9"  fill="#1e5c3a" opacity="0.8"/>
+
+      <!-- Muelle -->
+      <rect x="490" y="195" width="55" height="5" fill="#4a7a9b" rx="2"/>
+      <rect x="540" y="185" width="5"  height="25" fill="#4a7a9b" rx="1"/>
+
+      <!-- PIN naranja activo (con pulso) -->
+      <circle cx="175" cy="158" r="18" fill="none" stroke="#FF6B35" stroke-width="1.5" opacity="0.4"/>
+      <circle cx="175" cy="158" r="12" fill="#FF6B35"/>
+      <circle cx="175" cy="155" r="5"  fill="white"/>
+      <line x1="175" y1="169" x2="175" y2="176" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round"/>
+
+      <!-- PINs azules -->
+      <circle cx="300" cy="255" r="10" fill="#4A90D9"/>
+      <circle cx="300" cy="252" r="4"  fill="white"/>
+      <line x1="300" y1="264" x2="300" y2="270" stroke="#4A90D9" stroke-width="2" stroke-linecap="round"/>
+
+      <circle cx="420" cy="155" r="10" fill="#4A90D9"/>
+      <circle cx="420" cy="152" r="4"  fill="white"/>
+      <line x1="420" y1="164" x2="420" y2="170" stroke="#4A90D9" stroke-width="2" stroke-linecap="round"/>
+
+      <circle cx="130" cy="360" r="10" fill="#4A90D9"/>
+      <circle cx="130" cy="357" r="4"  fill="white"/>
+      <line x1="130" y1="369" x2="130" y2="375" stroke="#4A90D9" stroke-width="2" stroke-linecap="round"/>
+
+      <!-- PIN verde nuevo -->
+      <circle cx="60" cy="155" r="9"   fill="#2D9E6B"/>
+      <circle cx="60" cy="152" r="3.5" fill="white"/>
+      <line x1="60" y1="163" x2="60" y2="169" stroke="#2D9E6B" stroke-width="2" stroke-linecap="round"/>
+
+      <!-- Label lago -->
+      <text x="710" y="260" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="13" font-weight="500" fill="rgba(255,255,255,0.35)" letter-spacing="2">LAGO</text>
+      <text x="710" y="278" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="11" font-weight="400" fill="rgba(255,255,255,0.20)" letter-spacing="1">Puertos del Lago</text>
+    </svg>
+    <!-- FIN MAPA SVG -->
+
+    <div class="overlay"></div>
+
+    <div class="content">
+      <div class="loc-pill">
+        <div class="pin-dot"></div>
+        PUERTOS DEL LAGO · ESCOBAR
+      </div>
+      <div class="logo-entre">ENTRE</div>
+      <div class="logo-vecinos">Vecinos</div>
+      <div class="divider"></div>
+      <div class="tagline">
+        El mercado de tu barrio.<br>
+        Servicios y productos entre vecinos.
+      </div>
+      <button class="cta">Ver la app ↗</button>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="vecinos-count">
+        <div class="online-dot"></div>
+        24 vecinos activos hoy
+      </div>
+      <div class="pronet-badge">by PRONET</div>
+    </div>
+
+  </div>
+</body>
+</html>
