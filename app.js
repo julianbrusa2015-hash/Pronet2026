@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners','s-param-mkt-cats'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -412,6 +412,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-servicios-fijos'){ renderServiciosFijos(); }
     if (id === 's-verificaciones') { renderVerificaciones(); }
     if (id === 's-param-banners')  { renderParamBanners(); }
+    if (id === 's-param-mkt-cats') { renderParamMktCats(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -7179,6 +7180,87 @@ document.addEventListener('focusin', (e) => {
   }
   window.crearBannerUI = crearBannerUI;
 
+  // ══ PARAMETRÍAS · CATEGORÍAS DE ENTRE VECINOS ══════════════════════
+
+  async function renderParamMktCats() {
+    const wrap = document.getElementById('param-mktcats-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+
+    const filas = await PronetDB.listarMktCategorias(false).catch(() => []);
+    if (!filas.length) {
+      wrap.innerHTML = '<div style="padding:32px 18px;text-align:center;font-size:13px;color:#BE123C">⚠️ No se pudieron cargar las categorías.</div>';
+      return;
+    }
+
+    // Cuántas publicaciones usa cada una: es lo que decide si darla de baja
+    // molesta a alguien. La FK impide borrarla si tiene publicaciones, así
+    // que el conteo también explica por qué el borrado fallaría.
+    let uso = {};
+    try {
+      const { data } = await window._sb.from('publicaciones').select('categoria');
+      (data || []).forEach(p => { uso[p.categoria] = (uso[p.categoria] || 0) + 1; });
+    } catch (e) { /* informativo */ }
+
+    const bloque = (tipo, titulo) => {
+      const cats = filas.filter(c => c.tipo === tipo);
+      if (!cats.length) return '';
+      return '<div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin:6px 0 8px">' +
+        escHTML(titulo) + '</div>' +
+        cats.map(c => {
+          const n = uso[c.slug] || 0;
+          return '<div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:12px 13px;margin-bottom:9px' +
+            (c.activo ? '' : ';opacity:.6') + '">' +
+            '<div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">' +
+              '<span style="font-size:19px">' + escHTML(c.emoji) + '</span>' +
+              '<div style="flex:1">' +
+                '<div style="font-size:13.5px;font-weight:800;color:var(--ink)">' + escHTML(c.nombre) + '</div>' +
+                '<div style="font-size:10.5px;color:var(--ink3);margin-top:1px">' + escHTML(c.slug) +
+                  ' · ' + (n ? n + ' publicación' + (n > 1 ? 'es' : '') : 'sin publicaciones') + '</div>' +
+              '</div>' +
+              (c.activo ? '' : '<span style="font-size:10px;font-weight:700;background:var(--surface);color:var(--ink3);border-radius:6px;padding:3px 7px">Inactiva</span>') +
+            '</div>' +
+            '<div class="pa-row"><span class="pa-lbl">Orden</span>' +
+              '<input id="mc-' + escHTML(c.slug) + '-orden" class="pa-in" style="width:70px;text-align:right" inputmode="numeric" value="' + escHTML(String(c.orden)) + '"></div>' +
+            '<div id="mc-' + escHTML(c.slug) + '-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:4px 0"></div>' +
+            '<div style="display:flex;gap:8px">' +
+              '<button onclick="guardarMktCatUI(\'' + escHTML(c.slug) + '\')" style="flex:1;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>' +
+              '<button onclick="toggleMktCatUI(\'' + escHTML(c.slug) + '\',' + (c.activo ? 'false' : 'true') + ')" style="flex:1;background:' + (c.activo ? 'var(--surface)' : 'var(--green-s)') + ';color:' + (c.activo ? 'var(--ink2)' : 'var(--green)') + ';border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">' +
+                (c.activo ? 'Dar de baja' : 'Reactivar') + '</button>' +
+            '</div></div>';
+        }).join('');
+    };
+
+    wrap.innerHTML =
+      bloque('servicio', '🛠️ Servicios del Barrio') +
+      bloque('producto', '🛒 Mercado del Barrio') +
+      '<div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">' +
+      'Dar de baja una categoría la saca de los chips y del selector al publicar, pero <b>no toca las publicaciones que ya la usan</b>: siguen visibles con su nombre. Para moverlas hay que editarlas una por una.</div>';
+  }
+
+  async function guardarMktCatUI(slug) {
+    const msg = document.getElementById('mc-' + slug + '-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+    const orden = Number((document.getElementById('mc-' + slug + '-orden')?.value || '').trim());
+    if (!Number.isFinite(orden)) { decir('⚠️ El orden tiene que ser un número', '#BE123C'); return; }
+    const r = await PronetDB.guardarMktCategoria(slug, { orden });
+    if (!r.ok) { decir('⚠️ ' + r.error, '#BE123C'); return; }
+    decir('✅ Guardado', 'var(--green)');
+    mktCatsCargadas = false;
+    await cargarMktCategorias();
+    renderParamMktCats();
+  }
+  window.guardarMktCatUI = guardarMktCatUI;
+
+  async function toggleMktCatUI(slug, activo) {
+    const r = await PronetDB.guardarMktCategoria(slug, { activo });
+    if (!r.ok) { showToast && showToast('⚠️ ' + r.error); return; }
+    mktCatsCargadas = false;
+    await cargarMktCategorias();
+    renderParamMktCats();
+  }
+  window.toggleMktCatUI = toggleMktCatUI;
+
   // ══ PARAMETRÍAS · ALTA DE FILAS ════════════════════════════════════
   //
   // Hasta acá las tres pantallas sólo editaban lo que ya existía: sumar un
@@ -7256,6 +7338,28 @@ document.addEventListener('focusin', (e) => {
       refrescar: () => { cargarZonasDeLaBase?.(); renderParamZonas(); },
     },
 
+    mktcat: {
+      contenedor: 'param-mktcat-alta',
+      titulo: 'Nueva categoría',
+      campos: [
+        { id: 'nombre', lbl: 'Nombre', tipo: 'text', ancho: '150px', ph: 'Costura y arreglos' },
+        { id: 'emoji',  lbl: 'Ícono',  tipo: 'text', ancho: '60px',  ph: '🧵' },
+        { id: 'tipo',   lbl: 'Sección', tipo: 'select', ancho: '150px',
+          opciones: [{ v: 'servicio', t: '🛠️ Servicios del Barrio' },
+                     { v: 'producto', t: '🛒 Mercado del Barrio' }] },
+      ],
+      nota: 'La sección decide en cuál de las dos pestañas aparece. El prestador sólo ve las de Servicios.',
+      async guardar(v) {
+        if (!v.nombre) return { ok: false, error: 'Falta el nombre' };
+        return PronetDB.crearMktCategoria({
+          slug: slugificar(v.nombre), nombre: v.nombre,
+          emoji: v.emoji || '📦', tipo: v.tipo || 'servicio',
+          orden: 500, activo: true,
+        });
+      },
+      refrescar: async () => { mktCatsCargadas = false; await cargarMktCategorias(); renderParamMktCats(); },
+    },
+
     nivel: {
       contenedor: 'param-nivel-alta',
       titulo: 'Nuevo nivel',
@@ -7292,6 +7396,12 @@ document.addEventListener('focusin', (e) => {
     if (cont.style.display !== 'none') { cont.style.display = 'none'; cont.innerHTML = ''; return; }
 
     const fila = (c) => {
+      if (c.tipo === 'select') {
+        return '<div class="pa-row"><span class="pa-lbl">' + escHTML(c.lbl) + '</span>' +
+          '<select id="alta-' + tipo + '-' + c.id + '" class="pa-in" style="width:' + c.ancho + '">' +
+          c.opciones.map(o => '<option value="' + escHTML(o.v) + '">' + escHTML(o.t) + '</option>').join('') +
+          '</select></div>';
+      }
       if (c.tipo === 'madre') {
         // Las madres salen de las zonas que ya hay: escribirlas a mano es
         // como se generan los grupos huérfanos que no filtran nada.
