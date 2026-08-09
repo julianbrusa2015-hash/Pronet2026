@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v164'; // v164: sin reseñas inventadas
+const CACHE_VERSION = 'pronet-v165'; // v165: push de pedidos dirigidos
 
 const SHELL = [
   './',

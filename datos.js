@@ -318,6 +318,12 @@ const PronetDB = (() => {
     async notificar(opciones) {
       if (!remoto) return { ok: false, error: 'Push requiere modo remoto' };
       try {
+        // Lo que se le manda a la Edge Function. Arranca igual que `opciones`
+        // y se ajusta abajo para el destino 'prestador', que la función no
+        // conoce. En null significa "no pushear": o el destino no se pudo
+        // resolver, o el servidor rechazó la campanita y no hay razón para
+        // mandar un push que nadie autorizó.
+        let cuerpoPush = opciones;
         // 1. Persistir en notificaciones (campanita in-app) — siempre, independiente
         //    del push. Vía RPC: el servidor valida que exista una relación real
         //    con el destinatario. Antes era un INSERT directo sin validar, así que
@@ -344,6 +350,14 @@ const PronetDB = (() => {
           });
           if (error)       console.warn('[PronetDB] notificar_prestador', error.message);
           else if (!r?.ok) console.warn('[PronetDB] notificar_prestador', r?.error);
+
+          // La Edge Function no conoce el destino 'prestador' — sólo entiende
+          // 'usuario' y 'prestadores_rubro'. En vez de tocarla (su código vive
+          // sólo en el dashboard, fuera del repo), se traduce acá: el RPC ya
+          // resolvió a qué usuario corresponde la ficha y lo devuelve.
+          cuerpoPush = r?.ok && r.usuario_id
+            ? { ...opciones, destino: 'usuario', usuario_id: r.usuario_id }
+            : null;
         } else if (opciones.destino === 'prestadores_rubro' && opciones.rubro) {
           // Los destinatarios los resuelve el RPC desde `prestadores` (rubro +
           // activo). Antes salían de push_suscripciones, así que la campanita
@@ -368,7 +382,8 @@ const PronetDB = (() => {
         // Para unificarlo hay que crear una función nueva con el slug correcto
         // (ver PENDIENTES.md), no alcanza con renombrar la existente.
         const PUSH_EDGE_FN = 'bright-service';
-        const { data, error } = await sb.functions.invoke(PUSH_EDGE_FN, { body: opciones });
+        if (!cuerpoPush) return { ok: true, push: false };
+        const { data, error } = await sb.functions.invoke(PUSH_EDGE_FN, { body: cuerpoPush });
         if (error) { console.warn('[PronetDB] notificar push', error.message); }
 
         return data || { ok: true };
