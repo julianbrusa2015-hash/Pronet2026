@@ -4432,6 +4432,9 @@ document.addEventListener('focusin', (e) => {
     if (busc) busc.placeholder = mktTipoActivo === 'servicio'
       ? 'Buscá un servicio de tu barrio…'
       : 'Buscá productos de tu barrio…';
+
+    // El carrito depende de la sección, así que se repinta con ella.
+    pintarBadgeCarrito();
   }
 
   function mktSetTipo(tipo) {
@@ -4496,9 +4499,18 @@ document.addEventListener('focusin', (e) => {
     // 'flex' explícito y no '': el badge centra su número con flexbox, y
     // dejarlo vacío lo devolvería a `inline`, que descoloca el dígito.
     if (b) { b.textContent = n; b.style.display = n ? 'flex' : 'none'; }
-    // El acceso al carrito sólo aparece si hay algo adentro: un carrito
-    // vacío permanente en la barra es ruido.
-    if (btn) btn.style.display = n ? '' : 'none';
+
+    // El carrito se muestra SIEMPRE en Mercado, tenga o no algo adentro.
+    //
+    // Al principio se ocultaba vacío para no dejar un ícono de adorno. Fue
+    // un error: la primera pregunta del primer usuario que lo probó fue
+    // "¿dónde está el carrito?". Un acceso que aparece recién después de
+    // usarlo no se puede descubrir — hay que saber que existe para hacer lo
+    // que lo hace aparecer.
+    //
+    // En Servicios sigue oculto: ahí no se suma nada al carrito, y mostrarlo
+    // prometería algo que esa sección no hace.
+    if (btn) btn.style.display = (mktTipoActivo === 'producto') ? '' : 'none';
   }
 
   function agregarAlCarrito(pubId) {
