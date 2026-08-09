@@ -263,7 +263,7 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners','s-param-mkt-cats'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners','s-param-mkt-cats','s-carrito'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -413,6 +413,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-verificaciones') { renderVerificaciones(); }
     if (id === 's-param-banners')  { renderParamBanners(); }
     if (id === 's-param-mkt-cats') { renderParamMktCats(); }
+    if (id === 's-carrito')        { renderCarrito(); }
     if (id === 's-loyalty-admin') { renderCanjesPendientes(); renderBeneficiosAdmin(); }
     if (id === 's-loyalty') { renderLoyaltyScreen(); }
     if (id === 's-subs')    { reflejarPlan(); }
@@ -4444,6 +4445,202 @@ document.addEventListener('focusin', (e) => {
   }
   window.mktSetTipo = mktSetTipo;
 
+  // ══ CARRITO DE MERCADO ═════════════════════════════════════════════
+  //
+  // El vecino suma productos y termina mandándole el pedido al vendedor por
+  // el chat que ya existe. NO hay tabla de órdenes ni pago en la app: la
+  // venta se cierra hablando, igual que hoy. Es la opción A de las tres que
+  // se evaluaron el 2026-08-09 — la que no toca plata ajena y sirve para
+  // medir si la gente arma pedidos antes de invertir en lo demás.
+  //
+  // Vive en localStorage y no en la base: un carrito abandonado en una
+  // tabla es basura que después hay que salir a limpiar, y acá no aporta
+  // nada — nadie retoma un carrito desde otro teléfono.
+  //
+  // Se agrupa por vendedor desde el principio, aunque hoy sólo se use para
+  // mostrar: si mañana esto guarda órdenes, cada vendedor es una orden con
+  // su entrega, y rehacer la estructura después sería peor.
+
+  const CARRITO_KEY = 'pronet_carrito_v1';
+  let carrito = [];   // [{ id, titulo, precio, foto_url, autor_id, autor_nombre, cant }]
+
+  function cargarCarrito() {
+    try { carrito = JSON.parse(localStorage.getItem(CARRITO_KEY) || '[]'); }
+    catch (e) { carrito = []; }
+    if (!Array.isArray(carrito)) carrito = [];
+  }
+
+  function guardarCarrito() {
+    try { localStorage.setItem(CARRITO_KEY, JSON.stringify(carrito)); } catch (e) { /* sin espacio */ }
+    pintarBadgeCarrito();
+  }
+
+  const carritoTotal = () => carrito.reduce((s, i) => s + (i.precio || 0) * i.cant, 0);
+  const carritoUnidades = () => carrito.reduce((s, i) => s + i.cant, 0);
+
+  /** Agrupa por vendedor: cada uno es un pedido aparte, con su propia
+   *  entrega y su propio chat. */
+  function carritoPorVendedor() {
+    const mapa = new Map();
+    carrito.forEach(i => {
+      if (!mapa.has(i.autor_id)) mapa.set(i.autor_id, { autor_id: i.autor_id, nombre: i.autor_nombre, items: [] });
+      mapa.get(i.autor_id).items.push(i);
+    });
+    return [...mapa.values()];
+  }
+
+  function pintarBadgeCarrito() {
+    const b = document.getElementById('mkt-carrito-badge');
+    const btn = document.getElementById('mkt-carrito-btn');
+    const n = carritoUnidades();
+    // 'flex' explícito y no '': el badge centra su número con flexbox, y
+    // dejarlo vacío lo devolvería a `inline`, que descoloca el dígito.
+    if (b) { b.textContent = n; b.style.display = n ? 'flex' : 'none'; }
+    // El acceso al carrito sólo aparece si hay algo adentro: un carrito
+    // vacío permanente en la barra es ruido.
+    if (btn) btn.style.display = n ? '' : 'none';
+  }
+
+  function agregarAlCarrito(pubId) {
+    if (!usuarioActual) {
+      mostrarGate && mostrarGate({ titulo: 'Sumar al carrito', sub: 'Necesitás una cuenta para pedir.' });
+      return;
+    }
+    const p = mktPostsCache.get(pubId);
+    if (!p) return;
+    if (p.autor_id === usuarioActual.id) { showToast && showToast('Es tu propia publicación'); return; }
+    if (p.disponible === false) { showToast && showToast('Ese producto está sin stock'); return; }
+
+    const yaEsta = carrito.find(i => i.id === pubId);
+    if (yaEsta) yaEsta.cant += 1;
+    else carrito.push({
+      id: pubId, titulo: p.titulo, precio: p.precio_convenir ? 0 : (p.precio || 0),
+      convenir: !!p.precio_convenir, foto_url: p.foto_url || null,
+      autor_id: p.autor_id, autor_nombre: p.perfiles?.nombre || 'Vendedor', cant: 1,
+    });
+    guardarCarrito();
+    showToast && showToast('🛒 Agregado al carrito');
+  }
+  window.agregarAlCarrito = agregarAlCarrito;
+
+  function cambiarCantidad(pubId, delta) {
+    const it = carrito.find(i => i.id === pubId);
+    if (!it) return;
+    it.cant += delta;
+    if (it.cant < 1) carrito = carrito.filter(i => i.id !== pubId);
+    guardarCarrito();
+    renderCarrito();
+  }
+  window.cambiarCantidad = cambiarCantidad;
+
+  function vaciarCarrito() {
+    if (!confirm('¿Vaciar el carrito?')) return;
+    carrito = [];
+    guardarCarrito();
+    renderCarrito();
+  }
+  window.vaciarCarrito = vaciarCarrito;
+
+  const pesos = (n) => '$' + Number(n || 0).toLocaleString('es-AR');
+
+  function renderCarrito() {
+    const wrap = document.getElementById('carrito-lista');
+    if (!wrap) return;
+    const vaciarBtn = document.getElementById('carrito-vaciar');
+
+    if (!carrito.length) {
+      if (vaciarBtn) vaciarBtn.style.display = 'none';
+      wrap.innerHTML =
+        '<div style="padding:60px 24px;text-align:center;color:var(--ink3);line-height:1.6">' +
+          '<div style="font-size:38px;margin-bottom:10px">🛒</div>' +
+          '<div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">Tu carrito está vacío</div>' +
+          '<div style="font-size:12.5px">Sumá productos del Mercado y pedíselos a tus vecinos.</div>' +
+          '<button onclick="goTo(\'s-mercado\')" style="margin-top:16px;background:var(--blue);color:#fff;border:none;border-radius:11px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Ver el Mercado</button>' +
+        '</div>';
+      return;
+    }
+    if (vaciarBtn) vaciarBtn.style.display = '';
+
+    // Un bloque por vendedor: cada uno es un pedido con su propia entrega y
+    // su propio chat. Mezclarlos en un total único prometería una compra
+    // conjunta que no existe — son personas distintas.
+    wrap.innerHTML = carritoPorVendedor().map(v => {
+      const sub = v.items.reduce((s, i) => s + (i.precio || 0) * i.cant, 0);
+      const hayAConvenir = v.items.some(i => i.convenir);
+
+      const items = v.items.map(i =>
+        '<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border)">' +
+          (i.foto_url
+            ? '<img src="' + escHTML(i.foto_url) + '" alt="" style="width:52px;height:52px;border-radius:9px;object-fit:cover;flex-shrink:0">'
+            : '<div style="width:52px;height:52px;border-radius:9px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🛍️</div>') +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:13px;font-weight:700;color:var(--ink);line-height:1.3">' + escHTML(i.titulo) + '</div>' +
+            '<div style="font-size:12px;color:var(--ink2);margin-top:2px">' +
+              (i.convenir ? 'A convenir' : pesos(i.precio)) + '</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">' +
+            '<button onclick="cambiarCantidad(\'' + escHTML(i.id) + '\',-1)" aria-label="Quitar uno" style="width:28px;height:28px;border:1px solid var(--border);background:var(--white);border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;color:var(--ink2)">−</button>' +
+            '<span style="font-size:13px;font-weight:700;min-width:18px;text-align:center">' + i.cant + '</span>' +
+            '<button onclick="cambiarCantidad(\'' + escHTML(i.id) + '\',1)" aria-label="Agregar uno" style="width:28px;height:28px;border:1px solid var(--border);background:var(--white);border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;color:var(--ink2)">+</button>' +
+          '</div>' +
+        '</div>').join('');
+
+      return '<div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:12px">' +
+        '<div style="display:flex;align-items:center;gap:7px;padding-bottom:9px">' +
+          '<span style="font-size:15px">🏪</span>' +
+          '<div style="flex:1;font-size:13.5px;font-weight:800;color:var(--ink)">' + escHTML(v.nombre) + '</div>' +
+        '</div>' +
+        items +
+        '<div style="display:flex;align-items:center;padding-top:11px;margin-top:4px;border-top:1px solid var(--border)">' +
+          '<span style="flex:1;font-size:12.5px;color:var(--ink3)">Subtotal</span>' +
+          '<span style="font-size:15px;font-weight:800;color:var(--ink)">' + pesos(sub) +
+            (hayAConvenir ? ' <span style="font-size:11px;font-weight:600;color:var(--ink3)">+ a convenir</span>' : '') +
+          '</span>' +
+        '</div>' +
+        '<button onclick="pedirAVendedor(\'' + escHTML(v.autor_id) + '\')" style="width:100%;margin-top:11px;background:var(--blue);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">' +
+          'Pedir a ' + escHTML((v.nombre || '').split(' ')[0]) + ' →</button>' +
+      '</div>';
+    }).join('') +
+    '<div style="background:var(--blue-s);border:1px solid #C7D5FF;border-radius:12px;padding:11px 13px;font-size:11.5px;color:var(--ink2);line-height:1.55">' +
+      'Cada vendedor recibe su pedido por separado en el chat. <b>El precio final, la entrega y el pago los arreglás con cada uno ahí</b> — PRONET no cobra ni gestiona el envío.' +
+    '</div>';
+  }
+
+  /** Manda el pedido de UN vendedor a su chat y saca sus items del carrito.
+   *
+   *  No crea una orden en la base a propósito: en este circuito la venta se
+   *  cierra hablando, y una tabla de órdenes que nadie actualiza al entregar
+   *  sería un registro que miente. Si mañana se quiere historial de ventas,
+   *  el paso es guardar la orden acá y darle estados. */
+  async function pedirAVendedor(autorId) {
+    const grupo = carritoPorVendedor().find(v => v.autor_id === autorId);
+    if (!grupo) return;
+
+    const lineas = grupo.items.map(i =>
+      '• ' + i.cant + '× ' + i.titulo + ' — ' + (i.convenir ? 'a convenir' : pesos(i.precio * i.cant))
+    ).join('\n');
+    const sub = grupo.items.reduce((s, i) => s + (i.precio || 0) * i.cant, 0);
+    const texto = '🛒 *Pedido*\n' + lineas +
+      (sub ? '\n\nTotal: ' + pesos(sub) : '') +
+      '\n\n¿Cómo coordinamos la entrega?';
+
+    // Se abre el chat sobre la PRIMERA publicación del grupo: el chat de
+    // mercado cuelga de una publicación, y el resto del pedido viaja en el
+    // texto del mensaje.
+    await mktConsultar(grupo.items[0].id);
+    if (!chatMercadoActualId) { showToast && showToast('⚠️ No se pudo abrir el chat'); return; }
+
+    const r = await PronetDB.enviarMensajeMercado(chatMercadoActualId, texto);
+    if (!r.ok) { showToast && showToast('⚠️ No se pudo enviar el pedido'); return; }
+    await cargarMensajesMercado();
+
+    // Sólo se vacía lo de ESE vendedor: lo de los demás sigue esperando.
+    carrito = carrito.filter(i => i.autor_id !== autorId);
+    guardarCarrito();
+    showToast && showToast('✅ Pedido enviado');
+  }
+  window.pedirAVendedor = pedirAVendedor;
+
   function mktIniciales(nombre) {
     if (!nombre) return '?';
     return nombre.trim().split(' ').slice(0,2).map(w => w[0].toUpperCase()).join('');
@@ -4497,6 +4694,21 @@ document.addEventListener('focusin', (e) => {
            '<span style="color:#F5A623">★</span>' + escHTML(txt + prom) + '</div>';
   }
 
+  /** El botón de carrito sólo en PRODUCTOS: un servicio no se suma a un
+   *  carrito, se conversa. Y no en las propias, que no tiene sentido
+   *  comprarse a uno mismo. Sin stock, el botón lo dice en vez de
+   *  desaparecer — que desaparezca deja al comprador sin saber por qué. */
+  function botonCarritoHTML(p) {
+    const cat = catPorSlug(p.categoria);
+    if (cat?.tipo !== 'producto') return '';
+    if (usuarioActual && p.autor_id === usuarioActual.id) return '';
+    if (p.disponible === false) {
+      return '<span style="font-size:12px;font-weight:700;color:var(--ink3);background:var(--surface);border-radius:9px;padding:8px 12px">Sin stock</span>';
+    }
+    return '<button onclick="agregarAlCarrito(\'' + escHTML(p.id) + '\')" aria-label="Sumar al carrito"' +
+           ' style="background:var(--blue-s);border:1px solid #C7D5FF;border-radius:9px;padding:8px 12px;font-size:14px;cursor:pointer;font-family:inherit;margin-right:8px">🛒</button>';
+  }
+
   function mktCardHTML(p) {
     const nombre    = p.perfiles?.nombre || 'Vecino';
     const iniciales = mktIniciales(nombre);
@@ -4544,6 +4756,7 @@ document.addEventListener('focusin', (e) => {
               <span style="font-size:13px;font-weight:600;color:var(--ink3)">${comentarios > 0 ? comentarios : ''}</span>
             </button>
             <div style="flex:1"></div>
+            ${botonCarritoHTML(p)}
             <button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar('${escHTML(p.id)}')">💬 Consultar</button>
           </div>
           <div style="text-align:right"><span onclick="abrirReportarPub('${escHTML(p.id)}','${escHTML(p.autor_id)}')" style="font-size:11px;color:var(--ink3);cursor:pointer">⚑ Reportar</span></div>
@@ -12136,6 +12349,8 @@ document.addEventListener('focusin', (e) => {
   renderFlagToggles();
   habilitarAccesibilidadTeclado();
   restaurarEstado();
+  cargarCarrito();          // el carrito sobrevive al cierre de la app
+  pintarBadgeCarrito();
   renderPedidosGuardados();
 
   // ── Restaurar sesión y renderizar el Home con el usuario correcto ──

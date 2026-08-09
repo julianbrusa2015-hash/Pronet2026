@@ -1086,7 +1086,7 @@ const PronetDB = (() => {
       if (!remoto) return [];
       let q = sb.from('publicaciones')
         .select(`id, autor_id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, creado,
-                 likes_count, comentarios_count, perfiles:autor_id (nombre, zona)`)
+                 disponible, likes_count, comentarios_count, perfiles:autor_id (nombre, zona)`)
         .eq('activa', true)
         .order('creado', { ascending: false })
         .range(offset, offset + 9);

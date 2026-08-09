@@ -240,6 +240,12 @@
             <svg id="mkt-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
             <span id="mkt-toggle-lbl">Mapa</span>
           </button>
+          <!-- Sólo aparece con algo adentro: un carrito vacío permanente en
+               la barra es ruido. -->
+          <button id="mkt-carrito-btn" onclick="goTo('s-carrito')" aria-label="Ver carrito" style="display:none;position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;font-size:15px;font-family:'Inter',sans-serif">
+            🛒
+            <span id="mkt-carrito-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--blue);color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;border-radius:9px;align-items:center;justify-content:center;padding:0 4px">0</span>
+          </button>
           <button id="mkt-btn-publicar" onclick="abrirPublicarMercado()" style="display:none;background:var(--blue);border:none;border-radius:10px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:700;color:#fff;font-family:'Inter',sans-serif">+ Publicar</button>
           <div class="avatar-sm" id="mkt-avatar" onclick="goTo('s-miperfil')">JL</div>
         </div>
@@ -2194,6 +2200,18 @@
       <div id="param-zonas-lista" style="padding:12px 14px 90px">
         <div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando zonas…</div>
       </div>
+    </div>
+
+    <!-- ══ CARRITO DE MERCADO ═════════════════════════════════════════ -->
+    <div class="screen" id="s-carrito">
+      <div class="pub-header">
+        <button class="back-btn" onclick="goTo('s-mercado')" aria-label="Volver" style="background:none;border:none;padding:8px;margin:-8px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h2>Mi carrito</h2>
+        <button onclick="vaciarCarrito()" id="carrito-vaciar" style="margin-left:auto;background:none;border:none;font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:inherit">Vaciar</button>
+      </div>
+      <div id="carrito-lista" style="padding:12px 14px 100px;background:var(--surface);flex:1;overflow-y:auto"></div>
     </div>
 
     <!-- ══ PARAMETRÍAS · CATEGORÍAS DE ENTRE VECINOS ══════════════════ -->
