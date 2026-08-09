@@ -517,8 +517,7 @@ document.addEventListener('focusin', (e) => {
       const numHTML = i < 3
         ? `<div class="rank-num" style="background:${medallaBg[i]};color:${medallaColor[i]}">${medallas[i]}</div>`
         : `<div class="rank-num" style="background:var(--surface);color:var(--ink3);font-size:13px;font-weight:700">${i+1}</div>`;
-      const estrellas = Math.round(p.rating || 5);
-      const stars = Array(5).fill(0).map((_,j) => `<span class="star${j >= estrellas ? ' e' : ''}" style="font-size:10px">★</span>`).join('');
+      const stars = (p.resenas || 0) > 0 ? estrellasHTML(p.rating, '10px') : '';
       const badge = badgePlanPrestador(p.plan)
         || (p.premium ? '<span style="font-size:10px;color:#B86A00;font-weight:700">⭐ Premium</span>'
         : (p.verificado ? '<span style="font-size:10px;color:#047857;font-weight:700">✓ Verif.</span>' : ''));
@@ -529,12 +528,12 @@ document.addEventListener('focusin', (e) => {
           <div class="rank-name">${escHTML(p.nombre)} ${badge}</div>
           <div class="rank-sub">${escHTML(p.subrubro || p.rubro || '')}</div>
           <div class="rank-score">
-            <div class="stars">${stars}</div>
-            <span style="font-size:11px;color:var(--ink3)">${p.resenas||0} reseñas</span>
+            ${stars ? `<div class="stars">${stars}</div>` : ''}
+            <span style="font-size:11px;color:var(--ink3)">${(p.resenas || 0) > 0 ? p.resenas + ' reseñas' : 'Sin reseñas aún'}</span>
           </div>
         </div>
         <div class="rank-right">
-          <div class="rank-pts">${(p.rating||5).toFixed(1)}</div>
+          <div class="rank-pts">${(p.resenas || 0) > 0 ? (p.rating || 5).toFixed(1) : '–'}</div>
           <div class="rank-pts-lbl">score</div>
         </div>`;
       wrap.appendChild(item);
@@ -946,7 +945,10 @@ document.addEventListener('focusin', (e) => {
     if (avEl) { avEl.innerHTML = avatarInner(p); if (p.color_bg) avEl.style.background = p.color_bg; if (p.color_text) avEl.style.color = p.color_text; }
     setHTML('prof-name', escHTML(p.nombre || 'Prestador') + badgeVerif);
     set('prof-sub', (p.rubro || '') + (p.subrubro ? ' · ' + p.subrubro : ''));
-    set('prof-rating', (p.rating || 5).toFixed(1));
+    // Un guión en vez de 5.0 cuando nadie lo calificó: el rating arranca en
+    // 5.0 por defecto y mostrarlo como puntaje real es inventarle reputación.
+    const conResenas = (p.resenas || 0) > 0;
+    set('prof-rating', conResenas ? (p.rating || 5).toFixed(1) : '–');
     set('prof-resenas', p.resenas || 0);
     // Precio visible en stats
     const precioVal = document.getElementById('prof-precio-val');
@@ -1105,6 +1107,15 @@ document.addEventListener('focusin', (e) => {
   }
   window.renderResenasPerfil = renderResenasPerfil; // expuesta global: el link "Ver todas" la llama desde un onclick inline en el HTML
 
+  /** Las 5 estrellas, llenas hasta el rating. Sólo tiene sentido llamarlo
+   *  cuando hay reseñas: sin ellas no se muestran estrellas, ver más abajo. */
+  function estrellasHTML(rating, tam) {
+    const llenas = Math.round(rating || 5);
+    const est = tam ? ` style="font-size:${tam}"` : '';
+    return Array(5).fill(0).map((_, i) =>
+      `<span class="star${i >= llenas ? ' e' : ''}"${est}>★</span>`).join('');
+  }
+
   function crearCardPrestador(p, onclick) {
     const card = document.createElement('div');
     card.className = 'card';
@@ -1117,9 +1128,15 @@ document.addEventListener('focusin', (e) => {
     // prestador no tiene un plan con badge, cae al premium viejo.
     const badgePrem = badgePlanPrestador(p.plan) || (p.premium ? '<span class="badge b-prem">⭐ Premium</span>' : '');
     const badgeSusp = p.suspendido ? '<div style="background:#FEE2E2;color:#BE123C;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;margin:6px 0">🚫 Cuenta suspendida</div>' : '';
-    const estrellas = Math.round(p.rating || 5);
-    const stars = Array(5).fill(0).map((_,i) =>
-      `<span class="star${i >= estrellas ? ' e' : ''}">★</span>`).join('');
+    // Sin reseñas no se dibujan estrellas. `rating` arranca en 5.0 por
+    // defecto, así que la versión anterior mostraba ★★★★★ 5.0 (0) a alguien
+    // que nadie calificó nunca — prueba social inventada, que es justo lo
+    // que un vecino mira para decidir a quién deja entrar a su casa.
+    const califHTML = (p.resenas || 0) > 0
+      ? `<div class="stars">${estrellasHTML(p.rating)}</div>` +
+        `<span class="rating">${(p.rating || 5).toFixed(1)}</span>` +
+        `<span class="reviews">(${p.resenas})</span>`
+      : '<span class="reviews">Sin reseñas aún</span>';
     const pagos = (p.medios_pago || ['Efectivo']).map(m => {
       const tipo = m === 'Efectivo' ? 'efectivo' : m === 'QR' ? 'qr' : 'transferencia';
       const ico  = m === 'Efectivo' ? '💵' : m === 'QR' ? '📲' : '🏦';
@@ -1132,9 +1149,7 @@ document.addEventListener('focusin', (e) => {
         <div class="c-info">
           <div class="c-name">${escHTML(p.nombre)} ${badgeVerif}</div>
           <div class="c-role">${escHTML(p.rubro)}${p.subrubro ? ' · ' + escHTML(p.subrubro) : ''}</div>
-          <div class="c-badges"><div class="stars">${stars}</div>
-            <span class="rating">${(p.rating||5).toFixed(1)}</span>
-            <span class="reviews">(${p.resenas||0})</span>
+          <div class="c-badges">${califHTML}
             ${badgePrem}
           </div>
         </div>
@@ -2333,7 +2348,7 @@ document.addEventListener('focusin', (e) => {
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
           <span style="font-size:16px">${medallas[i]}</span>
           <span style="font-size:11px;font-weight:700;color:#92400E">${i === 0 ? 'Mejor opción' : 'Sugerido'}</span>
-          <div style="margin-left:auto;background:var(--gold-s);color:#92400E;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">⭐ ${(p.rating||5).toFixed(1)}</div>
+          <div style="margin-left:auto;background:var(--gold-s);color:#92400E;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">${(p.resenas || 0) > 0 ? '⭐ ' + (p.rating || 5).toFixed(1) : 'Sin reseñas'}</div>
         </div>
         <div class="prop-top">
           <div class="prop-av" style="background:${escHTML(p.color_bg||'#EEF2FF')};color:${escHTML(p.color_text||'#2B5BFF')}">${avatarInner(p)}</div>
@@ -3639,7 +3654,7 @@ document.addEventListener('focusin', (e) => {
         </div>
         <div class="sc-disp"><div class="sc-disp-dot"></div><div class="sc-disp-txt">Disponible ahora${distTxt ? ' · ' + distTxt : ''}</div></div>
         <div class="sc-price">$${(p.precio||0).toLocaleString('es-AR')} <span style="font-size:9px;color:var(--ink3)">/ ${escHTML(p.precio_unidad||'visita')}</span></div>
-        <div class="sc-dist">⭐ ${(p.rating||5).toFixed(1)} · ${escHTML(p.zona||'Escobar')}${badgePrem}</div>
+        <div class="sc-dist">${(p.resenas || 0) > 0 ? '⭐ ' + (p.rating || 5).toFixed(1) + ' · ' : ''}${escHTML(p.zona||'Escobar')}${badgePrem}</div>
         <button class="sc-btn">💬 Solicitar servicio</button>`;
       card.querySelector('.sc-btn').addEventListener('click', (e) => { e.stopPropagation(); prestadorActual = p; openChat(p.id || 'x'); });
       wrap.appendChild(card);
