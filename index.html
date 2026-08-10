@@ -4984,6 +4984,27 @@
     </div>
   </div>
 
+  <!-- ══ MODAL: TELÉFONO PARA PUBLICAR ═════════════════════════════════
+       Se pide acá y no en el registro a propósito: el alta tiene que ser lo
+       más liviana posible, y el teléfono recién hace falta cuando alguien va
+       a publicar un pedido — donde además el prestador lo necesita para
+       contactarlo. El servidor lo exige igual (trg_pedidos_exigir_telefono):
+       esto es la versión amable del mismo control, no el control. -->
+  <div class="zona-modal-overlay" id="modal-telefono">
+    <div class="zona-modal">
+      <div class="zm-handle"></div>
+      <div style="font-size:32px;text-align:center;margin-bottom:12px">📱</div>
+      <div class="zm-title" style="text-align:center">Necesitamos tu teléfono</div>
+      <div class="zm-sub" style="text-align:center">Es cómo te va a contactar el prestador que elijas. No se publica: sólo lo ve quien vos elegís.</div>
+      <label class="ob-label" for="tel-gate-input" style="display:block;margin-top:14px">Teléfono</label>
+      <input class="ob-input" id="tel-gate-input" name="tel-gate-input" type="tel"
+        inputmode="tel" autocomplete="tel" placeholder="Ej: 11 4554-6665" maxlength="30">
+      <div id="tel-gate-error" role="alert" style="display:none;font-size:12px;color:#E53E3E;margin-top:6px"></div>
+      <button class="btn-p" id="tel-gate-btn" style="width:100%;margin-top:14px" onclick="confirmarTelefonoGate()">Guardar y publicar</button>
+      <button style="width:100%;margin-top:8px;background:none;border:none;color:var(--ink3);font-size:13px;padding:10px;cursor:pointer;font-family:'Inter',sans-serif" onclick="cancelarTelefonoGate()">Cancelar</button>
+    </div>
+  </div>
+
   <!-- ══ MODAL: ¿EN QUÉ COMUNIDAD VIVÍS? ═══════════════════════════════
        Distinto del modal de zona de arriba: ese elige QUÉ ESTOY MIRANDO y
        vive en el dispositivo; éste guarda DÓNDE VIVO en la cuenta

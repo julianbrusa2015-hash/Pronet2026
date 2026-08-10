@@ -68,6 +68,11 @@ const PronetDB = (() => {
   function esRechazoServidor(error) {
     const code = String(error?.code || '');
     if (/^(23|42)/.test(code)) return true; // integridad (23xxx) / permisos (42501)
+    // P0001 = raise_exception: sólo lo produce un RAISE explícito, o sea una
+    // regla de negocio nuestra (TELEFONO_REQUERIDO, PROPUESTA_NO_ELEGIBLE…).
+    // Sin esto caían en el fallback local y el usuario veía como guardado algo
+    // que el servidor había rechazado a propósito.
+    if (code === 'P0001') return true;
     const m = String(error?.message || '').toLowerCase();
     return m.includes('row-level security') || m.includes('violates') || m.includes('limite_');
   }

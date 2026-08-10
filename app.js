@@ -9839,7 +9839,70 @@ document.addEventListener('focusin', (e) => {
     return await PronetDB.subirFotosPedido(pedidoId, npFotosArchivos);
   }
 
+  // ── Teléfono obligatorio para publicar ───────────────────────────────
+  //
+  // El índice único de teléfono no sirve contra quien simplemente no carga
+  // ninguno: hoy 5 de 12 cuentas están así. Este es el otro lado del mismo
+  // control — se pide en el momento del daño (publicar), no en el alta, así
+  // el que sólo mira nunca se entera y las cuentas viejas se regularizan
+  // solas la primera vez que publican.
+  //
+  // Quien manda de verdad es `trg_pedidos_exigir_telefono` en la base. Esto
+  // es la versión amable: sin el modal, el usuario llenaría el formulario
+  // entero para recibir un error de Postgres al final.
+  let _telGateContinuar = null;
+
+  function tieneTelefono() {
+    return !!String(usuarioActual?.telefono || '').trim();
+  }
+
+  function abrirTelefonoGate(continuar) {
+    _telGateContinuar = continuar;
+    const inp = document.getElementById('tel-gate-input');
+    const err = document.getElementById('tel-gate-error');
+    if (err) { err.style.display = 'none'; err.textContent = ''; }
+    if (inp) inp.value = '';
+    document.getElementById('modal-telefono')?.classList.add('show');
+    setTimeout(() => inp?.focus(), 120);
+  }
+
+  async function confirmarTelefonoGate() {
+    const inp = document.getElementById('tel-gate-input');
+    const err = document.getElementById('tel-gate-error');
+    const btn = document.getElementById('tel-gate-btn');
+    const tel = (inp?.value || '').trim();
+    const mostrarError = (m) => { if (err) { err.textContent = m; err.style.display = 'block'; } };
+    // 8 dígitos es lo mínimo de un número argentino sin código de área; no se
+    // valida más que eso porque el índice compara los últimos 10 y un formato
+    // demasiado estricto rebota números legítimos escritos distinto.
+    if (tel.replace(/\D/g, '').length < 8) return mostrarError('Escribí un teléfono válido');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+    const res = await PronetDB.actualizarMiPerfilBasico({ telefono: tel }).catch(() => ({ ok: false }));
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar y publicar'; }
+    if (!res.ok) {
+      return mostrarError(res.codigo === 'telefono_duplicado'
+        ? 'Ese teléfono ya está registrado en otra cuenta.'
+        : 'No se pudo guardar. Probá de nuevo.');
+    }
+    usuarioActual.telefono = tel;
+    document.getElementById('modal-telefono')?.classList.remove('show');
+    const seguir = _telGateContinuar;
+    _telGateContinuar = null;
+    if (seguir) seguir();
+  }
+  window.confirmarTelefonoGate = confirmarTelefonoGate;
+
+  function cancelarTelefonoGate() {
+    _telGateContinuar = null;
+    document.getElementById('modal-telefono')?.classList.remove('show');
+  }
+  window.cancelarTelefonoGate = cancelarTelefonoGate;
+
   async function npFinalizar() {
+    // Antes de leer el formulario: sin teléfono el INSERT lo rechaza el
+    // trigger igual, así que se pide acá y se reanuda con lo ya cargado.
+    if (usuarioActual && !tieneTelefono()) return abrirTelefonoGate(npFinalizar);
+
     // ── Fase 1: carga de datos real ──
     // Leer el formulario y guardar el pedido en la capa de datos (PronetDB).
     const titulo = (document.getElementById('np-titulo')?.value || '').trim();
@@ -9892,24 +9955,37 @@ document.addEventListener('focusin', (e) => {
 
     const dirigidoA = recontratarDestino?.prestadorId || null;
 
-    const pedido = await PronetDB.crear('pedidos', {
-      titulo: titulo,
-      descripcion: desc,
-      rubro: rubroEl ? rubroEl.textContent : 'Servicio',
-      icono: iconEl ? iconEl.textContent : '📋',
-      zona: zonaActual,
-      estado: 'Publicado',
-      urgencia: urgencia,
-      modalidad: modalidad,
-      frecuencia_veces: frecVeces,
-      frecuencia_periodo: frecPeriodo,
-      // Recontratación: si hay destinatario, el pedido no va al feed.
-      dirigido_a: dirigidoA,
-      presupuesto_min: precioMin,
-      presupuesto_max: precioMax,
-      usuario_id: usuarioActual ? usuarioActual.id : null,
-      fotos: [],
-    });
+    let pedido;
+    try {
+      pedido = await PronetDB.crear('pedidos', {
+        titulo: titulo,
+        descripcion: desc,
+        rubro: rubroEl ? rubroEl.textContent : 'Servicio',
+        icono: iconEl ? iconEl.textContent : '📋',
+        zona: zonaActual,
+        estado: 'Publicado',
+        urgencia: urgencia,
+        modalidad: modalidad,
+        frecuencia_veces: frecVeces,
+        frecuencia_periodo: frecPeriodo,
+        // Recontratación: si hay destinatario, el pedido no va al feed.
+        dirigido_a: dirigidoA,
+        presupuesto_min: precioMin,
+        presupuesto_max: precioMax,
+        usuario_id: usuarioActual ? usuarioActual.id : null,
+        fotos: [],
+      });
+    } catch (e) {
+      // Red de seguridad del gate de arriba: si `usuarioActual.telefono` venía
+      // desactualizado (lo borró en otra pestaña, o la sesión es vieja), el
+      // trigger rechaza igual. Se reabre el modal en vez de perder la carga.
+      if (String(e?.message || '').includes('TELEFONO_REQUERIDO')) {
+        return abrirTelefonoGate(npFinalizar);
+      }
+      showToast && showToast('⚠️ No se pudo publicar el pedido. Probá de nuevo.');
+      console.warn('[npFinalizar]', e?.message || e);
+      return;
+    }
     // Subir fotos si hay, y actualizar el pedido con las URLs
     if (pedido && npFotosArchivos.length > 0) {
       const urls = await npSubirFotos(pedido.id);

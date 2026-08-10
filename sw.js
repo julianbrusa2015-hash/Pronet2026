@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v199'; // v199: un telefono, una cuenta
+const CACHE_VERSION = 'pronet-v200'; // v200: telefono obligatorio para publicar un pedido
 
 const SHELL = [
   './',
