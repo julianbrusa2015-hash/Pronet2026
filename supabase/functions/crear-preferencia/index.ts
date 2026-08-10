@@ -42,10 +42,34 @@ Deno.serve(async (req) => {
       return json({ error: 'Usuario no autenticado' }, 401);
     }
 
-    const { plan, periodo } = await req.json();
+    // `ref` identifica QUÉ se está pagando cuando el producto no es el plan en
+    // sí: hoy, el id del banner. Va en el metadata para que el webhook sepa
+    // qué activar. Los planes y los créditos no lo usan.
+    const { plan, periodo, ref } = await req.json();
     // El frontend manda 'mes' (ver switchBilling en app.js), no 'mensual'.
     if (periodo !== 'mes' && periodo !== 'anual') {
       return json({ error: 'Periodo inválido' }, 400);
+    }
+
+    // Un banner se paga por período fijo y sólo si es TUYO y ya está aprobado.
+    // Se valida acá y no sólo en el webhook porque generar una preferencia
+    // para un banner ajeno permitiría pagarle la publicación a otro, o peor,
+    // activar algo que la moderación todavía no vio.
+    if (plan === 'banner') {
+      if (typeof ref !== 'string' || !/^[0-9a-f-]{36}$/i.test(ref)) {
+        return json({ error: 'Falta el banner a publicar' }, 400);
+      }
+      const { data: b } = await supabase
+        .from('banners')
+        .select('id, estado, usuario_id')
+        .eq('id', ref)
+        .maybeSingle();
+      if (!b || b.usuario_id !== user.id) {
+        return json({ error: 'Ese banner no es tuyo' }, 403);
+      }
+      if (b.estado !== 'aprobado') {
+        return json({ error: 'El banner todavía no está aprobado' }, 409);
+      }
     }
 
     const { data: precioPlan, error: precioError } = await supabase

@@ -53,7 +53,25 @@ alter table public.banners
   add column if not exists dias           integer,
   add column if not exists pagado_en      timestamptz,
   add column if not exists revisado_por   uuid references public.perfiles(id) on delete set null,
-  add column if not exists revisado_en    timestamptz;
+  add column if not exists revisado_en    timestamptz,
+  -- A dónde lleva el banner al tocarlo. NO se permite una URL libre: sería
+  -- una puerta a phishing y a linkear a otra app. Sólo dos destinos, y los
+  -- dos se quedan en el mundo del vecino:
+  --   'whatsapp' → enlace guarda el número; el click abre el chat
+  --   'imagen'   → enlace guarda una imagen (un flyer) que se abre ampliada
+  -- Los banners editoriales del admin quedan con null y siguen usando
+  -- `enlace` como URL, que es el comportamiento de hoy.
+  add column if not exists destino_tipo   text;
+
+alter table public.banners drop constraint if exists banners_destino_check;
+alter table public.banners add constraint banners_destino_check
+  check (destino_tipo is null or destino_tipo in ('whatsapp','imagen'));
+
+-- Cuántos banners pueden estar publicados a la vez. El carrusel rota entre
+-- ellos; vender más de los que entran es prometer algo que no se controla.
+insert into public.config_app (clave, valor)
+values ('banners_activos_max', '6')
+on conflict (clave) do nothing;
 
 -- Los banners que ya existen son editoriales del admin: `usuario_id` null y
 -- estado 'aprobado'. Por eso ese default — así los 5 actuales siguen
@@ -102,11 +120,28 @@ values ('banner', 'Banner en el carrusel', 12000)
 on conflict (plan) do nothing;
 
 -- ── 5 · Alta del banner por el vecino ────────────────────────────────
+/** Cuántos espacios quedan libres.
+ *
+ *  Cuenta 'aprobado' además de 'activo': un banner aprobado y todavía impago
+ *  ya tiene el lugar reservado. Si no, dos personas pagarían por el último
+ *  espacio y a una habría que devolverle la plata — justo lo que este diseño
+ *  evita moderando antes de cobrar. */
+create or replace function public.banners_espacios_libres()
+returns integer language sql stable security definer set search_path = public as $$
+  select greatest(0,
+    coalesce((select valor from public.config_app where clave='banners_activos_max'),'6')::int
+    - (select count(*) from public.banners where estado in ('aprobado','activo'))
+  );
+$$;
+
+grant execute on function public.banners_espacios_libres() to anon, authenticated;
+
 create or replace function public.crear_banner(
   p_nombre     text,
   p_imagen_url text,
   p_enlace     text default null,
-  p_dias       integer default 30
+  p_dias       integer default 30,
+  p_destino    text default 'whatsapp'
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   v_uid uuid := auth.uid();
@@ -122,6 +157,21 @@ begin
   if btrim(coalesce(p_nombre,'')) = '' or btrim(coalesce(p_imagen_url,'')) = '' then
     return jsonb_build_object('ok', false, 'error', 'Falta el nombre o la imagen');
   end if;
+  if p_destino not in ('whatsapp','imagen') then
+    return jsonb_build_object('ok', false, 'error', 'Destino inválido');
+  end if;
+  if btrim(coalesce(p_enlace,'')) = '' then
+    return jsonb_build_object('ok', false, 'error',
+      case when p_destino = 'whatsapp' then 'Falta el WhatsApp de contacto'
+           else 'Falta la imagen que se abre al tocarlo' end);
+  end if;
+
+  -- Se avisa acá, antes de que cargue nada, y no al aprobar: enterarse de que
+  -- no hay lugar después de preparar la pieza es la peor versión de esto.
+  if public.banners_espacios_libres() <= 0 then
+    return jsonb_build_object('ok', false, 'error',
+      'Por ahora no quedan espacios libres. Se liberan cuando vence alguno.', 'codigo', 'sin_espacio');
+  end if;
 
   -- Tope de piezas sin resolver por usuario: sin esto, alguien puede llenar
   -- la cola de moderación sin haber pagado nunca.
@@ -131,8 +181,8 @@ begin
     return jsonb_build_object('ok', false, 'error', 'Ya tenés 3 banners sin publicar. Resolvé esos primero.');
   end if;
 
-  insert into public.banners (nombre, imagen_url, enlace, usuario_id, estado, dias, activo, orden)
-  values (btrim(p_nombre), btrim(p_imagen_url), nullif(btrim(coalesce(p_enlace,'')),''),
+  insert into public.banners (nombre, imagen_url, enlace, destino_tipo, usuario_id, estado, dias, activo, orden)
+  values (btrim(p_nombre), btrim(p_imagen_url), btrim(p_enlace), p_destino,
           v_uid, 'pendiente', greatest(1, coalesce(p_dias, 30)), false, 999)
   returning id into v_id;
 
@@ -140,8 +190,12 @@ begin
 end;
 $$;
 
-revoke all on function public.crear_banner(text,text,text,integer) from public, anon;
-grant execute on function public.crear_banner(text,text,text,integer) to authenticated;
+revoke all on function public.crear_banner(text,text,text,integer,text) from public, anon;
+grant execute on function public.crear_banner(text,text,text,integer,text) to authenticated;
+-- La firma vieja de 4 parámetros: un create or replace con otra firma la
+-- dejaría conviviendo y PostgREST no podría elegir. Ya nos pasó con
+-- buscar_prestadores (ver supabase-ranking-bayesiano.sql).
+drop function if exists public.crear_banner(text, text, text, integer);
 
 -- ── 6 · Moderación ───────────────────────────────────────────────────
 create or replace function public.resolver_banner(
@@ -162,6 +216,12 @@ begin
     -- Exigir la transición desde 'pendiente' evita que dos clicks seguidos
     -- resuelvan dos veces, igual que en resolver_canje.
     return jsonb_build_object('ok', false, 'error', 'Ese banner ya fue resuelto');
+  end if;
+  -- Se revisa de nuevo al aprobar: entre el alta y la moderación pueden
+  -- haberse ocupado los últimos lugares. Aprobar sin espacio dejaría a alguien
+  -- pagando por un lugar que no existe.
+  if p_aprobar and public.banners_espacios_libres() <= 0 then
+    return jsonb_build_object('ok', false, 'error', 'No quedan espacios libres: no se puede aprobar todavía');
   end if;
 
   update public.banners

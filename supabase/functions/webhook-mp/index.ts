@@ -105,6 +105,9 @@ Deno.serve(async (req) => {
     const usuarioId = pago.metadata?.usuario_id;
     const plan = pago.metadata?.plan;
     const periodo = pago.metadata?.periodo;
+    // Qué se compró, cuando el producto no es el plan en sí. Hoy: el id del
+    // banner. MP baja las claves del metadata a snake_case.
+    const ref = pago.metadata?.ref;
     if (!usuarioId || !plan || !periodo) {
       console.error('[webhook-mp] pago aprobado sin metadata esperada', pago.id);
       return new Response('ok', { status: 200 });
@@ -155,6 +158,32 @@ Deno.serve(async (req) => {
       if (errCred) {
         await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
         console.error('[webhook-mp] error acreditando crédito ProMarket', errCred.message);
+        return new Response('error', { status: 500 });
+      }
+      return new Response('ok', { status: 200 });
+    }
+
+    // Banner del carrusel: publica la pieza por los días comprados. No es una
+    // suscripción ni un crédito, así que corta acá.
+    //
+    // `activar_banner_pagado` vuelve a validar que el banner sea del que pagó
+    // y esté aprobado — no alcanza con que la preferencia lo haya chequeado:
+    // esto corre con service_role y es la última puerta antes de publicar.
+    if (plan === 'banner') {
+      if (!ref) {
+        // Sin referencia no hay nada que activar, y reintentar no lo va a
+        // arreglar. Se suelta el candado para poder reprocesarlo a mano.
+        await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[webhook-mp] pago de banner sin ref', pago.id);
+        return new Response('ok', { status: 200 });
+      }
+      const { data: resBanner, error: errBanner } = await supabase.rpc('activar_banner_pagado', {
+        p_banner_id: ref,
+        p_usuario_id: usuarioId,
+      });
+      if (errBanner || !resBanner?.ok) {
+        await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[webhook-mp] error activando banner', errBanner?.message || resBanner?.error);
         return new Response('error', { status: 500 });
       }
       return new Response('ok', { status: 200 });
