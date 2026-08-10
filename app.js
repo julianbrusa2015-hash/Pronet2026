@@ -1622,9 +1622,9 @@ document.addEventListener('focusin', (e) => {
       PronetDB.noLeidosPorChat().catch(() => ({})),
       puedeEnviarPropuesta().catch(() => ({ ok: true })),
       PronetDB.obtenerAnalitica().catch(() => null),
-      pid && rubro
-        ? PronetDB.obtenerRankingPrestador(pid, rubro).catch(() => [])
-        : Promise.resolve([]),
+      pid
+        ? PronetDB.obtenerPosicionPrestador(pid).catch(() => null)
+        : Promise.resolve(null),
       PronetDB.listarPedidosDisponibles({
         zonas: zonasDelFiltro(),
         excluirUsuario: usuarioActual?.id || null,
@@ -1766,8 +1766,7 @@ document.addEventListener('focusin', (e) => {
 
     // ── Números del mes ──
     const vistas = analitica?.vistas_mes ?? 0;
-    const pos = ranking.find(r => r.zona === (usuarioActual?.zona || zonaActual));
-    const posTxt = pos ? '#' + pos.posicion : '—';
+    const posTxt = ranking?.pos_zona ? '#' + ranking.pos_zona : '—';
     const cupoTxt = cupo.limite == null ? '∞' : (cupo.usadas ?? 0) + '/' + cupo.limite;
     // El bloque azul muestra LOGROS, no gestión: "1/10 propuestas" es un
     // límite administrativo del plan, no algo de lo que enorgullecerse. El
@@ -10306,25 +10305,21 @@ document.addEventListener('focusin', (e) => {
     }
 
     // Ranking por zona — cálculo en tiempo real desde la tabla prestadores
-    // Ranking por zona — cálculo en tiempo real
+    // Ranking por zona — usa el mismo RPC que Mi Perfil para no traer toda la tabla
     const rankZonaWrap = document.getElementById('ranking-zonas');
     if (rankZonaWrap && usuarioActual?.prestador_id) {
-      let rubroPrestador = '';
-      const pData = await PronetDB.obtener('prestadores', usuarioActual.prestador_id).catch(() => null);
-      rubroPrestador = pData?.rubro || '';
-      if (rubroPrestador) {
-        const ranking = await PronetDB.obtenerRankingPrestador(usuarioActual.prestador_id, rubroPrestador).catch(() => []);
-        if (ranking.length) {
-          rankZonaWrap.innerHTML = ranking.map(r => `
-            <div class="zona-row">
-              <div class="zona-name">${escHTML(r.zona)}</div>
-              <div class="zona-prog-wrap"><div class="zona-prog" style="width:${r.pct}%"></div></div>
-              <div class="zona-rank">#${r.posicion}</div>
-              <div class="zona-val">de ${r.total} prestadores</div>
-            </div>`).join('');
-        } else {
-          rankZonaWrap.innerHTML = '<div style="text-align:center;padding:16px;color:#999;font-size:13px">Sin datos de ranking aún</div>';
-        }
+      const rk = await PronetDB.obtenerPosicionPrestador(usuarioActual.prestador_id).catch(() => null);
+      if (rk?.pos_zona) {
+        const pct = Math.round(((rk.total_zona - rk.pos_zona + 1) / rk.total_zona) * 100);
+        rankZonaWrap.innerHTML = `
+          <div class="zona-row">
+            <div class="zona-name">${escHTML(rk.zona || '')}</div>
+            <div class="zona-prog-wrap"><div class="zona-prog" style="width:${pct}%"></div></div>
+            <div class="zona-rank">#${rk.pos_zona}</div>
+            <div class="zona-val">de ${rk.total_zona} prestadores</div>
+          </div>`;
+      } else {
+        rankZonaWrap.innerHTML = '<div style="text-align:center;padding:16px;color:#999;font-size:13px">Sin datos de ranking aún</div>';
       }
     }
 
