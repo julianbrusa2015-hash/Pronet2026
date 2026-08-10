@@ -1110,7 +1110,7 @@ const PronetDB = (() => {
 
     /** Lista publicaciones activas, opcionalmente filtradas por categoría.
      *  Orden cronológico inverso, paginado de 10 en 10. */
-    async listarPublicaciones({ categoria = null, busqueda = null, zona = null, offset = 0, categorias = null } = {}) {
+    async listarPublicaciones({ categoria = null, busqueda = null, zona = null, offset = 0, categorias = null, barrios = null } = {}) {
       if (!remoto) return [];
       let q = sb.from('publicaciones')
         // `lote` NO se trae en el feed: es la dirección del vendedor y no se
@@ -1121,6 +1121,15 @@ const PronetDB = (() => {
         .order('creado', { ascending: false })
         .range(offset, offset + 9);
       if (zona) q = q.eq('zona', zona);
+      // Mercado acotado a una comunidad: `barrios` trae la comunidad y sus
+      // barrios. Las publicaciones SIN barrio entran igual — son anteriores
+      // a que el campo fuera obligatorio y esconderlas dejaría el feed casi
+      // vacío. Las comillas en el in() son necesarias: hay nombres con
+      // espacios y con barra ("Matheu / Garín").
+      if (barrios?.length) {
+        const lista = barrios.map(b => '"' + String(b).replace(/"/g, '') + '"').join(',');
+        q = q.or(`barrio.is.null,barrio.in.(${lista})`);
+      }
       // `categorias` acota a una sección (todas las de Servicios, o las de
       // Mercado); `categoria` es el chip puntual dentro de esa sección. El
       // chip gana, pero igual pertenece a la sección activa.

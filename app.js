@@ -5087,13 +5087,21 @@ document.addEventListener('focusin', (e) => {
       cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     }
     mktCargando = true;
+    // Mercado cerrado por comunidad: por defecto se ve lo de la propia. Un
+    // mercado abierto a toda la zona te trae empanadas de Garín que nadie va
+    // a ir a buscar. `mktAmpliado` lo abre a pedido — sin esa salida, el
+    // vecino de una comunidad chica ve un feed vacío y no vuelve.
+    const comunidad = await comunidadDelUsuario();
+    const barrios = (comunidad && !mktAmpliado) ? await barriosDeComunidad(comunidad) : null;
     // `categorias` acota a la sección activa: sin eso, "Todos" en Servicios
     // mostraría también los productos.
     const posts = await PronetDB.listarPublicaciones({
       categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
       busqueda: mktBusqueda, zona: mktZonaActiva, offset: mktOffset,
+      barrios,
     }).catch(() => []);
     mktCargando = false;
+    if (reset) mktPintarAmbito(comunidad);
     if (reset) { cont.innerHTML = ''; mktUltimoResultCount = posts.length; }
     posts.forEach(p => mktPostsCache.set(p.id, p));
     // Cargar qué publicaciones likeó el usuario actual (merge con el Set existente)
@@ -5103,7 +5111,15 @@ document.addEventListener('focusin', (e) => {
       nuevos.forEach(id => mktMisLikes.add(id));
     }
     if (!posts.length && mktOffset === 0) {
-      cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay publicaciones en esta categoría.<br><span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="abrirPublicarMercado()">¡Publicá el primero!</span></div>';
+      // Con el mercado acotado a la comunidad, "no hay nada" casi siempre
+      // significa "no hay nada ACÁ". Ofrecer primero ampliar y después
+      // publicar: mandar a publicar a alguien que entró a comprar es pedirle
+      // que resuelva él el problema de que el mercado esté vacío.
+      cont.innerHTML = (comunidad && !mktAmpliado)
+        ? '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay nada en ' + escHTML(comunidad) + '.<br>' +
+          '<span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="mktToggleAmbito()">Ver también otros barrios</span>' +
+          '<div style="margin-top:10px;font-size:12px">o <span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="abrirPublicarMercado()">publicá el primero</span></div></div>'
+        : '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay publicaciones en esta categoría.<br><span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="abrirPublicarMercado()">¡Publicá el primero!</span></div>';
       mktHayMas = false;
       return;
     }
@@ -5118,6 +5134,31 @@ document.addEventListener('focusin', (e) => {
     const verMas = document.getElementById('mkt-ver-mas');
     if (verMas) verMas.style.display = mktHayMas ? 'block' : 'none';
   }
+
+  // ¿El feed está abierto a toda la zona o acotado a mi comunidad?
+  let mktAmpliado = false;
+
+  /** La barrita que dice de qué mercado estás viendo y ofrece salir de él.
+   *
+   *  Va visible siempre que haya comunidad: un mercado cerrado sin cartel es
+   *  indistinguible de un mercado vacío, y el vecino concluye que no hay
+   *  nada en vez de que está mirando poquito. */
+  function mktPintarAmbito(comunidad) {
+    const cont = document.getElementById('mkt-ambito');
+    if (!cont) return;
+    if (!comunidad) { cont.style.display = 'none'; return; }
+    cont.style.display = 'flex';
+    const txt = document.getElementById('mkt-ambito-txt');
+    const btn = document.getElementById('mkt-ambito-btn');
+    if (txt) txt.textContent = mktAmpliado ? 'Viendo toda la zona' : 'Mercado de ' + comunidad;
+    if (btn) btn.textContent = mktAmpliado ? 'Volver a mi comunidad' : 'Ver también otros barrios';
+  }
+
+  function mktToggleAmbito() {
+    mktAmpliado = !mktAmpliado;
+    renderMercado(true);
+  }
+  window.mktToggleAmbito = mktToggleAmbito;
 
   function filtrarMercado(chip, categoria) {
     document.querySelectorAll('#s-mercado .filter-row .chip').forEach(c => c.classList.remove('on'));
@@ -5244,6 +5285,13 @@ document.addEventListener('focusin', (e) => {
    *  entra a Entre Vecinos por acá, pero se REGRESA al feed. Una portada al
    *  volver de un chat sería un peaje. */
   function entrarAVecinos() {
+    // La comunidad se pregunta ANTES de mostrar nada: es lo que decide qué
+    // mercado ve. Si ya la tiene, o la omitió hoy, sigue de largo.
+    pedirComunidadSiFalta(_entrarAVecinosReal);
+  }
+  window.entrarAVecinos = entrarAVecinos;
+
+  function _entrarAVecinosReal() {
     let visto = null;
     try { visto = localStorage.getItem(portadaKey()); } catch (e) {}
     if (visto === hoyLocal()) return goTo('s-mercado');
@@ -5254,7 +5302,131 @@ document.addEventListener('focusin', (e) => {
     const el = document.getElementById('s-vecinos-portada');
     if (el && el.classList.contains('active')) renderPortadaVecinos();
   }
-  window.entrarAVecinos = entrarAVecinos;
+
+  // ── Comunidad del vecino (perfiles.zona) ─────────────────────────────
+  //
+  // `zonaActual` (el modal de zona) es un filtro de navegación y vive en
+  // localStorage: hoy miro Puertos, mañana Escobar Centro. La comunidad es
+  // otra cosa —dónde vivo— y tiene que estar en la cuenta, porque define de
+  // qué mercado formo parte y quién puede ver mi lote. Eran lo mismo y por
+  // eso los 12 perfiles tenían zona='Escobar': el modal nunca escribía en
+  // la base. Mismo patrón que los T&C por dispositivo.
+  let zonasArbolCache = null;
+
+  async function cargarZonasArbol() {
+    if (zonasArbolCache) return zonasArbolCache;
+    zonasArbolCache = await PronetDB.listarZonasArbol().catch(() => []);
+    return zonasArbolCache;
+  }
+
+  /** La comunidad y sus barrios: el conjunto de valores de
+   *  `publicaciones.barrio` que cuentan como "de mi comunidad". */
+  async function barriosDeComunidad(comunidad) {
+    if (!comunidad) return null;
+    const arbol = await cargarZonasArbol();
+    return [comunidad, ...arbol.filter(z => z.nivel === 3 && z.comunidad === comunidad).map(z => z.nombre)];
+  }
+
+  /** Las comunidades (nivel 2) son las unidades de mercado. */
+  async function listarComunidades() {
+    return (await cargarZonasArbol()).filter(z => z.nivel === 2);
+  }
+
+  /** La comunidad del usuario, o null si su zona todavía es de nivel 1.
+   *
+   *  Un vecino que eligió un barrio (nivel 3) igual pertenece a la comunidad
+   *  de ese barrio: se resuelve por la columna `comunidad` de zonas_arbol. */
+  async function comunidadDelUsuario() {
+    if (!usuarioActual?.zona) return null;
+    const fila = (await cargarZonasArbol()).find(z => z.nombre === usuarioActual.zona);
+    if (!fila) return null;
+    if (fila.nivel === 2) return fila.nombre;
+    if (fila.nivel === 3) return fila.comunidad || null;
+    return null; // nivel 1: es la zona entera, no una comunidad
+  }
+
+  function comunidadOmitidaKey() {
+    return `pronet_comunidad_omitida:${usuarioActual?.id || 'anon'}`;
+  }
+
+  /** Pide la comunidad si falta y recién entonces sigue. Omitir vale por hoy:
+   *  ni bloquea la sección ni vuelve a preguntar en el mismo día. */
+  async function pedirComunidadSiFalta(continuar) {
+    if (!usuarioActual) return continuar();
+    let omitida = null;
+    try { omitida = localStorage.getItem(comunidadOmitidaKey()); } catch (e) {}
+    if (omitida === hoyLocal()) return continuar();
+    const yaTiene = await comunidadDelUsuario();
+    if (yaTiene) return continuar();
+    _comunidadContinuar = continuar;
+    await abrirModalComunidad();
+  }
+
+  let _comunidadContinuar = null;
+
+  async function abrirModalComunidad() {
+    const lista = document.getElementById('comunidad-list');
+    const modal = document.getElementById('modal-comunidad');
+    if (!lista || !modal) return _cerrarComunidadYSeguir();
+    const err = document.getElementById('comunidad-error');
+    if (err) { err.style.display = 'none'; err.textContent = ''; }
+    lista.innerHTML = '<div style="padding:20px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+    modal.classList.add('show');
+    const comunidades = await listarComunidades();
+    if (!comunidades.length) return _cerrarComunidadYSeguir();
+    // El nombre va en un data-attribute y no interpolado en el onclick: el
+    // catálogo de zonas lo edita el admin y "Matheu / Garín" ya trae una
+    // barra. Ver la nota de escHTML() en mktCardHTML.
+    lista.innerHTML = comunidades.map(c =>
+      '<div class="zona-option" data-comunidad="' + escHTML(c.nombre) + '">' +
+        '<div class="zo-icon">🏘️</div>' +
+        '<div style="flex:1"><div class="zo-name">' + escHTML(c.nombre) + '</div>' +
+        '<div class="zo-sub">' + escHTML(c.zona || '') + '</div></div>' +
+        '<div class="zo-check"></div>' +
+      '</div>').join('');
+    lista.querySelectorAll('.zona-option').forEach(el => {
+      el.addEventListener('click', () => confirmarComunidad(el.dataset.comunidad, el));
+    });
+  }
+
+  async function confirmarComunidad(nombre, el) {
+    if (!nombre) return;
+    const lista = document.getElementById('comunidad-list');
+    const err   = document.getElementById('comunidad-error');
+    if (lista) lista.style.opacity = '0.5';
+    if (el) el.classList.add('active');
+    const ok = await PronetDB.actualizarMiPerfilBasico({ zona: nombre }).catch(() => false);
+    if (lista) lista.style.opacity = '1';
+    if (!ok) {
+      // Sin esto el modal se cerraba igual y el vecino creía que había
+      // quedado guardado. Que falle y no se note es peor que el error.
+      if (el) el.classList.remove('active');
+      if (err) { err.textContent = 'No se pudo guardar. Probá de nuevo.'; err.style.display = 'block'; }
+      return;
+    }
+    usuarioActual.zona = nombre;
+    // El filtro de navegación acompaña a la comunidad recién elegida: sería
+    // raro decir "vivo en Puertos" y seguir viendo el feed de otra zona.
+    zonaActual = nombre;
+    guardarEstado();
+    actualizarZonaLabel(zonaActual);
+    showToast && showToast('🏘️ Listo, tu comunidad es ' + nombre);
+    _cerrarComunidadYSeguir();
+  }
+  window.confirmarComunidad = confirmarComunidad;
+
+  function omitirComunidad() {
+    try { localStorage.setItem(comunidadOmitidaKey(), hoyLocal()); } catch (e) {}
+    _cerrarComunidadYSeguir();
+  }
+  window.omitirComunidad = omitirComunidad;
+
+  function _cerrarComunidadYSeguir() {
+    document.getElementById('modal-comunidad')?.classList.remove('show');
+    const seguir = _comunidadContinuar;
+    _comunidadContinuar = null;
+    if (seguir) seguir();
+  }
 
   function cerrarPortadaVecinos() {
     // Se marca al SALIR, no al entrar: si la marcáramos al mostrarla y el
