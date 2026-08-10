@@ -276,23 +276,21 @@ test.describe('PM-6 · Contacto directo', () => {
     expect(r).toBeNull();
   });
 
-  test('perfiles solo es legible con sesión; el teléfono es visible entre usuarios', async ({ page, browser }) => {
-    // ⚠ ESTE TEST CAMBIÓ DE INTENCIÓN — leer antes de "arreglarlo".
+  test('perfiles: las columnas públicas se leen con sesión, el teléfono no', async ({ page, browser }) => {
+    // ⚠ ESTE TEST YA CAMBIÓ DE INTENCIÓN DOS VECES — leer antes de tocarlo.
     //
-    // La versión original exigía que pedir 'telefono' fuera RECHAZADO: había
-    // un grant por columna que lo excluía (supabase-fix-perfiles-lectura.sql).
-    // Esa restricción se revirtió a propósito el 2026-08-02
-    // (supabase-fix-perfiles-columnas.sql, commit b815bc0) porque rompía el
-    // guardado del teléfono PROPIO: el UPDATE ... RETURNING usa el mismo
-    // permiso de columna que un SELECT, así que ni el dueño podía leer de
-    // vuelta el teléfono que acababa de guardar.
+    // Al principio exigía que pedir 'telefono' fuera rechazado. El 2026-08-02 se
+    // revirtió porque el grant por columna rompía guardar el teléfono PROPIO:
+    // el UPDATE ... RETURNING usa el mismo permiso que un SELECT, así que ni
+    // el dueño podía leer de vuelta lo que acababa de escribir. El test pasó
+    // entonces a afirmar lo contrario.
     //
-    // GRANT/REVOKE es por rol, no por fila: no puede distinguir "el dueño lee
-    // el suyo" de "cualquiera lee el de otro". Se optó por el mismo criterio
-    // que prestadores/resenas — lectura para cualquier autenticado.
-    //
-    // Decisión confirmada por el usuario el 2026-08-03. El test ahora fija el
-    // límite que SÍ sigue vigente: sin cuenta no se lee nada.
+    // El 2026-08-09 se cerró de nuevo, y esta vez sin ese efecto: el
+    // guardado dejó de pedir la fila de vuelta (actualizarMiPerfilBasico), y
+    // las dos lecturas legítimas van por funciones security definer que no
+    // dependen del grant — mi_perfil() para el propio y
+    // obtener_telefono_contacto() para la contraparte, que además exige chat
+    // compartido. El SQL existía desde el 02 pero nunca se había corrido.
     await abrir(page);
 
     // 1) Con sesión: las columnas públicas se leen — el feed, los comentarios
@@ -304,21 +302,33 @@ test.describe('PM-6 · Contacto directo', () => {
     expect(publicas.error).toBeNull();
     expect(publicas.total).toBeGreaterThan(0);
 
-    // 2) Con sesión, el teléfono también se lee. Se afirma explícitamente
-    //    para que un cambio futuro que lo vuelva a cerrar rompa este test y
-    //    obligue a revisar el guardado del teléfono propio.
+    // 2) El teléfono NO: pedirlo en un select directo tiene que ser
+    //    rechazado, aun con sesión. Es lo que impide que cualquiera que se
+    //    registre se baje la agenda del barrio en una sola consulta.
     const conTelefono = await page.evaluate(async () => {
       const { data, error } = await window._sb.from('perfiles').select('id, telefono').limit(20);
-      return { huboError: !!error, trajoFilas: (data || []).length > 0 };
+      return { error: error?.message || null, filas: (data || []).length };
     });
-    expect(conTelefono.huboError, 'telefono es legible con sesión desde el 2026-08-02').toBe(false);
-    expect(conTelefono.trajoFilas).toBe(true);
+    expect(conTelefono.error, 'telefono debe estar fuera del grant de columna').not.toBeNull();
+    expect(conTelefono.filas).toBe(0);
 
-    // 3) LÍMITE VIGENTE: sin sesión no se lee NADA. La policy
-    //    perfiles_lectura_autenticados es sólo para {authenticated}; anon
-    //    tiene el grant de tabla pero ninguna policy, así que RLS devuelve
-    //    cero filas. Esto es lo que impide cosechar teléfonos en masa desde
-    //    afuera con la anon key, que es pública.
+    // 3) Pero el dueño sí ve el suyo: va por mi_perfil(), security definer.
+    //    Sin esto, "cerrar el teléfono" rompería el form de editar perfil y
+    //    nadie se enteraría hasta que un usuario no pudiera cargarlo.
+    const propio = await page.evaluate(async () => {
+      const { data, error } = await window._sb.rpc('mi_perfil');
+      const fila = Array.isArray(data) ? data[0] : data;
+      return { error: error?.message || null, tieneCampo: !!fila && 'telefono' in fila };
+    });
+    expect(propio.error).toBeNull();
+    expect(propio.tieneCampo, 'mi_perfil() debe seguir devolviendo el teléfono propio').toBe(true);
+
+    // 4) Sin sesión no se lee NADA. La policy perfiles_lectura_autenticados
+    //    es sólo para {authenticated}; anon no tiene ninguna, así que RLS le
+    //    devuelve cero filas. Esto es lo que impide cosechar desde afuera con
+    //    la anon key, que es pública. Desde el 2026-08-09 anon además tiene
+    //    el grant recortado a (id, nombre): doble cerradura, por si algún día
+    //    se agrega una policy para invitados.
     //
     // ⚠ NO usar window._sb.auth.signOut() acá. En Supabase el signOut por
     //   defecto tiene scope 'global': revoca el refresh token en el SERVIDOR,
