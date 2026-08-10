@@ -4435,6 +4435,53 @@ document.addEventListener('focusin', (e) => {
   // Sección activa. El prestador arranca —y se queda— en 'servicio'.
   let mktTipoActivo = 'servicio';
 
+  // Formato del feed, con un default distinto por sección: en Mercado se
+  // navega buscando qué hay (grilla de fichas); en Servicios importa más el
+  // texto que la foto (tarjeta grande). El usuario puede cambiarlo con el
+  // botón y esa elección se recuerda por sección mientras dure la sesión.
+  let mktFormatoServicio = 'grande'; // 'grande' | 'grid'
+  let mktFormatoProducto = 'grid';
+  // Orden actual del feed (ids), para poder repintar sin volver a pedir al
+  // servidor cuando el usuario sólo cambia de formato.
+  let mktFeedIds = [];
+
+  function mktFormatoActual() {
+    return mktTipoActivo === 'servicio' ? mktFormatoServicio : mktFormatoProducto;
+  }
+
+  function mktAplicarFormatoUI() {
+    const cont = document.getElementById('mkt-feed');
+    if (cont) cont.classList.toggle('mkt-feed-grid', mktFormatoActual() === 'grid');
+    const lbl = document.getElementById('mkt-formato-lbl');
+    // El label nombra el destino, no el estado actual — mismo patrón que el toggle de Mapa/Lista.
+    if (lbl) lbl.textContent = mktFormatoActual() === 'grid' ? 'Tarjetas' : 'Fichas';
+  }
+
+  function mktRepintarFeed() {
+    const cont = document.getElementById('mkt-feed');
+    if (!cont) return;
+    mktAplicarFormatoUI();
+    cont.innerHTML = mktFeedIds.map(id => mktPostsCache.get(id)).filter(Boolean).map(mktCardHTML).join('');
+  }
+
+  function mktToggleFormato() {
+    const nuevo = mktFormatoActual() === 'grid' ? 'grande' : 'grid';
+    if (mktTipoActivo === 'servicio') mktFormatoServicio = nuevo; else mktFormatoProducto = nuevo;
+    mktRepintarFeed();
+  }
+  window.mktToggleFormato = mktToggleFormato;
+
+  // Tocar una ficha de la grilla la expande a tarjeta grande, en el lugar:
+  // no hay pantalla de detalle propia, el feed mismo hace de detalle.
+  function mktVerCompleta(pubId) {
+    if (mktTipoActivo === 'servicio') mktFormatoServicio = 'grande'; else mktFormatoProducto = 'grande';
+    mktRepintarFeed();
+    requestAnimationFrame(() => {
+      document.getElementById('mkt-post-' + pubId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+  window.mktVerCompleta = mktVerCompleta;
+
   /** Muestra u oculta el selector de sección y pinta los chips de la
    *  sección activa.
    *
@@ -4894,8 +4941,25 @@ document.addEventListener('focusin', (e) => {
     const foto = p.foto_url
       ? `<img src="${escHTML(p.foto_url)}" alt="${escHTML(p.titulo)}" style="width:100%;aspect-ratio:4/5;object-fit:cover;display:block">`
       : `<div class="mkt-post-photo" style="background:var(--surface);font-size:48px">🛍️</div>`;
+    const precio = p.precio_convenir ? 'A convenir' : (p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar');
+
+    // Ficha compacta: sólo foto, título, precio y lugar. Sin estrellas a
+    // propósito — casi ninguna publicación tiene reseñas todavía y una ficha
+    // con el rating vacío se lee como si el vecino fuera malo.
+    if (mktFormatoActual() === 'grid') {
+      return `
+        <div class="mkt-ficha" id="mkt-post-${escHTML(p.id)}" onclick="mktVerCompleta('${escHTML(p.id)}')">
+          <div class="mkt-ficha-foto">${foto}</div>
+          <div class="mkt-ficha-body">
+            <div class="mkt-ficha-title">${escHTML(p.titulo)}</div>
+            <div class="mkt-ficha-price">${precio}</div>
+            <div class="mkt-ficha-meta">${escHTML(p.barrio || p.zona || nombre)}</div>
+          </div>
+        </div>`;
+    }
+
     return `
-      <div class="mkt-post">
+      <div class="mkt-post" id="mkt-post-${escHTML(p.id)}">
         <div class="mkt-post-head">
           <div class="c-av" style="width:38px;height:38px;font-size:14px;background:var(--blue-s);color:var(--blue)">${escHTML(iniciales)}</div>
           <div class="c-info">
@@ -4907,7 +4971,7 @@ document.addEventListener('focusin', (e) => {
         <div class="mkt-post-body">
           <div class="mkt-post-title-row">
             <div class="mkt-post-title">${escHTML(p.titulo)}</div>
-            <div class="mkt-post-price">${p.precio_convenir ? 'A convenir' : (p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : 'Consultar')}</div>
+            <div class="mkt-post-price">${precio}</div>
           </div>
           ${mktRecomiendanHTML(p.id)}
           ${p.descripcion ? `<div class="c-desc">${escHTML(p.descripcion)}</div>` : ''}
@@ -5086,9 +5150,11 @@ document.addEventListener('focusin', (e) => {
     // las pestañas y chips salen de él.
     if (!mktCatsCargadas) { await cargarMktCategorias(); mktCatsCargadas = true; }
     mktPintarSecciones();
+    mktAplicarFormatoUI();
     if (reset) {
       mktOffset  = 0;
       mktHayMas  = true;
+      mktFeedIds = [];
       cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     }
     mktCargando = true;
@@ -5117,6 +5183,7 @@ document.addEventListener('focusin', (e) => {
     const recos = await PronetDB.listarRecomendaciones(posts.map(p => p.id)).catch(() => new Map());
     recos.forEach((v, k) => mktRecosCache.set(k, v));
     cont.insertAdjacentHTML('beforeend', posts.map(mktCardHTML).join(''));
+    mktFeedIds.push(...posts.map(p => p.id));
     mktOffset  += posts.length;
     mktHayMas   = posts.length === 10;
     const verMas = document.getElementById('mkt-ver-mas');
@@ -5301,6 +5368,9 @@ document.addEventListener('focusin', (e) => {
     document.getElementById('mkt-ver-mas').style.display    = mktModo === 'lista' && mktHayMas ? 'block' : 'none';
     const lbl = document.getElementById('mkt-toggle-lbl');
     if (lbl) lbl.textContent = mktModo === 'mapa' ? 'Lista' : 'Mapa';
+    // El formato es del feed: en el mapa no tiene nada que cambiar.
+    const btnFmt = document.getElementById('mkt-toggle-formato');
+    if (btnFmt) btnFmt.style.display = mktModo === 'lista' ? '' : 'none';
     if (mktModo === 'mapa') renderMapaMercado();
   }
   window.toggleMapaMercado = toggleMapaMercado;
