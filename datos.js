@@ -1149,6 +1149,39 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    // ── Pre-alta de prestadores ───────────────────────────────────────
+    // Captar en la calle sin obligar a crear una cuenta. Ver
+    // supabase-prealta-prestador.sql.
+
+    /** Código de invitación del usuario actual. Se crea solo la primera vez. */
+    async miCodigoReferido() {
+      if (!remoto) return null;
+      const { data, error } = await sb.rpc('mi_codigo_referido');
+      if (error) { console.warn('[PronetDB] miCodigoReferido', error.message); return null; }
+      return data || null;
+    },
+
+    /** Alta de un lead. Se llama SIN sesión: el que carga es el prestador que
+     *  todavía no tiene cuenta, y por eso el RPC exige un código válido. */
+    async crearPrealta({ codigo, nombre, telefono, rubros, zona, barrio, dni } = {}) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.rpc('crear_prealta', {
+        p_codigo: codigo, p_nombre: nombre, p_telefono: telefono,
+        p_rubros: rubros || [], p_zona: zona || null,
+        p_barrio: barrio || null, p_dni: dni || null,
+      });
+      if (error) { console.warn('[PronetDB] crearPrealta', error.message); return { ok: false, error: error.message }; }
+      return data || { ok: false, error: 'Sin respuesta' };
+    },
+
+    /** A quiénes invitó el usuario actual (o todas, si es admin). */
+    async listarMisPrealtas() {
+      if (!remoto) return [];
+      const { data, error } = await sb.rpc('mis_prealtas');
+      if (error) { console.warn('[PronetDB] listarMisPrealtas', error.message); return []; }
+      return data || [];
+    },
+
     /** Los lotes que el usuario actual tiene permitido ver, de un lote de ids.
      *
      *  El lote es la dirección del vendedor: no viene en `listarPublicaciones`

@@ -1302,6 +1302,17 @@
           </div>
           <div class="m-chev">›</div>
         </div>
+        <!-- Sin data-solo-prestador ni feature flag: cualquiera puede
+             recomendar a alguien que trabaja bien, y de hecho el vecino que
+             ya usó el servicio es el mejor invitando. -->
+        <div class="menu-item" id="menu-invitar" onclick="abrirInvitar()">
+          <div class="m-icon" style="background:#FFF7ED;color:#EA580C">🤝</div>
+          <div class="m-txt">
+            <div class="m-title">Invitar a un prestador</div>
+            <div class="m-sub">Anotalo en 30 segundos, sin que cree cuenta</div>
+          </div>
+          <div class="m-chev">›</div>
+        </div>
         <!-- Visible para los dos roles: el vecino ve sus servicios fijos y
              el prestador sus clientes fijos. El título de la pantalla cambia
              solo según quién entre. -->
@@ -4242,6 +4253,87 @@
       <div style="height:20px"></div>
     </div>
   </div><!-- /privacidad -->
+
+
+  <!-- ══ INVITAR A UN PRESTADOR ════════════════════════════════════════
+       Para captar en la calle: el vecino muestra su link/código y el
+       prestador carga sus datos sin crear cuenta, o el vecino los carga por
+       él. El alta completa (email y contraseña) queda para después. -->
+  <div class="screen" id="s-invitar">
+    <div class="nprop-header">
+      <div class="back-btn" onclick="goTo('s-miperfil')" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <h2>Invitar a un prestador</h2>
+    </div>
+
+    <div style="padding:16px 18px 90px">
+      <div style="background:linear-gradient(135deg,#1A3ACC,#2B5BFF);border-radius:16px;padding:18px;color:#fff;margin-bottom:18px">
+        <div style="font-size:13px;opacity:.75">¿Conocés a alguien que trabaje bien?</div>
+        <div style="font-size:16px;font-weight:800;line-height:1.35;margin-top:5px">Anotalo en 30 segundos</div>
+        <div style="font-size:12.5px;opacity:.8;margin-top:6px;line-height:1.5">No necesita crear una cuenta ahora. Le guardamos los datos y después completa cuando pueda.</div>
+      </div>
+
+      <div style="border:1.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;text-align:center">
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase">Tu código de invitación</div>
+        <div id="inv-codigo" style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:var(--blue);letter-spacing:.14em;margin:8px 0 4px">······</div>
+        <div style="font-size:11.5px;color:var(--ink3);line-height:1.5">Se lo podés dictar por teléfono o mandarle el link</div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn-p" style="flex:1;padding:11px;font-size:13px" onclick="invCompartirWhatsapp()">Enviar por WhatsApp</button>
+          <button style="flex:1;padding:11px;font-size:13px;font-weight:700;background:var(--surface);color:var(--blue);border:1.5px solid var(--blue);border-radius:12px;cursor:pointer;font-family:'Inter',sans-serif" onclick="invCopiarLink()">Copiar link</button>
+        </div>
+      </div>
+
+      <button style="width:100%;padding:13px;font-size:13.5px;font-weight:700;background:var(--surface);border:1.5px dashed var(--border);border-radius:14px;color:var(--ink);cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:22px" onclick="invCargarYo()">
+        ✍️ Cargar yo sus datos ahora
+      </button>
+
+      <div style="font-size:13px;font-weight:800;color:var(--ink);margin-bottom:8px">A quiénes anotaste</div>
+      <div id="inv-lista"></div>
+    </div>
+  </div><!-- /invitar -->
+
+
+  <!-- ══ PRE-ALTA (formulario público, sin cuenta) ═════════════════════
+       Se llega por ?prealta=CODIGO. No requiere sesión: el que carga es el
+       prestador que todavía no tiene cuenta. -->
+  <div class="screen" id="s-prealta">
+    <div class="nprop-header">
+      <div class="back-btn" id="prealta-back" onclick="prealtaSalir()" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <h2>Sumate como prestador</h2>
+    </div>
+
+    <div style="padding:16px 18px 90px">
+      <div id="prealta-form">
+        <div style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:12px;padding:12px 14px;font-size:12.5px;color:var(--blue);line-height:1.55;margin-bottom:18px">
+          <b id="prealta-invitador">Un vecino</b> te está invitando a PRONET. Dejanos tus datos y te contactamos — <b>no necesitás crear una cuenta ahora</b>.
+        </div>
+
+        <label class="ob-label" for="prealta-nombre">Nombre y apellido <span style="color:#E53E3E">*</span></label>
+        <input class="ob-input" id="prealta-nombre" name="prealta-nombre" type="text" placeholder="Ej: Pablo González" maxlength="80" style="margin-bottom:14px">
+
+        <label class="ob-label" for="prealta-tel">Teléfono <span style="color:#E53E3E">*</span></label>
+        <input class="ob-input" id="prealta-tel" name="prealta-tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej: 11 4554-6665" maxlength="30" style="margin-bottom:4px">
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:14px;line-height:1.5">Es por dónde te vamos a contactar.</div>
+
+        <label class="ob-label">¿En qué trabajás? <span style="color:#E53E3E">*</span></label>
+        <div id="prealta-rubros" class="sub-grid" style="margin-bottom:14px"></div>
+
+        <label class="ob-label" for="prealta-zona">Zona</label>
+        <select class="ob-input" id="prealta-zona" name="prealta-zona" style="margin-bottom:18px">
+          <option value="">Elegí tu zona…</option>
+        </select>
+
+        <div id="prealta-error" role="alert" style="display:none;font-size:12.5px;color:#E53E3E;margin-bottom:12px"></div>
+        <button class="btn-p" id="prealta-btn" style="width:100%" onclick="prealtaEnviar()">Anotarme</button>
+      </div>
+
+      <div id="prealta-ok" style="display:none;text-align:center;padding:28px 8px">
+        <div style="font-size:44px">✅</div>
+        <div style="font-size:17px;font-weight:800;color:var(--ink);margin-top:10px">¡Listo, quedaste anotado!</div>
+        <div style="font-size:13px;color:var(--ink3);margin-top:8px;line-height:1.6">Te vamos a contactar por teléfono para terminar de darte de alta. No hace falta que hagas nada más.</div>
+        <button class="btn-p" style="width:100%;margin-top:22px" onclick="prealtaSalir()">Entendido</button>
+      </div>
+    </div>
+  </div><!-- /prealta -->
 
 
   <!-- ══ TUTORIAL OVERLAY ══════════════════════════════════════════════ -->

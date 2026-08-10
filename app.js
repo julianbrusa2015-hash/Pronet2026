@@ -55,7 +55,10 @@ document.addEventListener('DOMContentLoaded', function() {
       );
     } catch (e) {}
     if (login) {
-      if (haySesionGuardada) login.classList.add('hidden');
+      // El link de invitación (?prealta=CODIGO) abre la única pantalla
+      // pública de la app. La bandera ya está puesta acá: la captura corre
+      // al parsear el script, o sea antes de este DOMContentLoaded.
+      if (haySesionGuardada || window._prealtaPendiente) login.classList.add('hidden');
       else login.classList.remove('hidden');
     }
     // 4. Home listo en segundo plano
@@ -290,9 +293,11 @@ document.addEventListener('focusin', (e) => {
     's-loyalty-admin':    'nb-perfil',
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
+    's-invitar':          'nb-perfil',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-vecinos-portada','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
-    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners','s-param-mkt-cats','s-carrito'];
+    's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners','s-param-mkt-cats','s-carrito',
+    's-invitar','s-prealta'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -9839,6 +9844,169 @@ document.addEventListener('focusin', (e) => {
     return await PronetDB.subirFotosPedido(pedidoId, npFotosArchivos);
   }
 
+  // ══ PRE-ALTA DE PRESTADORES ═════════════════════════════════════════
+  //
+  // El alta normal pide email + contraseña + confirmar el mail. Alguien a
+  // quien le ofrecés la app parado en una cola no abre el mail para
+  // confirmar: ahí se pierde, no escribiendo el nombre. Esto separa capturar
+  // el dato (30 segundos, sin cuenta) de crear la cuenta (después).
+  //
+  // Dos caminos al mismo formulario: el prestador entra por el link/QR del
+  // vecino, o el vecino carga los datos en su propio teléfono. El segundo es
+  // el más probable en la calle — el que tiene la app abierta es él.
+
+  let _prealtaCodigo = null;   // el código con el que se entró al formulario
+
+  async function abrirInvitar() {
+    if (!usuarioActual) {
+      mostrarGate && mostrarGate({ titulo: 'Invitar prestadores', sub: 'Necesitás una cuenta para invitar.' });
+      return;
+    }
+    goTo('s-invitar');
+    const codEl = document.getElementById('inv-codigo');
+    const cod = await PronetDB.miCodigoReferido();
+    if (codEl) codEl.textContent = cod || '—';
+    _prealtaCodigo = cod;
+    renderMisPrealtas();
+  }
+  window.abrirInvitar = abrirInvitar;
+
+  function invLink() {
+    return location.origin + location.pathname + '?prealta=' + encodeURIComponent(_prealtaCodigo || '');
+  }
+
+  function invCompartirWhatsapp() {
+    if (!_prealtaCodigo) return;
+    const msg = '¡Hola! Te invito a sumarte a PRONET, la app de servicios de Escobar. ' +
+                'Anotate acá en un minuto (no hace falta crear cuenta): ' + invLink();
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  }
+  window.invCompartirWhatsapp = invCompartirWhatsapp;
+
+  async function invCopiarLink() {
+    if (!_prealtaCodigo) return;
+    try {
+      await navigator.clipboard.writeText(invLink());
+      showToast && showToast('🔗 Link copiado');
+    } catch {
+      // clipboard falla sin HTTPS o sin permiso: mostrar el link para copiar a mano
+      showToast && showToast(invLink(), 8000);
+    }
+  }
+  window.invCopiarLink = invCopiarLink;
+
+  /** El vecino carga los datos él mismo, en su teléfono. */
+  function invCargarYo() {
+    if (!_prealtaCodigo) return;
+    abrirPrealta(_prealtaCodigo, { volverA: 's-invitar' });
+  }
+  window.invCargarYo = invCargarYo;
+
+  async function renderMisPrealtas() {
+    const cont = document.getElementById('inv-lista');
+    if (!cont) return;
+    cont.innerHTML = '<div style="padding:18px 0;text-align:center;font-size:12.5px;color:var(--ink3)">⏳ Cargando…</div>';
+    const lista = await PronetDB.listarMisPrealtas();
+    if (!lista.length) {
+      cont.innerHTML = '<div style="padding:22px 14px;text-align:center;font-size:12.5px;color:var(--ink3);line-height:1.6">Todavía no anotaste a nadie.<br>Cuando lo hagas, van a aparecer acá.</div>';
+      return;
+    }
+    const ESTADOS = {
+      pendiente:  { t: 'Pendiente',  c: '#B45309', b: '#FEF3C7' },
+      reclamada:  { t: 'Ya se sumó', c: '#166534', b: '#DCFCE7' },
+      descartada: { t: 'Descartada', c: 'var(--ink3)', b: 'var(--surface)' },
+    };
+    cont.innerHTML = lista.map(p => {
+      const e = ESTADOS[p.estado] || ESTADOS.pendiente;
+      const rubros = (p.rubros || []).join(' · ');
+      return '<div style="border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;gap:10px">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(p.nombre) + '</div>' +
+          '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(p.telefono) +
+            (rubros ? ' · ' + escHTML(rubros) : '') + '</div>' +
+        '</div>' +
+        '<span style="flex-shrink:0;background:' + e.b + ';color:' + e.c + ';border-radius:20px;padding:4px 10px;font-size:10.5px;font-weight:700">' + e.t + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  /** Abre el formulario público. `volverA` es null cuando se entró por el
+   *  link sin sesión: ahí no hay pantalla a la que volver. */
+  async function abrirPrealta(codigo, { volverA = null } = {}) {
+    _prealtaCodigo = codigo;
+    _prealtaVolverA = volverA;
+    const back = document.getElementById('prealta-back');
+    if (back) back.style.display = volverA ? '' : 'none';
+    ['prealta-nombre','prealta-tel'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const err = document.getElementById('prealta-error');
+    if (err) { err.style.display = 'none'; err.textContent = ''; }
+    document.getElementById('prealta-form').style.display = '';
+    document.getElementById('prealta-ok').style.display   = 'none';
+    // Rubros y zonas salen del catálogo, no escritos a mano: si el admin
+    // agrega un rubro, acá aparece sin tocar código.
+    const wrap = document.getElementById('prealta-rubros');
+    if (wrap) {
+      const rubros = await PronetDB.listarRubros(true).catch(() => []);
+      wrap.innerHTML = rubros.map(r =>
+        '<div class="sub-opt" data-rubro="' + escHTML(r.nombre) + '" onclick="this.classList.toggle(\'on\')">' +
+        escHTML((r.emoji ? r.emoji + ' ' : '') + r.nombre) + '</div>').join('');
+    }
+    const selZ = document.getElementById('prealta-zona');
+    if (selZ && selZ.options.length <= 1) {
+      const zonas = await PronetDB.listarZonasArbol().catch(() => []);
+      selZ.innerHTML = '<option value="">Elegí tu zona…</option>' +
+        zonas.filter(z => z.nivel === 2).map(z =>
+          '<option value="' + escHTML(z.nombre) + '">' + escHTML(z.nombre) + '</option>').join('');
+    }
+    goTo('s-prealta');
+  }
+
+  let _prealtaVolverA = null;
+
+  async function prealtaEnviar() {
+    const err = document.getElementById('prealta-error');
+    const btn = document.getElementById('prealta-btn');
+    const mostrar = (m) => { if (err) { err.textContent = m; err.style.display = 'block'; } };
+    const nombre = (document.getElementById('prealta-nombre')?.value || '').trim();
+    const tel    = (document.getElementById('prealta-tel')?.value || '').trim();
+    const rubros = Array.from(document.querySelectorAll('#prealta-rubros .sub-opt.on')).map(e => e.dataset.rubro);
+    const zona   = document.getElementById('prealta-zona')?.value || null;
+
+    if (nombre.split(/\s+/).filter(Boolean).length < 2) return mostrar('Escribí nombre y apellido');
+    if (tel.replace(/\D/g, '').length < 8) return mostrar('El teléfono no parece válido');
+    // Sin rubro el prestador queda invisible cuando se dé de alta — mismo
+    // motivo por el que el registro normal también lo exige.
+    if (!rubros.length) return mostrar('Elegí al menos un rubro');
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+    const res = await PronetDB.crearPrealta({ codigo: _prealtaCodigo, nombre, telefono: tel, rubros, zona });
+    if (btn) { btn.disabled = false; btn.textContent = 'Anotarme'; }
+
+    if (!res.ok) {
+      if (res.codigo === 'ya_tiene_cuenta') {
+        return mostrar('Ese teléfono ya tiene una cuenta en PRONET. Iniciá sesión con ella.');
+      }
+      return mostrar(res.error || 'No se pudo guardar. Probá de nuevo.');
+    }
+    document.getElementById('prealta-form').style.display = 'none';
+    document.getElementById('prealta-ok').style.display   = '';
+    if (err) err.style.display = 'none';
+  }
+  window.prealtaEnviar = prealtaEnviar;
+
+  function prealtaSalir() {
+    if (_prealtaVolverA) {
+      const destino = _prealtaVolverA;
+      _prealtaVolverA = null;
+      goTo(destino);
+      if (destino === 's-invitar') renderMisPrealtas();
+      return;
+    }
+    // Se entró por el link sin cuenta: la salida natural es el login.
+    location.href = location.origin + location.pathname;
+  }
+  window.prealtaSalir = prealtaSalir;
+
   // ── Teléfono obligatorio para publicar ───────────────────────────────
   //
   // El índice único de teléfono no sirve contra quien simplemente no carga
@@ -13278,15 +13446,16 @@ document.addEventListener('focusin', (e) => {
         }
 
       } else {
-        // Token inválido o expirado: mostrar login
+        // Token inválido o expirado: mostrar login. Salvo que se haya entrado
+        // por un link de invitación, que es público y ya pintó su pantalla.
         quitarAntiFlash();
-        if (loginEl) loginEl.classList.remove('hidden');
+        if (loginEl && !window._prealtaPendiente) loginEl.classList.remove('hidden');
         renderHomeFeed('todos'); // render como invitado
       }
     } catch (e) {
       quitarAntiFlash();
       const loginEl = document.getElementById('login-screen');
-      if (loginEl) loginEl.classList.remove('hidden');
+      if (loginEl && !window._prealtaPendiente) loginEl.classList.remove('hidden');
       renderHomeFeed('todos');
     }
   })();
@@ -13294,6 +13463,21 @@ document.addEventListener('focusin', (e) => {
   // Capturar el resultado de MP y limpiar la URL de forma síncrona.
   // El procesamiento real ocurre dentro de restaurarSesion() una vez que
   // usuarioActual ya está cargado (ver _pendingMpResult más abajo).
+  // Link de invitación (?prealta=CODIGO). Es la única pantalla pública de la
+  // app: la abre alguien que todavía no tiene cuenta, así que no espera a que
+  // restaurarSesion resuelva ni pasa por el login. Corre en el mismo tick que
+  // el resto del módulo, o sea antes de que restaurarSesion vuelva de su
+  // primer await — por eso alcanza con la bandera para que no pise la pantalla.
+  (function capturarPrealta() {
+    const cod = (new URLSearchParams(location.search).get('prealta') || '').trim();
+    if (!cod) return;
+    window._prealtaPendiente = cod;
+    history.replaceState(null, '', location.pathname);
+    try { quitarAntiFlash(); } catch (e) {}
+    document.getElementById('login-screen')?.classList.add('hidden');
+    abrirPrealta(cod, { volverA: null });
+  })();
+
   (function capturarRetornoMP() {
     const p = new URLSearchParams(location.search);
     const mp = p.get('mp');
