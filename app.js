@@ -5943,14 +5943,17 @@ document.addEventListener('focusin', (e) => {
     }
     const plan = planParaLimites(planActual);
     if (plan === 'pro') return { ok: true };
+    const planes = window.PRONET_CONFIG?.PLANES || [];
     if (plan === 'plus') {
+      const limite = planes.find(p => p.id === 'plus')?.mkt_publicaciones_mes ?? 10;
       const usadas = await PronetDB.contarPublicacionesMercadoMes(usuarioActual.id).catch(() => 0);
-      return { ok: usadas < 10, motivo: 'limite_mes', usadas, limite: 10 };
+      return { ok: usadas < limite, motivo: 'limite_mes', usadas, limite };
     }
+    const limite = planes.find(p => p.id === 'base')?.mkt_publicaciones_anio ?? 3;
     const usadas = await PronetDB.contarPublicacionesMercadoAnio(usuarioActual.id).catch(() => 0);
-    if (usadas < 3) return { ok: true };
+    if (usadas < limite) return { ok: true };
     if ((usuarioActual.promarket_creditos || 0) > 0) return { ok: true };
-    return { ok: false, motivo: 'sin_creditos', usadas, limite: 3 };
+    return { ok: false, motivo: 'sin_creditos', usadas, limite };
   }
 
   /** Llena el selector de categoría desde el catálogo, agrupado por sección.
@@ -6083,7 +6086,7 @@ document.addEventListener('focusin', (e) => {
     const cupo = await puedePublicarMercado();
     if (!cupo.ok) {
       if (cupo.motivo === 'limite_mes') {
-        showToast && showToast('⚠️ Ya usaste tus 10 publicaciones de este mes con tu plan Plus. Se renueva el mes que viene.');
+        showToast && showToast(`⚠️ Ya usaste tus ${cupo.limite} publicaciones de este mes con tu plan Plus. Se renueva el mes que viene.`);
       } else {
         abrirModalComprarPublicacion();
       }
@@ -6394,7 +6397,9 @@ document.addEventListener('focusin', (e) => {
         return;
       }
       if (res.error?.includes('limite_publicaciones_mes')) {
-        showToast && showToast('⚠️ Ya usaste tus 10 publicaciones de este mes con tu plan Plus.');
+        const m = res.error.match(/permite (\d+)/);
+        const lim = m ? m[1] : (window.PRONET_CONFIG?.PLANES?.find(p => p.id === 'plus')?.mkt_publicaciones_mes ?? 10);
+        showToast && showToast(`⚠️ Ya usaste tus ${lim} publicaciones de este mes con tu plan Plus.`);
         return;
       }
       showToast && showToast('⚠️ No se pudo ' + (editando ? 'guardar' : 'publicar') + ': ' + res.error);
@@ -7240,11 +7245,13 @@ document.addEventListener('focusin', (e) => {
           <div style="flex:1;font-size:14px;font-weight:800;color:var(--ink)">${escHTML(p.nombre || p.plan)}</div>
           <span style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">${escHTML(p.plan)}</span>
         </div>
-        ${campo(p.plan, 'precio_mes',      'Precio mensual',      p.precio_mes,      'En pesos. 0 = gratuito')}
-        ${campo(p.plan, 'precio_anual',    'Precio anual',        p.precio_anual,    'En pesos')}
-        ${campo(p.plan, 'propuestas_mes',  'Propuestas por mes',  p.propuestas_mes,  'Vacío = ilimitado')}
-        ${campo(p.plan, 'fotos_portfolio', 'Fotos de portfolio',  p.fotos_portfolio, '')}
-        ${campo(p.plan, 'loyalty_boost',   'Multiplicador de puntos', p.loyalty_boost, '1 = sin boost. 1.5 = 50% más puntos')}
+        ${campo(p.plan, 'precio_mes',              'Precio mensual',                   p.precio_mes,              'En pesos. 0 = gratuito')}
+        ${campo(p.plan, 'precio_anual',            'Precio anual',                     p.precio_anual,            'En pesos')}
+        ${campo(p.plan, 'propuestas_mes',          'Propuestas por mes',               p.propuestas_mes,          'Vacío = ilimitado')}
+        ${campo(p.plan, 'fotos_portfolio',         'Fotos de portfolio',               p.fotos_portfolio,         '')}
+        ${campo(p.plan, 'mkt_publicaciones_mes',   'Publicaciones EV por mes',         p.mkt_publicaciones_mes,   'Solo plan Plus. Vacío = no aplica')}
+        ${campo(p.plan, 'mkt_publicaciones_anio',  'Publicaciones EV por año (gratis)', p.mkt_publicaciones_anio, 'Solo plan Base. Vacío = no aplica')}
+        ${campo(p.plan, 'loyalty_boost',           'Multiplicador de puntos',          p.loyalty_boost,           '1 = sin boost. 1.5 = 50% más puntos')}
         <div id="pp-${escHTML(p.plan)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin-top:8px"></div>
         <button onclick="guardarParamPlan('${escHTML(p.plan)}')"
                 style="width:100%;background:var(--blue);color:white;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
@@ -7270,11 +7277,13 @@ document.addEventListener('focusin', (e) => {
     };
 
     const cambios = {
-      precio_mes:      num(leer('precio_mes')),
-      precio_anual:    num(leer('precio_anual')),
-      propuestas_mes:  num(leer('propuestas_mes'), { permitirVacio: true }),  // null = ilimitado
-      fotos_portfolio: num(leer('fotos_portfolio')),
-      loyalty_boost:   num(leer('loyalty_boost')),
+      precio_mes:             num(leer('precio_mes')),
+      precio_anual:           num(leer('precio_anual')),
+      propuestas_mes:         num(leer('propuestas_mes'),         { permitirVacio: true }),
+      fotos_portfolio:        num(leer('fotos_portfolio')),
+      mkt_publicaciones_mes:  num(leer('mkt_publicaciones_mes'),  { permitirVacio: true }),
+      mkt_publicaciones_anio: num(leer('mkt_publicaciones_anio'), { permitirVacio: true }),
+      loyalty_boost:          num(leer('loyalty_boost')),
     };
 
     for (const [k, v] of Object.entries(cambios)) {
@@ -7296,11 +7305,13 @@ document.addEventListener('focusin', (e) => {
     // si no, el admin guarda y la app sigue mostrando lo viejo.
     const cfg = (window.PRONET_CONFIG?.PLANES || []).find(p => p.id === plan);
     if (cfg) {
-      cfg.precio_mes      = cambios.precio_mes;
-      cfg.precio_anual    = cambios.precio_anual;
-      cfg.propuestas_mes  = cambios.propuestas_mes;
-      cfg.fotos_portfolio = cambios.fotos_portfolio;
-      cfg.loyalty_boost   = cambios.loyalty_boost;
+      cfg.precio_mes             = cambios.precio_mes;
+      cfg.precio_anual           = cambios.precio_anual;
+      cfg.propuestas_mes         = cambios.propuestas_mes;
+      cfg.fotos_portfolio        = cambios.fotos_portfolio;
+      cfg.mkt_publicaciones_mes  = cambios.mkt_publicaciones_mes;
+      cfg.mkt_publicaciones_anio = cambios.mkt_publicaciones_anio;
+      cfg.loyalty_boost          = cambios.loyalty_boost;
     }
     decir('✅ Guardado', 'var(--green)');
     setTimeout(() => decir('', ''), 2500);
@@ -12756,8 +12767,10 @@ document.addEventListener('focusin', (e) => {
         if (!p) return;
         p.propuestas_mes  = row.propuestas_mes;
         p.fotos_portfolio = row.fotos_portfolio;
-        if (row.precio_mes   != null) p.precio_mes   = row.precio_mes;
-        if (row.precio_anual != null) p.precio_anual = row.precio_anual;
+        if (row.precio_mes             != null) p.precio_mes              = row.precio_mes;
+        if (row.precio_anual           != null) p.precio_anual            = row.precio_anual;
+        if (row.mkt_publicaciones_mes  != null) p.mkt_publicaciones_mes   = row.mkt_publicaciones_mes;
+        if (row.mkt_publicaciones_anio != null) p.mkt_publicaciones_anio  = row.mkt_publicaciones_anio;
         // El boost que se le PROMETE al usuario tiene que salir de la misma
         // fila que usa acreditar_puntos() para calcularlo. Si quedan en dos
         // lados, la pantalla puede decir ×1.5 mientras la base acredita ×1.25
