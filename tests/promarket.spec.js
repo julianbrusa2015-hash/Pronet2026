@@ -196,6 +196,19 @@ test.describe('PM-0 · Portada de Entre Vecinos', () => {
     await page.locator('#nb-mercado').click();
     // Tiene que mostrarse igual: esa marca no es suya.
     await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
+
+    // Y lo que de verdad cierra la regresión: al salir, la marca que se guarda
+    // tiene que ser LA DE ESTA CUENTA. Sin esta afirmación el test pasaría
+    // igual con el código viejo —la clave global tampoco habría coincidido con
+    // la que planta el test— o sea que verificaría de casualidad.
+    await page.locator('#s-vecinos-portada button').click();
+    await expect(page.locator('#s-mercado')).toHaveClass(/active/, { timeout: 10000 });
+
+    const uid = await page.evaluate(async () =>
+      (await window._sb.auth.getUser()).data.user?.id);
+    expect(uid, 'sin sesión el test no prueba lo que dice').toBeTruthy();
+    expect(await marcas(page), 'la marca tiene que llevar el id de la cuenta')
+      .toContain(`${PREFIJO}:${uid}`);
   });
 });
 
