@@ -5142,15 +5142,16 @@
         <div style="font-size:11px;color:#39FF14;font-weight:700;text-transform:uppercase;letter-spacing:.5px">⚙️ Panel Admin</div>
         <div onclick="cerrarAdmin()" style="color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;padding:0 4px">✕</div>
       </div>
-      <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px">Nivel de funcionalidades</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px">Presets locales · solo este dispositivo</div>
       <div onclick="setNivel(1)" style="padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.06);color:white;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px">🟢 Nivel 1 · Núcleo</div>
       <div onclick="setNivel(2)" style="padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.06);color:white;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px">🟡 Nivel 2 · Crecimiento</div>
       <div onclick="setNivel(3)" style="padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.06);color:white;font-size:12px;font-weight:600;cursor:pointer">🔵 Nivel 3 · Completo</div>
-      <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12);font-size:9px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Flags individuales</div>
-      <div id="dev-flags" style="margin-top:6px"></div>
       <div onclick="reiniciarDemo()" style="margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(255,80,80,.15);color:#FCA5A5;font-size:11px;font-weight:600;cursor:pointer;text-align:center;border:1px solid rgba(255,80,80,.3)">🔄 Reiniciar demo</div>
       <div id="dev-panel-datos" style="margin-top:4px;font-size:10px;font-weight:700;text-align:center;color:rgba(255,255,255,.5)">Datos: …</div>
       <div id="dev-panel-status" style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.5);text-align:center">Nivel actual: 3 (completo)</div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12)">
+        <div onclick="cerrarAdmin();goTo('s-param-features')" style="padding:8px 10px;border-radius:8px;background:rgba(43,91,255,.25);color:#93C5FD;font-size:11px;font-weight:600;cursor:pointer;text-align:center;border:1px solid rgba(43,91,255,.4)">🎛️ Funcionalidades para todos →</div>
+      </div>
     </div>
   </div>
 
