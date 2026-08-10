@@ -5267,7 +5267,10 @@
   </div>
 
   <!-- ══ PANEL ADMIN — Oculto por defecto, acceso secreto ══════════════ -->
-  <!-- Se activa con: 5 toques en el logo PRONET o URL ?admin=true -->
+  <!-- Se abre desde "Mi perfil" → tocar la versión (#version-tap) y pasar el
+       PIN: sólo para admins. Los presets de Nivel de acá valen para esta
+       sesión y este dispositivo — la configuración real que ven todos los
+       usuarios vive en "Funcionalidades para todos" (s-param-features). -->
   <div id="admin-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:999998;align-items:center;justify-content:center" onclick="cerrarAdmin(event)">
     <div id="dev-panel-body" style="background:#1A1A2E;border-radius:14px;padding:18px;width:260px;max-height:80%;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5);font-family:'Inter',sans-serif" onclick="event.stopPropagation()">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">

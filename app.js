@@ -3905,73 +3905,14 @@ document.addEventListener('focusin', (e) => {
     }
   }
 
-  // Permite activar/desactivar cada feature suelta sin arrastrar un nivel
-  // completo (ej: probar loyalty sin denuncias).
-  const FLAG_LABELS = {
-    bolsaTrabajo:       { label: 'Bolsa de trabajo',    grupo: 'Nivel 1' },
-    tutorialOnboarding: { label: 'Tutorial onboarding', grupo: 'Nivel 1' },
-    badgeVerificado:    { label: 'Badge verificado',    grupo: 'Nivel 2' },
-    // Distinto de planes_pagos_activos (config_app, editable desde Moderación):
-    // esto solo decide si la SECCIÓN existe en el build/demo, no si se puede
-    // comprar. Si cualquiera de los dos está apagado, Suscripción se oculta.
-    suscripcionPro:     { label: 'Sección Suscripción (demo)', grupo: 'Nivel 2' },
-    catalogoPrecios:    { label: 'Catálogo de precios', grupo: 'Nivel 2' },
-    editarPerfilPro:    { label: 'Editar perfil pro',   grupo: 'Nivel 2' },
-    denuncias:          { label: 'Denuncias',           grupo: 'Nivel 2' },
-    loyalty:            { label: 'PRONET Points',       grupo: 'Nivel 3' },
-    analyticsAvanzado:  { label: 'Analítica avanzada',  grupo: 'Nivel 3' },
-    mostrarSelectorDemo:{ label: 'Selector demo login', grupo: 'Demo' },
-    // panelConfiguracion se excluye a propósito: apagarlo desde adentro
-    // del propio panel te dejaría sin forma de volver a abrirlo.
-  };
-  let flagsPersonalizados = false;
-
-  function renderFlagToggles() {
-    const wrap = document.getElementById('dev-flags');
-    if (!wrap) return;
-    wrap.innerHTML = '';
-    let grupoActual = null;
-    Object.keys(FLAG_LABELS).forEach(key => {
-      const meta = FLAG_LABELS[key];
-      if (meta.grupo !== grupoActual) {
-        grupoActual = meta.grupo;
-        const g = document.createElement('div');
-        g.textContent = grupoActual;
-        g.style.cssText = 'font-size:8px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:6px 0 3px';
-        wrap.appendChild(g);
-      }
-      const on = FEATURES[key];
-      const row = document.createElement('div');
-      row.setAttribute('role', 'switch');
-      row.setAttribute('aria-checked', on ? 'true' : 'false');
-      row.setAttribute('tabindex', '0');
-      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:7px;cursor:pointer;margin-bottom:3px;background:' + (on ? 'rgba(57,255,20,.08)' : 'rgba(255,255,255,.04)');
-      const lbl = document.createElement('span');
-      lbl.textContent = meta.label;
-      lbl.style.cssText = 'font-size:11px;font-weight:600;color:' + (on ? 'white' : 'rgba(255,255,255,.45)');
-      const dot = document.createElement('span');
-      dot.textContent = on ? '●' : '○';
-      dot.style.cssText = 'font-size:12px;color:' + (on ? '#39FF14' : 'rgba(255,255,255,.3)');
-      row.appendChild(lbl);
-      row.appendChild(dot);
-      row.addEventListener('click', () => toggleFeature(key));
-      row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFeature(key); } });
-      wrap.appendChild(row);
-    });
-  }
-
-  function toggleFeature(key) {
-    FEATURES[key] = !FEATURES[key];
-    flagsPersonalizados = true;
-    aplicarFeatureFlags();
-    // Si la pantalla activa quedó deshabilitada, volver a Home
-    const activeScreen = document.querySelector('.screen.active');
-    if (activeScreen && !isScreenEnabled(activeScreen.id)) goTo('s-home');
-    const status = document.getElementById('dev-panel-status');
-    if (status) status.textContent = 'Nivel: personalizado';
-    renderFlagToggles();
-    guardarEstado();
-  }
+  // Los interruptores por feature viven en "Funcionalidades para todos"
+  // (s-param-features), que guarda en config_app.features_off y alcanza a
+  // todos los usuarios. Acá hubo una copia que escribía en localStorage:
+  // renderizaba en un contenedor `#dev-flags` que no existe en el HTML, así
+  // que hacía años que no dibujaba nada, y su rastro en localStorage podía
+  // dejar una feature apagada en un dispositivo sin que el admin lo viera
+  // (features_off sólo lista las APAGADAS: nunca vuelve a prender lo que el
+  // snapshot local bajó). Se borró entera — ver restaurarEstado().
 
   // ── Persistencia de estado (Punto 2 del plan) ────────────────────────
   // Guarda nivel de features, zona y tipo de usuario para que sobrevivan
@@ -3981,12 +3922,14 @@ document.addEventListener('focusin', (e) => {
   const STORAGE_KEY = 'pronet-estado-v1';
   let nivelActual = 3;
 
+  // Los feature flags NO se guardan acá: su fuente de verdad es
+  // config_app.features_off, que se aplica en restaurarSesion() y vale para
+  // todos los usuarios. Persistirlos por dispositivo hacía que un preset de
+  // Nivel probado una vez sobreviviera para siempre en ese navegador, por
+  // debajo de la configuración real y sin forma de notarlo.
   function guardarEstado() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        nivel: nivelActual,
-        flags: { ...FEATURES },        // Punto 3: snapshot de flags individuales
-        personalizado: flagsPersonalizados,
         zona:  zonaActual,
         tipo:  userTipo,
       }));
@@ -4003,22 +3946,10 @@ document.addEventListener('focusin', (e) => {
   function restaurarEstado() {
     const est = leerEstadoGuardado();
     if (!est) return;
-    // Flags: si el usuario personalizó toggles individuales, restaurar el
-    // snapshot exacto; si no, alcanza con re-aplicar el nivel guardado.
-    if (est.personalizado && est.flags && typeof est.flags === 'object') {
-      Object.keys(FEATURES).forEach(k => {
-        if (k === 'panelConfiguracion') return; // nunca restaurar apagado el panel
-        if (typeof est.flags[k] === 'boolean') FEATURES[k] = est.flags[k];
-      });
-      flagsPersonalizados = true;
-      if (typeof est.nivel === 'number') nivelActual = est.nivel;
-      aplicarFeatureFlags();
-      const status = document.getElementById('dev-panel-status');
-      if (status) status.textContent = 'Nivel: personalizado';
-      renderFlagToggles();
-    } else if (est.nivel === 1 || est.nivel === 2 || est.nivel === 3) {
-      setNivel(est.nivel);
-    }
+    // `nivel`, `flags` y `personalizado` pueden venir en snapshots viejos:
+    // se ignoran a propósito. Los presets de Nivel siguen sirviendo para
+    // mostrar la app en una etapa, pero duran lo que dura la sesión — al
+    // recargar manda config_app, que es lo que ven todos los usuarios.
     // Tipo de usuario (actualiza también el selector demo del login)
     if (est.tipo === 'cliente' || est.tipo === 'prestador') setUserTipo(est.tipo);
     // Zona: restaurar valor, marcar la opción en el modal y no volver a mostrarlo
@@ -4068,9 +3999,7 @@ document.addEventListener('focusin', (e) => {
     }
     aplicarFeatureFlags();
     nivelActual = n;
-    flagsPersonalizados = false; // volver a un preset limpia la personalización
-    renderFlagToggles();         // reflejar el preset en los toggles individuales
-    guardarEstado(); // persistir nivel elegido
+    // No se persiste: el preset vale para esta sesión. Ver guardarEstado().
     const status = document.getElementById('dev-panel-status');
     if (status) status.textContent = `Nivel actual: ${n}`;
     // Si la pantalla activa quedó deshabilitada, volver a Home
@@ -12844,7 +12773,6 @@ document.addEventListener('focusin', (e) => {
   }
 
   // ── Inicialización (el script corre al final del <body>, DOM listo) ──
-  renderFlagToggles();
   habilitarAccesibilidadTeclado();
   restaurarEstado();
   cargarCarrito();          // el carrito sobrevive al cierre de la app

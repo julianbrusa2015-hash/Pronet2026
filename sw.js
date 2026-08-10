@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v195'; // v195: toggle de formato (fichas/tarjetas) en el feed de Entre Vecinos
+const CACHE_VERSION = 'pronet-v196'; // v196: borrado el panel de flags local que pisaba la config de la DB
 
 const SHELL = [
   './',
