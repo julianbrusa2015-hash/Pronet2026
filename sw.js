@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v197'; // v197: comunidad del vecino en la cuenta + mercado cerrado por comunidad
+const CACHE_VERSION = 'pronet-v198'; // v198: lote opcional visible solo dentro de la comunidad
 
 const SHELL = [
   './',

@@ -4360,6 +4360,8 @@ document.addEventListener('focusin', (e) => {
   // de la card pasen solo el id (uuid, no controlado por el usuario) en vez
   // de interpolar título/nombre (texto libre) directo en el atributo onclick.
   const mktPostsCache = new Map();
+  // Lote por publicación, sólo de las que el servidor autorizó a ver.
+  const mktLotesCache = new Map();
 
   // Sección activa. El prestador arranca —y se queda— en 'servicio'.
   let mktTipoActivo = 'servicio';
@@ -4908,7 +4910,7 @@ document.addEventListener('focusin', (e) => {
             <summary style="font-size:12px;color:var(--blue);font-weight:600;cursor:pointer">Ver detalles</summary>
             <ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--ink2)">${p.detalles.map(d => `<li>${escHTML(d)}</li>`).join('')}</ul>
           </details>` : ''}
-          ${(p.barrio || p.zona) ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">📍 ${escHTML(p.barrio || p.zona)}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</div>` : ''}
+          ${(p.barrio || p.zona) ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">📍 ${escHTML(p.barrio || p.zona)}${mktLotesCache.get(p.id) ? ' · ' + escHTML(mktLotesCache.get(p.id)) : ''}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</div>` : ''}
           <div style="display:flex;align-items:center;gap:12px;margin:10px 0 8px">
             <button id="like-btn-${escHTML(p.id)}" onclick="mktToggleLike('${escHTML(p.id)}')"
               data-liked="${liked ? '1' : '0'}"
@@ -5127,6 +5129,10 @@ document.addEventListener('focusin', (e) => {
     // dibujar: una consulta por tarjeta serían diez por scroll.
     const recos = await PronetDB.listarRecomendaciones(posts.map(p => p.id)).catch(() => new Map());
     recos.forEach((v, k) => mktRecosCache.set(k, v));
+    // Los lotes que este usuario puede ver. El servidor decide cuáles: acá
+    // sólo llegan los que corresponden, así que no hay nada que filtrar.
+    const lotes = await PronetDB.listarLotesVisibles(posts.map(p => p.id)).catch(() => new Map());
+    lotes.forEach((v, k) => mktLotesCache.set(k, v));
     cont.insertAdjacentHTML('beforeend', posts.map(mktCardHTML).join(''));
     mktFeedIds.push(...posts.map(p => p.id));
     mktOffset  += posts.length;
@@ -6312,6 +6318,7 @@ document.addEventListener('focusin', (e) => {
       .find(z => z.nombre === suZona)?.madre || '';
     await pmPintarZonas(suMadre, suZona);
     const loteEl = document.getElementById('pm-lote'); if (loteEl) loteEl.value = '';
+    const mlEl = document.getElementById('pm-mostrar-lote'); if (mlEl) mlEl.checked = false;
     const catSel = document.getElementById('pm-categoria');
     if (catSel) catSel.value = '';
     const tit = document.getElementById('pm-screen-titulo'); if (tit) tit.textContent = 'Nueva publicación';
@@ -6410,6 +6417,7 @@ document.addEventListener('focusin', (e) => {
     // barrio antes de que su lista exista lo dejaría vacío.
     await pmPintarZonas(pub.zona || '', pub.barrio || '');
     const loteEl = document.getElementById('pm-lote'); if (loteEl) loteEl.value = pub.lote || '';
+    const mlEl = document.getElementById('pm-mostrar-lote'); if (mlEl) mlEl.checked = !!pub.mostrar_lote;
     // La sección sale de la categoría guardada: si la publicación es de
     // Mercado, el formulario tiene que abrir en Mercado. Va ANTES de pintar,
     // porque pmPintarCategorias sólo lista las de la sección activa y si no
@@ -6545,6 +6553,7 @@ document.addEventListener('focusin', (e) => {
     const zona   = document.getElementById('pm-zona')?.value;
     const barrio = document.getElementById('pm-barrio')?.value;
     const lote   = (document.getElementById('pm-lote')?.value || '').trim();
+    const mostrarLote = !!document.getElementById('pm-mostrar-lote')?.checked && !!lote;
     const categoria = document.getElementById('pm-categoria')?.value;
     const editando = !!pmEditandoId;
 
@@ -6571,10 +6580,10 @@ document.addEventListener('focusin', (e) => {
     let res;
     if (editando) {
       res = await PronetDB.editarPublicacion(pmEditandoId, { categoria, titulo, descripcion: desc || null,
-                                                              precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona, barrio, lote: lote || null });
+                                                              precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona, barrio, lote: lote || null, mostrar_lote: mostrarLote });
     } else {
       res = await PronetDB.crearPublicacion({ categoria, titulo, descripcion: desc || null,
-                                             precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona, barrio, lote: lote || null });
+                                             precio: precio ? Number(precio) : null, precio_convenir: precioConvenir, detalles, foto_url, zona, barrio, lote: lote || null, mostrar_lote: mostrarLote });
     }
 
     btn.disabled = false;

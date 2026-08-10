@@ -1144,8 +1144,24 @@ const PronetDB = (() => {
       return data || [];
     },
 
+    /** Los lotes que el usuario actual tiene permitido ver, de un lote de ids.
+     *
+     *  El lote es la dirección del vendedor: no viene en `listarPublicaciones`
+     *  y `publicaciones.lote` ya no tiene SELECT para authenticated. Sólo lo
+     *  devuelve este RPC, y sólo si el autor lo habilitó y el que mira vive
+     *  en su misma comunidad (ver supabase-lote-opcional.sql).
+     *
+     *  Batch por página, no por tarjeta: una consulta por publicación serían
+     *  diez por scroll. Mismo criterio que listarRecomendaciones. */
+    async listarLotesVisibles(ids) {
+      if (!remoto || !ids?.length) return new Map();
+      const { data, error } = await sb.rpc('lotes_visibles', { p_ids: ids });
+      if (error) { console.warn('[PronetDB] listarLotesVisibles', error.message); return new Map(); }
+      return new Map((data || []).map(r => [r.id, r.lote]));
+    },
+
     /** Crea una publicación nueva. El autor_id lo pone RLS (auth.uid()). */
-    async crearPublicacion({ categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, lote }) {
+    async crearPublicacion({ categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, lote, mostrar_lote }) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const uid = await this.usuarioIdActual();
       if (!uid) return { ok: false, error: 'Sin sesión' };
@@ -1153,7 +1169,8 @@ const PronetDB = (() => {
         .insert({ autor_id: uid, categoria, titulo, descripcion: descripcion || null,
                   precio: precio || null, precio_convenir: !!precio_convenir, detalles: detalles || [],
                   foto_url: foto_url || null, zona: zona || null,
-                  barrio: barrio || null, lote: lote || null })
+                  barrio: barrio || null, lote: lote || null,
+                  mostrar_lote: !!mostrar_lote })
         .select('id').single();
       if (error) return { ok: false, error: error.message };
       // Best-effort: notificar suscriptores con alertas que coincidan
@@ -1350,7 +1367,7 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
-    async editarPublicacion(id, { categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, lote }) {
+    async editarPublicacion(id, { categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, lote, mostrar_lote }) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const uid = await this.usuarioIdActual();
       if (!uid) return { ok: false, error: 'Sin sesión' };
@@ -1361,6 +1378,7 @@ const PronetDB = (() => {
       if (zona   !== undefined) campos.zona   = zona || null;
       if (barrio !== undefined) campos.barrio = barrio || null;
       if (lote   !== undefined) campos.lote   = lote || null;
+      if (mostrar_lote !== undefined) campos.mostrar_lote = !!mostrar_lote;
       const { error } = await sb.from('publicaciones').update(campos).eq('id', id).eq('autor_id', uid);
       if (error) return { ok: false, error: error.message };
       return { ok: true };
@@ -1383,15 +1401,15 @@ const PronetDB = (() => {
       return chats.map(c => ({ ...c, consultante: pm[c.consultante_id] || {} }));
     },
 
-    /** Lista todas las publicaciones propias (activas e inactivas). */
+    /** Lista todas las publicaciones propias (activas e inactivas).
+     *
+     *  Va por RPC y no por select directo porque `lote` dejó de tener SELECT
+     *  para `authenticated`, y GRANT es por ROL y no por fila: sin esto el
+     *  propio autor no podría leer su lote para editarlo. El RPC filtra por
+     *  auth.uid(), así que sigue devolviendo sólo lo suyo. */
     async listarMisPublicaciones() {
       if (!remoto) return [];
-      const uid = await this.usuarioIdActual();
-      if (!uid) return [];
-      const { data, error } = await sb.from('publicaciones')
-        .select('id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, activa, disponible, zona, barrio, lote, creado')
-        .eq('autor_id', uid)
-        .order('creado', { ascending: false });
+      const { data, error } = await sb.rpc('mis_publicaciones');
       if (error) { console.warn('[PronetDB] listarMisPublicaciones', error.message); return []; }
       return data || [];
     },
