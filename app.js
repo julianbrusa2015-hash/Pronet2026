@@ -9934,12 +9934,58 @@ document.addEventListener('focusin', (e) => {
     const cod = await PronetDB.miCodigoReferido();
     if (codEl) codEl.textContent = cod || '—';
     _prealtaCodigo = cod;
+    invPintarQR();
     renderMisPrealtas();
   }
   window.abrirInvitar = abrirInvitar;
 
   function invLink() {
     return location.origin + location.pathname + '?prealta=' + encodeURIComponent(_prealtaCodigo || '');
+  }
+
+  /** Carga la librería de QR una sola vez, cuando se abre la pantalla.
+   *
+   *  Local y no de un CDN: la CSP bloquea los hosts externos. Bajo demanda y
+   *  no en el <head>: son 56 KB para una pantalla que casi nadie abre.
+   *  Mismo patrón que cargarGoogleMapsAPI(). */
+  let _qrLibPromesa = null;
+  function cargarQRLib() {
+    if (window.qrcode) return Promise.resolve(true);
+    if (_qrLibPromesa) return _qrLibPromesa;
+    _qrLibPromesa = new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = './vendor/qrcode.js';
+      s.onload  = () => resolve(!!window.qrcode);
+      s.onerror = () => { _qrLibPromesa = null; resolve(false); };
+      document.head.appendChild(s);
+    });
+    return _qrLibPromesa;
+  }
+
+  /** Dibuja el QR del link de invitación.
+   *
+   *  Corrección M (15%): el QR se muestra en una pantalla y se escanea de
+   *  cerca, no impreso ni arrugado. Subir a Q/H agrandaría los módulos sin
+   *  necesidad y lo haría más difícil de enfocar con una cámara vieja. */
+  async function invPintarQR() {
+    const cont = document.getElementById('inv-qr');
+    if (!cont || !_prealtaCodigo) return;
+    const ok = await cargarQRLib();
+    if (!ok) { cont.innerHTML = '<div style="font-size:11.5px;color:var(--ink3);padding:18px 0">No se pudo cargar el código QR. Igual podés compartir el link.</div>'; return; }
+    try {
+      const qr = window.qrcode(0, 'M');   // 0 = elige la versión más chica que entre
+      qr.addData(invLink());
+      qr.make();
+      // createSvgTag arma el SVG entero: nada de lo que devuelve viene del
+      // usuario (es una URL que construimos nosotros), así que no hay dato
+      // ajeno interpolándose acá.
+      cont.innerHTML = qr.createSvgTag({ cellSize: 5, margin: 2, scalable: true });
+      const svg = cont.querySelector('svg');
+      if (svg) { svg.style.width = '100%'; svg.style.height = 'auto'; svg.style.display = 'block'; }
+    } catch (e) {
+      console.warn('[QR]', e?.message || e);
+      cont.innerHTML = '';
+    }
   }
 
   function invCompartirWhatsapp() {

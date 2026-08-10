@@ -4273,9 +4273,13 @@
       </div>
 
       <div style="border:1.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;text-align:center">
-        <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase">Tu código de invitación</div>
-        <div id="inv-codigo" style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:var(--blue);letter-spacing:.14em;margin:8px 0 4px">······</div>
-        <div style="font-size:11.5px;color:var(--ink3);line-height:1.5">Se lo podés dictar por teléfono o mandarle el link</div>
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase">Mostrale este código</div>
+        <!-- El QR es el camino de la calle: se lo mostrás en la pantalla y lo
+             escanea con la cámara. El código de abajo es el plan B para
+             cuando la cámara no engancha o hay que dictarlo por teléfono. -->
+        <div id="inv-qr" style="width:180px;max-width:60%;margin:12px auto 10px;aspect-ratio:1;display:flex;align-items:center;justify-content:center"></div>
+        <div id="inv-codigo" style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--blue);letter-spacing:.14em;margin:0 0 4px">······</div>
+        <div style="font-size:11.5px;color:var(--ink3);line-height:1.5">O dictale el código por teléfono</div>
         <div style="display:flex;gap:8px;margin-top:14px">
           <button class="btn-p" style="flex:1;padding:11px;font-size:13px" onclick="invCompartirWhatsapp()">Enviar por WhatsApp</button>
           <button style="flex:1;padding:11px;font-size:13px;font-weight:700;background:var(--surface);color:var(--blue);border:1.5px solid var(--blue);border-radius:12px;cursor:pointer;font-family:'Inter',sans-serif" onclick="invCopiarLink()">Copiar link</button>
