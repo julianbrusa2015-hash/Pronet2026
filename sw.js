@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v192'; // v192: encabezado inicio marino con logo ProNet
+const CACHE_VERSION = 'pronet-v193'; // v193: fix logo alineado en encabezado + banner login con red de personas
 
 const SHELL = [
   './',
