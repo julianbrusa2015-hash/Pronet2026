@@ -69,6 +69,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof aplicarFeatureFlags === 'function') aplicarFeatureFlags();
   });
 
+// Bloque 1b-0: frases rotantes en el pill del hero de login
+(function() {
+  const FRASES = [
+    'La red de los que saben hacer',
+    'Conexiones de trabajo garantizadas',
+    'El punto de encuentro de los que trabajan',
+    'Profesionales de confianza, a un clic de distancia',
+  ];
+  let idx = 0;
+  function cicloPill() {
+    const el = document.getElementById('login-pill-msg');
+    if (!el) return;
+    el.style.opacity = '0';
+    setTimeout(() => {
+      idx = (idx + 1) % FRASES.length;
+      el.textContent = FRASES[idx];
+      el.style.opacity = '1';
+    }, 420);
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    setInterval(cicloPill, 3500);
+  });
+})();
+
 // Bloque 1b: handler de teclado virtual (visualViewport API)
 // Cuando el teclado abre en iOS/Android PWA, el viewport se achica.
 // Ajustamos el padding-bottom de la pantalla activa para que el contenido
