@@ -1154,6 +1154,26 @@ const PronetDB = (() => {
       return { ok: true, id: data.id };
     },
 
+    /** Cuántas publicaciones activas hay, opcionalmente acotado a un conjunto
+     *  de zonas. Lo usa la portada de Entre Vecinos para mostrar un número
+     *  real en vez del "24 vecinos activos hoy" fijo del diseño.
+     *
+     *  Cuenta publicaciones, no personas: es lo que la tabla sabe de verdad y
+     *  lo que el vecino puede contrastar entrando al feed. "Vecinos activos"
+     *  implicaría una noción de actividad que no registramos.
+     *
+     *  head:true — sólo pide el count, no trae las filas. */
+    async contarPublicacionesActivas(zonas = null) {
+      if (!remoto) return 0;
+      let q = sb.from('publicaciones')
+        .select('id', { count: 'exact', head: true })
+        .eq('activa', true);
+      if (zonas?.length) q = q.in('zona', zonas);
+      const { count, error } = await q;
+      if (error) { console.warn('[PronetDB] contarPublicacionesActivas', error.message); return 0; }
+      return count || 0;
+    },
+
     /** Publicaciones que un usuario creó en el mes calendario actual (cupo Plus). */
     async contarPublicacionesMercadoMes(usuarioId) {
       if (!remoto || !usuarioId) return 0;

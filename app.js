@@ -189,7 +189,11 @@ document.addEventListener('focusin', (e) => {
     editarPerfilPro:   ['s-historial'],
     suscripcionPro:    [], // s-subs siempre accesible — es donde el usuario activa el plan
     analyticsAvanzado: ['s-analytics'],
-    mercadoPlaza:      ['s-mercado', 's-pub-mercado', 's-chat-mercado', 's-mis-publicaciones', 's-mis-consultas-mkt', 's-mis-consultas-enviadas', 's-comentarios-pub', 's-mis-alertas'],
+    // 's-vecinos-portada' va acá y no aparte: es la puerta de Entre Vecinos,
+    // así que con el flag apagado tiene que quedar tan inalcanzable como el
+    // feed. Una portada accesible hacia una sección apagada sería peor que
+    // no tenerla.
+    mercadoPlaza:      ['s-mercado', 's-vecinos-portada', 's-pub-mercado', 's-chat-mercado', 's-mis-publicaciones', 's-mis-consultas-mkt', 's-mis-consultas-enviadas', 's-comentarios-pub', 's-mis-alertas'],
   };
 
   function isScreenEnabled(id) {
@@ -229,6 +233,7 @@ document.addEventListener('focusin', (e) => {
     's-miperfil':         'nb-perfil',
     's-ranking':          'nb-mercado',
     's-mercado':          'nb-mercado',
+    's-vecinos-portada':  'nb-mercado',
     's-pub-mercado':      'nb-mercado',
     's-chat-mercado':       'nb-mercado',
     's-mis-publicaciones':  'nb-perfil',
@@ -262,7 +267,7 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
   };
-  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
+  const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-vecinos-portada','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
     's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners','s-param-mkt-cats','s-carrito'];
 
   function goTo(id) {
@@ -5181,6 +5186,74 @@ document.addEventListener('focusin', (e) => {
     renderMercado(true);
   }
   window.mktFiltrarZona = mktFiltrarZona;
+
+  // ═══ Portada de Entre Vecinos ═══════════════════════════════════════════
+  // Se muestra la primera vez del día que se entra a la sección. Por
+  // dispositivo (localStorage) y no por cuenta: es una decisión de
+  // presentación, no un dato del usuario, y no justifica una tabla ni una
+  // escritura por visita.
+  const PORTADA_VECINOS_KEY = 'pronet_portada_vecinos_v1';
+
+  /** Fecha local en formato YYYY-MM-DD.
+   *
+   *  A mano y no con toISOString(): ese convierte a UTC, así que entre las
+   *  21hs y la medianoche de Argentina ya devuelve el día siguiente y la
+   *  portada se daría por vista una noche antes de tiempo. */
+  function hoyLocal() {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  }
+
+  /** Punto de entrada a la sección desde el nav y el menú.
+   *
+   *  Los "volver" de las sub-pantallas siguen yendo a s-mercado directo: se
+   *  entra a Entre Vecinos por acá, pero se REGRESA al feed. Una portada al
+   *  volver de un chat sería un peaje. */
+  function entrarAVecinos() {
+    let visto = null;
+    try { visto = localStorage.getItem(PORTADA_VECINOS_KEY); } catch (e) {}
+    if (visto === hoyLocal()) return goTo('s-mercado');
+    goTo('s-vecinos-portada');
+    // Sólo se rellena si el goTo prosperó. Con el flag de Entre Vecinos
+    // apagado, goTo corta antes de activar nada, y seguir adelante haría una
+    // consulta a la base para pintar una pantalla que nadie va a ver.
+    const el = document.getElementById('s-vecinos-portada');
+    if (el && el.classList.contains('active')) renderPortadaVecinos();
+  }
+  window.entrarAVecinos = entrarAVecinos;
+
+  function cerrarPortadaVecinos() {
+    // Se marca al SALIR, no al entrar: si la marcáramos al mostrarla y el
+    // usuario cerrara la app en esa pantalla, se habría gastado la portada
+    // del día sin haberla usado.
+    try { localStorage.setItem(PORTADA_VECINOS_KEY, hoyLocal()); } catch (e) {}
+    goTo('s-mercado');
+  }
+  window.cerrarPortadaVecinos = cerrarPortadaVecinos;
+
+  /** Rellena lo que la portada tiene de real: la zona y el conteo.
+   *
+   *  El diseño traía "24 vecinos activos hoy" fijo. Acá se cuentan
+   *  publicaciones activas del área del usuario — un número que puede
+   *  contrastar entrando al feed. Si da cero la línea no se muestra: anunciar
+   *  que no hay nada es peor que no decir nada. */
+  async function renderPortadaVecinos() {
+    const pill = document.getElementById('pv-zona');
+    if (pill) pill.textContent = (zonaParaFiltro() || 'Escobar').toUpperCase();
+
+    const cont = document.getElementById('pv-actividad');
+    const txt  = document.getElementById('pv-actividad-txt');
+    if (!cont || !txt) return;
+    cont.style.display = 'none';   // hasta saber que hay algo que mostrar
+
+    const zonas = zonasDelFiltro();
+    const n = await PronetDB.contarPublicacionesActivas(zonas).catch(() => 0);
+    if (!n) return;
+    txt.textContent = n === 1 ? '1 publicación en tu zona' : `${n} publicaciones en tu zona`;
+    cont.style.display = 'flex';
+  }
 
   function toggleMapaMercado() {
     mktModo = mktModo === 'lista' ? 'mapa' : 'lista';

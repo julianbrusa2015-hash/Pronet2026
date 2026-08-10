@@ -87,6 +87,79 @@ test.describe('PM-1 · Cupo de publicaciones', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
+// PM-0 · Portada de Entre Vecinos
+// ══════════════════════════════════════════════════════════════════════════════
+// Pantalla previa al feed, una vez por día y por dispositivo. Lo que importa no
+// es que aparezca —eso se ve— sino las dos condiciones que la hacen tolerable:
+// que NO vuelva a aparecer el mismo día, y que los "volver" desde las
+// sub-pantallas vayan al feed y no a la portada. Si alguna falla, la portada
+// deja de ser una entrada y pasa a ser un peaje.
+test.describe('PM-0 · Portada de Entre Vecinos', () => {
+  test.use({ storageState: sesionVecino });
+
+  const CLAVE = 'pronet_portada_vecinos_v1';
+  const activa = (page) => page.evaluate(() =>
+    [...document.querySelectorAll('.screen.active')].map(s => s.id));
+
+  test('primera vez del día: el nav lleva a la portada, y "Entrar" al feed', async ({ page }) => {
+    await abrir(page);
+    await page.evaluate((k) => localStorage.removeItem(k), CLAVE);
+
+    await page.locator('#nb-mercado').click();
+    await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
+
+    // La portada muestra datos reales, no los del mock: la zona del usuario y
+    // —si hay— el conteo de publicaciones. El bloque de actividad arranca
+    // oculto y sólo se muestra si el número es mayor que cero.
+    await expect(page.locator('#pv-zona')).not.toBeEmpty();
+
+    await page.locator('#s-vecinos-portada button').click();
+    await expect(page.locator('#s-mercado')).toHaveClass(/active/, { timeout: 10000 });
+    // Una sola pantalla activa: el registro `all` de goTo tiene que incluir la
+    // portada para desactivarla. Al agregarla faltó, y quedaban las dos
+    // superpuestas sin que nada fallara.
+    expect(await activa(page)).toEqual(['s-mercado']);
+  });
+
+  test('el mismo día no vuelve a aparecer', async ({ page }) => {
+    await abrir(page);
+    await page.evaluate((k) => localStorage.removeItem(k), CLAVE);
+
+    await page.locator('#nb-mercado').click();
+    await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
+    await page.locator('#s-vecinos-portada button').click();
+    await expect(page.locator('#s-mercado')).toHaveClass(/active/, { timeout: 10000 });
+
+    await irA(page, 's-home');
+    await page.locator('#nb-mercado').click();
+    await expect(page.locator('#s-mercado')).toHaveClass(/active/, { timeout: 10000 });
+    expect(await activa(page)).toEqual(['s-mercado']);
+  });
+
+  test('vuelve al día siguiente', async ({ page }) => {
+    await abrir(page);
+    // Una marca vieja equivale a "otro día" sin tener que mover el reloj.
+    await page.evaluate((k) => localStorage.setItem(k, '2020-01-01'), CLAVE);
+
+    await page.locator('#nb-mercado').click();
+    await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
+  });
+
+  test('volver al feed desde una sub-pantalla no muestra la portada', async ({ page }) => {
+    await abrir(page);
+    // Peor caso a propósito: sin marca, o sea "todavía no la vio hoy".
+    await page.evaluate((k) => localStorage.removeItem(k), CLAVE);
+
+    await irA(page, 's-mis-publicaciones');
+    await irA(page, 's-mercado');   // lo que hacen los back-btn de la sección
+    expect(await activa(page)).toEqual(['s-mercado']);
+    // Y no gastó la portada del día: sigue pendiente para cuando entre por el nav.
+    const marca = await page.evaluate((k) => localStorage.getItem(k), CLAVE);
+    expect(marca).toBeNull();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // PM-2 · Feed: carga, filtros y buscador
 // ══════════════════════════════════════════════════════════════════════════════
 test.describe('PM-2 · Feed', () => {

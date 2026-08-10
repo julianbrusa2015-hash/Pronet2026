@@ -224,6 +224,122 @@
     </div><!-- /buscar -->
 
 
+    <!-- ══ PORTADA DE ENTRE VECINOS ═════════════════════════════════════
+         Pantalla previa al feed: se muestra la primera vez del día que se
+         entra a la sección desde el nav o el menú, y con un toque pasa a
+         s-mercado. Los "volver" de las sub-pantallas van directo al feed —
+         una portada al regresar de un chat sería un peaje, no una entrada.
+
+         El mapa es un SVG inline, no una imagen: la CSP bloquea recursos
+         externos y así no hay ningún archivo que se pueda perder. Por el
+         mismo motivo la tipografía es Inter, la que ya carga la app, y no
+         la DM Sans del diseño original — el carácter lo dan los pesos y el
+         letter-spacing, que sí se conservan. -->
+    <div class="screen" id="s-vecinos-portada" style="background:#0d2340;overflow:hidden">
+      <div style="position:absolute;inset:0">
+
+        <svg viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg"
+             preserveAspectRatio="xMidYMid slice" aria-hidden="true"
+             style="position:absolute;inset:0;width:100%;height:100%">
+          <rect width="900" height="480" fill="#2a4a6b"/>
+          <path d="M520,20 C560,10 640,30 700,60 C760,90 820,130 860,180 C890,220 900,270 890,320 C875,380 840,430 790,460 C750,480 700,480 660,470 C610,455 570,420 540,380 C510,340 490,290 495,240 C500,190 510,140 520,100 C528,70 515,35 520,20 Z" fill="#1a3d5c"/>
+          <path d="M600,80 C640,70 700,90 740,120 C780,150 810,190 820,240 C825,270 815,300 795,320 C770,345 735,355 700,350 C660,342 625,318 605,285 C585,252 580,210 590,175 C600,145 580,95 600,80 Z" fill="#1e4a6e" opacity="0.6"/>
+          <rect x="0" y="210" width="530" height="14" fill="#3a5f80" rx="2"/>
+          <rect x="480" y="0" width="14" height="215" fill="#3a5f80" rx="2"/>
+          <rect x="0" y="120" width="490" height="8" fill="#2e5270" rx="1"/>
+          <rect x="0" y="320" width="510" height="8" fill="#2e5270" rx="1"/>
+          <rect x="100" y="0" width="8" height="480" fill="#2e5270" rx="1"/>
+          <rect x="240" y="0" width="8" height="480" fill="#2e5270" rx="1"/>
+          <rect x="370" y="0" width="8" height="480" fill="#2e5270" rx="1"/>
+          <g fill="#243f58" opacity="0.9">
+            <rect x="10"  y="30"  width="75"  height="75" rx="6"/>
+            <rect x="10"  y="135" width="75"  height="65" rx="6"/>
+            <rect x="10"  y="230" width="75"  height="75" rx="6"/>
+            <rect x="10"  y="335" width="75"  height="80" rx="6"/>
+            <rect x="115" y="30"  width="115" height="75" rx="6"/>
+            <rect x="115" y="135" width="115" height="65" rx="6"/>
+            <rect x="115" y="230" width="115" height="75" rx="6"/>
+            <rect x="115" y="335" width="115" height="80" rx="6"/>
+            <rect x="255" y="30"  width="100" height="75" rx="6"/>
+            <rect x="255" y="135" width="100" height="65" rx="6"/>
+            <rect x="255" y="230" width="100" height="75" rx="6"/>
+            <rect x="255" y="335" width="100" height="80" rx="6"/>
+            <rect x="385" y="30"  width="80"  height="75" rx="6"/>
+            <rect x="385" y="135" width="80"  height="65" rx="6"/>
+            <rect x="385" y="230" width="80"  height="75" rx="6"/>
+            <rect x="385" y="335" width="80"  height="80" rx="6"/>
+          </g>
+          <g fill="#1e5c3a">
+            <circle cx="50"  cy="217" r="10" opacity="0.7"/>
+            <circle cx="195" cy="217" r="10" opacity="0.8"/>
+            <circle cx="210" cy="217" r="8"  opacity="0.7"/>
+            <circle cx="320" cy="217" r="10" opacity="0.8"/>
+            <circle cx="335" cy="217" r="8"  opacity="0.6"/>
+            <circle cx="450" cy="217" r="9"  opacity="0.8"/>
+          </g>
+          <rect x="490" y="195" width="55" height="5" fill="#4a7a9b" rx="2"/>
+          <rect x="540" y="185" width="5"  height="25" fill="#4a7a9b" rx="1"/>
+          <circle cx="175" cy="158" r="18" fill="none" stroke="#FF6B35" stroke-width="1.5" opacity="0.4"/>
+          <circle cx="175" cy="158" r="12" fill="#FF6B35"/>
+          <circle cx="175" cy="155" r="5"  fill="white"/>
+          <line x1="175" y1="169" x2="175" y2="176" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round"/>
+          <g fill="#4A90D9">
+            <circle cx="300" cy="255" r="10"/><circle cx="420" cy="155" r="10"/><circle cx="130" cy="360" r="10"/>
+          </g>
+          <g fill="white">
+            <circle cx="300" cy="252" r="4"/><circle cx="420" cy="152" r="4"/><circle cx="130" cy="357" r="4"/>
+          </g>
+          <g stroke="#4A90D9" stroke-width="2" stroke-linecap="round">
+            <line x1="300" y1="264" x2="300" y2="270"/>
+            <line x1="420" y1="164" x2="420" y2="170"/>
+            <line x1="130" y1="369" x2="130" y2="375"/>
+          </g>
+          <circle cx="60" cy="155" r="9"   fill="#2D9E6B"/>
+          <circle cx="60" cy="152" r="3.5" fill="white"/>
+          <line x1="60" y1="163" x2="60" y2="169" stroke="#2D9E6B" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+
+        <!-- Degradé vertical, no en diagonal como el diseño original: en
+             vertical el texto ocupa el ancho completo y necesita el fondo
+             oscuro abajo, donde antes estaba a la izquierda. -->
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,28,64,.45) 0%,rgba(8,28,64,.72) 42%,rgba(8,28,64,.94) 100%)"></div>
+
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:0 26px 26px">
+
+          <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 13px;color:#C8E0F9;font-size:10.5px;font-weight:600;letter-spacing:1.4px;width:fit-content;margin-bottom:20px">
+            <span style="width:7px;height:7px;background:#FF6B35;border-radius:50%"></span>
+            <span id="pv-zona">ESCOBAR</span>
+          </div>
+
+          <div style="font-size:13px;font-weight:500;color:#7EC0F5;letter-spacing:6px;line-height:1;margin-bottom:3px">ENTRE</div>
+          <div style="font-size:48px;font-weight:800;color:#fff;letter-spacing:-1.6px;line-height:1;margin-bottom:14px">Vecinos</div>
+          <div style="width:44px;height:3px;background:#FF6B35;border-radius:2px;margin-bottom:16px"></div>
+
+          <div style="font-size:15px;color:rgba(255,255,255,.82);line-height:1.5;margin-bottom:24px">
+            El mercado de tu barrio.<br>Servicios y productos entre vecinos.
+          </div>
+
+          <button onclick="cerrarPortadaVecinos()"
+                  style="display:flex;align-items:center;justify-content:center;gap:8px;background:#FF6B35;color:#fff;border:none;border-radius:11px;padding:15px 24px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;width:100%">
+            Entrar
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px">
+            <!-- Se rellena con el conteo real; si da cero queda oculto en vez
+                 de anunciar que no hay nada. -->
+            <div id="pv-actividad" style="display:none;align-items:center;gap:6px;color:rgba(255,255,255,.70);font-size:11px">
+              <span style="width:6px;height:6px;background:#52D9A0;border-radius:50%"></span>
+              <span id="pv-actividad-txt"></span>
+            </div>
+            <div style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);color:rgba(255,255,255,.65);font-size:9.5px;font-weight:600;letter-spacing:1.4px;padding:5px 13px;border-radius:20px;margin-left:auto">by PRONET</div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /portada vecinos -->
+
+
     <!-- ══ MERCADO (wireframe, mock — sin conectar a datos reales) ══════ -->
     <div class="screen" id="s-mercado">
 
@@ -1283,7 +1399,7 @@
             </div>
             <div class="m-chev">›</div>
           </div>
-          <div class="menu-item" onclick="goTo('s-mercado')">
+          <div class="menu-item" onclick="entrarAVecinos()">
             <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🛒</div>
             <div class="m-txt">
               <div class="m-title">Ir a Entre Vecinos</div>
@@ -4979,7 +5095,9 @@
       </div>
       <span style="margin-top:2px">Pedidos</span>
     </button>
-    <button class="nav-btn" id="nb-mercado" onclick="goTo('s-mercado')" data-feature="mercadoPlaza">
+    <!-- entrarAVecinos() y no goTo() directo: decide si toca mostrar la
+         portada del día o ir derecho al feed. -->
+    <button class="nav-btn" id="nb-mercado" onclick="entrarAVecinos()" data-feature="mercadoPlaza">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>
       <!-- "Vecinos" y no "Entre Vecinos": el nombre completo no entra en una
            pestaña de cinco. El título largo está dentro de la pantalla. -->
