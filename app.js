@@ -9493,6 +9493,17 @@ document.addEventListener('focusin', (e) => {
       if (ficha?.ok) usuarioActual = await PronetDB.usuarioActual();
     }
 
+    // Venía de un link de alta: la pre-alta se convierte en su ficha, con los
+    // rubros y la zona ya cargados, y arrastra el teléfono si no puso uno.
+    // Va DESPUÉS de asegurarFichaPrestador para no depender del orden: el RPC
+    // es idempotente y devuelve la ficha existente si ya está.
+    if (window._reclamarPrealta) {
+      const r = await PronetDB.reclamarPrealta(window._reclamarPrealta).catch(() => ({ ok: false }));
+      window._reclamarPrealta = null;
+      if (r?.ok) usuarioActual = await PronetDB.usuarioActual();
+      else console.warn('[prealta] no se pudo reclamar:', r?.error);
+    }
+
     cerrarRegistro();
     entrarApp();
   }
@@ -9916,19 +9927,50 @@ document.addEventListener('focusin', (e) => {
       reclamada:  { t: 'Ya se sumó', c: '#166534', b: '#DCFCE7' },
       descartada: { t: 'Descartada', c: 'var(--ink3)', b: 'var(--surface)' },
     };
+    _prealtasCache.clear();
+    lista.forEach(p => _prealtasCache.set(p.id, p));
     cont.innerHTML = lista.map(p => {
       const e = ESTADOS[p.estado] || ESTADOS.pendiente;
       const rubros = (p.rubros || []).join(' · ');
-      return '<div style="border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;gap:10px">' +
-        '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(p.nombre) + '</div>' +
-          '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(p.telefono) +
-            (rubros ? ' · ' + escHTML(rubros) : '') + '</div>' +
+      // Sólo el id (uuid) va en el onclick; el nombre y el teléfono salen del
+      // cache. escHTML() no protege dentro de un handler inline — el parser
+      // decodifica las entidades antes de que el JS las lea.
+      return '<div style="border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px">' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(p.nombre) + '</div>' +
+            '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(p.telefono) +
+              (rubros ? ' · ' + escHTML(rubros) : '') + '</div>' +
+          '</div>' +
+          '<span style="flex-shrink:0;background:' + e.b + ';color:' + e.c + ';border-radius:20px;padding:4px 10px;font-size:10.5px;font-weight:700">' + e.t + '</span>' +
         '</div>' +
-        '<span style="flex-shrink:0;background:' + e.b + ';color:' + e.c + ';border-radius:20px;padding:4px 10px;font-size:10.5px;font-weight:700">' + e.t + '</span>' +
+        (p.estado === 'pendiente'
+          ? '<button onclick="invMandarAlta(\'' + escHTML(p.id) + '\')" style="width:100%;margin-top:9px;padding:8px;font-size:12px;font-weight:700;background:#25D366;color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:\'Inter\',sans-serif">Mandarle el link de alta</button>'
+          : '') +
       '</div>';
     }).join('');
   }
+
+  const _prealtasCache = new Map();
+
+  /** Número en el formato que espera wa.me: sólo dígitos, con país y el 9 de
+   *  celular. Los vecinos escriben "11 4554-6665" y así el link no abre. */
+  function telParaWhatsapp(tel) {
+    let d = String(tel || '').replace(/\D/g, '');
+    if (d.startsWith('54')) return d.startsWith('549') ? d : '549' + d.slice(2);
+    return '549' + d.replace(/^0/, '');
+  }
+
+  /** Le manda por WhatsApp el link que convierte su pre-alta en cuenta. */
+  function invMandarAlta(id) {
+    const p = _prealtasCache.get(id);
+    if (!p) return;
+    const link = location.origin + location.pathname + '?reclamar=' + encodeURIComponent(id);
+    const msg = 'Hola ' + (p.nombre || '').split(' ')[0] + '! Te dejo el link para terminar tu alta en PRONET. ' +
+                'Ya tenés los datos cargados, sólo te falta poner un mail y una contraseña: ' + link;
+    window.open('https://wa.me/' + telParaWhatsapp(p.telefono) + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+  window.invMandarAlta = invMandarAlta;
 
   /** Abre el formulario público. `volverA` es null cuando se entró por el
    *  link sin sesión: ahí no hay pantalla a la que volver. */
@@ -13476,6 +13518,33 @@ document.addEventListener('focusin', (e) => {
     try { quitarAntiFlash(); } catch (e) {}
     document.getElementById('login-screen')?.classList.add('hidden');
     abrirPrealta(cod, { volverA: null });
+  })();
+
+  // Link de alta (?reclamar=ID). Lo manda por WhatsApp el que lo anotó: abre
+  // el registro con el nombre puesto y marcado como prestador, y al terminar
+  // hacerRegistro() convierte la pre-alta en su ficha.
+  (function capturarReclamo() {
+    const id = (new URLSearchParams(location.search).get('reclamar') || '').trim();
+    if (!id) return;
+    window._reclamarPrealta = id;
+    history.replaceState(null, '', location.pathname);
+    (async () => {
+      const pa = await PronetDB.prealtaPublica(id).catch(() => null);
+      // Si la pre-alta ya se usó o no existe, no se avisa nada raro: queda el
+      // registro normal, que es un final correcto igual.
+      try { quitarAntiFlash(); } catch (e) {}
+      document.getElementById('login-screen')?.classList.remove('hidden');
+      mostrarFormRegistro();
+      const radioP = document.querySelector('input[name="reg-tipo"][value="prestador"]');
+      if (radioP) { radioP.checked = true; mostrarRubrosRegistro(true); }
+      if (pa?.nombre) {
+        const inp = document.getElementById('reg-nombre');
+        if (inp) inp.value = pa.nombre;
+      }
+      (pa?.rubros || []).forEach(r => {
+        document.querySelector('#reg-rubros .sub-opt[data-rubro="' + String(r).replace(/"/g, '') + '"]')?.classList.add('on');
+      });
+    })();
   })();
 
   (function capturarRetornoMP() {

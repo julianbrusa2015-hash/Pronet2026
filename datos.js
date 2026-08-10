@@ -1174,6 +1174,24 @@ const PronetDB = (() => {
       return data || { ok: false, error: 'Sin respuesta' };
     },
 
+    /** Nombre de una pre-alta, para saludar por su nombre en el registro.
+     *  Callable sin sesión; no devuelve teléfono ni DNI a propósito. */
+    async prealtaPublica(id) {
+      if (!remoto || !id) return null;
+      const { data, error } = await sb.rpc('prealta_publica', { p_prealta_id: id });
+      if (error) { console.warn('[PronetDB] prealtaPublica', error.message); return null; }
+      return data || null;
+    },
+
+    /** Convierte la pre-alta en la ficha de prestador del usuario logueado.
+     *  Se llama después del registro, con el id que venía en el link. */
+    async reclamarPrealta(id) {
+      if (!remoto || !id) return { ok: false, error: 'Sin id' };
+      const { data, error } = await sb.rpc('reclamar_prealta', { p_prealta_id: id });
+      if (error) { console.warn('[PronetDB] reclamarPrealta', error.message); return { ok: false, error: error.message }; }
+      return data || { ok: false, error: 'Sin respuesta' };
+    },
+
     /** A quiénes invitó el usuario actual (o todas, si es admin). */
     async listarMisPrealtas() {
       if (!remoto) return [];

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v201'; // v201: pre-alta de prestadores sin crear cuenta
+const CACHE_VERSION = 'pronet-v202'; // v202: la pre-alta se convierte en cuenta real
 
 const SHELL = [
   './',
