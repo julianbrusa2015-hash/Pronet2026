@@ -11759,6 +11759,9 @@ document.addEventListener('focusin', (e) => {
     lbl.textContent = starLabels[n];
     lbl.style.color = n >= 4 ? 'var(--blue)' : n === 3 ? 'var(--gold)' : 'var(--red)';
 
+    // El impacto depende de la nota, así que se recalcula con cada cambio.
+    pintarImpactoResena();
+
     // swap tag suggestions based on rating
     const posWrap = document.getElementById('tags-positivos');
     if (n <= 2) {
@@ -12370,16 +12373,69 @@ document.addEventListener('focusin', (e) => {
         ta.placeholder = 'Ej: ' + primerNombre + ' llegó a tiempo, resolvió el problema y dejó todo limpio. Súper recomendado.';
         const cc = document.getElementById('rev-char-count'); if (cc) cc.textContent = '0';
       }
-      const imp = document.getElementById('rev-impacto');
-      if (imp) {
-        const primerNombre = (p.nombre || 'El prestador').split(' ')[0];
-        imp.innerHTML =
-          '<div>⭐ ' + escHTML(primerNombre) + ' mantiene su puntuación de <strong>' + (p.rating || 5).toFixed(1) + '</strong> (' + ((p.resenas || 0) + 1) + ' reseñas)</div>' +
-          '<div>🏆 Refuerza su posición en <strong>' + escHTML(p.zona || 'Escobar') + ' · ' + escHTML(p.rubro || 'Servicios') + '</strong></div>' +
-          '<div>👥 Tu recomendación suma <strong>+1 punto extra</strong> al score zonal</div>';
-      }
+      // Los datos del prestador quedan guardados para poder recalcular el
+      // impacto cada vez que el vecino cambia la nota o el toggle.
+      _resenaPrestador = { nombre: p.nombre, rating: p.rating, resenas: p.resenas, zona: p.zona, rubro: p.rubro };
+      pintarImpactoResena();
     }
   }
+
+  // Datos del prestador que se está calificando, para recalcular el impacto.
+  let _resenaPrestador = null;
+
+  /** El panel "Impacto de tu reseña".
+   *
+   *  Antes decía tres cosas y dos no eran ciertas:
+   *   1. "mantiene su puntuación de X" — se pintaba ANTES de que el vecino
+   *      eligiera la nota, así que le anticipaba un resultado que dependía de
+   *      algo que todavía no había hecho. Si ponía 1 estrella, la puntuación
+   *      no se mantenía: bajaba.
+   *   2. "+1 punto extra al score zonal" — el score zonal NO EXISTE. Se buscó
+   *      en todo el proyecto y aparecía sólo en ese texto. `recomendar` no
+   *      participa de ningún ranking: la fórmula real es
+   *      (rating*reseñas + 15) / (reseñas + 5), sólo nota y cantidad.
+   *
+   *  Ahora el promedio se proyecta de verdad con la nota elegida, y lo de la
+   *  recomendación dice lo único que hace: aparecer en el perfil. */
+  function pintarImpactoResena() {
+    const imp = document.getElementById('rev-impacto');
+    const p = _resenaPrestador;
+    if (!imp || !p) return;
+    const nombre = (p.nombre || 'El prestador').split(' ')[0];
+    const resenas = p.resenas || 0;
+    const rating  = p.rating || 0;
+    const nota = typeof currentStars === 'number' ? currentStars : null;
+
+    let linea1;
+    if (!nota) {
+      linea1 = '⭐ Hoy tiene <strong>' + rating.toFixed(1) + '</strong>'
+             + (resenas ? ' con ' + resenas + (resenas === 1 ? ' reseña' : ' reseñas') : ', sin reseñas todavía');
+    } else if (!resenas) {
+      // Sin reseñas previas no hay de dónde subir ni bajar: el 5.0 que trae
+      // la ficha es el valor por defecto de la columna, no reputación ganada
+      // (el mismo malentendido que motivó el ranking bayesiano). Decir "baja
+      // a 4.0" sugeriría que perdió algo que nunca tuvo.
+      linea1 = '⭐ ' + escHTML(nombre) + ' arranca con <strong>' + nota.toFixed(1) + '</strong> — es su primera reseña';
+    } else {
+      // Promedio proyectado, el mismo cálculo que hace la base al acreditar.
+      const nuevo = (rating * resenas + nota) / (resenas + 1);
+      const sube = nuevo > rating + 0.049;
+      const baja = nuevo < rating - 0.049;
+      const flecha = sube ? '📈' : baja ? '📉' : '⭐';
+      const verbo  = sube ? 'sube a' : baja ? 'baja a' : 'queda en';
+      linea1 = flecha + ' ' + escHTML(nombre) + ' ' + verbo + ' <strong>' + nuevo.toFixed(1) + '</strong>'
+             + ' (de ' + rating.toFixed(1) + ' con ' + resenas + (resenas === 1 ? ' reseña)' : ' reseñas)');
+    }
+
+    const recomienda = !!document.getElementById('chk-recomendar')?.checked;
+    imp.innerHTML =
+      '<div>' + linea1 + '</div>' +
+      '<div>🏆 Cuenta para su posición en <strong>' + escHTML(p.zona || 'Escobar') + ' · ' + escHTML(p.rubro || 'Servicios') + '</strong></div>' +
+      (recomienda
+        ? '<div>👥 Va a figurar como <strong>Recomendado por vecinos</strong> en su perfil</div>'
+        : '');
+  }
+  window.pintarImpactoResena = pintarImpactoResena;
 
   function cerrarResena() {
     const el = document.getElementById('s-resena');

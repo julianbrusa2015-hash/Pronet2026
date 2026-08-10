@@ -3235,10 +3235,14 @@
           <div style="font-size:26px">👥</div>
           <div class="rev-rec-txt" style="flex:1">
             <div class="rt-title">Recomendar a mis vecinos</div>
-            <div class="rt-sub">Aparecerá como "Recomendado por vecinos" en el perfil y suma más al ranking por ser del mismo barrio</div>
+            <!-- Decía "y suma más al ranking por ser del mismo barrio". Es
+                 falso: `recomendar` no participa de ningún ranking — la
+                 fórmula usa sólo la nota y la cantidad de reseñas. Lo único
+                 que hace es aparecer en el perfil. -->
+            <div class="rt-sub">Aparecerá como "Recomendado por vecinos" en su perfil</div>
           </div>
           <label class="toggle-sw" style="margin:0">
-            <input name="chk-recomendar" type="checkbox" checked id="chk-recomendar">
+            <input name="chk-recomendar" type="checkbox" checked id="chk-recomendar" onchange="pintarImpactoResena()">
             <span class="slider"></span>
           </label>
         </div>
