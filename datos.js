@@ -2410,12 +2410,19 @@ const PronetDB = (() => {
      *  rompería el guardado del propio teléfono sin necesidad — el llamador
      *  ya tiene los valores que mandó, no necesita que el server se los confirme. */
     async actualizarMiPerfilBasico(cambios) {
-      if (!remoto) return false;
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const uid = await this.usuarioIdActual();
-      if (!uid) return false;
+      if (!uid) return { ok: false, error: 'Sin sesión' };
       const { error } = await sb.from('perfiles').update(cambios).eq('id', uid);
-      if (error) { console.warn('[PronetDB] actualizarMiPerfilBasico', error.message); return false; }
-      return true;
+      if (error) {
+        console.warn('[PronetDB] actualizarMiPerfilBasico', error.message);
+        // 23505 sobre idx_perfiles_telefono_unico: ese número ya está en otra
+        // cuenta. Se distingue del resto porque es el único error de acá que
+        // el usuario puede resolver — ver supabase-telefono-unico.sql.
+        const dup = error.code === '23505' && /telefono/i.test(error.message || '');
+        return { ok: false, error: error.message, codigo: dup ? 'telefono_duplicado' : error.code };
+      }
+      return { ok: true };
     },
 
     /** Actualiza un registro por id. Devuelve el registro actualizado. */

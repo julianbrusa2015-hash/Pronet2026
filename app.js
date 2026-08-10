@@ -5401,9 +5401,9 @@ document.addEventListener('focusin', (e) => {
     const err   = document.getElementById('comunidad-error');
     if (lista) lista.style.opacity = '0.5';
     if (el) el.classList.add('active');
-    const ok = await PronetDB.actualizarMiPerfilBasico({ zona: nombre }).catch(() => false);
+    const res = await PronetDB.actualizarMiPerfilBasico({ zona: nombre }).catch(() => ({ ok: false }));
     if (lista) lista.style.opacity = '1';
-    if (!ok) {
+    if (!res.ok) {
       // Sin esto el modal se cerraba igual y el vecino creía que había
       // quedado guardado. Que falle y no se note es peor que el error.
       if (el) el.classList.remove('active');
@@ -6898,7 +6898,16 @@ document.addEventListener('focusin', (e) => {
       const perfilCambios = { nombre, telefono };
       if (fotoPerfilNueva) perfilCambios.foto_url = fotoPerfilNueva;
       const perfilGuardado = await PronetDB.actualizarMiPerfilBasico(perfilCambios);
-      if (perfilGuardado) { usuarioActual.nombre = nombre; usuarioActual.telefono = telefono; if (fotoPerfilNueva) usuarioActual.foto_url = fotoPerfilNueva; }
+      // Un teléfono ya usado por otra cuenta es el único error de acá que el
+      // usuario puede resolver, así que se corta con un mensaje concreto en
+      // vez de dejarlo dentro del "no se pudo guardar" genérico.
+      if (perfilGuardado.codigo === 'telefono_duplicado') {
+        showToast && showToast('⚠️ Ese teléfono ya está registrado en otra cuenta');
+        document.getElementById('edit-tel')?.focus();
+        if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
+        return;
+      }
+      if (perfilGuardado.ok) { usuarioActual.nombre = nombre; usuarioActual.telefono = telefono; if (fotoPerfilNueva) usuarioActual.foto_url = fotoPerfilNueva; }
       // 2. Fila del prestador (si lo es)
       if (usuarioActual.prestador_id) {
         const especialidades = Array.from(document.querySelectorAll('#edit-especialidades .sub-opt.on')).map(e => e.dataset.esp);
