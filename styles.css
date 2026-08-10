@@ -2173,8 +2173,7 @@
     background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
     border-radius: 20px; padding: 5px 14px;
     color: #C8E0F9; font-size: 10px; font-weight: 600;
-    letter-spacing: 1.2px; margin-bottom: 14px; width: fit-content;
-    text-transform: uppercase;
+    letter-spacing: 0.3px; margin-bottom: 14px; width: fit-content;
   }
   .login-pin-dot { width: 7px; height: 7px; background: #FF6B35; border-radius: 50%; flex-shrink: 0; }
   #login-pill-msg { transition: opacity 0.4s ease; }

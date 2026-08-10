@@ -72,10 +72,10 @@ document.addEventListener('DOMContentLoaded', function() {
 // Bloque 1b-0: frases rotantes en el pill del hero de login
 (function() {
   const FRASES = [
-    'La red de los que saben hacer',
-    'Conexiones de trabajo garantizadas',
-    'El punto de encuentro de los que trabajan',
-    'Profesionales de confianza, a un clic de distancia',
+    'la red de los que saben hacer',
+    'conexiones de trabajo garantizadas',
+    'el punto de encuentro de los que trabajan',
+    'profesionales de confianza, a un clic de distancia',
   ];
   let idx = 0;
   function cicloPill() {
