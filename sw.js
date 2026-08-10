@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v186'; // v186: portada de Entre Vecinos
+const CACHE_VERSION = 'pronet-v187'; // v187: la portada se recuerda por cuenta
 
 const SHELL = [
   './',

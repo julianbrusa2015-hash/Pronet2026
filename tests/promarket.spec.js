@@ -97,13 +97,34 @@ test.describe('PM-1 · Cupo de publicaciones', () => {
 test.describe('PM-0 · Portada de Entre Vecinos', () => {
   test.use({ storageState: sesionVecino });
 
-  const CLAVE = 'pronet_portada_vecinos_v1';
+  // La marca es por CUENTA, no por dispositivo: la clave lleva el id del
+  // usuario. Con una sola clave global, cambiar de perfil en el mismo teléfono
+  // heredaba el "ya la vio" del anterior y la portada no aparecía nunca para
+  // el segundo. Los tests borran/escriben por prefijo para no depender de qué
+  // cuenta esté logueada.
+  const PREFIJO = 'pronet_portada_vecinos_v1';
+
+  /** Borra la marca de todas las cuentas: deja "todavía no la vio hoy". */
+  const limpiarMarcas = (page) => page.evaluate((p) => {
+    Object.keys(localStorage).filter(k => k.startsWith(p)).forEach(k => localStorage.removeItem(k));
+  }, PREFIJO);
+
+  /** Marca la portada como vista en una fecha dada, para la cuenta logueada.
+   *  Con '2020-01-01' equivale a "otro día" sin tener que mover el reloj. */
+  const marcarFecha = (page, fecha) => page.evaluate(async ([p, f]) => {
+    const uid = (await window._sb.auth.getUser()).data.user?.id || 'anon';
+    localStorage.setItem(`${p}:${uid}`, f);
+  }, [PREFIJO, fecha]);
+
+  const marcas = (page) => page.evaluate((p) =>
+    Object.keys(localStorage).filter(k => k.startsWith(p)), PREFIJO);
+
   const activa = (page) => page.evaluate(() =>
     [...document.querySelectorAll('.screen.active')].map(s => s.id));
 
   test('primera vez del día: el nav lleva a la portada, y "Entrar" al feed', async ({ page }) => {
     await abrir(page);
-    await page.evaluate((k) => localStorage.removeItem(k), CLAVE);
+    await limpiarMarcas(page);
 
     await page.locator('#nb-mercado').click();
     await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
@@ -123,7 +144,7 @@ test.describe('PM-0 · Portada de Entre Vecinos', () => {
 
   test('el mismo día no vuelve a aparecer', async ({ page }) => {
     await abrir(page);
-    await page.evaluate((k) => localStorage.removeItem(k), CLAVE);
+    await limpiarMarcas(page);
 
     await page.locator('#nb-mercado').click();
     await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
@@ -138,8 +159,8 @@ test.describe('PM-0 · Portada de Entre Vecinos', () => {
 
   test('vuelve al día siguiente', async ({ page }) => {
     await abrir(page);
-    // Una marca vieja equivale a "otro día" sin tener que mover el reloj.
-    await page.evaluate((k) => localStorage.setItem(k, '2020-01-01'), CLAVE);
+    await limpiarMarcas(page);
+    await marcarFecha(page, '2020-01-01');
 
     await page.locator('#nb-mercado').click();
     await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
@@ -148,14 +169,33 @@ test.describe('PM-0 · Portada de Entre Vecinos', () => {
   test('volver al feed desde una sub-pantalla no muestra la portada', async ({ page }) => {
     await abrir(page);
     // Peor caso a propósito: sin marca, o sea "todavía no la vio hoy".
-    await page.evaluate((k) => localStorage.removeItem(k), CLAVE);
+    await limpiarMarcas(page);
 
     await irA(page, 's-mis-publicaciones');
     await irA(page, 's-mercado');   // lo que hacen los back-btn de la sección
     expect(await activa(page)).toEqual(['s-mercado']);
     // Y no gastó la portada del día: sigue pendiente para cuando entre por el nav.
-    const marca = await page.evaluate((k) => localStorage.getItem(k), CLAVE);
-    expect(marca).toBeNull();
+    expect(await marcas(page)).toEqual([]);
+  });
+
+  test('la marca de una cuenta no vale para otra en el mismo dispositivo', async ({ page }) => {
+    // El bug real: con una clave única por dispositivo, el segundo perfil que
+    // entraba desde el mismo teléfono no veía la portada nunca — heredaba el
+    // "ya la vio" del primero. Aparece apenas se prueba con dos cuentas, y le
+    // pasaría a cualquier teléfono compartido en una casa.
+    await abrir(page);
+    await limpiarMarcas(page);
+
+    // Marca de OTRA cuenta, con la fecha de hoy: la más "reciente" posible.
+    await page.evaluate((p) => {
+      const hoy = new Date();
+      const f = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+      localStorage.setItem(`${p}:00000000-0000-0000-0000-000000000000`, f);
+    }, PREFIJO);
+
+    await page.locator('#nb-mercado').click();
+    // Tiene que mostrarse igual: esa marca no es suya.
+    await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
   });
 });
 

@@ -5188,11 +5188,23 @@ document.addEventListener('focusin', (e) => {
   window.mktFiltrarZona = mktFiltrarZona;
 
   // ═══ Portada de Entre Vecinos ═══════════════════════════════════════════
-  // Se muestra la primera vez del día que se entra a la sección. Por
-  // dispositivo (localStorage) y no por cuenta: es una decisión de
-  // presentación, no un dato del usuario, y no justifica una tabla ni una
-  // escritura por visita.
-  const PORTADA_VECINOS_KEY = 'pronet_portada_vecinos_v1';
+  // Se muestra la primera vez del día que se entra a la sección.
+  //
+  // Sigue en localStorage y no en la base —es una decisión de presentación, no
+  // un dato del usuario— pero la clave lleva el id de la cuenta. Con una clave
+  // única por dispositivo, cambiar de perfil en el mismo teléfono heredaba el
+  // "ya la vio" del perfil anterior y la portada no aparecía nunca para el
+  // segundo. Es el caso normal de quien prueba con varias cuentas, y sería el
+  // de cualquier teléfono compartido en una casa.
+  const PORTADA_VECINOS_BASE = 'pronet_portada_vecinos_v1';
+
+  /** Clave de la portada para la cuenta activa.
+   *
+   *  Sin sesión cae en 'anon', que es su propio cajón: lo que vio un invitado
+   *  no debe darse por visto cuando después inicie sesión. */
+  function portadaKey() {
+    return `${PORTADA_VECINOS_BASE}:${usuarioActual?.id || 'anon'}`;
+  }
 
   /** Fecha local en formato YYYY-MM-DD.
    *
@@ -5213,7 +5225,7 @@ document.addEventListener('focusin', (e) => {
    *  volver de un chat sería un peaje. */
   function entrarAVecinos() {
     let visto = null;
-    try { visto = localStorage.getItem(PORTADA_VECINOS_KEY); } catch (e) {}
+    try { visto = localStorage.getItem(portadaKey()); } catch (e) {}
     if (visto === hoyLocal()) return goTo('s-mercado');
     goTo('s-vecinos-portada');
     // Sólo se rellena si el goTo prosperó. Con el flag de Entre Vecinos
@@ -5228,7 +5240,7 @@ document.addEventListener('focusin', (e) => {
     // Se marca al SALIR, no al entrar: si la marcáramos al mostrarla y el
     // usuario cerrara la app en esa pantalla, se habría gastado la portada
     // del día sin haberla usado.
-    try { localStorage.setItem(PORTADA_VECINOS_KEY, hoyLocal()); } catch (e) {}
+    try { localStorage.setItem(portadaKey(), hoyLocal()); } catch (e) {}
     goTo('s-mercado');
   }
   window.cerrarPortadaVecinos = cerrarPortadaVecinos;
