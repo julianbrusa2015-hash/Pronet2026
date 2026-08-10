@@ -1115,7 +1115,7 @@ const PronetDB = (() => {
 
     /** Lista publicaciones activas, opcionalmente filtradas por categoría.
      *  Orden cronológico inverso, paginado de 10 en 10. */
-    async listarPublicaciones({ categoria = null, busqueda = null, zona = null, offset = 0, categorias = null, barrios = null } = {}) {
+    async listarPublicaciones({ categoria = null, busqueda = null, zona = null, offset = 0, categorias = null, barrios = null, incluirSinBarrio = true } = {}) {
       if (!remoto) return [];
       let q = sb.from('publicaciones')
         // `lote` NO se trae en el feed: es la dirección del vendedor y no se
@@ -1127,13 +1127,19 @@ const PronetDB = (() => {
         .range(offset, offset + 9);
       if (zona) q = q.eq('zona', zona);
       // Mercado acotado a una comunidad: `barrios` trae la comunidad y sus
-      // barrios. Las publicaciones SIN barrio entran igual — son anteriores
-      // a que el campo fuera obligatorio y esconderlas dejaría el feed casi
-      // vacío. Las comillas en el in() son necesarias: hay nombres con
+      // barrios. Las comillas en el in() son necesarias: hay nombres con
       // espacios y con barra ("Matheu / Garín").
+      //
+      // `incluirSinBarrio` distingue dos usos que parecen el mismo:
+      //  - ámbito de comunidad (true): las publicaciones sin barrio entran
+      //    igual, porque son anteriores a que el campo fuera obligatorio y
+      //    esconderlas dejaría el feed casi vacío.
+      //  - un barrio puntual elegido en el mapa (false): el pin dice
+      //    "Araucarias · 2" y al tocarlo tienen que aparecer esas 2, no 4.
       if (barrios?.length) {
         const lista = barrios.map(b => '"' + String(b).replace(/"/g, '') + '"').join(',');
-        q = q.or(`barrio.is.null,barrio.in.(${lista})`);
+        if (incluirSinBarrio) q = q.or(`barrio.is.null,barrio.in.(${lista})`);
+        else                  q = q.in('barrio', barrios);
       }
       // `categorias` acota a una sección (todas las de Servicios, o las de
       // Mercado); `categoria` es el chip puntual dentro de esa sección. El
@@ -1390,6 +1396,25 @@ const PronetDB = (() => {
      *  al dispositivo para armar un contador de 11 números, con costo
      *  lineal al tamaño de la tabla. Ahora la respuesta es de tamaño
      *  constante (una fila por zona). */
+    /** {barrio: cantidad} de publicaciones activas, para los pines del mapa.
+     *
+     *  Agrupa por barrio y no por zona: un pin para todo Escobar no contesta
+     *  "¿dónde hay empanadas?". Las que no declaran barrio caen en el pin de
+     *  su zona — son anteriores a que el campo fuera obligatorio y perderlas
+     *  del mapa sería peor. `barrios` acota igual que el feed. */
+    async contarPublicacionesPorBarrio({ categoria = null, busqueda = null, barrios = null } = {}) {
+      if (!remoto) return {};
+      const { data, error } = await sb.rpc('contar_publicaciones_por_barrio', {
+        p_categoria: categoria && categoria !== 'todos' ? categoria : null,
+        p_busqueda:  busqueda && busqueda.trim() ? busqueda.trim() : null,
+        p_barrios:   barrios?.length ? barrios : null,
+      });
+      if (error) { console.warn('[PronetDB] contarPublicacionesPorBarrio', error.message); return {}; }
+      const counts = {};
+      (data || []).forEach(r => { if (r.lugar) counts[r.lugar] = Number(r.cantidad) || 0; });
+      return counts;
+    },
+
     async contarPublicacionesPorZona({ categoria = null, busqueda = null } = {}) {
       if (!remoto) return {};
       const { data, error } = await sb.rpc('contar_publicaciones_por_zona', {

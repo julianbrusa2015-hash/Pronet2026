@@ -5099,13 +5099,18 @@ document.addEventListener('focusin', (e) => {
     // a ir a buscar. `mktAmpliado` lo abre a pedido — sin esa salida, el
     // vecino de una comunidad chica ve un feed vacío y no vuelve.
     const comunidad = await comunidadDelUsuario();
-    const barrios = (comunidad && !mktAmpliado) ? await barriosDeComunidad(comunidad) : null;
+    const barrios = mktBarrioFiltro
+      ? [mktBarrioFiltro]
+      : ((comunidad && !mktAmpliado) ? await barriosDeComunidad(comunidad) : null);
     // `categorias` acota a la sección activa: sin eso, "Todos" en Servicios
     // mostraría también los productos.
     const posts = await PronetDB.listarPublicaciones({
       categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
       busqueda: mktBusqueda, zona: mktZonaActiva, offset: mktOffset,
       barrios,
+      // Un barrio elegido en el mapa es una pregunta concreta: mostrar
+      // también las que no dicen dónde están contradiría el número del pin.
+      incluirSinBarrio: !mktBarrioFiltro,
     }).catch(() => []);
     mktCargando = false;
     if (reset) mktPintarAmbito(comunidad);
@@ -5148,6 +5153,9 @@ document.addEventListener('focusin', (e) => {
 
   // ¿El feed está abierto a toda la zona o acotado a mi comunidad?
   let mktAmpliado = false;
+  // Barrio puntual elegido desde un pin del mapa. Manda sobre el ámbito de
+  // comunidad: si tocaste "Araucarias" querés ver Araucarias, no tu barrio.
+  let mktBarrioFiltro = null;
 
   /** La barrita que dice de qué mercado estás viendo y ofrece salir de él.
    *
@@ -5157,10 +5165,19 @@ document.addEventListener('focusin', (e) => {
   function mktPintarAmbito(comunidad) {
     const cont = document.getElementById('mkt-ambito');
     if (!cont) return;
-    if (!comunidad) { cont.style.display = 'none'; return; }
-    cont.style.display = 'flex';
     const txt = document.getElementById('mkt-ambito-txt');
     const btn = document.getElementById('mkt-ambito-btn');
+    // El barrio elegido en el mapa se muestra aunque el vecino no tenga
+    // comunidad: si no, el feed quedaría filtrado sin que nada lo diga.
+    if (mktBarrioFiltro) {
+      cont.style.display = 'flex';
+      if (txt) txt.textContent = 'Publicaciones en ' + mktBarrioFiltro;
+      if (btn) { btn.textContent = 'Quitar filtro'; btn.setAttribute('onclick', 'mktQuitarBarrioFiltro()'); }
+      return;
+    }
+    if (btn) btn.setAttribute('onclick', 'mktToggleAmbito()');
+    if (!comunidad) { cont.style.display = 'none'; return; }
+    cont.style.display = 'flex';
     if (txt) txt.textContent = mktAmpliado ? 'Viendo toda la zona' : 'Mercado de ' + comunidad;
     if (btn) btn.textContent = mktAmpliado ? 'Volver a mi comunidad' : 'Ver también otros barrios';
   }
@@ -5497,7 +5514,15 @@ document.addEventListener('focusin', (e) => {
       return;
     }
 
-    const counts = await PronetDB.contarPublicacionesPorZona({ categoria: mktFiltroActivo, busqueda: mktBusqueda }).catch(() => ({}));
+    // Un pin por BARRIO, no por zona: un solo pin para todo Escobar no
+    // contesta "¿dónde hay empanadas?", que es la pregunta que originó el
+    // mapa. El mapa respeta el mismo ámbito que el feed — sería raro decir
+    // "Mercado de San Matías" y mostrar pines de otra comunidad.
+    const comunidadMapa = await comunidadDelUsuario();
+    const barriosMapa = (comunidadMapa && !mktAmpliado) ? await barriosDeComunidad(comunidadMapa) : null;
+    const counts = await PronetDB.contarPublicacionesPorBarrio({
+      categoria: mktFiltroActivo, busqueda: mktBusqueda, barrios: barriosMapa,
+    }).catch(() => ({}));
     const container = document.getElementById('mkt-mapa-div');
     if (!container) return;
 
@@ -5519,17 +5544,23 @@ document.addEventListener('focusin', (e) => {
     const bounds = new google.maps.LatLngBounds();
     let hayPins = false;
 
-    Object.entries(counts).forEach(([zona, count]) => {
-      const coord = MKT_ZONA_COORD[zona];
+    _mktPins.length = 0;
+    Object.entries(counts).forEach(([lugar, count]) => {
+      const coord = MKT_ZONA_COORD[lugar];
       if (!coord) return;
       const pos = new google.maps.LatLng(coord.lat, coord.lng);
       bounds.extend(pos);
       hayPins = true;
+      // Sólo el índice (un número) viaja en el onclick. El nombre sale del
+      // array: los nombres de barrio los edita el admin y escHTML() no
+      // protege adentro de un handler inline — el parser decodifica las
+      // entidades antes de que el JS las lea.
+      const idx = _mktPins.push(lugar) - 1;
       const label = count > 9 ? '9+' : String(count);
       const marker = new google.maps.Marker({
         position: pos,
         map: mapaGoogleMkt,
-        title: zona + ' — ' + count + ' publicación' + (count !== 1 ? 'es' : ''),
+        title: lugar + ' — ' + count + ' ' + (count === 1 ? 'publicación' : 'publicaciones'),
         label: { text: label, color: 'white', fontWeight: '700', fontSize: '12px' },
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
@@ -5542,9 +5573,9 @@ document.addEventListener('focusin', (e) => {
       });
       const info = new google.maps.InfoWindow({
         content: `<div style="font-family:'Inter',sans-serif;min-width:160px;padding:4px 0">
-          <div style="font-weight:700;font-size:14px;margin-bottom:4px">${escHTML(zona)}</div>
-          <div style="font-size:12px;color:#555;margin-bottom:8px">${count} publicación${count !== 1 ? 'es' : ''}</div>
-          <button onclick="mktFiltrarZona('${escHTML(zona)}');toggleMapaMercado()"
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px">${escHTML(lugar)}</div>
+          <div style="font-size:12px;color:#555;margin-bottom:8px">${count} ${count === 1 ? 'publicación' : 'publicaciones'}</div>
+          <button onclick="mktVerBarrioDelMapa(${idx})"
             style="background:#2B5BFF;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;width:100%">Ver publicaciones</button>
         </div>`,
       });
@@ -5560,6 +5591,28 @@ document.addEventListener('focusin', (e) => {
     if (loading) loading.style.display = 'none';
   }
   window.renderMapaMercado = renderMapaMercado;
+
+  // Nombre de cada pin dibujado. El onclick del globo manda el índice.
+  const _mktPins = [];
+
+  /** Tocar "Ver publicaciones" en un pin: vuelve a la lista, acotada a ese
+   *  barrio. Filtra por BARRIO y no por zona — antes usaba mktFiltrarZona,
+   *  que compara contra `publicaciones.zona` ('Escobar') y con un pin de
+   *  barrio habría devuelto un feed vacío. */
+  function mktVerBarrioDelMapa(idx) {
+    const lugar = _mktPins[idx];
+    if (!lugar) return;
+    mktBarrioFiltro = lugar;
+    if (mktModo === 'mapa') toggleMapaMercado();
+    renderMercado(true);
+  }
+  window.mktVerBarrioDelMapa = mktVerBarrioDelMapa;
+
+  function mktQuitarBarrioFiltro() {
+    mktBarrioFiltro = null;
+    renderMercado(true);
+  }
+  window.mktQuitarBarrioFiltro = mktQuitarBarrioFiltro;
 
   /** Abre (o crea) el chat de mercado con el autor de una publicación.
    *
@@ -5922,7 +5975,7 @@ document.addEventListener('focusin', (e) => {
     // Actualizar subtítulo del menu item
     const activas = pubs.filter(p => p.activa).length;
     const subEl = document.getElementById('mp-mis-pubs-sub');
-    if (subEl) subEl.textContent = activas + ' publicación' + (activas !== 1 ? 'es' : '') + ' activa' + (activas !== 1 ? 's' : '');
+    if (subEl) subEl.textContent = activas + ' ' + (activas === 1 ? 'publicación' : 'publicaciones') + ' activa' + (activas !== 1 ? 's' : '');
     renderTendenciasMercado();
   }
 
@@ -8076,7 +8129,7 @@ document.addEventListener('focusin', (e) => {
               '<div style="flex:1">' +
                 '<div style="font-size:13.5px;font-weight:800;color:var(--ink)">' + escHTML(c.nombre) + '</div>' +
                 '<div style="font-size:10.5px;color:var(--ink3);margin-top:1px">' + escHTML(c.slug) +
-                  ' · ' + (n ? n + ' publicación' + (n > 1 ? 'es' : '') : 'sin publicaciones') + '</div>' +
+                  ' · ' + (n ? n + ' ' + (n === 1 ? 'publicación' : 'publicaciones') : 'sin publicaciones') + '</div>' +
               '</div>' +
               (c.activo ? '' : '<span style="font-size:10px;font-weight:700;background:var(--surface);color:var(--ink3);border-radius:6px;padding:3px 7px">Inactiva</span>') +
             '</div>' +
@@ -8988,7 +9041,7 @@ document.addEventListener('focusin', (e) => {
       pmEstadoLbl.textContent = usadas + '/3 gratis este año';
       pmEstadoLbl.style.color = 'var(--ink3)';
     } else if (creditos > 0) {
-      pmEstadoLbl.textContent = creditos + ' publicación' + (creditos !== 1 ? 'es' : '') + ' extra disponible' + (creditos !== 1 ? 's' : '');
+      pmEstadoLbl.textContent = creditos + ' ' + (creditos === 1 ? 'publicación' : 'publicaciones') + ' extra disponible' + (creditos !== 1 ? 's' : '');
       pmEstadoLbl.style.color = 'var(--blue)';
     } else {
       pmEstadoLbl.textContent = 'Sin cupo — $5.000 por publicación extra';
