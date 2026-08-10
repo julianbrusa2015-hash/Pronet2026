@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v190'; // v190: nuevo banner de login con mapa + frases rotantes
+const CACHE_VERSION = 'pronet-v191'; // v191: ranking bayesiano + T&C por cuenta
 
 const SHELL = [
   './',

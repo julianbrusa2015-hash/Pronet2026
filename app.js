@@ -530,8 +530,8 @@ document.addEventListener('focusin', (e) => {
     if (cat) filtros.rubro = cat.charAt(0).toUpperCase() + cat.slice(1);
     if (zonaActual) filtros.zona = zonaParaFiltro();
     let prestadores = await PronetDB.listarPrestadores(filtros);
-    // Ordenar por rating desc (el score visible)
-    prestadores = [...prestadores].sort((a,b) => (b.rating||0) - (a.rating||0));
+    const _bs = (p) => ((p.rating||0)*(p.resenas||0)+15)/((p.resenas||0)+5);
+    prestadores = [...prestadores].sort((a,b) => _bs(b) - _bs(a));
     wrap.innerHTML = '';
     // Actualizar subtítulo con zona
     const sub = document.querySelector('#s-ranking .rank-header p');
@@ -1450,18 +1450,17 @@ document.addEventListener('focusin', (e) => {
     if (zonaActual) filtros.zona = zonaParaFiltro();
     if (busquedaHome) filtros.busqueda = busquedaHome;
     let prestadores = await PronetDB.listarPrestadores(filtros);
-    // Aplicar boost por plan y re-ordenar. El privilegio de ranking sale de
-    // `desempate` en PRONET_CONFIG.PLANES: true (Pro) > sin boost.
+    // Score Bayesiano: evita que un prestador con 0 reseñas (rating 5.0 por default)
+    // le gane a alguien con historial real. M=3.0 (prior neutro), C=5 (peso mínimo).
+    const _bayScore   = (p) => ((p.rating || 0) * (p.resenas || 0) + 15) / ((p.resenas || 0) + 5);
     const _boostPro    = window.PRONET_CONFIG?.BOOST_PRO     || 1.4;
     const _boostDePlan = (p) => {
-      // Sin plan propio no hereda nada: getPlanConfig() cae a planActual (el del
-      // usuario que mira), así que sólo lo consultamos si el prestador tiene plan.
       const des = p.plan ? getPlanConfig(p.plan).desempate : false;
       if (des || p.premium)  return _boostPro;
       return 1.0;
     };
     prestadores = prestadores
-      .map(p => ({ ...p, _score: (p.rating || 0) * _boostDePlan(p) }))
+      .map(p => ({ ...p, _score: _bayScore(p) * _boostDePlan(p) }))
       .sort((a, b) => b._score - a._score);
     wrap.innerHTML = '';
     // Actualizar meta con conteo real
@@ -2342,7 +2341,7 @@ document.addEventListener('focusin', (e) => {
       filtros.rubro = alt;
       prestadores = await PronetDB.listarPrestadores(filtros);
     }
-    prestadores = [...prestadores].sort((a,b) => (b.rating||0)-(a.rating||0)).slice(0, PRONET_CONFIG.SUGERIDOS_PEDIDO);
+    prestadores = [...prestadores].sort((a,b) => { const s=(p)=>((p.rating||0)*(p.resenas||0)+15)/((p.resenas||0)+5); return s(b)-s(a); }).slice(0, PRONET_CONFIG.SUGERIDOS_PEDIDO);
     wrap.innerHTML = '';
     if (prestadores.length === 0) {
       wrap.innerHTML = '<div style="padding:20px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay prestadores de este rubro en la zona.</div>';
@@ -6882,7 +6881,8 @@ document.addEventListener('focusin', (e) => {
 
   // ── Aceptación de Términos/Privacidad previa al login ──────────────────
   const TYC_LOGIN_KEY = 'pronet_tyc_aceptado';
-  let tycAccionPendiente = null; // { method, ev }
+  let tycAccionPendiente   = null; // { method, ev } — flujo pre-login (legacy)
+  let _tycPostLoginCallback = null; // función async — flujo post-login para cuentas sin tyc_aceptado_en
 
   /** Ejecuta la acción de login. Ya NO muestra el modal de T&C.
    *
@@ -6921,19 +6921,35 @@ document.addEventListener('focusin', (e) => {
     const c1 = document.getElementById('tyc-check-terminos');
     const c2 = document.getElementById('tyc-check-edad');
     if (!c1?.checked || !c2?.checked) return;
-    localStorage.setItem(TYC_LOGIN_KEY, new Date().toISOString());
+    const now = new Date().toISOString();
+    localStorage.setItem(TYC_LOGIN_KEY, now);
     const modal = document.getElementById('modal-tyc-login');
     if (modal) modal.style.display = 'none';
-    const accion = tycAccionPendiente;
-    tycAccionPendiente = null;
-    if (accion) ejecutarAccionLogin(accion.method, accion.ev);
+    if (_tycPostLoginCallback) {
+      PronetDB.registrarAceptacionTyc(now).catch(() => {});
+      if (usuarioActual) usuarioActual.tyc_aceptado_en = now;
+      const cb = _tycPostLoginCallback;
+      _tycPostLoginCallback = null;
+      cb();
+    } else {
+      const accion = tycAccionPendiente;
+      tycAccionPendiente = null;
+      if (accion) ejecutarAccionLogin(accion.method, accion.ev);
+    }
   }
   window.confirmarTyc = confirmarTyc;
 
   function cancelarTyc() {
     const modal = document.getElementById('modal-tyc-login');
     if (modal) modal.style.display = 'none';
-    tycAccionPendiente = null;
+    if (_tycPostLoginCallback) {
+      _tycPostLoginCallback = null;
+      PronetDB.logout().catch(() => {});
+      const loginEl = document.getElementById('login-screen');
+      if (loginEl) loginEl.classList.remove('hidden');
+    } else {
+      tycAccionPendiente = null;
+    }
   }
   window.cancelarTyc = cancelarTyc;
 
@@ -12872,6 +12888,8 @@ document.addEventListener('focusin', (e) => {
         usuarioActual = u;
         const tycTs = localStorage.getItem('pronet_tyc_aceptado');
         if (tycTs) PronetDB.registrarAceptacionTyc(tycTs).catch(() => {});
+
+        const _continuarLogin = async () => {
         // modoRol persiste en localStorage entre sesiones y entre cuentas.
         // Si el usuario que ingresa es un prestador puro (sin doble perfil),
         // limpiar para que no herede un 'vecino' de una sesión anterior.
@@ -12975,6 +12993,24 @@ document.addEventListener('focusin', (e) => {
           } else if (_mpRes === 'failure') {
             showToast('⚠️ El pago no se completó. Podés intentarlo de nuevo.', 5000);
           }
+        }
+        }; // fin _continuarLogin
+
+        if (!u.tyc_aceptado_en) {
+          // Cuenta sin T&C aceptado: mostrar modal antes de dejar entrar
+          _tycPostLoginCallback = _continuarLogin;
+          const modal = document.getElementById('modal-tyc-login');
+          if (modal) {
+            ['tyc-check-terminos', 'tyc-check-edad'].forEach(id => {
+              const el = document.getElementById(id); if (el) el.checked = false;
+            });
+            actualizarBotonTyc();
+            modal.style.display = 'flex';
+          } else {
+            _continuarLogin(); // sin modal: dejar pasar igual
+          }
+        } else {
+          _continuarLogin();
         }
 
       } else {
