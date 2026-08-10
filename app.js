@@ -290,7 +290,9 @@ document.addEventListener('focusin', (e) => {
       return;
     }
     // Gating de pantallas admin: bloquear acceso a no-admins
-    const PANTALLAS_ADMIN = ['s-moderacion', 's-loyalty-admin', 's-catalogo', 's-catalogo-form', 's-ficha-ref'];
+    const PANTALLAS_ADMIN = ['s-moderacion', 's-loyalty-admin', 's-catalogo', 's-catalogo-form', 's-ficha-ref',
+      's-parametrias','s-param-planes','s-param-rubros','s-param-zonas','s-param-niveles',
+      's-param-ajustes','s-param-banners','s-param-mkt-cats','s-param-features'];
     if (PANTALLAS_ADMIN.includes(id) && !esAdmin()) {
       console.warn('[ADMIN] Pantalla "' + id + '" requiere rol admin.');
       showToast && showToast('🛡 Esta sección es solo para administradores');
