@@ -5522,6 +5522,9 @@ document.addEventListener('focusin', (e) => {
     const barriosMapa = (comunidadMapa && !mktAmpliado) ? await barriosDeComunidad(comunidadMapa) : null;
     const counts = await PronetDB.contarPublicacionesPorBarrio({
       categoria: mktFiltroActivo, busqueda: mktBusqueda, barrios: barriosMapa,
+      // El desplegable de zona acota el feed; sin esto el mapa mostraba
+      // pines de publicaciones que la lista no tenía.
+      zona: mktZonaActiva,
     }).catch(() => ({}));
     const container = document.getElementById('mkt-mapa-div');
     if (!container) return;

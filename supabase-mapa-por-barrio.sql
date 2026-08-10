@@ -20,10 +20,16 @@
 
 begin;
 
+-- La versión de 3 parámetros se descarta explícitamente: un `create or
+-- replace` con una firma distinta deja las dos conviviendo y PostgREST no
+-- sabe cuál elegir.
+drop function if exists public.contar_publicaciones_por_barrio(text, text, text[]);
+
 create or replace function public.contar_publicaciones_por_barrio(
   p_categoria text     default null,
   p_busqueda  text     default null,
-  p_barrios   text[]   default null
+  p_barrios   text[]   default null,
+  p_zona      text     default null
 )
 returns table(lugar text, cantidad bigint)
 language sql
@@ -43,9 +49,13 @@ as $$
      -- Mismo criterio que listarPublicaciones: las que no declaran barrio
      -- entran en cualquier comunidad, porque son anteriores al campo.
      and (p_barrios is null or p.barrio is null or p.barrio = any(p_barrios))
+     -- El desplegable de zona filtraba el feed pero no el mapa: hoy no se
+     -- nota porque todo es 'Escobar', pero con barrios de otras zonas el
+     -- mapa mostraría pines que la lista no tiene.
+     and (p_zona is null or p.zona = p_zona)
    group by coalesce(p.barrio, p.zona);
 $$;
 
-grant execute on function public.contar_publicaciones_por_barrio(text, text, text[]) to anon, authenticated;
+grant execute on function public.contar_publicaciones_por_barrio(text, text, text[], text) to anon, authenticated;
 
 commit;

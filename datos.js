@@ -1402,12 +1402,13 @@ const PronetDB = (() => {
      *  "¿dónde hay empanadas?". Las que no declaran barrio caen en el pin de
      *  su zona — son anteriores a que el campo fuera obligatorio y perderlas
      *  del mapa sería peor. `barrios` acota igual que el feed. */
-    async contarPublicacionesPorBarrio({ categoria = null, busqueda = null, barrios = null } = {}) {
+    async contarPublicacionesPorBarrio({ categoria = null, busqueda = null, barrios = null, zona = null } = {}) {
       if (!remoto) return {};
       const { data, error } = await sb.rpc('contar_publicaciones_por_barrio', {
         p_categoria: categoria && categoria !== 'todos' ? categoria : null,
         p_busqueda:  busqueda && busqueda.trim() ? busqueda.trim() : null,
         p_barrios:   barrios?.length ? barrios : null,
+        p_zona:      zona || null,
       });
       if (error) { console.warn('[PronetDB] contarPublicacionesPorBarrio', error.message); return {}; }
       const counts = {};
