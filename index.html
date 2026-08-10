@@ -74,8 +74,49 @@
     <div class="screen active" id="s-home">
 
       <div class="appbar">
+        <svg class="home-appbar-map" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMid slice" aria-hidden="true">
+          <rect width="900" height="480" fill="#2a4a6b"/>
+          <path d="M520,20 C560,10 640,30 700,60 C760,90 820,130 860,180 C890,220 900,270 890,320 C875,380 840,430 790,460 C750,480 700,480 660,470 C610,455 570,420 540,380 C510,340 490,290 495,240 C500,190 510,140 520,100 C528,70 515,35 520,20 Z" fill="#1a3d5c"/>
+          <path d="M600,80 C640,70 700,90 740,120 C780,150 810,190 820,240 C825,270 815,300 795,320 C770,345 735,355 700,350 C660,342 625,318 605,285 C585,252 580,210 590,175 C600,145 580,95 600,80 Z" fill="#1e4a6e" opacity="0.5"/>
+          <rect x="0" y="210" width="530" height="12" fill="#3a5f80" rx="2"/>
+          <rect x="480" y="0" width="12" height="215" fill="#3a5f80" rx="2"/>
+          <rect x="0" y="120" width="490" height="7" fill="#2e5270" rx="1"/>
+          <rect x="0" y="320" width="510" height="7" fill="#2e5270" rx="1"/>
+          <rect x="100" y="0" width="7" height="480" fill="#2e5270" rx="1"/>
+          <rect x="240" y="0" width="7" height="480" fill="#2e5270" rx="1"/>
+          <rect x="370" y="0" width="7" height="480" fill="#2e5270" rx="1"/>
+          <rect x="10"  y="30"  width="75"  height="75" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="10"  y="135" width="75"  height="60" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="10"  y="230" width="75"  height="72" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="10"  y="335" width="75"  height="78" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="115" y="30"  width="110" height="75" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="115" y="135" width="110" height="60" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="115" y="230" width="110" height="72" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="115" y="335" width="110" height="78" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="255" y="30"  width="95"  height="75" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="255" y="135" width="95"  height="60" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="255" y="230" width="95"  height="72" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="255" y="335" width="95"  height="78" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="385" y="30"  width="78"  height="75" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="385" y="135" width="78"  height="60" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="385" y="230" width="78"  height="72" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <rect x="385" y="335" width="78"  height="78" rx="5" fill="#1e3a54" opacity="0.8"/>
+          <circle cx="175" cy="158" r="12" fill="#FF6B35"/>
+          <circle cx="175" cy="155" r="5"  fill="white"/>
+          <line x1="175" y1="169" x2="175" y2="176" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="300" cy="255" r="9" fill="#4A90D9"/>
+          <circle cx="300" cy="252" r="3.5" fill="white"/>
+          <circle cx="60"  cy="155" r="8"   fill="#2D9E6B"/>
+        </svg>
+        <div class="home-appbar-grad"></div>
         <div>
-          <div class="logo" id="logo-pronet">PRONET</div>
+          <svg width="110" height="30" viewBox="0 0 300 82" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ProNet">
+            <text x="0"   y="74" font-family="Montserrat,sans-serif" font-size="76" font-weight="800" font-style="italic" fill="white">P</text>
+            <text x="52"  y="74" font-family="Montserrat,sans-serif" font-size="76" font-weight="800" font-style="italic" fill="white">r</text>
+            <text x="83"  y="74" font-family="Montserrat,sans-serif" font-size="76" font-weight="800" font-style="italic" fill="white">o</text>
+            <text x="132" y="74" font-family="Montserrat,sans-serif" font-size="76" font-weight="800" font-style="italic" fill="#FF6B35">N</text>
+            <text x="186" y="74" font-family="Montserrat,sans-serif" font-size="76" font-weight="800" font-style="italic" fill="white">et</text>
+          </svg>
           <div class="zona-pill" onclick="abrirZonaModal()">
             📍 <span id="zona-label">Escobar</span>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
@@ -83,10 +124,10 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <button class="bell-btn" onclick="goTo('s-ranking')" id="ranking-btn" aria-label="Ver ranking de prestadores" title="Ranking de prestadores" style="padding:0;font-family:inherit">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
           </button>
           <div class="bell-btn" onclick="goTo('s-notif')" id="bell-btn" aria-label="Ver notificaciones">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <div class="bell-badge" id="bell-count" style="display:none">0</div>
           </div>
           <div class="avatar-sm" id="home-avatar" onclick="goTo('s-miperfil')">JL</div>
