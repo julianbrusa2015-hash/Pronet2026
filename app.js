@@ -10081,7 +10081,12 @@ document.addEventListener('focusin', (e) => {
     _prealtaVolverA = volverA;
     const back = document.getElementById('prealta-back');
     if (back) back.style.display = volverA ? '' : 'none';
-    ['prealta-nombre','prealta-tel'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    ['prealta-nombre','prealta-tel','prealta-dni'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    // El botón de escanear sólo si el navegador sabe leer un PDF417.
+    prealtaPuedeEscanear().then(puede => {
+      const b = document.getElementById('prealta-btn-dni');
+      if (b) b.style.display = puede ? '' : 'none';
+    });
     const err = document.getElementById('prealta-error');
     if (err) { err.style.display = 'none'; err.textContent = ''; }
     document.getElementById('prealta-form').style.display = '';
@@ -10107,6 +10112,126 @@ document.addEventListener('focusin', (e) => {
 
   let _prealtaVolverA = null;
 
+  // ── Escaneo del DNI ──────────────────────────────────────────────────
+  //
+  // El dorso del DNI argentino trae un PDF417 con los datos en TEXTO PLANO,
+  // separados por '@'. No hay servicio que consultar ni costo: se decodifica
+  // en el propio teléfono, incluso sin internet. Distinto sería validar
+  // contra RENAPER, que sí se paga y no es lo que queremos acá.
+  //
+  // Sólo se usa el decodificador nativo del navegador (BarcodeDetector). No
+  // se trae una librería: cubrir los navegadores que no lo tienen exige
+  // WebAssembly (~400 KB) y acá no hay forma de probarlo contra un DNI real.
+  // Donde no está, el botón no aparece y se carga a mano, que es el camino
+  // normal igual.
+
+  /** Pasa a "Nombre Apellido" en capitalizado. El DNI viene TODO EN MAYÚSCULAS. */
+  function _tituloNombre(s) {
+    return String(s || '').toLowerCase().split(/\s+/).filter(Boolean)
+      .map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+  }
+
+  /** Extrae los datos del contenido del PDF417.
+   *
+   *  Se ancla en el campo de SEXO ('M' o 'F') en vez de usar posiciones
+   *  fijas: hay al menos dos versiones del DNI con distinta cantidad de
+   *  campos al principio, pero en las dos el orden relativo es
+   *  …apellido, nombre, sexo, documento… Anclar ahí funciona con ambas.
+   *
+   *  Devuelve null si no reconoce la estructura — mejor no completar nada
+   *  que completar mal y que la persona no lo revise. */
+  function parsearDNI(texto) {
+    const p = String(texto || '').split('@').map(s => s.trim());
+    const iSexo = p.findIndex(x => /^[MF]$/i.test(x));
+    if (iSexo < 2) return null;
+
+    const apellido = p[iSexo - 2];
+    const nombre   = p[iSexo - 1];
+    // Sólo letras (con acentos y ñ), espacios, apóstrofes y guiones.
+    const esNombre = (s) => /^[A-ZÁÉÍÓÚÜÑ' -]{2,}$/i.test(s || '');
+    if (!esNombre(apellido) || !esNombre(nombre)) return null;
+
+    // El documento va DESPUÉS del sexo. El número de trámite va antes y es
+    // más largo, así que buscar hacia adelante evita confundirlos.
+    const dni = (p.slice(iSexo + 1).find(x => /^\d{7,8}$/.test(x)) || '').replace(/^0+/, '');
+    if (!dni) return null;
+
+    const fnac = p.find(x => /^\d{2}\/\d{2}\/\d{4}$/.test(x)) || null;
+    // El DNI dice APELLIDO y después NOMBRE; el formulario pide al revés.
+    return { nombre: _tituloNombre(nombre) + ' ' + _tituloNombre(apellido), dni, fecha_nac: fnac };
+  }
+  window.parsearDNI = parsearDNI;   // expuesto para poder probarlo
+
+  /** ¿Este navegador puede leer un PDF417? Chrome en Android sí; Safari no. */
+  async function prealtaPuedeEscanear() {
+    if (!window.BarcodeDetector || !navigator.mediaDevices?.getUserMedia) return false;
+    try {
+      const f = await window.BarcodeDetector.getSupportedFormats();
+      return f.includes('pdf417');
+    } catch { return false; }
+  }
+
+  let _escanerStream = null;
+  let _escanerTimer  = null;
+
+  async function abrirEscanerDNI() {
+    const cont = document.getElementById('escaner-dni');
+    const video = document.getElementById('escaner-video');
+    const msg = document.getElementById('escaner-msg');
+    if (!cont || !video) return;
+    cont.style.display = 'flex';
+    if (msg) msg.textContent = 'Apuntá al código de barras ancho del dorso';
+    try {
+      _escanerStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1920 } },
+      });
+    } catch (e) {
+      // Permiso denegado o sin cámara: no dejar la pantalla en negro.
+      if (msg) msg.textContent = 'No pudimos usar la cámara. Cargá los datos a mano.';
+      return;
+    }
+    video.srcObject = _escanerStream;
+    await video.play().catch(() => {});
+
+    const detector = new window.BarcodeDetector({ formats: ['pdf417'] });
+    let intentos = 0;
+    _escanerTimer = setInterval(async () => {
+      if (!_escanerStream) return;
+      intentos++;
+      // A los ~15s sin leer nada, avisar en vez de dejarlo intentando mudo.
+      if (intentos === 30 && msg) msg.textContent = 'Cuesta engancharlo. Buscá más luz y apoyá el DNI en una superficie plana.';
+      let codigos = [];
+      try { codigos = await detector.detect(video); } catch { return; }
+      if (!codigos.length) return;
+      const datos = parsearDNI(codigos[0].rawValue);
+      if (!datos) {
+        if (msg) msg.textContent = 'Leí el código pero no reconocí el formato. Cargalo a mano.';
+        return;
+      }
+      cerrarEscanerDNI();
+      const setV = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+      setV('prealta-nombre', datos.nombre);
+      setV('prealta-dni', datos.dni);
+      showToast && showToast('✅ Datos cargados. Revisalos antes de enviar.');
+      document.getElementById('prealta-tel')?.focus();
+    }, 500);
+  }
+  window.abrirEscanerDNI = abrirEscanerDNI;
+
+  function cerrarEscanerDNI() {
+    if (_escanerTimer) { clearInterval(_escanerTimer); _escanerTimer = null; }
+    if (_escanerStream) {
+      // Sin esto la luz de la cámara queda prendida y el teléfono se calienta.
+      _escanerStream.getTracks().forEach(t => t.stop());
+      _escanerStream = null;
+    }
+    const video = document.getElementById('escaner-video');
+    if (video) video.srcObject = null;
+    const cont = document.getElementById('escaner-dni');
+    if (cont) cont.style.display = 'none';
+  }
+  window.cerrarEscanerDNI = cerrarEscanerDNI;
+
   async function prealtaEnviar() {
     const err = document.getElementById('prealta-error');
     const btn = document.getElementById('prealta-btn');
@@ -10115,6 +10240,7 @@ document.addEventListener('focusin', (e) => {
     const tel    = (document.getElementById('prealta-tel')?.value || '').trim();
     const rubros = Array.from(document.querySelectorAll('#prealta-rubros .sub-opt.on')).map(e => e.dataset.rubro);
     const zona   = document.getElementById('prealta-zona')?.value || null;
+    const dni    = (document.getElementById('prealta-dni')?.value || '').replace(/\D/g, '');
 
     if (nombre.split(/\s+/).filter(Boolean).length < 2) return mostrar('Escribí nombre y apellido');
     if (tel.replace(/\D/g, '').length < 8) return mostrar('El teléfono no parece válido');
@@ -10123,7 +10249,7 @@ document.addEventListener('focusin', (e) => {
     if (!rubros.length) return mostrar('Elegí al menos un rubro');
 
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
-    const res = await PronetDB.crearPrealta({ codigo: _prealtaCodigo, nombre, telefono: tel, rubros, zona });
+    const res = await PronetDB.crearPrealta({ codigo: _prealtaCodigo, nombre, telefono: tel, rubros, zona, dni });
     if (btn) { btn.disabled = false; btn.textContent = 'Anotarme'; }
 
     if (!res.ok) {

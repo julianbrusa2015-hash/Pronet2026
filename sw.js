@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v205'; // v205: QR del link de invitacion
+const CACHE_VERSION = 'pronet-v206'; // v206: escaneo del DNI en la pre-alta
 
 const SHELL = [
   './',
