@@ -1010,11 +1010,77 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
-    /** Sube la imagen al bucket y devuelve su URL pública. */
-    async subirImagenBanner(archivo) {
+    // ── Banners que compra un vecino ──────────────────────────────────
+    // Ver supabase-banners-pagos.sql. Todo el circuito está detrás del flag
+    // `banners_pagos_activos`; apagado, estos métodos no se llaman.
+
+    /** Cuántos espacios quedan libres de los 6 (o los que diga la config). */
+    async bannersEspaciosLibres() {
+      if (!remoto) return 0;
+      const { data, error } = await sb.rpc('banners_espacios_libres');
+      if (error) { console.warn('[PronetDB] bannersEspaciosLibres', error.message); return 0; }
+      return Number(data) || 0;
+    },
+
+    /** Alta de un banner por su dueño. Queda 'pendiente' de moderación. */
+    async crearBanner({ nombre, imagen_url, enlace, dias, destino } = {}) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.rpc('crear_banner', {
+        p_nombre: nombre, p_imagen_url: imagen_url, p_enlace: enlace,
+        p_dias: dias || 30, p_destino: destino || 'whatsapp',
+      });
+      if (error) { console.warn('[PronetDB] crearBanner', error.message); return { ok: false, error: error.message }; }
+      return data || { ok: false, error: 'Sin respuesta' };
+    },
+
+    /** Los banners propios, en cualquier estado. La RLS los acota al dueño. */
+    async listarMisBanners() {
+      if (!remoto) return [];
+      const uid = await this.usuarioIdActual();
+      if (!uid) return [];
+      const { data, error } = await sb.from('banners')
+        .select('id, nombre, imagen_url, enlace, destino_tipo, estado, motivo_rechazo, dias, clicks, desde, hasta, creado')
+        .eq('usuario_id', uid)
+        .order('creado', { ascending: false });
+      if (error) { console.warn('[PronetDB] listarMisBanners', error.message); return []; }
+      return data || [];
+    },
+
+    /** Los que esperan moderación. Sólo devuelve algo si quien pregunta es admin. */
+    async listarBannersPendientes() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('banners')
+        .select('id, nombre, imagen_url, enlace, destino_tipo, dias, creado, usuario_id, perfiles:usuario_id (nombre)')
+        .eq('estado', 'pendiente')
+        .order('creado', { ascending: true });
+      if (error) { console.warn('[PronetDB] listarBannersPendientes', error.message); return []; }
+      return data || [];
+    },
+
+    /** Aprueba o rechaza. Sólo admin (lo valida el RPC). */
+    async resolverBanner(id, aprobar, motivo) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { data, error } = await sb.rpc('resolver_banner', {
+        p_banner_id: id, p_aprobar: !!aprobar, p_motivo: motivo || null,
+      });
+      if (error) { console.warn('[PronetDB] resolverBanner', error.message); return { ok: false, error: error.message }; }
+      return data || { ok: false, error: 'Sin respuesta' };
+    },
+
+    /** Sube la imagen al bucket y devuelve su URL pública.
+     *
+     *  `carpetaPropia` la mete en <uid>/…, que es lo único que la policy le
+     *  permite escribir a un usuario común. El admin sube a la raíz, como
+     *  siempre, para no mover los banners editoriales que ya existen. */
+    async subirImagenBanner(archivo, carpetaPropia = false) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const ext = (archivo.name.split('.').pop() || 'jpg').toLowerCase();
-      const ruta = 'b-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+      let ruta = 'b-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+      if (carpetaPropia) {
+        const uid = await this.usuarioIdActual();
+        if (!uid) return { ok: false, error: 'Sin sesión' };
+        ruta = uid + '/' + ruta;
+      }
       const { error } = await sb.storage.from('banners')
         .upload(ruta, archivo, { cacheControl: '3600', upsert: false });
       if (error) {
@@ -1640,10 +1706,12 @@ const PronetDB = (() => {
     /** Crea una preferencia de pago en MercadoPago vía Edge Function y
      *  devuelve la URL de checkout. El precio se resuelve server-side —
      *  acá solo mandamos qué plan/periodo quiere el usuario. */
-    async crearPreferenciaMP(plan, periodo) {
+    /** `ref` identifica QUÉ se paga cuando el producto no es el plan en sí:
+     *  hoy, el id del banner. Los planes y los créditos no lo mandan. */
+    async crearPreferenciaMP(plan, periodo, ref = null) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       try {
-        const { data, error } = await sb.functions.invoke('crear-preferencia', { body: { plan, periodo } });
+        const { data, error } = await sb.functions.invoke('crear-preferencia', { body: { plan, periodo, ref } });
         if (error) { console.warn('[PronetDB] crearPreferenciaMP', error.message); return { ok: false, error: error.message }; }
         if (!data?.init_point) return { ok: false, error: 'Respuesta inválida de MercadoPago' };
         return { ok: true, init_point: data.init_point };

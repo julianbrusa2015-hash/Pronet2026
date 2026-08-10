@@ -267,15 +267,36 @@ $$;
 revoke all on function public.activar_banner_pagado(uuid, uuid) from public, anon, authenticated;
 grant execute on function public.activar_banner_pagado(uuid, uuid) to service_role;
 
--- ── 8 · Contador de clicks ───────────────────────────────────────────
--- La columna existía y se mostraba en el panel, pero NADA la incrementaba:
--- el número era decorativo. Sin esto no se le puede rendir cuentas a quien
--- pagó, ni saber si el carrusel sirve cuando es editorial.
-create or replace function public.registrar_click_banner(p_banner_id uuid)
-returns void language sql security definer set search_path = public as $$
-  update public.banners set clicks = coalesce(clicks, 0) + 1 where id = p_banner_id;
-$$;
+-- ── 8 · Contador de clicks: YA FUNCIONABA ────────────────────────────
+-- Nota para el próximo que mire: se creyó que el contador estaba roto porque
+-- buscando "clicks" en app.js sólo aparece la línea que lo MUESTRA. El
+-- incremento existe y anda — va por `PronetDB.clickBanner()` (app.js:3491) →
+-- RPC `click_banner`, que ya estaba creada. Los banners están en 0 porque
+-- nadie los tocó, no porque no se cuente. `clicks` es NOT NULL default 0, así
+-- que el `clicks + 1` de esa función tampoco tiene el problema del null.
+-- No hace falta ninguna función nueva.
+drop function if exists public.registrar_click_banner(uuid);
 
-grant execute on function public.registrar_click_banner(uuid) to anon, authenticated;
+-- ── 9 · Subida de la imagen por el anunciante ────────────────────────
+-- El bucket `banners` sólo lo podía escribir el admin (`banners_img_admin`),
+-- que era correcto cuando el carrusel era puramente editorial. Ahora el
+-- anunciante sube su propia pieza, así que necesita poder escribir — pero
+-- SÓLO en su carpeta, para que nadie pise ni borre la imagen de otro.
+-- Mismo criterio que el bucket `avatares`.
+drop policy if exists banners_img_usuario_sube on storage.objects;
+create policy banners_img_usuario_sube on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'banners'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists banners_img_usuario_borra on storage.objects;
+create policy banners_img_usuario_borra on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'banners'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
 
 commit;

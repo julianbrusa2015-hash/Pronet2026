@@ -294,10 +294,11 @@ document.addEventListener('focusin', (e) => {
     's-mis-propuestas':   'nb-pedidos',
     's-resena':           'nb-pedidos',
     's-invitar':          'nb-perfil',
+    's-promocionar':      'nb-perfil',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-vecinos-portada','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
     's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners','s-param-mkt-cats','s-carrito',
-    's-invitar','s-prealta'];
+    's-invitar','s-prealta','s-promocionar'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -437,7 +438,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-chats') { if (!chatsFiltroPendiente) chatsFiltroPendiente = 'todos'; renderChats(); }
     // Los toggles de configuración se mudaron con las parametrías, así que
     // renderConfigAdmin() se llama desde ahí y no desde moderación.
-    if (id === 's-moderacion') { renderModeracion(); }
+    if (id === 's-moderacion') { renderModeracion(); renderBannersPendientes(); }
     if (id === 's-parametrias') { renderConfigAdmin(); }
     if (id === 's-param-planes')   { renderParamPlanes(); }
     if (id === 's-param-features') { renderParamFeatures(); }
@@ -8650,6 +8651,31 @@ document.addEventListener('focusin', (e) => {
         : 'Desactivado · el tab ProMarket está oculto';
       estPm.style.color = pmOn ? 'var(--green)' : 'var(--ink3)';
     }
+
+    const chkBn = document.getElementById('cfg-banners');
+    const estBn = document.getElementById('cfg-banners-estado');
+    const bnOn  = bannersPagosActivos();
+    if (chkBn) chkBn.checked = bnOn;
+    if (estBn) {
+      estBn.textContent = bnOn ? 'Activa · los vecinos pueden comprar un espacio'
+                               : 'Desactivada · el carrusel es sólo editorial';
+      estBn.style.color = bnOn ? 'var(--green)' : 'var(--ink3)';
+    }
+    // El conteo de espacios se pide aparte: es una consulta, no un flag.
+    if (bnOn && estBn) {
+      PronetDB.bannersEspaciosLibres().then(n => {
+        const e = document.getElementById('cfg-banners-estado');
+        if (e) e.textContent = 'Activa · quedan ' + n + ' espacio' + (n === 1 ? '' : 's') + ' de ' + (PRONET_CONFIG.BANNERS_MAX || 6);
+      }).catch(() => {});
+    }
+  }
+
+  /** ¿Se pueden comprar espacios del carrusel? Default apagado: mientras la
+   *  clave no exista, el carrusel es editorial y nada cambia. Criterio
+   *  opuesto a promarketActivo(), que viene de una época en que ProMarket ya
+   *  estaba en uso — acá el default seguro es NO vender. */
+  function bannersPagosActivos() {
+    return configApp.banners_pagos_activos === 'true';
   }
 
   async function togglePlanesPagos(el) {
@@ -8690,6 +8716,26 @@ document.addEventListener('focusin', (e) => {
   }
 
   window.toggleMpCheckout = toggleMpCheckout;
+
+  async function toggleBannersPagos(el) {
+    const nuevo = !!el.checked;
+    el.disabled = true;
+    const res = await PronetDB.guardarConfigApp('banners_pagos_activos', nuevo ? 'true' : 'false');
+    el.disabled = false;
+    if (!res.ok) {
+      el.checked = !nuevo;
+      showToast && showToast('⚠️ No se pudo guardar. ' + (res.error || ''));
+      return;
+    }
+    configApp.banners_pagos_activos = nuevo ? 'true' : 'false';
+    // La fila de Mi Perfil aparece o desaparece sin recargar.
+    reflejarUsuario();
+    renderConfigAdmin();
+    showToast && showToast(nuevo
+      ? '📣 Venta de espacios activa. Los vecinos ya pueden comprar un banner.'
+      : '🔒 Venta de espacios desactivada. El carrusel vuelve a ser sólo tuyo.');
+  }
+  window.toggleBannersPagos = toggleBannersPagos;
 
   async function togglePromarket(el) {
     const nuevo = !!el.checked;
@@ -8922,6 +8968,11 @@ document.addEventListener('focusin', (e) => {
     // Ocultar PRONET Points para admin o si el feature está desactivado
     const loyaltyTile = document.querySelector('[data-feature="loyalty"]');
     if (loyaltyTile) loyaltyTile.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
+    // La venta de espacios del carrusel se ofrece sólo si el admin la
+    // habilitó. Con el interruptor apagado la fila no existe.
+    const menuPromo = document.getElementById('menu-promocionar');
+    if (menuPromo) menuPromo.style.display = bannersPagosActivos() ? '' : 'none';
+
     const loyaltyMenu = document.querySelector('.menu-item[data-feature="loyalty"]');
     if (loyaltyMenu) loyaltyMenu.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
 
@@ -9910,6 +9961,252 @@ document.addEventListener('focusin', (e) => {
     if (!npFotosArchivos.length) return [];
     return await PronetDB.subirFotosPedido(pedidoId, npFotosArchivos);
   }
+
+  // ══ PROMOCIONAR: COMPRAR UN ESPACIO DEL CARRUSEL ════════════════════
+  //
+  // Tercer producto que PRONET le vende a un usuario, después de las
+  // suscripciones y los créditos. Sigue siendo "PRONET le cobra a alguien":
+  // no es plata entre vecinos.
+  //
+  // El orden importa y es al revés de lo intuitivo: PRIMERO SE MODERA,
+  // DESPUÉS SE COBRA. Cobrar antes obliga a devolver plata cada vez que se
+  // rechaza una imagen, y eso es una operación que no queremos.
+
+  let promoDestino = 'whatsapp';
+  let promoImagenUrl = null;   // la del carrusel
+  let promoFlyerUrl  = null;   // la que se abre ampliada, si el destino es 'imagen'
+
+  async function abrirPromocionar() {
+    if (!usuarioActual) {
+      mostrarGate && mostrarGate({ titulo: 'Promocionar', sub: 'Necesitás una cuenta.' });
+      return;
+    }
+    goTo('s-promocionar');
+    promoDestino = 'whatsapp';
+    promoImagenUrl = null;
+    promoFlyerUrl = null;
+    ['promo-nombre','promo-whatsapp'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+    const err = document.getElementById('promo-error');
+    if (err) { err.style.display = 'none'; err.textContent = ''; }
+    promoSetDestino('whatsapp');
+
+    // El teléfono del perfil como valor propuesto: casi siempre es el mismo,
+    // y ahorra tipearlo.
+    const wa = document.getElementById('promo-whatsapp');
+    if (wa && usuarioActual.telefono) wa.value = usuarioActual.telefono;
+
+    // El precio sale de planes_limites, igual que los planes: nunca escrito
+    // en el cliente, para que no diga uno y se cobre otro.
+    //
+    // Se lee de la base y NO de PRONET_CONFIG.PLANES: el sync del arranque
+    // sólo pisa los planes que ya existen en config.js, así que la fila
+    // `banner` —que es nueva— nunca llegaría y el precio quedaría en
+    // "Consultar" para siempre.
+    const pEl = document.getElementById('promo-precio');
+    if (pEl) pEl.textContent = '…';
+    PronetDB.listarPlanesLimites().then(filas => {
+      const precio = (filas || []).find(f => f.plan === 'banner')?.precio_mes;
+      const el = document.getElementById('promo-precio');
+      if (el) el.textContent = precio ? '$' + Number(precio).toLocaleString('es-AR') : 'Consultar';
+    }).catch(() => {});
+
+    const libres = await PronetDB.bannersEspaciosLibres();
+    const esp = document.getElementById('promo-espacios');
+    if (esp) esp.textContent = libres > 0
+      ? '📍 Quedan ' + libres + ' espacio' + (libres === 1 ? '' : 's') + ' disponible' + (libres === 1 ? '' : 's')
+      : '📍 Por ahora no hay espacios libres';
+    const btn = document.getElementById('promo-btn');
+    if (btn) { btn.disabled = libres <= 0; btn.style.opacity = libres > 0 ? '1' : '.5'; }
+
+    renderMisBanners();
+  }
+  window.abrirPromocionar = abrirPromocionar;
+
+  function promoSetDestino(tipo) {
+    promoDestino = tipo;
+    document.querySelectorAll('#promo-destino .mkt-sec').forEach((b, i) => {
+      b.classList.toggle('on', (i === 0) === (tipo === 'whatsapp'));
+    });
+    const w = document.getElementById('promo-wrap-whatsapp');
+    const f = document.getElementById('promo-wrap-flyer');
+    if (w) w.style.display = tipo === 'whatsapp' ? '' : 'none';
+    if (f) f.style.display = tipo === 'imagen'   ? '' : 'none';
+  }
+  window.promoSetDestino = promoSetDestino;
+
+  /** Sube y previsualiza. Se sube al elegirla y no al enviar: así el vecino
+   *  ve si la imagen entró antes de completar el resto. */
+  async function _promoSubir(input, contenedorId, cb) {
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast && showToast('⚠️ La imagen no puede superar 5 MB'); input.value = ''; return; }
+    const cont = document.getElementById(contenedorId);
+    if (cont) cont.innerHTML = '<div style="font-size:13px;color:var(--ink3)">⏳ Subiendo…</div>';
+    const res = await PronetDB.subirImagenBanner(file, true);   // true = carpeta propia
+    if (!res.ok) {
+      if (cont) cont.innerHTML = '<div style="font-size:12.5px;color:#E53E3E;padding:0 12px;text-align:center">No se pudo subir: ' + escHTML(res.error || '') + '</div>';
+      return;
+    }
+    if (cont) cont.innerHTML = '<img src="' + escHTML(res.url) + '" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
+    cb(res.url);
+  }
+
+  function promoPrevisualizar(input) { _promoSubir(input, 'promo-img-prev', (u) => { promoImagenUrl = u; }); }
+  window.promoPrevisualizar = promoPrevisualizar;
+  function promoPrevisualizarFlyer(input) { _promoSubir(input, 'promo-flyer-prev', (u) => { promoFlyerUrl = u; }); }
+  window.promoPrevisualizarFlyer = promoPrevisualizarFlyer;
+
+  async function promoEnviar() {
+    const err = document.getElementById('promo-error');
+    const btn = document.getElementById('promo-btn');
+    const decir = (m) => { if (err) { err.textContent = m; err.style.display = 'block'; } };
+    const nombre = (document.getElementById('promo-nombre')?.value || '').trim();
+
+    if (!nombre) return decir('Poné un nombre para identificar tu aviso');
+    if (!promoImagenUrl) return decir('Falta la imagen del aviso');
+    let enlace;
+    if (promoDestino === 'whatsapp') {
+      const tel = (document.getElementById('promo-whatsapp')?.value || '').trim();
+      if (tel.replace(/\D/g, '').length < 8) return decir('Escribí un WhatsApp válido');
+      enlace = 'https://wa.me/' + telParaWhatsapp(tel);
+    } else {
+      if (!promoFlyerUrl) return decir('Falta el flyer que se abre al tocarlo');
+      enlace = promoFlyerUrl;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+    const res = await PronetDB.crearBanner({
+      nombre, imagen_url: promoImagenUrl, enlace, dias: 30, destino: promoDestino,
+    });
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar a revisión'; }
+    if (!res.ok) return decir(res.error || 'No se pudo enviar');
+
+    if (err) err.style.display = 'none';
+    showToast && showToast('✅ Tu aviso quedó en revisión. Te avisamos cuando lo aprobemos.');
+    abrirPromocionar();   // recarga el formulario limpio y la lista
+  }
+  window.promoEnviar = promoEnviar;
+
+  // ── Moderación de avisos (admin) ─────────────────────────────────────
+  const _bannersModCache = new Map();
+
+  async function renderBannersPendientes() {
+    const cont = document.getElementById('mod-banners-lista');
+    const wrap = document.getElementById('mod-banners');
+    if (!cont || !wrap) return;
+    // La sección entera desaparece con el circuito apagado: no tiene sentido
+    // una cola de moderación de algo que nadie puede enviar.
+    if (!bannersPagosActivos()) { wrap.style.display = 'none'; return; }
+    wrap.style.display = '';
+    cont.innerHTML = '<div style="padding:16px 0;text-align:center;font-size:12.5px;color:var(--ink3)">⏳ Cargando…</div>';
+    const lista = await PronetDB.listarBannersPendientes();
+    const libres = await PronetDB.bannersEspaciosLibres();
+    const aviso = document.getElementById('mod-banners-espacios');
+    if (aviso) {
+      aviso.textContent = libres > 0
+        ? 'Quedan ' + libres + ' espacio' + (libres === 1 ? '' : 's') + ' libre' + (libres === 1 ? '' : 's')
+        : 'Sin espacios libres: no vas a poder aprobar hasta que venza alguno';
+      aviso.style.color = libres > 0 ? 'var(--ink3)' : '#BE123C';
+    }
+    if (!lista.length) {
+      cont.innerHTML = '<div style="padding:16px 14px;text-align:center;font-size:12.5px;color:var(--ink3)">No hay avisos esperando revisión.</div>';
+      return;
+    }
+    _bannersModCache.clear();
+    lista.forEach(b => _bannersModCache.set(b.id, b));
+    cont.innerHTML = lista.map(b => {
+      const quien = b.perfiles?.nombre || 'Vecino';
+      const destino = b.destino_tipo === 'imagen' ? 'Abre un flyer' : 'Abre WhatsApp';
+      return '<div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">' +
+        '<img src="' + escHTML(b.imagen_url) + '" alt="" style="width:100%;aspect-ratio:3/1;object-fit:cover;border-radius:8px;display:block;margin-bottom:9px">' +
+        '<div style="font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(b.nombre) + '</div>' +
+        '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(quien) + ' · ' + escHTML(destino) + ' · ' + (b.dias || 30) + ' días</div>' +
+        '<div style="display:flex;gap:8px;margin-top:10px">' +
+          '<button onclick="modResolverBanner(\'' + escHTML(b.id) + '\',true)" style="flex:1;padding:9px;font-size:12.5px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:\'Inter\',sans-serif">Aprobar</button>' +
+          '<button onclick="modResolverBanner(\'' + escHTML(b.id) + '\',false)" style="flex:1;padding:9px;font-size:12.5px;font-weight:700;background:var(--surface);color:#BE123C;border:1.5px solid #FECACA;border-radius:10px;cursor:pointer;font-family:\'Inter\',sans-serif">Rechazar</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  window.renderBannersPendientes = renderBannersPendientes;
+
+  async function modResolverBanner(id, aprobar) {
+    const b = _bannersModCache.get(id);
+    if (!b) return;
+    let motivo = null;
+    if (!aprobar) {
+      // El motivo le llega al vecino tal cual: es lo único que le explica
+      // por qué se rechazó y qué corregir.
+      motivo = prompt('¿Por qué se rechaza? El vecino va a leer esto.');
+      if (motivo === null) return;
+    }
+    const res = await PronetDB.resolverBanner(id, aprobar, motivo);
+    if (!res?.ok) { showToast && showToast('⚠️ ' + (res?.error || 'No se pudo resolver')); return; }
+    showToast && showToast(aprobar ? '✅ Aprobado. Ahora puede pagarlo.' : 'Rechazado.');
+    renderBannersPendientes();
+  }
+  window.modResolverBanner = modResolverBanner;
+
+  const _misBannersCache = new Map();
+
+  async function renderMisBanners() {
+    const cont = document.getElementById('promo-lista');
+    if (!cont) return;
+    cont.innerHTML = '<div style="padding:18px 0;text-align:center;font-size:12.5px;color:var(--ink3)">⏳ Cargando…</div>';
+    const lista = await PronetDB.listarMisBanners();
+    if (!lista.length) {
+      cont.innerHTML = '<div style="padding:20px 14px;text-align:center;font-size:12.5px;color:var(--ink3)">Todavía no enviaste ningún aviso.</div>';
+      return;
+    }
+    _misBannersCache.clear();
+    lista.forEach(b => _misBannersCache.set(b.id, b));
+    const E = {
+      pendiente: { t: 'En revisión', c: '#B45309', b: '#FEF3C7' },
+      aprobado:  { t: 'Aprobado',    c: '#166534', b: '#DCFCE7' },
+      rechazado: { t: 'Rechazado',   c: '#BE123C', b: '#FFE4E6' },
+      activo:    { t: 'Publicado',   c: '#166534', b: '#DCFCE7' },
+      borrador:  { t: 'Borrador',    c: 'var(--ink3)', b: 'var(--surface)' },
+    };
+    cont.innerHTML = lista.map(b => {
+      const e = E[b.estado] || E.pendiente;
+      const vence = b.hasta ? new Date(b.hasta).toLocaleDateString('es-AR') : null;
+      return '<div style="border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px">' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+          '<img src="' + escHTML(b.imagen_url) + '" alt="" style="width:64px;height:22px;object-fit:cover;border-radius:5px;flex-shrink:0">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(b.nombre) + '</div>' +
+            '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' +
+              (b.estado === 'activo'
+                ? ('👆 ' + (b.clicks || 0) + ' click' + (b.clicks === 1 ? '' : 's') + (vence ? ' · hasta el ' + vence : ''))
+                : (b.dias || 30) + ' días') +
+            '</div>' +
+          '</div>' +
+          '<span style="flex-shrink:0;background:' + e.b + ';color:' + e.c + ';border-radius:20px;padding:4px 10px;font-size:10.5px;font-weight:700">' + e.t + '</span>' +
+        '</div>' +
+        (b.estado === 'rechazado' && b.motivo_rechazo
+          ? '<div style="font-size:11.5px;color:#BE123C;margin-top:8px;line-height:1.45">' + escHTML(b.motivo_rechazo) + '</div>' : '') +
+        (b.estado === 'aprobado'
+          ? '<button onclick="promoPagar(\'' + escHTML(b.id) + '\')" style="width:100%;margin-top:9px;padding:9px;font-size:12.5px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:\'Inter\',sans-serif">Pagar y publicar</button>'
+          : '') +
+      '</div>';
+    }).join('');
+  }
+
+  /** Lleva al checkout. Sólo el id viaja en el onclick — el resto sale del
+   *  cache, mismo criterio que en el resto de la app. */
+  async function promoPagar(id) {
+    const b = _misBannersCache.get(id);
+    if (!b) return;
+    if (!mpCheckoutActivo()) {
+      showToast && showToast('🧪 El cobro está en modo test: pedile al admin que lo active.');
+      return;
+    }
+    showToast && showToast('Abriendo el pago…');
+    const res = await PronetDB.crearPreferenciaMP('banner', 'mes', id);
+    if (res?.init_point) { window.location.href = res.init_point; return; }
+    showToast && showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
+  }
+  window.promoPagar = promoPagar;
 
   // ══ PRE-ALTA DE PRESTADORES ═════════════════════════════════════════
   //
