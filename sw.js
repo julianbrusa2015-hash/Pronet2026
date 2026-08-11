@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v208'; // v208: el impacto de la resena dice la verdad
+const CACHE_VERSION = 'pronet-v209'; // v209: ref del banner en el metadata + nombre del denunciante
 
 const SHELL = [
   './',

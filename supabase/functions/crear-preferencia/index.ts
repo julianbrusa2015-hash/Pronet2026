@@ -111,6 +111,11 @@ Deno.serve(async (req) => {
         usuario_id: user.id,
         plan,
         periodo,
+        // Sin esto el webhook recibe `ref` vacío y no sabe QUÉ activar: el
+        // pago entra bien pero el banner nunca se publica. Se validó arriba
+        // que sea del que paga y esté aprobado, pero validarlo no alcanza —
+        // hay que mandarlo.
+        ...(ref ? { ref } : {}),
       },
       back_urls: {
         success: siteUrl + '/?mp=success',

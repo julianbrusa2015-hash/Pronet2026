@@ -2499,8 +2499,13 @@ document.addEventListener('focusin', (e) => {
     if (!listaEl) return;
     listaEl.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     try {
+      // El denunciante se trae por su propia FK a `perfiles`. Faltaba: el fix
+      // de moderación del 2026-08-03 agregó la de `denunciado_id` pero no
+      // ésta, así que el panel decía a quién denunciaron pero no quién —
+      // justo lo que hace falta para detectar a alguien que denuncia en masa
+      // a un competidor, y para el botón "Contactar partes".
       const { data: todas, error: errDenuncias } = await window._sb.from('denuncias')
-        .select('*, perfiles!denunciado_id(nombre, prestador_id, prestadores(id, suspendido, denuncias_confirmadas))')
+        .select('*, perfiles!denunciado_id(nombre, prestador_id, prestadores(id, suspendido, denuncias_confirmadas)), denunciante:perfiles!denuncias_denunciante_id_perfiles_fkey(nombre)')
         .order('creado', { ascending: false });
       if (errDenuncias) throw errDenuncias;
       const denuncias = todas || [];
@@ -2536,6 +2541,8 @@ document.addEventListener('focusin', (e) => {
         const suspendido = !!prestadorInfo.suspendido;
         const nDenuncias = prestadorInfo.denuncias_confirmadas || 0;
         const nombreDenunciado = perfil.nombre ? `<span style="font-size:12px;color:var(--ink2)">Denunciado: <b>${escHTML(perfil.nombre)}</b>${nDenuncias > 0 ? ` · ${nDenuncias} denuncia/s confirmada/s` : ''}</span>` : '';
+        const quienDenuncio = d.denunciante?.nombre
+          ? `<div style="font-size:12px;color:var(--ink2);margin-top:2px">Denunció: <b>${escHTML(d.denunciante.nombre)}</b></div>` : '';
         const toggleBtnHTML = prestadorId ? `
           <button class="mod-btn ${suspendido ? 'mod-btn-ok' : 'mod-btn-suspend'}"
             onclick="toggleSuspensionPrestador('${prestadorId}', ${!suspendido})"
@@ -2551,7 +2558,7 @@ document.addEventListener('focusin', (e) => {
             <div class="mod-time">${escHTML(hace)}</div>
           </div>
           <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">${badgeHTML}${suspendido ? '<div style="background:#FEE2E2;color:#BE123C;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700">🚫 Suspendido</div>' : ''}</div>
-          ${nombreDenunciado ? `<div style="margin-bottom:6px">${nombreDenunciado}</div>` : ''}
+          ${nombreDenunciado || quienDenuncio ? `<div style="margin-bottom:6px">${nombreDenunciado}${quienDenuncio}</div>` : ''}
           <div class="mod-desc">${escHTML(d.detalle || 'Sin detalle')}</div>
           ${d.estado !== 'resuelta' ? `
           <div class="mod-actions">
