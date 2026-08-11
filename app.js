@@ -7228,6 +7228,11 @@ document.addEventListener('focusin', (e) => {
     const modal = document.getElementById('modal-tyc-login');
     if (modal) modal.style.display = 'none';
     if (_tycPostLoginCallback) {
+      // El flujo post-login tuvo que volver a mostrar #login-screen para que
+      // este modal se viera (vive adentro). Ya aceptado, hay que esconderlo
+      // de nuevo o la app queda tapada por la pantalla de login.
+      const loginEl = document.getElementById('login-screen');
+      if (loginEl) loginEl.classList.add('hidden');
       PronetDB.registrarAceptacionTyc(now).catch(() => {});
       if (usuarioActual) usuarioActual.tyc_aceptado_en = now;
       const cb = _tycPostLoginCallback;
@@ -14111,6 +14116,19 @@ document.addEventListener('focusin', (e) => {
               const el = document.getElementById(id); if (el) el.checked = false;
             });
             actualizarBotonTyc();
+            // El modal vive DENTRO de #login-screen, que a esta altura ya está
+            // oculto (la clase .hidden y el <style> anti-flash lo esconden
+            // apenas se detecta un token, para que no parpadee el login al
+            // recargar). Ponerle display:flex al modal no alcanza: quedaba con
+            // caja 0x0, invisible e inclickeable.
+            //
+            // El efecto era silencioso y grave: nadie podía aceptar, así que
+            // _continuarLogin no corría nunca y la cuenta entraba a medio
+            // inicializar — sin reflejarUsuario() (un prestador veía la UI de
+            // vecino), sin plan y sin realtime. Y sin salida, porque lo único
+            // que destraba es este modal.
+            quitarAntiFlash();
+            if (loginEl) loginEl.classList.remove('hidden');
             modal.style.display = 'flex';
           } else {
             _continuarLogin(); // sin modal: dejar pasar igual

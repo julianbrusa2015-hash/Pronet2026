@@ -6,11 +6,15 @@ const { test, expect } = require('@playwright/test');
 // onclick="gateLogin(...)" el 2026-08-02 y acá seguía el selector viejo,
 // que no matcheaba nada. Se reusan los helpers compartidos para el modal
 // de T&C y la espera del Service Worker.
-const { aceptarTycSiAparece, esperarSWListo } = require('./helpers');
+const { aceptarTycSiAparece, esperarSWListo, pasarGateTelefono } = require('./helpers');
 
 // ─── Credenciales ────────────────────────────────────────────────────────────
 const VECINO    = { email: 'vecino_test@pronet.test',    pw: 'Test1234!' };
 const PRESTADOR = { email: 'prestador_test@pronet.test', pw: '12345678' };
+// Números reservados para las cuentas de prueba. Uno por cuenta: hay un
+// índice único sobre los últimos 10 dígitos, así que compartirlo haría
+// fallar a la segunda cuenta que lo intente.
+const TEL_VECINO    = '11 5000-0001';
 
 // Título único por ejecución para encontrar el pedido entre runs
 const TITULO_PEDIDO = `Test E2E – Revisión eléctrica ${Date.now()}`;
@@ -131,6 +135,12 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
     await expect(page.locator('#np-3')).toBeVisible({ timeout: 5000 });
     await cerrarOverlays(page);
     await page.locator('button[onclick="npFinalizar()"]').click();
+
+    // Anti-fraude: publicar exige teléfono (una cuenta por número). Si la
+    // cuenta todavía no lo tiene, npFinalizar() abre el modal en vez de
+    // publicar, y al confirmarlo retoma la publicación sola. La primera
+    // corrida lo completa; las siguientes no lo ven.
+    await pasarGateTelefono(page, TEL_VECINO);
 
     // ── Éxito ──
     await expect(page.locator('#np-exito')).toBeVisible({ timeout: 15000 });

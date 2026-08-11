@@ -16,7 +16,7 @@
 // que tenía antes de correr.
 const { test, expect } = require('@playwright/test');
 const path = require('path');
-const { abrir, irA, visible, entrarComoInvitado } = require('./helpers');
+const { abrir, irA, visible, entrarComoInvitado, omitirComunidadSiAparece } = require('./helpers');
 
 const sesionVecino    = path.join(__dirname, '.auth', 'vecino.json');
 const sesionPrestador = path.join(__dirname, '.auth', 'prestador.json');
@@ -127,6 +127,7 @@ test.describe('PM-0 · Portada de Entre Vecinos', () => {
     await limpiarMarcas(page);
 
     await page.locator('#nb-mercado').click();
+    await omitirComunidadSiAparece(page);
     await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
 
     // La portada muestra datos reales, no los del mock: la zona del usuario y
@@ -147,12 +148,14 @@ test.describe('PM-0 · Portada de Entre Vecinos', () => {
     await limpiarMarcas(page);
 
     await page.locator('#nb-mercado').click();
+    await omitirComunidadSiAparece(page);
     await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
     await page.locator('#s-vecinos-portada button').click();
     await expect(page.locator('#s-mercado')).toHaveClass(/active/, { timeout: 10000 });
 
     await irA(page, 's-home');
     await page.locator('#nb-mercado').click();
+    await omitirComunidadSiAparece(page);
     await expect(page.locator('#s-mercado')).toHaveClass(/active/, { timeout: 10000 });
     expect(await activa(page)).toEqual(['s-mercado']);
   });
@@ -163,6 +166,7 @@ test.describe('PM-0 · Portada de Entre Vecinos', () => {
     await marcarFecha(page, '2020-01-01');
 
     await page.locator('#nb-mercado').click();
+    await omitirComunidadSiAparece(page);
     await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
   });
 
@@ -194,6 +198,7 @@ test.describe('PM-0 · Portada de Entre Vecinos', () => {
     }, PREFIJO);
 
     await page.locator('#nb-mercado').click();
+    await omitirComunidadSiAparece(page);
     // Tiene que mostrarse igual: esa marca no es suya.
     await expect(page.locator('#s-vecinos-portada')).toHaveClass(/active/, { timeout: 10000 });
 

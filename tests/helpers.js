@@ -82,7 +82,7 @@ async function limpiarSesion(page) {
  *  cada contexto de browser (localStorage limpio, como es cada test de
  *  Playwright), y se interpone entre "Ingresar" y el login real. Sin este
  *  paso el click en Ingresar no dispara loginWith(): solo abre el modal. */
-async function aceptarTycSiAparece(page) {
+async function aceptarTycSiAparece(page, timeout = 5000) {
   const modal = page.locator('#modal-tyc-login');
   // El modal aparece de forma ASÍNCRONA tras el click en Ingresar. La
   // versión anterior leía `el.style.display` en el mismo tick: si todavía
@@ -94,7 +94,7 @@ async function aceptarTycSiAparece(page) {
   // waitFor({state:'visible'}) resuelve las dos cosas: espera de verdad y
   // evalúa visibilidad real, no el atributo.
   try {
-    await modal.waitFor({ state: 'visible', timeout: 5000 });
+    await modal.waitFor({ state: 'visible', timeout });
   } catch {
     return; // no apareció: este contexto ya tenía los T&C aceptados
   }
@@ -104,6 +104,35 @@ async function aceptarTycSiAparece(page) {
   // Esperar el cierre antes de seguir: si no, el siguiente paso puede
   // clickear contra el overlay que todavía está desapareciendo.
   await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+}
+
+/** Atraviesa el modal "¿En qué comunidad vivís?" eligiendo "Ahora no".
+ *
+ *  `entrarAVecinos()` lo interpone cuando `perfiles.zona` no es una comunidad
+ *  (nivel 2) — las cuentas de prueba tienen zona='Escobar', que es nivel 1.
+ *  Se usa "Ahora no" y no una comunidad concreta a propósito: omitir no toca
+ *  la cuenta, así el test es repetible y no le cambia el mercado a una cuenta
+ *  que otros specs usan. */
+async function omitirComunidadSiAparece(page, timeout = 3000) {
+  const modal = page.locator('#modal-comunidad');
+  try { await modal.waitFor({ state: 'visible', timeout }); } catch { return; }
+  await page.locator('#modal-comunidad button', { hasText: /ahora no/i }).click();
+  await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+}
+
+/** Completa el modal "Necesitamos tu teléfono" que `npFinalizar()` interpone
+ *  antes de publicar un pedido si la cuenta no tiene teléfono cargado.
+ *
+ *  El número tiene que ser único: hay un índice sobre los últimos 10 dígitos
+ *  (una cuenta por teléfono). Por eso se pasa uno distinto por cuenta en vez
+ *  de un fijo compartido, que haría fallar al segundo test que lo use. */
+async function pasarGateTelefono(page, numero, timeout = 3000) {
+  const modal = page.locator('#modal-telefono');
+  try { await modal.waitFor({ state: 'visible', timeout }); } catch { return false; }
+  await page.locator('#tel-gate-input').fill(numero);
+  await page.locator('#tel-gate-btn').click();
+  await modal.waitFor({ state: 'hidden', timeout: 10000 });
+  return true;
 }
 
 async function entrarComoInvitado(page) {
@@ -224,6 +253,21 @@ async function sesionRestaurada(page) {
     return api.sesionLista() && typeof window.goTo === 'function'
       && !!window._sb && !!window.PronetDB;
   }, { timeout: 30000 });
+  // sesionLista() es `!!usuarioActual`, y restaurarSesion() asigna
+  // usuarioActual ANTES de decidir si muestra el modal de T&C. Para una
+  // cuenta con `perfiles.tyc_aceptado_en` en null el modal se interpone, y
+  // todo el post-login (reflejarUsuario, obtenerSuscripcion, realtime) queda
+  // esperando en `_tycPostLoginCallback` sin ejecutarse.
+  //
+  // Con storageState no hay click en "Ingresar", así que el aceptarTyc de
+  // login() nunca corre y nadie descarta ese modal: los specs leían el DOM
+  // de un prestador todavía pintado como vecino. Va acá y no en login()
+  // porque es el único punto por el que pasan las dos rutas.
+  //
+  // 1500ms y no los 5000 por defecto: acá el modal, si va a aparecer, ya
+  // apareció (usuarioActual está asignado). Esperar 5s en cada llamada le
+  // sumaría minutos a la suite entera para el caso normal de "no aparece".
+  await aceptarTycSiAparece(page, 1500);
   // Tras sesionLista() todavía corren cadenas async cortas (mostrarZonaAlLogin,
   // tutorial, chequeo de actualización del SW) que pueden interrumpir un
   // evaluate() inmediato. 300ms no alcanzaba — se veía como "window.PronetDB
@@ -288,4 +332,4 @@ async function visible(page, selector) {
   }, selector);
 }
 
-module.exports = { CUENTAS, esperarDOM, esperarSWListo, cerrarTutorialSiAparece, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece };
+module.exports = { CUENTAS, esperarDOM, esperarSWListo, cerrarTutorialSiAparece, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece, omitirComunidadSiAparece, pasarGateTelefono };

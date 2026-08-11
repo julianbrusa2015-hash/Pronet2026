@@ -256,7 +256,12 @@ test.describe('D-01b · Sync precio_mes/precio_anual desde planes_limites', () =
   // PRONET_CONFIG.PLANES ni en s-subs — no es una suscripción, no se elige
   // desde la pantalla de planes. El sync de precios sigue aplicando sólo a
   // los planes de prestador de verdad.
-  const NO_SON_PLANES_DE_PRESTADOR = ['promarket_credito'];
+  // `planes_limites` no es sólo el catálogo de suscripciones del prestador:
+  // también guarda el precio de cosas que se compran sueltas y que por eso
+  // no tienen entrada en PRONET_CONFIG.PLANES.
+  //   · promarket_credito — crédito de publicación de Entre Vecinos
+  //   · banner            — espacio publicitario del carrusel (v207)
+  const NO_SON_PLANES_DE_PRESTADOR = ['promarket_credito', 'banner'];
 
   test('PRONET_CONFIG.PLANES coincide con planes_limites para los planes de prestador', async ({ page }) => {
     const { planes, filas } = await page.evaluate(async () => ({
