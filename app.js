@@ -2529,11 +2529,21 @@ document.addEventListener('focusin', (e) => {
       lista.forEach(d => {
         const iconos = { pendiente: '🚨', en_revision: '⚠️', resuelta: '✅' };
         const clases = { pendiente: 'critica', en_revision: 'alta', resuelta: 'resuelta' };
+        // El badge de resuelta dice QUÉ se decidió. Antes confirmar y
+        // desestimar terminaban las dos en un "Resuelta" idéntico, así que un
+        // día después no se sabía si se le había dado la razón al denunciante.
+        const resueltaHTML = d.resolucion === 'falta_confirmada'
+          ? '<div style="background:#FEE2E2;color:#BE123C;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700">✓ Falta confirmada</div>'
+          : d.resolucion === 'desestimada'
+          ? '<div style="background:var(--surface);color:var(--ink2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700">✕ Desestimada</div>'
+          // Las resueltas antes de este cambio no tienen resolución guardada:
+          // no hay forma de saber cuál fue y adivinarla sería peor.
+          : '<div style="background:var(--green-s);color:var(--green);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700">✓ Resuelta</div>';
         const badgeHTML = d.estado === 'pendiente'
           ? '<div class="badge-suspendido">🔴 Pendiente</div>'
           : d.estado === 'en_revision'
           ? '<div class="badge-revision">⚠️ En revisión</div>'
-          : '<div style="background:var(--green-s);color:var(--green);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700">✓ Resuelta</div>';
+          : resueltaHTML;
         const hace = d.creado ? tiempoRelativo(d.creado) : '';
         const perfil = d.perfiles || {};
         const prestadorInfo = perfil.prestadores || {};
@@ -2560,12 +2570,19 @@ document.addEventListener('focusin', (e) => {
           <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">${badgeHTML}${suspendido ? '<div style="background:#FEE2E2;color:#BE123C;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700">🚫 Suspendido</div>' : ''}</div>
           ${nombreDenunciado || quienDenuncio ? `<div style="margin-bottom:6px">${nombreDenunciado}${quienDenuncio}</div>` : ''}
           <div class="mod-desc">${escHTML(d.detalle || 'Sin detalle')}</div>
+          ${d.resuelto_en ? `<div style="font-size:11px;color:var(--ink3);margin-top:6px">Resuelta el ${new Date(d.resuelto_en).toLocaleDateString('es-AR')}</div>` : ''}
           ${d.estado !== 'resuelta' ? `
           <div class="mod-actions">
-            <button class="mod-btn mod-btn-suspend" onclick="accionDenuncia('${d.id}','resuelta','baja')">Confirmar baja</button>
-            <button class="mod-btn mod-btn-info" onclick="accionDenuncia('${d.id}','en_revision','contacto')">Contactar partes</button>
-            <button class="mod-btn mod-btn-ok" onclick="accionDenuncia('${d.id}','resuelta','desestimada')">Desestimar</button>
-          </div>` : ''}
+            <!-- Antes decía "Confirmar baja", que hacía pensar en eliminar la
+                 cuenta. No da de baja a nadie: suma +1 al contador del
+                 prestador y lo suspende recién a las 3. -->
+            <button class="mod-btn mod-btn-suspend" onclick="accionDenuncia('${d.id}','falta_confirmada')">Confirmar falta</button>
+            <button class="mod-btn mod-btn-info" onclick="accionDenuncia('${d.id}','contacto')">Contactar partes</button>
+            <button class="mod-btn mod-btn-ok" onclick="accionDenuncia('${d.id}','desestimada')">Desestimar</button>
+          </div>` : `
+          <div class="mod-actions">
+            <button class="mod-btn mod-btn-info" onclick="reabrirDenuncia('${d.id}')" style="width:100%">↩ Reabrir</button>
+          </div>`}
           ${toggleBtnHTML}`;
         listaEl.appendChild(card);
       });
@@ -2839,22 +2856,29 @@ document.addEventListener('focusin', (e) => {
     return 'Hace ' + Math.floor(diff / 86400) + ' días';
   }
 
-  async function accionDenuncia(id, nuevoEstado, tipo) {
-    const labels = { baja: 'Baja confirmada', contacto: 'Partes contactadas', desestimada: 'Denuncia desestimada' };
+  /** Resuelve una denuncia. Los tres caminos pasan por el mismo RPC, que
+   *  registra QUÉ se decidió, quién y cuándo — antes confirmar y desestimar
+   *  escribían el mismo estado y después no se distinguían. */
+  async function accionDenuncia(id, resolucion) {
     try {
-      if (tipo === 'baja') {
-        // Usa RPC SECURITY DEFINER: marca resuelta + incrementa contador + auto-suspende si >= 3
-        const { data, error } = await window._sb.rpc('confirmar_baja_prestador', { p_denuncia_id: id });
-        if (error) throw error;
-        if (data?.suspendido) {
-          showToast && showToast('🚫 Prestador suspendido automáticamente (3 denuncias confirmadas)', null, true);
-        } else {
-          showToast && showToast('✅ Baja confirmada (' + (data?.denuncias || '?') + ' denuncia/s)');
-        }
+      const { data, error } = await window._sb.rpc('resolver_denuncia', {
+        p_denuncia_id: id, p_resolucion: resolucion,
+      });
+      if (error) throw error;
+      if (!data?.ok) { showToast && showToast('⚠️ ' + (data?.error || 'No se pudo resolver')); return; }
+
+      if (resolucion === 'contacto') {
+        showToast && showToast('✅ Marcada en revisión');
+      } else if (resolucion === 'desestimada') {
+        showToast && showToast('✅ Denuncia desestimada');
+      } else if (data.suspendido) {
+        showToast && showToast('🚫 Prestador suspendido automáticamente (3 faltas confirmadas)', null, true);
+      } else if (!data.aplica_a_prestador) {
+        // Al vecino denunciado no le pasa nada: no hay dónde acumular la
+        // falta. Decirlo evita que el admin crea que aplicó una sanción.
+        showToast && showToast('✓ Falta confirmada. Ojo: el denunciado no es prestador, así que no se le aplica ninguna sanción.', 6000);
       } else {
-        const { error } = await window._sb.from('denuncias').update({ estado: nuevoEstado }).eq('id', id);
-        if (error) throw error;
-        showToast && showToast('✅ ' + (labels[tipo] || 'Actualizado'));
+        showToast && showToast('✓ Falta confirmada (' + (data.denuncias || 1) + ' de 3 para la suspensión)');
       }
       renderModeracion();
       cargarBadgeDenuncias && cargarBadgeDenuncias();
@@ -2863,6 +2887,26 @@ document.addEventListener('focusin', (e) => {
       showToast && showToast(esConectividad ? '⚠️ Sin conexión. Intentá de nuevo.' : '❌ Error al actualizar: ' + (e?.message || 'intentá de nuevo'));
     }
   }
+
+  /** Vuelve una denuncia a pendiente. Si había sumado al contador del
+   *  prestador, se lo resta. La suspensión NO se levanta sola: pudo haberla
+   *  puesto el admin a mano por otro motivo. Para eso está "Reactivar". */
+  async function reabrirDenuncia(id) {
+    if (!confirm('¿Reabrir esta denuncia? Vuelve a quedar pendiente y se descuenta la falta si la habías confirmado.')) return;
+    try {
+      const { data, error } = await window._sb.rpc('reabrir_denuncia', { p_denuncia_id: id });
+      if (error) throw error;
+      if (!data?.ok) { showToast && showToast('⚠️ ' + (data?.error || 'No se pudo reabrir')); return; }
+      showToast && showToast(data.descontado
+        ? '↩ Reabierta. Se descontó la falta del prestador.'
+        : '↩ Reabierta.');
+      renderModeracion();
+      cargarBadgeDenuncias && cargarBadgeDenuncias();
+    } catch (e) {
+      showToast && showToast('❌ Error: ' + (e?.message || 'intentá de nuevo'));
+    }
+  }
+  window.reabrirDenuncia = reabrirDenuncia;
 
   async function toggleSuspensionPrestador(prestadorId, suspender) {
     try {
