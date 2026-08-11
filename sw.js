@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v214'; // v214: las hojas inferiores no se salian del marco
+const CACHE_VERSION = 'pronet-v215'; // v215: respetar prefers-reduced-motion en las hojas inferiores
 
 const SHELL = [
   './',

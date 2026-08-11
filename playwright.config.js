@@ -18,6 +18,13 @@ module.exports = defineConfig({
     baseURL: 'https://pronetprueba.netlify.app',
     headless: false,           // visible para ver qué pasa
     viewport: { width: 390, height: 844 }, // iPhone 14 (diseño mobile-first)
+    // Una transición CSS sólo avanza si el navegador compone frames, y una
+    // ventana oculta o tapada no compone. Las hojas que suben desde abajo
+    // (.zona-modal) se quedaban en translateY(100%), fuera del marco —que es
+    // overflow:hidden— y Playwright las veía "visible y estable" pero el
+    // click moría contra .phone. Con reduced-motion el estado final se
+    // aplica de una: mismo resultado, sin depender del compositor.
+    reducedMotion: 'reduce',
     // El Service Worker es la causa raíz de casi todos los flakes de esta
     // suite. app.js llama a location.reload() en 'controllerchange', que
     // ocurre la primera vez que el SW toma control de un contexto — o sea,

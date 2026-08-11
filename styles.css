@@ -2313,6 +2313,16 @@
     max-height:90%; overflow-y:auto; overscroll-behavior:contain;
   }
   .zona-modal-overlay.show .zona-modal { transform:translateY(0); }
+  /* Quien pidió menos movimiento en su sistema recibe la hoja ya puesta, sin
+     el deslizamiento. Los estados finales son los mismos: sólo se saca la
+     interpolación, así que nada queda a mitad de camino.
+     De paso vuelve deterministas los tests: una transición sólo avanza si el
+     navegador está componiendo frames, y en una ventana oculta o no visible
+     no compone — la hoja se quedaba en translateY(100%), fuera del marco
+     (que es overflow:hidden), y el click nunca le llegaba. */
+  @media (prefers-reduced-motion: reduce) {
+    .zona-modal-overlay, .zona-modal { transition:none; }
+  }
   .zm-handle { width:36px; height:4px; background:#D1D5DB; border-radius:99px; margin:0 auto 18px; }
   .zm-title { font-family:'Sora',sans-serif; font-size:18px; font-weight:700; color:var(--ink); margin-bottom:6px; }
   .zm-sub   { font-size:13px; color:var(--ink3); margin-bottom:20px; line-height:1.5; }
