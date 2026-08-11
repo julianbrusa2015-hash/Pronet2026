@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v210'; // v210: la moderacion registra que se decidio y permite revertir
+const CACHE_VERSION = 'pronet-v211'; // v211: el ABM de publicidad del admin volvio a funcionar
 
 const SHELL = [
   './',

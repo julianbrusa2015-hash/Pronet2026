@@ -10126,7 +10126,7 @@ document.addEventListener('focusin', (e) => {
     }
 
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
-    const res = await PronetDB.crearBanner({
+    const res = await PronetDB.comprarBanner({
       nombre, imagen_url: promoImagenUrl, enlace, dias: 30, destino: promoDestino,
     });
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar a revisión'; }

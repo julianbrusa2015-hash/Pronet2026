@@ -1022,8 +1022,15 @@ const PronetDB = (() => {
       return Number(data) || 0;
     },
 
-    /** Alta de un banner por su dueño. Queda 'pendiente' de moderación. */
-    async crearBanner({ nombre, imagen_url, enlace, dias, destino } = {}) {
+    /** Alta de un banner COMPRADO por un vecino. Queda 'pendiente' de
+     *  moderación y está gateada por `banners_pagos_activos`.
+     *
+     *  Ojo con el nombre: NO es `crearBanner` — ése es el alta editorial del
+     *  admin, que inserta directo y no pasa por el flag. Llamarlos igual hizo
+     *  que el segundo pisara al primero (en un objeto gana la última clave) y
+     *  el ABM del panel empezó a rechazar con "los espacios publicitarios no
+     *  están disponibles". */
+    async comprarBanner({ nombre, imagen_url, enlace, dias, destino } = {}) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const { data, error } = await sb.rpc('crear_banner', {
         p_nombre: nombre, p_imagen_url: imagen_url, p_enlace: enlace,
