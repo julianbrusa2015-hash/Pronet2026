@@ -1382,13 +1382,16 @@ const PronetDB = (() => {
       if (!remoto) return;
       const uid = await this.usuarioIdActual();
       if (!uid) return; // solo se loguea de usuarios logueados
-      await sb.from('busquedas_mercado').insert({
+      // Sin `.catch()` colgado del builder: no existe y tiraba TypeError antes
+      // de mandar el insert. `busquedas_mercado` quedó en cero filas.
+      const { error } = await sb.from('busquedas_mercado').insert({
         termino: termino.trim().toLowerCase().slice(0, 100),
         zona: zona || null,
         categoria: categoria && categoria !== 'todos' ? categoria : null,
         resultados_count: resultadosCount || 0,
         usuario_id: uid,
-      }).catch(() => {});
+      });
+      if (error) console.warn('[PronetDB] registrarBusquedaMercado', error.message);
     },
 
     /** Términos más buscados sin resultado en una zona (últimos 7 días,
@@ -1609,8 +1612,13 @@ const PronetDB = (() => {
       if (!uid) return;
       const { data } = await sb.from('perfiles').select('tyc_aceptado_en').eq('id', uid).maybeSingle();
       if (data?.tyc_aceptado_en) return;
-      await sb.from('perfiles').update({ tyc_aceptado_en: timestampLocal }).eq('id', uid)
-        .catch(() => {});
+      // OJO: nada de `.catch()` colgado del builder de PostgREST — no existe
+      // ese método, así que la llamada tiraba TypeError ANTES de mandar el
+      // request y el consentimiento no se guardaba nunca. Los errores de
+      // PostgREST vienen en `error`, no por excepción.
+      const { error } = await sb.from('perfiles')
+        .update({ tyc_aceptado_en: timestampLocal }).eq('id', uid);
+      if (error) console.warn('[PronetDB] registrarAceptacionTyc', error.message);
     },
 
     /** Devuelve el teléfono de un usuario, solo si ya comparten un chat de
@@ -2306,8 +2314,10 @@ const PronetDB = (() => {
     async registrarVista(prestadorId, origen = 'busqueda') {
       if (!remoto) return;
       // RPC valida el prestador, bloquea vistas propias y deduplica una por día
-      await sb.rpc('fn_registrar_vista', { p_prestador_id: prestadorId, p_origen: origen })
-        .catch(e => console.warn('[PronetDB] registrarVista', e.message));
+      // El builder de rpc() tampoco tiene `.catch()`: tiraba TypeError y la
+      // vista no se registraba. El error viene en `error`.
+      const { error } = await sb.rpc('fn_registrar_vista', { p_prestador_id: prestadorId, p_origen: origen });
+      if (error) console.warn('[PronetDB] registrarVista', error.message);
     },
 
     /** Registra un contacto (click en botón Contactar) con un prestador. */
@@ -2321,8 +2331,9 @@ const PronetDB = (() => {
           zona = perfil?.zona || null;
         }
       } catch { /* zona queda null */ }
-      await sb.rpc('fn_registrar_contacto', { p_prestador_id: prestadorId, p_origen: origen, p_zona: zona })
-        .catch(e => console.warn('[PronetDB] registrarContacto', e.message));
+      // Ídem registrarVista: `.catch()` sobre el builder no existe.
+      const { error } = await sb.rpc('fn_registrar_contacto', { p_prestador_id: prestadorId, p_origen: origen, p_zona: zona });
+      if (error) console.warn('[PronetDB] registrarContacto', error.message);
     },
 
     /** Obtiene analítica completa del prestador logueado para un período dado. */
@@ -2864,7 +2875,10 @@ const PronetDB = (() => {
           // por el cliente (auditoría 2026-08-03, ver
           // supabase-fix-perfiles-columnas-sensibles.sql) para que nadie
           // pudiera activarse es_pro_marketplace propio desde la consola.
-          await sb.rpc('expirar_mi_pro_marketplace').catch(() => {});
+          // Sin `.catch()` colgado del builder: no existe y tiraba TypeError,
+          // así que la expiración nunca llegaba a correr en el servidor.
+          const { error } = await sb.rpc('expirar_mi_pro_marketplace');
+          if (error) console.warn('[PronetDB] expirar_mi_pro_marketplace', error.message);
           perfil.es_pro_marketplace = false;
         }
       }

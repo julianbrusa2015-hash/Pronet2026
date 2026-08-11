@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "build": "cleancss -o styles.min.css styles.css",
+    "check": "node scripts/chequeo.js",
     "test": "playwright test",
     "perf:e1": "k6 run tests/perf/e1-contratacion.js",
     "perf:e1:smoke": "k6 run --vus 5 --duration 30s tests/perf/e1-contratacion.js",
