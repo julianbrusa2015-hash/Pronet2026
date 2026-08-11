@@ -225,7 +225,17 @@ test.describe('PM-2 · Feed', () => {
 
   test('el feed carga y deja de mostrar el spinner', async ({ page }) => {
     await abrir(page);
-    await irA(page, 's-mercado');
+    // Por el nav y no con irA(): quien pinta el feed es entrarAVecinos(), no
+    // goTo(). Saltar al router dejaba #mkt-feed literalmente vacío —el test
+    // veía "no dice Cargando" y lo daba por bueno— y desde que entrarAVecinos
+    // pregunta la comunidad, ni siquiera llegaba.
+    await page.locator('#nb-mercado').click();
+    await omitirComunidadSiAparece(page);
+    const portada = page.locator('#s-vecinos-portada.active');
+    if (await portada.isVisible().catch(() => false)) {
+      await page.locator('#s-vecinos-portada button').first().click();
+    }
+    await expect(page.locator('#s-mercado')).toHaveClass(/active/, { timeout: 10000 });
     await page.waitForFunction(() => {
       const f = document.getElementById('mkt-feed');
       return f && !f.textContent.includes('Cargando');

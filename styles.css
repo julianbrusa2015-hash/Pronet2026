@@ -2304,6 +2304,13 @@
     background:white; border-radius:24px 24px 0 0; width:100%;
     padding:20px 20px 36px;
     transform:translateY(100%); transition:transform .35s;
+    /* Estas hojas crecen con el catálogo y no tenían tope ni scroll: el
+       selector de zona con 27 barrios mide 2136px y el de comunidad con 9
+       mide 886px, dentro de un marco de 696px que además es overflow:hidden.
+       Lo que se pasa se recorta y no hay forma de llegar — y el control para
+       salir ("Ahora no", "Confirmar") es siempre el último de la hoja.
+       Con tope y scroll propio la hoja nunca se sale del marco. */
+    max-height:90%; overflow-y:auto; overscroll-behavior:contain;
   }
   .zona-modal-overlay.show .zona-modal { transform:translateY(0); }
   .zm-handle { width:36px; height:4px; background:#D1D5DB; border-radius:99px; margin:0 auto 18px; }
