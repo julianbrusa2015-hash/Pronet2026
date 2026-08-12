@@ -486,6 +486,7 @@ document.addEventListener('focusin', (e) => {
         telInput.value = usuarioActual.telefono || '';
         if (telInput.value) formatearTel(telInput);
       }
+      poblarComunidadEdit();
       cargarEdicionPrestador();
       if (usuarioActual.prestador_id) cargarPortfolioEdit(usuarioActual.prestador_id);
     }
@@ -5555,6 +5556,32 @@ document.addEventListener('focusin', (e) => {
     return (await cargarZonasArbol()).filter(z => z.nivel === 2);
   }
 
+  /** Llena el selector de comunidad de Editar perfil.
+   *
+   *  El valor guardado puede ser un BARRIO (nivel 3) y no una comunidad: el
+   *  modal de Entre Vecinos guarda comunidades, pero `perfiles.zona` es un
+   *  campo viejo donde también hay barrios y hasta 'Escobar' suelto. Por eso
+   *  se preselecciona por la comunidad RESUELTA —la que devuelve
+   *  comunidadDelUsuario()— y no por igualdad literal: si no, alguien de
+   *  Araucarias abriría el selector y lo vería vacío, como si nunca hubiera
+   *  elegido nada. */
+  async function poblarComunidadEdit() {
+    const sel = document.getElementById('edit-comunidad');
+    if (!sel) return;
+    const [comunidades, actual] = await Promise.all([
+      listarComunidades().catch(() => []),
+      comunidadDelUsuario().catch(() => null),
+    ]);
+    if (!comunidades.length) {
+      sel.innerHTML = '<option value="">No se pudieron cargar las comunidades</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Prefiero no decirlo — ver todo Escobar</option>' +
+      comunidades.map(c =>
+        '<option value="' + escHTML(c.nombre) + '"' + (c.nombre === actual ? ' selected' : '') + '>' +
+        escHTML(c.nombre) + '</option>').join('');
+  }
+
   /** La comunidad del usuario, o null si su zona todavía es de nivel 1.
    *
    *  Un vecino que eligió un barrio (nivel 3) igual pertenece a la comunidad
@@ -7150,8 +7177,17 @@ document.addEventListener('focusin', (e) => {
     const telefono = val('edit-tel');
     let ok = true;
     try {
-      // 1. Perfil del usuario (nombre + teléfono)
+      // 1. Perfil del usuario (nombre + teléfono + dónde vive)
       const perfilCambios = { nombre, telefono };
+      // La comunidad sólo se toca si el selector está y trae algo distinto:
+      // mandarla siempre pisaría con '' el barrio de nivel 3 de quien eligió
+      // uno, porque el selector ofrece comunidades y no barrios.
+      const selCom = document.getElementById('edit-comunidad');
+      if (selCom) {
+        const elegida = selCom.value;
+        const actual = await comunidadDelUsuario().catch(() => null);
+        if (elegida !== (actual || '')) perfilCambios.zona = elegida || null;
+      }
       if (fotoPerfilNueva) perfilCambios.foto_url = fotoPerfilNueva;
       const perfilGuardado = await PronetDB.actualizarMiPerfilBasico(perfilCambios);
       // Un teléfono ya usado por otra cuenta es el único error de acá que el
@@ -7163,7 +7199,14 @@ document.addEventListener('focusin', (e) => {
         if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
         return;
       }
-      if (perfilGuardado.ok) { usuarioActual.nombre = nombre; usuarioActual.telefono = telefono; if (fotoPerfilNueva) usuarioActual.foto_url = fotoPerfilNueva; }
+      if (perfilGuardado.ok) {
+        usuarioActual.nombre = nombre; usuarioActual.telefono = telefono;
+        if (fotoPerfilNueva) usuarioActual.foto_url = fotoPerfilNueva;
+        // Sin esto el feed de Entre Vecinos sigue filtrando por la comunidad
+        // vieja hasta la próxima recarga: `comunidadDelUsuario()` lee de
+        // `usuarioActual.zona`, no vuelve a la base.
+        if ('zona' in perfilCambios) usuarioActual.zona = perfilCambios.zona;
+      }
       // 2. Fila del prestador (si lo es)
       if (usuarioActual.prestador_id) {
         const especialidades = Array.from(document.querySelectorAll('#edit-especialidades .sub-opt.on')).map(e => e.dataset.esp);
@@ -7198,6 +7241,9 @@ document.addEventListener('focusin', (e) => {
         ok = !!r;
       }
     } catch(e) { ok = false; }
+    // La cabecera de Mi Perfil muestra la zona; sin esto sigue diciendo la
+    // vieja hasta recargar y parece que el guardado no tomó.
+    if (ok) reflejarUsuario();
     if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
     const saved = document.getElementById('edit-saved');
     if (saved) {

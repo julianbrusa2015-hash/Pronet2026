@@ -5499,6 +5499,23 @@
           <textarea name="edit-desc" class="ob-input" rows="3" style="resize:none;line-height:1.5" id="edit-desc" placeholder="Contá tu experiencia, servicios y qué te diferencia..."></textarea>
         </div>
 
+        <!-- Dónde vivo. Es de la CUENTA (perfiles.zona) y decide de qué
+             mercado formo parte en Entre Vecinos. Distinto de la cobertura
+             de abajo, que es dónde TRABAJO: un prestador tiene las dos y no
+             tienen por qué coincidir.
+             Hasta ahora sólo se podía cargar desde el modal que aparece al
+             entrar a Entre Vecinos, y quien tocaba "Ahora no" se quedaba sin
+             forma de volver — 18 de 19 perfiles siguen sin comunidad. -->
+        <div class="ob-field" style="margin-top:12px">
+          <label class="ob-label" for="edit-comunidad">¿En qué comunidad vivís?</label>
+          <div style="font-size:11px;color:var(--ink3);margin:-4px 0 8px;line-height:1.5">
+            Entre Vecinos te muestra primero lo que hay en tu comunidad.
+          </div>
+          <select class="ob-input" id="edit-comunidad" name="edit-comunidad">
+            <option value="">Cargando…</option>
+          </select>
+        </div>
+
         <!-- Zona -->
         <div class="ob-field" style="margin-top:12px">
           <label id="lbl-grupo-24" class="ob-label">Zona de cobertura</label>
