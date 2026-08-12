@@ -1472,24 +1472,34 @@ const PronetDB = (() => {
      *  al dispositivo para armar un contador de 11 números, con costo
      *  lineal al tamaño de la tabla. Ahora la respuesta es de tamaño
      *  constante (una fila por zona). */
-    /** {barrio: cantidad} de publicaciones activas, para los pines del mapa.
+    /** `[{lugar, cantidad, vecinos}]` de publicaciones activas. Alimenta los
+     *  pines del mapa y el resumen de búsqueda ("3 vecinos ofrecen pizza ·
+     *  Araucarias (2)").
      *
      *  Agrupa por barrio y no por zona: un pin para todo Escobar no contesta
      *  "¿dónde hay empanadas?". Las que no declaran barrio caen en el pin de
      *  su zona — son anteriores a que el campo fuera obligatorio y perderlas
      *  del mapa sería peor. `barrios` acota igual que el feed. */
     async contarPublicacionesPorBarrio({ categoria = null, busqueda = null, barrios = null, zona = null } = {}) {
-      if (!remoto) return {};
+      if (!remoto) return [];
       const { data, error } = await sb.rpc('contar_publicaciones_por_barrio', {
         p_categoria: categoria && categoria !== 'todos' ? categoria : null,
         p_busqueda:  busqueda && busqueda.trim() ? busqueda.trim() : null,
         p_barrios:   barrios?.length ? barrios : null,
         p_zona:      zona || null,
       });
-      if (error) { console.warn('[PronetDB] contarPublicacionesPorBarrio', error.message); return {}; }
-      const counts = {};
-      (data || []).forEach(r => { if (r.lugar) counts[r.lugar] = Number(r.cantidad) || 0; });
-      return counts;
+      if (error) { console.warn('[PronetDB] contarPublicacionesPorBarrio', error.message); return []; }
+      return (data || [])
+        .filter(r => r.lugar)
+        .map(r => ({
+          lugar: r.lugar,
+          cantidad: Number(r.cantidad) || 0,
+          // Personas distintas, no publicaciones: dos avisos de la misma
+          // persona son un vecino. Decir "2 vecinos" ahí sería inflar el
+          // mercado, que es justo la impresión que no queremos dar con el
+          // marketplace arrancando. Medido: Araucarias tiene 2 y 1.
+          vecinos: Number(r.vecinos) || 0,
+        }));
     },
 
     async contarPublicacionesPorZona({ categoria = null, busqueda = null } = {}) {

@@ -5321,6 +5321,11 @@ document.addEventListener('focusin', (e) => {
     if (mktOrigen === 'prestador') {
       mktCargando = true;
       mktHayMas = false;   // sin paginado: el "Ver más" no aplica a esta fuente
+      // El resumen cuenta publicaciones de VECINOS por barrio; en este
+      // origen no aplica, y dejarlo pintado de la vista anterior mostraría
+      // números que no corresponden a lo que está abajo.
+      const resumen = document.getElementById('mkt-resumen');
+      if (resumen) resumen.style.display = 'none';
       await renderFeedPrestadores(cont);
       mktCargando = false;
       return;
@@ -5346,7 +5351,7 @@ document.addEventListener('focusin', (e) => {
       incluirSinBarrio: !mktBarrioFiltro,
     }).catch(() => []);
     mktCargando = false;
-    if (reset) mktPintarAmbito(comunidad);
+    if (reset) { mktPintarAmbito(comunidad); mktPintarResumen(barrios); }
     if (reset) { cont.innerHTML = ''; mktUltimoResultCount = posts.length; }
     posts.forEach(p => mktPostsCache.set(p.id, p));
     // Cargar qué publicaciones likeó el usuario actual (merge con el Set existente)
@@ -5420,6 +5425,75 @@ document.addEventListener('focusin', (e) => {
     renderMercado(true);
   }
   window.mktToggleAmbito = mktToggleAmbito;
+
+  /** "3 vecinos ofrecen pizza · Araucarias (2) · Acacias (1)".
+   *
+   *  Sólo cuando el vecino ACOTÓ algo —buscó o eligió una categoría—, que es
+   *  cuando la pregunta "¿cuántos y dónde?" existe. Sin filtro sería repetir
+   *  el tamaño del mercado en cada apertura, y con un barrio ya elegido
+   *  sobra: ya estás adentro de uno.
+   *
+   *  Cuenta PERSONAS y no publicaciones. Dos avisos del mismo vecino son un
+   *  vecino; decir dos sería inflar el mercado. */
+  async function mktPintarResumen(barrios) {
+    const cont = document.getElementById('mkt-resumen');
+    if (!cont) return;
+    const hayFiltro = (mktBusqueda && mktBusqueda.trim()) ||
+                      (mktFiltroActivo && mktFiltroActivo !== 'todos');
+    if (!hayFiltro || mktBarrioFiltro || mktOrigen !== 'vecino') {
+      cont.style.display = 'none';
+      return;
+    }
+
+    const filas = await PronetDB.contarPublicacionesPorBarrio({
+      categoria: mktFiltroActivo, busqueda: mktBusqueda,
+      barrios, zona: mktZonaActiva,
+    }).catch(() => []);
+
+    if (!filas.length) { cont.style.display = 'none'; return; }
+
+    const totalVecinos = filas.reduce((n, f) => n + f.vecinos, 0);
+    const ordenadas = [...filas].sort((a, b) => b.cantidad - a.cantidad);
+    const que = (mktBusqueda && mktBusqueda.trim())
+      ? '"' + escHTML(mktBusqueda.trim()) + '"'
+      : escHTML(nombreCategoriaMkt(mktFiltroActivo));
+
+    // El índice y no el nombre en el onclick: los nombres de barrio los
+    // edita el admin, y escHTML no protege adentro de un handler inline
+    // porque el parser decodifica las entidades antes de que el JS las lea.
+    _mktResumenLugares.length = 0;
+    ordenadas.forEach(f => _mktResumenLugares.push(f.lugar));
+
+    cont.style.display = 'block';
+    cont.innerHTML =
+      '<div style="background:white;border:1px solid var(--border);border-radius:12px;padding:10px 12px">' +
+        '<div style="font-size:12.5px;font-weight:700;color:var(--ink)">' +
+          totalVecinos + (totalVecinos === 1 ? ' vecino ofrece ' : ' vecinos ofrecen ') + que +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' +
+          ordenadas.map((f, i) =>
+            '<button onclick="mktFiltrarPorLugar(' + i + ')" ' +
+              'style="border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:11.5px;font-weight:600;color:var(--ink2);cursor:pointer;font-family:\'Inter\',sans-serif">' +
+              escHTML(f.lugar) + ' (' + f.cantidad + ')</button>').join('') +
+        '</div>' +
+      '</div>';
+  }
+
+  const _mktResumenLugares = [];
+
+  function mktFiltrarPorLugar(idx) {
+    const lugar = _mktResumenLugares[idx];
+    if (!lugar) return;
+    mktBarrioFiltro = lugar;
+    renderMercado(true);
+  }
+  window.mktFiltrarPorLugar = mktFiltrarPorLugar;
+
+  /** Nombre legible de la categoría activa, para el texto del resumen. */
+  function nombreCategoriaMkt(slug) {
+    const cat = catsDeTipo(mktTipoActivo).find(c => c.slug === slug);
+    return cat ? cat.nombre.toLowerCase() : slug;
+  }
 
   function filtrarMercado(chip, categoria) {
     document.querySelectorAll('#s-mercado .filter-row .chip').forEach(c => c.classList.remove('on'));
@@ -5905,7 +5979,7 @@ document.addEventListener('focusin', (e) => {
       // El desplegable de zona acota el feed; sin esto el mapa mostraba
       // pines de publicaciones que la lista no tenía.
       zona: mktZonaActiva,
-    }).catch(() => ({}));
+    }).catch(() => []);
     const container = document.getElementById('mkt-mapa-div');
     if (!container) return;
 
@@ -5928,7 +6002,7 @@ document.addEventListener('focusin', (e) => {
     let hayPins = false;
 
     _mktPins.length = 0;
-    Object.entries(counts).forEach(([lugar, count]) => {
+    counts.forEach(({ lugar, cantidad: count }) => {
       const coord = MKT_ZONA_COORD[lugar];
       if (!coord) return;
       const pos = new google.maps.LatLng(coord.lat, coord.lng);
