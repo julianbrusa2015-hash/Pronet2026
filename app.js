@@ -4530,7 +4530,7 @@ document.addEventListener('focusin', (e) => {
       // styles.css): mover un fondo entre dos botones distintos no se puede
       // animar, así que la pastilla vive en el contenedor.
       origenSel.dataset.origen = mktOrigen;
-      origenSel.querySelectorAll('.mkt-sec').forEach((b, i) => {
+      origenSel.querySelectorAll('.mo-lbl').forEach((b, i) => {
         const suyo = i === 0 ? 'vecino' : 'prestador';
         b.classList.toggle('on', suyo === mktOrigen);
         b.setAttribute('aria-selected', suyo === mktOrigen ? 'true' : 'false');
@@ -4684,6 +4684,15 @@ document.addEventListener('focusin', (e) => {
     renderMercado(true);
   }
   window.mktSetOrigen = mktSetOrigen;
+
+  /** La perilla del interruptor: alterna entre los dos lados. Las etiquetas
+   *  siguen eligiendo directo — tocar "Prestadores" estando ahí no hace
+   *  nada, pero tocar la perilla siempre cambia, que es lo que se espera de
+   *  un interruptor. */
+  function mktToggleOrigen() {
+    mktSetOrigen(mktOrigen === 'vecino' ? 'prestador' : 'vecino');
+  }
+  window.mktToggleOrigen = mktToggleOrigen;
 
   function mktSetTipo(tipo) {
     if (tipo === mktTipoActivo) return;
