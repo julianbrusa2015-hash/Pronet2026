@@ -2009,8 +2009,13 @@
   .mkt-origen::before {
     content: ''; position: absolute; z-index: 0;
     top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px);
-    background: var(--white); border-radius: 999px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.10);
+    /* Pastilla LLENA de color, no blanca: el selector de arriba usa pastilla
+       blanca sobre gris, y repetir eso hacía que los dos controles se vieran
+       iguales — que es exactamente lo que se quería evitar. Acá el contraste
+       invertido (fondo pleno, texto blanco) hace que se lea como UN control
+       con algo que se mueve, y no como dos botones. */
+    background: var(--blue); border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(43,91,255,.32);
     transition: transform .28s cubic-bezier(.4,0,.2,1);
   }
   /* Prestadores activo → la pastilla viaja a la derecha. */
@@ -2019,8 +2024,9 @@
     position: relative; z-index: 1;   /* por encima de la pastilla */
     border-radius: 999px; background: none !important; box-shadow: none !important;
     display: flex; align-items: center; justify-content: center; gap: 5px;
+    transition: color .2s;
   }
-  .mkt-origen .mkt-sec.on { color: var(--blue); }
+  .mkt-origen .mkt-sec.on { color: #fff; }
 
   @media (prefers-reduced-motion: reduce) {
     .mkt-origen::before { transition: none; }

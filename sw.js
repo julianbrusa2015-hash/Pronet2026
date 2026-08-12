@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v232'; // v232: el selector vecinos-prestadores pasa a toggle deslizante
+const CACHE_VERSION = 'pronet-v233'; // v233: el toggle de origen se lee como toggle, con pastilla de color
 
 const SHELL = [
   './',
