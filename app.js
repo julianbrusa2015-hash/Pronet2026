@@ -5337,14 +5337,22 @@ document.addEventListener('focusin', (e) => {
     // a ir a buscar. `mktAmpliado` lo abre a pedido — sin esa salida, el
     // vecino de una comunidad chica ve un feed vacío y no vuelve.
     const comunidad = await comunidadDelUsuario();
+    // El desplegable de zona ofrece COMUNIDADES ("Puertos del Lago"), pero
+    // `publicaciones.zona` dice siempre "Escobar" — el barrio va en otra
+    // columna. Comparar el valor elegido contra `zona` devolvía CERO
+    // siempre: elegir una zona dejaba el feed y el mapa vacíos, sin decir
+    // por qué. Se traduce a la lista de barrios de esa comunidad, que es lo
+    // que el filtro realmente quiere decir.
+    const barriosDeLaZona = mktZonaActiva ? await barriosDeComunidad(mktZonaActiva) : null;
     const barrios = mktBarrioFiltro
       ? [mktBarrioFiltro]
-      : ((comunidad && !mktAmpliado) ? await barriosDeComunidad(comunidad) : null);
+      : (barriosDeLaZona
+        || ((comunidad && !mktAmpliado) ? await barriosDeComunidad(comunidad) : null));
     // `categorias` acota a la sección activa: sin eso, "Todos" en Servicios
     // mostraría también los productos.
     const posts = await PronetDB.listarPublicaciones({
       categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
-      busqueda: mktBusqueda, zona: mktZonaActiva, offset: mktOffset,
+      busqueda: mktBusqueda, offset: mktOffset,
       barrios,
       // Un barrio elegido en el mapa es una pregunta concreta: mostrar
       // también las que no dicen dónde están contradiría el número del pin.
@@ -5447,7 +5455,7 @@ document.addEventListener('focusin', (e) => {
 
     const filas = await PronetDB.contarPublicacionesPorBarrio({
       categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
-      busqueda: mktBusqueda, barrios, zona: mktZonaActiva,
+      busqueda: mktBusqueda, barrios,
     }).catch(() => []);
 
     if (!filas.length) { cont.style.display = 'none'; return; }
@@ -5973,13 +5981,15 @@ document.addEventListener('focusin', (e) => {
     // mapa. El mapa respeta el mismo ámbito que el feed — sería raro decir
     // "Mercado de San Matías" y mostrar pines de otra comunidad.
     const comunidadMapa = await comunidadDelUsuario();
-    const barriosMapa = (comunidadMapa && !mktAmpliado) ? await barriosDeComunidad(comunidadMapa) : null;
+    // El desplegable de zona manda sobre la comunidad propia, y se traduce a
+    // barrios igual que en el feed: comparar su valor contra
+    // `publicaciones.zona` (siempre "Escobar") dejaba el mapa sin pines.
+    const barriosMapa = mktZonaActiva
+      ? await barriosDeComunidad(mktZonaActiva)
+      : ((comunidadMapa && !mktAmpliado) ? await barriosDeComunidad(comunidadMapa) : null);
     const counts = await PronetDB.contarPublicacionesPorBarrio({
       categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
       busqueda: mktBusqueda, barrios: barriosMapa,
-      // El desplegable de zona acota el feed; sin esto el mapa mostraba
-      // pines de publicaciones que la lista no tenía.
-      zona: mktZonaActiva,
     }).catch(() => []);
     const container = document.getElementById('mkt-mapa-div');
     if (!container) return;
@@ -6071,7 +6081,7 @@ document.addEventListener('focusin', (e) => {
   async function mktContenidoPin(lugar, count, idx) {
     const posts = await PronetDB.listarPublicaciones({
       categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
-      busqueda: mktBusqueda, zona: mktZonaActiva,
+      busqueda: mktBusqueda,
       barrios: [lugar], incluirSinBarrio: false, offset: 0,
     }).catch(() => []);
 
