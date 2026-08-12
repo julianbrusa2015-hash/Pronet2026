@@ -11161,6 +11161,14 @@ document.addEventListener('focusin', (e) => {
   async function ppImpulsar(id) {
     const p = _ppLista.find(x => x.id === id);
     if (!p) return;
+    // Mismo gate que promoPagar: el interruptor de MercadoPago manda por
+    // encima del de la venta. Sin esto "el checkout está apagado" sería
+    // mentira para los impulsos y se podría cobrar con el cobro cerrado.
+    if (!mpCheckoutActivo()) {
+      showToast && showToast('🧪 El cobro está en modo test: pedile al admin que lo active.');
+      return;
+    }
+    showToast && showToast('Abriendo el pago…');
     const res = await PronetDB.crearPreferenciaMP('impulso', 'mes', id);
     if (res?.init_point) { window.location.href = res.init_point; return; }
     showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
