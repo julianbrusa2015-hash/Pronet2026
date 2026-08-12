@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v223'; // v223: Todo Escobar como opcion de cobertura
+const CACHE_VERSION = 'pronet-v224'; // v224: el pedido guarda la comunidad del vecino y la cobertura no esconde los sin clasificar
 
 const SHELL = [
   './',

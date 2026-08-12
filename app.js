@@ -11592,7 +11592,13 @@ document.addEventListener('focusin', (e) => {
         descripcion: desc,
         rubro: rubroEl ? rubroEl.textContent : 'Servicio',
         icono: iconEl ? iconEl.textContent : '📋',
-        zona: zonaActual,
+        // Dónde vive el vecino, no la zona que está MIRANDO. `zonaActual` es
+        // el filtro de navegación del dispositivo y su default es la ciudad
+        // entera: por eso los 63 pedidos de la base dicen "Escobar" y ninguno
+        // trae comunidad, lo que dejaba sin efecto la cobertura del
+        // prestador. Se cae a zonaActual sólo si el vecino todavía no
+        // declaró dónde vive.
+        zona: usuarioActual?.zona || zonaActual,
         estado: 'Publicado',
         urgencia: urgencia,
         modalidad: modalidad,
