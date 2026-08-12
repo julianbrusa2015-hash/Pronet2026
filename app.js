@@ -4611,7 +4611,7 @@ document.addEventListener('focusin', (e) => {
     if (!tieneTelefono()) return abrirTelefonoGate(() => pubPrestContactar(pubId));
 
     const nombre = p.prestadores?.nombre || 'este profesional';
-    dirigirPedidoA(p.prestador_id, nombre);
+    dirigirPedidoA(p.prestador_id, nombre, pubId);
     // Prefijar el rubro del aviso: el vecino ya eligió qué necesita al
     // tocar esa tarjeta, volver a preguntárselo es un paso de más.
     // Las opciones no tienen id — se generan desde RUBROS con el nombre en
@@ -8871,6 +8871,18 @@ document.addEventListener('focusin', (e) => {
       estPp.style.color = ppOn ? 'var(--green)' : 'var(--ink3)';
     }
 
+    const chkIm = document.getElementById('cfg-impulsos');
+    const estIm = document.getElementById('cfg-impulsos-estado');
+    const imOn  = impulsosActivos();
+    if (chkIm) { chkIm.checked = imOn; chkIm.disabled = !ppOn; }
+    if (estIm) {
+      estIm.textContent = !ppOn
+        ? 'Requiere los avisos de prestadores activados'
+        : (imOn ? 'Activa · el prestador puede pagar para aparecer primero'
+                : 'Desactivada · nadie puede comprar impulsos');
+      estIm.style.color = (ppOn && imOn) ? 'var(--green)' : 'var(--ink3)';
+    }
+
     // El conteo de espacios se pide aparte: es una consulta, no un flag.
     if (bnOn && estBn) {
       PronetDB.bannersEspaciosLibres().then(n => {
@@ -8966,6 +8978,24 @@ document.addEventListener('focusin', (e) => {
       : '🔒 Avisos de prestadores desactivados. Sin rastros en la app.');
   }
   window.togglePubsPrestador = togglePubsPrestador;
+
+  async function toggleImpulsos(el) {
+    const nuevo = !!el.checked;
+    el.disabled = true;
+    const res = await PronetDB.guardarConfigApp('impulsos_activos', nuevo ? 'true' : 'false');
+    el.disabled = false;
+    if (!res.ok) {
+      el.checked = !nuevo;
+      showToast && showToast('⚠️ No se pudo guardar. ' + (res.error || ''));
+      return;
+    }
+    configApp.impulsos_activos = nuevo ? 'true' : 'false';
+    renderConfigAdmin();
+    showToast && showToast(nuevo
+      ? '⚡ Venta de impulsos activa.'
+      : '🔒 Venta de impulsos desactivada.');
+  }
+  window.toggleImpulsos = toggleImpulsos;
 
   async function togglePromarket(el) {
     const nuevo = !!el.checked;
@@ -10522,11 +10552,26 @@ document.addEventListener('focusin', (e) => {
   /** Etiqueta de estado para el slot. La 'vencida' es lógica: el estado en
    *  la base sigue siendo 'activa', pero la vigencia ya pasó y el RLS del
    *  feed ya no la muestra. */
+  /** ¿Ya venció? Se pregunta por las dos vías a propósito: el cron pone
+   *  estado='vencida' una vez por hora, así que entre que la vigencia pasa
+   *  y el job corre hay una ventana donde sigue diciendo 'activa'. El feed
+   *  del vecino nunca la muestra en esa ventana (el RLS compara la fecha),
+   *  pero el panel del prestador sí la mostraría como publicada. */
+  function ppVencida(p) {
+    return p.estado === 'vencida'
+      || (p.estado === 'activa' && new Date(p.vigencia_hasta) <= new Date());
+  }
+
   function ppEstadoInfo(p) {
+    if (ppVencida(p)) return { label: 'Vencida', bg: '#F1F3F7', color: '#8A94A3' };
     if (p.estado === 'activa') {
       const resta = Math.ceil((new Date(p.vigencia_hasta) - Date.now()) / 86400000);
-      if (resta <= 0) return { label: 'Vencida', bg: '#F1F3F7', color: '#8A94A3' };
-      return { label: 'Publicada · ' + resta + (resta === 1 ? ' día' : ' días'), bg: '#E7F6EF', color: '#127A52' };
+      const porVencer = resta <= 2;
+      return {
+        label: 'Publicada · ' + resta + (resta === 1 ? ' día' : ' días'),
+        bg: porVencer ? '#FFF4E0' : '#E7F6EF',
+        color: porVencer ? '#B9760A' : '#127A52',
+      };
     }
     if (p.estado === 'pendiente') return { label: 'En revisión', bg: '#FFF4E0', color: '#B9760A' };
     if (p.estado === 'rechazada') return { label: 'Rechazada', bg: '#FEF2F2', color: '#DC2626' };
@@ -10548,9 +10593,16 @@ document.addEventListener('focusin', (e) => {
 
     const tarjetas = _ppLista.map(p => {
       const e = ppEstadoInfo(p);
-      const m = metricas[p.id] || { vistas: 0, clics: 0, likes: 0 };
-      const vencida = p.estado === 'activa' && new Date(p.vigencia_hasta) <= new Date();
+      const m = metricas[p.id] || { vistas: 0, clics: 0, likes: 0, solicitudes: 0 };
+      const vencida = ppVencida(p);
       const editable = p.estado !== 'activa' || vencida;
+      // Renovar sólo tiene sentido en lo que ya pasó por moderación una vez:
+      // un borrador no se renueva, se envía.
+      const renovable = vencida && !!p.moderado_en;
+      // Impulsar sólo lo que está al aire de verdad: pagar por subir algo
+      // que nadie puede ver sería cobrar por nada.
+      const impulsado = p.impulso_hasta && new Date(p.impulso_hasta) > new Date();
+      const impulsable = p.estado === 'activa' && !vencida && impulsosActivos();
       return '<div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px">' +
         (p.foto_url
           ? '<div style="height:110px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/cover"></div>'
@@ -10563,9 +10615,32 @@ document.addEventListener('focusin', (e) => {
           '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(rubroDeCat(p.rubro)) + '</div>' +
           (p.estado === 'rechazada' && p.motivo_rechazo
             ? '<div style="font-size:11.5px;color:#DC2626;margin-top:6px;line-height:1.4">Motivo: ' + escHTML(p.motivo_rechazo) + '</div>' : '') +
-          (p.estado === 'activa'
-            ? '<div style="display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--ink3);font-weight:600">' +
-                '<span>👁 ' + m.vistas + '</span><span>👍 ' + m.likes + '</span><span>👆 ' + m.clics + '</span>' +
+          (p.estado === 'activa' || vencida
+            ? '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--ink3);font-weight:600">' +
+                '<span title="Vieron tu aviso">👁 ' + m.vistas + '</span>' +
+                '<span title="Les gustó">👍 ' + m.likes + '</span>' +
+                '<span title="Tocaron Contactar">👆 ' + m.clics + '</span>' +
+                '<span title="Te mandaron un pedido" style="color:#127A52">📩 ' + m.solicitudes + '</span>' +
+                (p.renovaciones ? '<span title="Veces renovado">🔄 ' + p.renovaciones + '</span>' : '') +
+              '</div>' +
+              // La conversión recién con una muestra mínima. Con 3 vistas y
+              // 0 clics diría 0%, que no informa nada y desmotiva a quien
+              // paga — mismo criterio con el que se postergó "Actividad
+              // reciente" en Entre Vecinos.
+              (m.vistas >= 20
+                ? '<div style="margin-top:5px;font-size:11px;color:var(--ink3)">' +
+                    Math.round((m.clics / m.vistas) * 100) + '% de los que lo vieron te contactaron</div>'
+                : '') : '') +
+          (impulsado
+            ? '<div style="margin-top:8px;font-size:11px;font-weight:700;color:#B9760A">⚡ Impulsado hasta el ' +
+                new Date(p.impulso_hasta).toLocaleDateString('es-AR') + '</div>' : '') +
+          (impulsable && !impulsado
+            ? '<button style="width:100%;margin-top:9px;border:1px solid #F59E0B;background:#FFF8EC;color:#B9760A;border-radius:9px;padding:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppImpulsar(\'' + p.id + '\')">⚡ Impulsar · aparece primero</button>'
+            : '') +
+          (renovable
+            ? '<div style="margin-top:9px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:9px 11px">' +
+                '<div style="font-size:11.5px;color:#9A3412;line-height:1.4">Salió de Servicios. Renovalo y vuelve al aire sin pasar de nuevo por revisión.</div>' +
+                '<button style="width:100%;margin-top:8px;border:0;background:#EA580C;color:white;border-radius:9px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppRenovar(\'' + p.id + '\')">🔄 Renovar</button>' +
               '</div>' : '') +
           '<div style="display:flex;gap:8px;margin-top:10px">' +
             '<button style="flex:1;border:1px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppVistaPrevia(\'' + p.id + '\')">👀 Vista previa</button>' +
@@ -10692,6 +10767,31 @@ document.addEventListener('focusin', (e) => {
     renderPubsPrestador();
   }
   window.ppEnviarRevision = ppEnviarRevision;
+
+  function impulsosActivos() {
+    return configApp.impulsos_activos === 'true';
+  }
+
+  /** Compra suelta: lleva al checkout de MP con el aviso como referencia.
+   *  El mismo circuito del banner — y con el `ref` viajando de verdad, que
+   *  es el detalle que la primera vez quedó afuera y dejó un pago cobrado
+   *  sin efecto. */
+  async function ppImpulsar(id) {
+    const p = _ppLista.find(x => x.id === id);
+    if (!p) return;
+    const res = await PronetDB.crearPreferenciaMP('impulso', 'mes', id);
+    if (res?.init_point) { window.location.href = res.init_point; return; }
+    showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
+  }
+  window.ppImpulsar = ppImpulsar;
+
+  async function ppRenovar(id) {
+    const res = await PronetDB.renovarPubPrestador(id);
+    if (!res.ok) { showToast('⚠️ ' + (res.error || 'No se pudo renovar.')); return; }
+    showToast('🔄 Renovado por ' + res.dias + ' días. Ya está de nuevo en Servicios.');
+    renderPubsPrestador();
+  }
+  window.ppRenovar = ppRenovar;
 
   async function ppEliminar(id) {
     const p = _ppLista.find(x => x.id === id);
@@ -11263,6 +11363,10 @@ document.addEventListener('focusin', (e) => {
         frecuencia_periodo: frecPeriodo,
         // Recontratación: si hay destinatario, el pedido no va al feed.
         dirigido_a: dirigidoA,
+        // De qué aviso de Servicios salió, si salió de uno. Es lo que hace
+        // que "solicitudes" sea un hecho contable y no una inferencia por
+        // cercanía entre un clic y un pedido cualquiera.
+        origen_pub_id: recontratarDestino?.pubId || null,
         presupuesto_min: precioMin,
         presupuesto_max: precioMax,
         usuario_id: usuarioActual ? usuarioActual.id : null,
@@ -11598,10 +11702,10 @@ document.addEventListener('focusin', (e) => {
    *  pedido termina saliendo ABIERTO a todo el rubro. El vecino cree que le
    *  está escribiendo a una persona y le escribe a cualquiera.
    *  Por eso se navega primero y se fija el destino después. */
-  function dirigirPedidoA(prestadorId, nombre) {
+  function dirigirPedidoA(prestadorId, nombre, pubId) {
     if (!prestadorId) return;
     goTo('s-nuevo-pedido');
-    recontratarDestino = { prestadorId, nombre: nombre || 'esta persona' };
+    recontratarDestino = { prestadorId, nombre: nombre || 'esta persona', pubId: pubId || null };
     const banner = document.getElementById('np-dirigido-banner');
     const nom    = document.getElementById('np-dirigido-nombre');
     if (nom) nom.textContent = recontratarDestino.nombre;

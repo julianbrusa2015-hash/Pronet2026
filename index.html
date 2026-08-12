@@ -5214,6 +5214,19 @@
           <strong>Desactivado</strong>: sin rastros — el prestador no ve el panel y nada aparece en Servicios. <strong>Activado</strong>: el prestador arma sus avisos desde Mi Perfil, vos los aprobás o rechazás en Moderación, y recién ahí los ven los vecinos.
           Los cupos por plan (cantidad y días) se ajustan en la base, tabla <code>planes_limites</code>.
         </div>
+
+        <!-- Venta de impulsos: interruptor aparte, se puede tener los avisos
+             sin vender nada (mismo criterio que la venta de banners). -->
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">Venta de impulsos</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:2px" id="cfg-impulsos-estado">Cargando...</div>
+          </div>
+          <label class="toggle-sw" style="flex-shrink:0">
+            <input type="checkbox" id="cfg-impulsos" onchange="toggleImpulsos(this)">
+            <span class="slider"></span>
+          </label>
+        </div>
       </div>
     </div>
 

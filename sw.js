@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v219'; // v219: el pedido dirigido se perdia al navegar (rompia recontratacion)
+const CACHE_VERSION = 'pronet-v220'; // v220: vencimiento y renovacion, impulsar, solicitudes y conversion
 
 const SHELL = [
   './',

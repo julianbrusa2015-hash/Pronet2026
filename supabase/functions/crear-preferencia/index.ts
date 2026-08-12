@@ -72,6 +72,36 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Impulsar un aviso de Servicios: mismo criterio que el banner. Tiene
+    // que ser TUYO y estar al aire — impulsar un borrador o algo que la
+    // moderación no vio sería pagar por nada, e impulsar el aviso de otro
+    // le pagaría la promoción a un tercero.
+    if (plan === 'impulso') {
+      if (typeof ref !== 'string' || !/^[0-9a-f-]{36}$/i.test(ref)) {
+        return json({ error: 'Falta el aviso a impulsar' }, 400);
+      }
+      const { data: pub } = await supabase
+        .from('publicaciones_prestador')
+        .select('id, estado, vigencia_hasta, prestador_id, perfiles:prestador_id (id)')
+        .eq('id', ref)
+        .maybeSingle();
+      if (!pub) {
+        return json({ error: 'Ese aviso no existe' }, 404);
+      }
+      // El dueño se resuelve por el perfil, que es quien tiene el user id.
+      const { data: miPerfil } = await supabase
+        .from('perfiles')
+        .select('prestador_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (!miPerfil?.prestador_id || miPerfil.prestador_id !== pub.prestador_id) {
+        return json({ error: 'Ese aviso no es tuyo' }, 403);
+      }
+      if (pub.estado !== 'activa' || new Date(pub.vigencia_hasta) <= new Date()) {
+        return json({ error: 'El aviso tiene que estar publicado para impulsarlo' }, 409);
+      }
+    }
+
     const { data: precioPlan, error: precioError } = await supabase
       .from('planes_limites')
       .select('nombre, precio_mes, precio_anual')

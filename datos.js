@@ -1999,23 +1999,39 @@ const PronetDB = (() => {
       return publicUrl;
     },
 
-    /** Métricas de mis publicaciones: {pubId: {vistas, clics, likes}}.
-     *  Los eventos vienen de la tabla (el RLS sólo me muestra los de mis
-     *  publicaciones); se cuentan acá — con estos volúmenes alcanza. */
+    /** Métricas de mis publicaciones: {pubId: {vistas, clics, likes, solicitudes}}.
+     *
+     *  Sale de un RPC y no de contar en el cliente porque las SOLICITUDES
+     *  viven en `pedidos`, que el prestador no puede leer entero: sólo ve
+     *  los abiertos de su rubro y los dirigidos a él. Contarlas desde acá
+     *  daría de menos sin que nada falle — el peor tipo de error, porque el
+     *  número igual se muestra. */
     async metricasPubsPrestador(ids) {
       if (!remoto || !ids?.length) return {};
       const res = {};
-      ids.forEach(id => { res[id] = { vistas: 0, clics: 0, likes: 0 }; });
-      const [ev, lk] = await Promise.all([
-        sb.from('pub_prestador_eventos').select('publicacion_id, tipo').in('publicacion_id', ids),
-        sb.from('likes_pub_prestador').select('publicacion_id').in('publicacion_id', ids),
-      ]);
-      (ev.data || []).forEach(e => {
-        const m = res[e.publicacion_id]; if (!m) return;
-        if (e.tipo === 'vista') m.vistas++; else if (e.tipo === 'clic_contacto') m.clics++;
+      ids.forEach(id => { res[id] = { vistas: 0, clics: 0, likes: 0, solicitudes: 0 }; });
+      const { data, error } = await sb.rpc('metricas_pubs_prestador');
+      if (error) { console.warn('[PronetDB] metricasPubsPrestador', error.message); return res; }
+      (data || []).forEach(r => {
+        if (!res[r.publicacion_id]) return;
+        res[r.publicacion_id] = {
+          vistas: Number(r.vistas) || 0,
+          clics: Number(r.clics) || 0,
+          likes: Number(r.likes) || 0,
+          solicitudes: Number(r.solicitudes) || 0,
+        };
       });
-      (lk.data || []).forEach(l => { const m = res[l.publicacion_id]; if (m) m.likes++; });
       return res;
+    },
+
+    /** Renueva un aviso ya publicado por otro período de su plan.
+     *  No vuelve a moderación: el admin ya aprobó ESE contenido. Editarlo
+     *  sí obliga a revisar, y eso lo garantiza el RLS (with check). */
+    async renovarPubPrestador(id) {
+      if (!remoto || !id) return { ok: false };
+      const { data, error } = await sb.rpc('renovar_pub_prestador', { p_id: id });
+      if (error) { console.warn('[PronetDB] renovarPubPrestador', error.message); return { ok: false, error: error.message }; }
+      return data || { ok: false, error: 'Sin respuesta' };
     },
 
     /** Feed del vecino: avisos activos y vigentes. El RLS ya filtra estado,

@@ -189,6 +189,28 @@ Deno.serve(async (req) => {
       return new Response('ok', { status: 200 });
     }
 
+    // Impulso de un aviso de Servicios: lo sube en el orden del feed por los
+    // días comprados. Tampoco es suscripción ni crédito, así que corta acá.
+    // Mismo criterio que el banner: el RPC vuelve a validar dueño y estado,
+    // porque esto corre con service_role y es la última puerta.
+    if (plan === 'impulso') {
+      if (!ref) {
+        await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[webhook-mp] pago de impulso sin ref', pago.id);
+        return new Response('ok', { status: 200 });
+      }
+      const { data: resImp, error: errImp } = await supabase.rpc('activar_impulso_pagado', {
+        p_pub_id: ref,
+        p_usuario_id: usuarioId,
+      });
+      if (errImp || !resImp?.ok) {
+        await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[webhook-mp] error activando impulso', errImp?.message || resImp?.error);
+        return new Response('error', { status: 500 });
+      }
+      return new Response('ok', { status: 200 });
+    }
+
     const { error } = await supabase.from('suscripciones').upsert({
       usuario_id: usuarioId,
       plan,
