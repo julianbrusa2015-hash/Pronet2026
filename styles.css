@@ -1994,6 +1994,38 @@
   .mkt-sec.on { background: var(--white); color: var(--blue); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .mkt-sec:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 
+  /* ── Origen del aviso: vecinos ↔ prestadores ──
+     Va apilado justo debajo del selector de sección y con la misma forma, así
+     que con el mismo estilo parecían el mismo control repetido dos veces.
+     Acá la pastilla se DESLIZA de un lado al otro: el movimiento dice que es
+     una elección entre dos, no dos botones sueltos.
+     La pastilla es un pseudo-elemento del contenedor y no el fondo del botón
+     activo — un fondo no se puede animar entre dos elementos distintos. */
+  .mkt-origen {
+    position: relative; display: flex; margin: 0 14px 10px;
+    background: var(--surface); border-radius: 999px; padding: 4px;
+    border: 1px solid var(--border);
+  }
+  .mkt-origen::before {
+    content: ''; position: absolute; z-index: 0;
+    top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px);
+    background: var(--white); border-radius: 999px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.10);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+  }
+  /* Prestadores activo → la pastilla viaja a la derecha. */
+  .mkt-origen[data-origen="prestador"]::before { transform: translateX(100%); }
+  .mkt-origen .mkt-sec {
+    position: relative; z-index: 1;   /* por encima de la pastilla */
+    border-radius: 999px; background: none !important; box-shadow: none !important;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .mkt-origen .mkt-sec.on { color: var(--blue); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mkt-origen::before { transition: none; }
+  }
+
   /* Selector de puntaje del comentario. Gris hasta que se elige: en gris
      no promete nada, y así "sin puntuar" se distingue de "puntuó bajo". */
   .com-star {

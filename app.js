@@ -4526,6 +4526,10 @@ document.addEventListener('focusin', (e) => {
     if (!verOrigen) mktOrigen = 'vecino';
     if (origenSel) {
       origenSel.style.display = verOrigen ? 'flex' : 'none';
+      // La pastilla que se desliza sale de este atributo (ver .mkt-origen en
+      // styles.css): mover un fondo entre dos botones distintos no se puede
+      // animar, así que la pastilla vive en el contenedor.
+      origenSel.dataset.origen = mktOrigen;
       origenSel.querySelectorAll('.mkt-sec').forEach((b, i) => {
         const suyo = i === 0 ? 'vecino' : 'prestador';
         b.classList.toggle('on', suyo === mktOrigen);
