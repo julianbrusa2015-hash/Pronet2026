@@ -4480,6 +4480,21 @@ document.addEventListener('focusin', (e) => {
     const soloServicios = esPrestador();
     if (soloServicios) mktTipoActivo = 'servicio';
 
+    // El toggle de origen vive sólo en Servicios, con el flag prendido y
+    // para quien NO es prestador: el prestador publica hacia este espacio,
+    // no lo navega — su ventana es la vista previa de su panel.
+    const origenSel = document.getElementById('mkt-origen');
+    const verOrigen = !soloServicios && mktTipoActivo === 'servicio' && pubsPrestadorActivo();
+    if (!verOrigen) mktOrigen = 'vecino';
+    if (origenSel) {
+      origenSel.style.display = verOrigen ? 'flex' : 'none';
+      origenSel.querySelectorAll('.mkt-sec').forEach((b, i) => {
+        const suyo = i === 0 ? 'vecino' : 'prestador';
+        b.classList.toggle('on', suyo === mktOrigen);
+        b.setAttribute('aria-selected', suyo === mktOrigen ? 'true' : 'false');
+      });
+    }
+
     const sel = document.getElementById('mkt-secciones');
     if (sel) {
       sel.style.display = soloServicios ? 'none' : 'flex';
@@ -4492,10 +4507,19 @@ document.addEventListener('focusin', (e) => {
 
     const chips = document.getElementById('mkt-chips');
     if (chips) {
+      // Los dos orígenes usan catálogos DISTINTOS y no son intercambiables:
+      // las publicaciones de vecinos se clasifican con las categorías de
+      // Entre Vecinos, y los avisos de prestadores con RUBROS, el catálogo
+      // de oficios (el mismo que usa el alta de pedido, y por eso se puede
+      // prefijar el rubro al contactar). Pintar los chips del catálogo
+      // equivocado da un feed vacío sin explicar por qué.
+      const cats = mktOrigen === 'prestador'
+        ? RUBROS.map(r => ({ slug: r.slug, nombre: r.n, emoji: r.emoji }))
+        : catsDeTipo(mktTipoActivo);
       chips.innerHTML =
         '<div class="chip' + (mktFiltroActivo === 'todos' ? ' on' : '') +
         '" onclick="filtrarMercado(this,\'todos\')">Todos</div>' +
-        catsDeTipo(mktTipoActivo).map(c =>
+        cats.map(c =>
           '<div class="chip' + (mktFiltroActivo === c.slug ? ' on' : '') +
           '" onclick="filtrarMercado(this,\'' + escHTML(c.slug) + '\')">' +
           escHTML(c.emoji + ' ' + c.nombre) + '</div>').join('');
@@ -4508,9 +4532,123 @@ document.addEventListener('focusin', (e) => {
       ? 'Buscá un servicio de tu barrio…'
       : 'Buscá productos de tu barrio…';
 
+    // Controles que son del feed de vecinos y no aplican a los avisos de
+    // prestadores: el mapa (un prestador tiene zona de cobertura, no un lote
+    // en el barrio), el toggle de formato (no hay grilla de fichas) y el
+    // "Ver más" (esta fuente no pagina). Dejarlos visibles prometería cosas
+    // que este origen no hace.
+    const soloVecinos = mktOrigen === 'vecino';
+    ['mkt-toggle-mapa', 'mkt-toggle-formato', 'mkt-ver-mas'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = soloVecinos ? '' : 'none';
+    });
+
     // El carrito depende de la sección, así que se repinta con ella.
     pintarBadgeCarrito();
   }
+
+  // ── Feed de avisos de prestadores (lo que ve el vecino) ─────────────
+  const _pubPrestCache = new Map();
+  let _pubPrestLikes = { mios: new Set(), conteo: {} };
+
+  async function renderFeedPrestadores(cont) {
+    const posts = await PronetDB.listarPubsPrestadorActivas({
+      rubro: mktFiltroActivo, busqueda: mktBusqueda,
+    }).catch(() => []);
+
+    if (!posts.length) {
+      cont.innerHTML = '<div style="padding:40px 24px;text-align:center">' +
+        '<div style="font-size:34px">🛠️</div>' +
+        '<div style="font-size:14px;font-weight:700;color:var(--ink);margin-top:10px">Todavía no hay avisos de profesionales acá</div>' +
+        '<div style="font-size:12.5px;color:var(--ink3);margin-top:6px;line-height:1.5">Mirá lo que publicaron los vecinos, o contá qué necesitás y que te manden propuestas.</div>' +
+        '<button class="btn-p" style="margin-top:14px;padding:10px 18px" onclick="mktSetOrigen(\'vecino\')">Ver avisos de vecinos</button>' +
+      '</div>';
+      return;
+    }
+
+    _pubPrestCache.clear();
+    posts.forEach(p => _pubPrestCache.set(p.id, p));
+    _pubPrestLikes = await PronetDB.likesDePubsPrestador(posts.map(p => p.id)).catch(
+      () => ({ mios: new Set(), conteo: {} }));
+
+    cont.innerHTML = posts.map(p => pubPrestadorCardHTML(p, p.prestadores, false, {
+      liked: _pubPrestLikes.mios.has(p.id),
+      likes: _pubPrestLikes.conteo[p.id] || 0,
+    })).join('');
+
+    // Una vista por aviso mostrado. El RPC decide si cuenta: si quien mira
+    // es una cuenta prestador, no suma (la conversión que ve el dueño tiene
+    // que estar calculada sobre vecinos de verdad).
+    posts.forEach(p => PronetDB.registrarEventoPub(p.id, 'vista'));
+  }
+
+  async function pubPrestLike(pubId) {
+    if (!usuarioActual) { showToast('Entrá para dar me gusta'); return; }
+    const res = await PronetDB.toggleLikePubPrestador(pubId);
+    if (!res.ok) { showToast('⚠️ No se pudo registrar tu me gusta.'); return; }
+    if (res.liked) _pubPrestLikes.mios.add(pubId); else _pubPrestLikes.mios.delete(pubId);
+    _pubPrestLikes.conteo[pubId] = Math.max(0, (_pubPrestLikes.conteo[pubId] || 0) + (res.liked ? 1 : -1));
+    const btn = document.getElementById('pplike-' + pubId);
+    if (btn) {
+      btn.textContent = (res.liked ? '❤️ ' : '🤍 ') + _pubPrestLikes.conteo[pubId];
+      btn.style.color = res.liked ? '#E11D48' : 'var(--ink3)';
+    }
+  }
+  window.pubPrestLike = pubPrestLike;
+
+  /** Contactar: NO abre un chat suelto — arma un pedido dirigido a ese
+   *  prestador, que él responde con una propuesta normal. Así el contacto
+   *  entra al circuito que ya tiene cierre y reseña, en vez de abrir un
+   *  canal paralelo que no alimenta la reputación de nadie.
+   *  Reusa la maquinaria de recontratación, que ya hacía exactamente esto. */
+  function pubPrestContactar(pubId) {
+    const p = _pubPrestCache.get(pubId);
+    if (!p) return;
+    if (!usuarioActual) { showToast('Entrá para pedir un presupuesto'); return; }
+    PronetDB.registrarEventoPub(pubId, 'clic_contacto');
+    // Mismo gate que publicar un pedido: esto TERMINA en un pedido, así que
+    // pedir el teléfono en otro momento sería incoherente.
+    if (!tieneTelefono()) return abrirTelefonoGate(() => pubPrestContactar(pubId));
+
+    recontratarDestino = {
+      prestadorId: p.prestador_id,
+      nombre: p.prestadores?.nombre || 'este profesional',
+    };
+    goTo('s-nuevo-pedido');
+    const banner = document.getElementById('np-dirigido-banner');
+    const nom    = document.getElementById('np-dirigido-nombre');
+    if (nom) nom.textContent = recontratarDestino.nombre;
+    if (banner) banner.style.display = 'flex';
+    // Prefijar el rubro del aviso: el vecino ya eligió qué necesita al
+    // tocar esa tarjeta, volver a preguntárselo es un paso de más.
+    // Las opciones no tienen id — se generan desde RUBROS con el nombre en
+    // .opt-lbl, así que se busca por ese texto.
+    const nombreRubro = rubroDeCat(p.rubro);
+    document.querySelectorAll('#np-rubro-opts .form-opt').forEach(o => {
+      if (o.querySelector('.opt-lbl')?.textContent.trim() === nombreRubro) o.click();
+    });
+    showToast('Contale a ' + recontratarDestino.nombre + ' qué necesitás');
+  }
+  window.pubPrestContactar = pubPrestContactar;
+
+  // ── Origen del aviso dentro de Servicios: vecino o prestador ────────
+  //
+  // Arranca en 'vecino' a propósito: Entre Vecinos es comunidad, y lo pago
+  // no puede ser lo primero que ve alguien al entrar. Se recuerda la última
+  // elección mientras dura la sesión, igual que el formato del feed.
+  let mktOrigen = 'vecino';
+
+  function mktSetOrigen(origen) {
+    if (origen === mktOrigen) return;
+    mktOrigen = origen;
+    // El chip puntual no sobrevive al cambio de origen: los dos catálogos
+    // son distintos (ver la nota en mktPintarSecciones), así que arrastrar
+    // el slug de uno al otro deja el feed vacío sin motivo visible.
+    mktFiltroActivo = 'todos';
+    mktPintarSecciones();
+    renderMercado(true);
+  }
+  window.mktSetOrigen = mktSetOrigen;
 
   function mktSetTipo(tipo) {
     if (tipo === mktTipoActivo) return;
@@ -5146,6 +5284,17 @@ document.addEventListener('focusin', (e) => {
       mktFeedIds = [];
       cont.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
     }
+    // Avisos de prestadores: otra fuente, otro render, mismo lugar. No
+    // pasan por el filtro de comunidad ni por el mapa — un prestador trabaja
+    // en una zona de cobertura, no vive en un lote del barrio.
+    if (mktOrigen === 'prestador') {
+      mktCargando = true;
+      mktHayMas = false;   // sin paginado: el "Ver más" no aplica a esta fuente
+      await renderFeedPrestadores(cont);
+      mktCargando = false;
+      return;
+    }
+
     mktCargando = true;
     // Mercado cerrado por comunidad: por defecto se ve lo de la propia. Un
     // mercado abierto a toda la zona te trae empanadas de Garín que nadie va
@@ -10590,11 +10739,25 @@ document.addEventListener('focusin', (e) => {
   /** Tarjeta compartida entre la vista previa (F2) y el feed del vecino
    *  (F4). Reputación: SOLO la real — rating bayesiano y reseñas
    *  verificadas del prestador. Sin estrellas si todavía no tiene. */
-  function pubPrestadorCardHTML(p, prestador, esPreview) {
+  function pubPrestadorCardHTML(p, prestador, esPreview, social) {
+    // Reputación: SÓLO la real. Sin reseñas verificadas no se inventan
+    // estrellas — se dice que es nuevo, que es información honesta y no
+    // castiga con un 0 a quien todavía no trabajó por la app.
     const rep = (prestador?.resenas > 0 && prestador?.rating)
       ? '★ ' + Number(prestador.rating).toFixed(1) + ' · ' + prestador.resenas + (prestador.resenas === 1 ? ' reseña' : ' reseñas')
       : 'Nuevo en PRONET';
-    return '<div style="background:white;border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:14px;overflow:hidden">' +
+    const id = escHTML(String(p.id || ''));
+    const acciones = esPreview
+      ? '<span style="font-size:11.5px;font-weight:700;color:white;background:var(--blue);padding:7px 13px;border-radius:8px;opacity:.5">Contactar (vista previa)</span>'
+      : '<div style="display:flex;align-items:center;gap:8px">' +
+          '<button id="pplike-' + id + '" onclick="pubPrestLike(\'' + id + '\')" ' +
+            'style="border:1px solid var(--border);background:white;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;color:' +
+            (social?.liked ? '#E11D48' : 'var(--ink3)') + '">' +
+            (social?.liked ? '❤️ ' : '🤍 ') + (social?.likes || 0) + '</button>' +
+          '<button onclick="pubPrestContactar(\'' + id + '\')" ' +
+            'style="border:0;background:var(--blue);color:white;border-radius:8px;padding:7px 13px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif">Contactar</button>' +
+        '</div>';
+    return '<div style="background:white;border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:14px;overflow:hidden;margin-bottom:11px">' +
       (p.foto_url ? '<div style="height:140px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/cover"></div>' : '') +
       '<div style="padding:12px 13px">' +
         '<span style="font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:#E8F0FF;color:#1A4FC4">Prestador</span>' +
@@ -10602,10 +10765,9 @@ document.addEventListener('focusin', (e) => {
         '<div style="font-size:12px;color:var(--ink3);margin-top:2px">' +
           escHTML(prestador?.nombre || '') + ' · ' + escHTML(rubroDeCat(p.rubro)) + '</div>' +
         (p.descripcion ? '<div style="font-size:12px;color:var(--ink2);margin-top:6px;line-height:1.45">' + escHTML(p.descripcion) + '</div>' : '') +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">' +
-          '<span style="font-size:11.5px;font-weight:700;color:#B9760A">' + rep + '</span>' +
-          '<span style="font-size:11.5px;font-weight:700;color:white;background:var(--blue);padding:6px 12px;border-radius:8px;' +
-            (esPreview ? 'opacity:.5' : '') + '">' + (esPreview ? 'Contactar (vista previa)' : 'Contactar') + '</span>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px">' +
+          '<span style="font-size:11.5px;font-weight:700;color:#B9760A;flex-shrink:0">' + rep + '</span>' +
+          acciones +
         '</div>' +
       '</div>' +
     '</div>';

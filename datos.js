@@ -2018,6 +2018,72 @@ const PronetDB = (() => {
       return res;
     },
 
+    /** Feed del vecino: avisos activos y vigentes. El RLS ya filtra estado,
+     *  vigencia y prestador suspendido; los eq/gt de acá son para que el
+     *  servidor no mande filas que igual se van a descartar.
+     *  Trae del prestador SÓLO la reputación real (rating bayesiano y
+     *  reseñas): es el único número de reputación que se muestra. */
+    async listarPubsPrestadorActivas({ rubro = null, busqueda = '', limite = 40 } = {}) {
+      if (!remoto) return [];
+      let q = sb.from('publicaciones_prestador')
+        .select('id, titulo, descripcion, rubro, foto_url, publicada_desde, impulso_hasta, prestador_id, prestadores:prestador_id (id, nombre, rating, resenas, zona)')
+        .eq('estado', 'activa')
+        .gt('vigencia_hasta', new Date().toISOString());
+      if (rubro && rubro !== 'todos') q = q.eq('rubro', rubro);
+      if (busqueda?.trim()) {
+        const t = busqueda.trim().replace(/[%,]/g, ' ');
+        q = q.or('titulo.ilike.%' + t + '%,descripcion.ilike.%' + t + '%');
+      }
+      // Los impulsados primero (Fase 6); dentro de cada grupo, los más nuevos.
+      const { data, error } = await q
+        .order('impulso_hasta', { ascending: false, nullsFirst: false })
+        .order('publicada_desde', { ascending: false })
+        .limit(limite);
+      if (error) { console.warn('[PronetDB] listarPubsPrestadorActivas', error.message); return []; }
+      return data || [];
+    },
+
+    /** Registra una vista o un clic de contacto. El RPC decide si cuenta:
+     *  excluye a cualquier cuenta prestador y deduplica por día. */
+    async registrarEventoPub(pubId, tipo) {
+      if (!remoto || !pubId) return;
+      const { error } = await sb.rpc('fn_pub_prestador_evento', { p_pub_id: pubId, p_tipo: tipo });
+      if (error) console.warn('[PronetDB] registrarEventoPub', error.message);
+    },
+
+    /** Like de un aviso de prestador. Devuelve {ok, liked}. */
+    async toggleLikePubPrestador(pubId) {
+      if (!remoto) return { ok: false };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
+      const { data: hay } = await sb.from('likes_pub_prestador')
+        .select('publicacion_id').eq('usuario_id', uid).eq('publicacion_id', pubId).maybeSingle();
+      if (hay) {
+        await sb.from('likes_pub_prestador').delete()
+          .eq('usuario_id', uid).eq('publicacion_id', pubId);
+        return { ok: true, liked: false };
+      }
+      const { error } = await sb.from('likes_pub_prestador')
+        .insert({ usuario_id: uid, publicacion_id: pubId });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, liked: true };
+    },
+
+    /** Cuáles de estos avisos likeó el usuario, y cuántos likes tiene cada
+     *  uno. Un solo par de consultas para todo el feed. */
+    async likesDePubsPrestador(ids) {
+      const res = { mios: new Set(), conteo: {} };
+      if (!remoto || !ids?.length) return res;
+      const uid = await this.usuarioIdActual();
+      const { data } = await sb.from('likes_pub_prestador')
+        .select('publicacion_id, usuario_id').in('publicacion_id', ids);
+      (data || []).forEach(l => {
+        res.conteo[l.publicacion_id] = (res.conteo[l.publicacion_id] || 0) + 1;
+        if (uid && l.usuario_id === uid) res.mios.add(l.publicacion_id);
+      });
+      return res;
+    },
+
     /** Cola de moderación (admin): avisos de prestadores esperando revisión.
      *  El nombre del prestador viene por el embed del FK. */
     async listarPubsPrestadorPendientes() {

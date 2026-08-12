@@ -427,6 +427,14 @@
         <button class="mkt-sec"    role="tab" aria-selected="false" onclick="mktSetTipo('producto')">🛒 Mercado</button>
       </div>
 
+      <!-- Origen del aviso, sólo dentro de Servicios: publicaciones de
+           vecinos o de prestadores. Es el mismo rubro, dos orígenes. Lo
+           muestra/oculta mktPintarSecciones() según el flag. -->
+      <div id="mkt-origen" class="mkt-secciones" role="tablist" aria-label="Origen del aviso" style="display:none">
+        <button class="mkt-sec on" role="tab" aria-selected="true"  onclick="mktSetOrigen('vecino')">🏘️ Vecinos</button>
+        <button class="mkt-sec"    role="tab" aria-selected="false" onclick="mktSetOrigen('prestador')">🛠️ Prestadores</button>
+      </div>
+
       <!-- Chips de categoría: cambian según la sección activa -->
       <div class="filter-row" id="mkt-chips"></div>
 
