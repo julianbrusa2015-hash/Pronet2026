@@ -21,12 +21,29 @@ entre cuentas. Si usás el mismo en dos, la segunda va a fallar — y eso es lo
 correcto, no un bug. Tené cuatro números distintos (pueden ser inventados con
 formato válido, ej. `11 4000-0001`, `11 4000-0002`…).
 
-**Estado esperado de los interruptores** (Panel admin → Configuración):
+**Estado esperado de los interruptores** (Panel admin → Parametrías):
 
-- Planes pagos: **apagado**
-- Checkout MP: **apagado** (modo test)
-- ProMarket / Entre Vecinos: **encendido**
-- Venta de espacios del carrusel: **apagado** (se prende en el bloque 6)
+| Interruptor | Cómo arranca | Dónde se prende |
+|---|---|---|
+| Planes pagos | **apagado** | — |
+| Checkout MP | **apagado** (modo test) | bloques 8 y 8bis-e |
+| ProMarket / Entre Vecinos | **encendido** | — |
+| Venta de espacios del carrusel | **apagado** | bloque 8 |
+| Avisos de prestadores en Servicios | **apagado** | bloque 8bis |
+| Venta de impulsos | **apagado** | bloque 8bis-e |
+
+> **Ojo con "Planes pagos".** Prendido, cada plan usa sus propios límites:
+> Base baja a 1 aviso publicado y 7 días. Apagado rige la etapa fundadora y
+> todos reciben los de Plus (3 y 15). Si los números que ves no coinciden con
+> los que dice este instructivo, mirá este interruptor **antes** de reportar
+> un bug.
+
+**Tarjeta de prueba de MercadoPago** (para los bloques que cobran):
+`5031 7557 3453 0604` · venc. `11/30` · CVV `123` · nombre **APRO** · DNI
+`12345678`.
+
+**Al terminar, apagá lo que hayas prendido.** Sobre todo el checkout: si
+queda encendido, cualquiera que entre puede iniciar un pago real.
 
 **Después de cada bloque**, si algo no coincide con lo esperado, anotá el
 número del paso antes de seguir: los bloques siguientes dependen de éste.
@@ -169,13 +186,53 @@ V1 — Puertos del Lago).
 > pantalla. Si te aparece el lote de otra comunidad, es un problema serio, no
 > cosmético.
 
-### 6d · El mapa
+### 6d · El mapa y las miniaturas
 
 | # | Qué hacer | Qué tiene que pasar |
 |---|---|---|
 | 6.14 | Vecinos → **Mapa** | Un pin **por barrio**, con la cantidad al lado |
-| 6.15 | Tocar un pin → "Ver publicaciones" | Vuelve a la lista, filtrada a **ese barrio**, y la cantidad coincide con la del pin |
-| 6.16 | "Quitar filtro" | Vuelven todas |
+| 6.15 | Tocar un pin que diga 2 o más | El globo muestra **las publicaciones con foto chica**, título y precio — no sólo el número |
+| 6.16 | Tocar una de esas miniaturas | Sale del mapa, filtra por ese barrio y **abre esa publicación** (expandida, con scroll hasta ella) |
+| 6.17 | Si el pin tiene más de 4 | Muestra 4 y un "Ver las N →" que lleva a la lista del barrio |
+| 6.18 | "Quitar filtro" | Vuelven todas |
+| 6.19 | Estando en el mapa, mirar la pantalla | El aviso azul "Publicá lo que tenés" **no aparece** — y no queda un hueco entre el mapa y el pie |
+
+### 6e · El resumen de búsqueda por barrio
+
+| # | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 6.20 | En Mercado, sin buscar ni filtrar nada | **No** hay línea de resumen arriba del feed |
+| 6.21 | Buscar algo que exista (ej. "pizza") | Aparece "**N vecinos ofrecen "pizza"**" y abajo los barrios con su cantidad |
+| 6.22 | Contar las tarjetas del feed y sumar los números de los barrios | **Coinciden** |
+| 6.23 | Si un vecino tiene 2 publicaciones del mismo tipo | El total dice **vecinos**, no publicaciones: 2 avisos de una persona cuentan **1** |
+| 6.24 | Tocar uno de los barrios del resumen | Filtra a ese barrio, y la cantidad de tarjetas es la que prometía |
+| 6.25 | Pasar a la sección **Servicios** con la búsqueda puesta | Los números cambian: cuenta **sólo** lo de esa sección |
+
+> **Qué se está probando.** Que el resumen no prometa algo que el feed no
+> muestra. Contaba servicios y productos juntos: decía "Araucarias (2)", se
+> tocaba y aparecían cero.
+
+### 6f · El filtro de zona
+
+| # | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 6.26 | En Mercado, elegir **"Puertos del Lago"** en el desplegable de zona | El feed muestra las publicaciones de esa comunidad — **no queda vacío** |
+| 6.27 | Con esa zona puesta, ir al **Mapa** | Salen los pines de los barrios de Puertos, no un mapa vacío mostrando medio país |
+| 6.28 | Cambiar a **El Cantón** | Cambia el feed y los pines |
+| 6.29 | Volver a "📍 Zona" (sin filtro) | Vuelven todas |
+
+> **Qué se está probando.** El desplegable ofrece **comunidades**, pero la
+> publicación guarda `zona = "Escobar"` y el barrio aparte. Se comparaba
+> contra la columna equivocada y elegir cualquier zona vaciaba todo.
+
+### 6g · El aviso de publicar se puede cerrar
+
+| # | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 6.30 | En la lista de Mercado, tocar la **×** del aviso azul "Publicá lo que tenés" | Desaparece |
+| 6.31 | Moverse a Servicios y volver | **Sigue oculto** |
+| 6.32 | Cerrar la app del todo y volver a abrirla | **Vuelve a aparecer** |
+| 6.33 | (Opcional, si podés esperar) Cerrarlo y volver al otro día | Vuelve a aparecer |
 
 ---
 
@@ -216,6 +273,111 @@ Parametrías → Banners o no vas a poder aprobar.
 | 8.11 | Admin | Prender el checkout MP y repetir | Redirige a MercadoPago. Pagando con la **cuenta compradora de prueba**, el banner pasa a **Publicado** y entra al carrusel |
 | 8.12 | Cualquiera | Tocar el banner en el inicio | Abre el WhatsApp del anunciante, y el **contador de clicks sube** |
 | 8.13 | Admin | Volver a apagar los dos interruptores | El carrusel vuelve a ser sólo editorial |
+
+---
+
+## Bloque 8bis · Avisos de prestadores en Servicios *(hay que prenderlo)*
+
+Es lo más nuevo y lo que más piezas toca. Se prende en **Parametrías →
+"Avisos de prestadores en Servicios"**.
+
+> **Antes de empezar, entendé la diferencia**, porque son dos compras
+> distintas y es fácil confundirlas:
+>
+> - **Impulsar** = aparece **primero** en la lista. No cambia el vencimiento.
+> - **Renovar** = le da **más tiempo**. No cambia el orden.
+
+### 8bis-a · El prestador arma su aviso
+
+| # | Quién | Qué hacer | Qué tiene que pasar |
+|---|---|---|---|
+| 8b.1 | Admin | Prender el flag en Parametrías | Avisa que quedó activo |
+| 8b.2 | P1 | Mi perfil | Aparece **"Mis avisos en Servicios"** |
+| 8b.3 | V1 | Mi perfil | **No** aparece — es sólo para prestadores |
+| 8b.4 | P1 | Abrirlo | Dice cuántos publicados tiene y cuántos días dura cada uno |
+| 8b.5 | P1 | "Agregar aviso", completar **sin foto**, "Guardar como borrador" | Guarda. Queda **Borrador** |
+| 8b.6 | P1 | Intentar "Enviar a revisión" sin foto | Rechaza: pide la foto |
+| 8b.7 | P1 | Cargar foto, título y rubro → "Enviar a revisión" | Queda **En revisión** |
+| 8b.8 | P1 | Tocar **"Vista previa"** | Muestra la tarjeta **como la ve un vecino** |
+| 8b.9 | V1 | Entre Vecinos → Servicios | El aviso **todavía no está**: falta aprobarlo |
+
+### 8bis-b · La moderación
+
+| # | Quién | Qué hacer | Qué tiene que pasar |
+|---|---|---|---|
+| 8b.10 | Admin | Moderación | Sección **"🛠️ Avisos de prestadores por revisar"** con la foto |
+| 8b.11 | Admin | **Rechazar** con un motivo | P1 lo ve **Rechazada con el motivo**, y le llega una **notificación** |
+| 8b.12 | P1 | Corregir y reenviar | Vuelve a **En revisión** |
+| 8b.13 | Admin | **Aprobar** | P1 lo ve **Publicada · N días** y le llega la notificación |
+
+### 8bis-c · Lo que ve el vecino
+
+| # | Quién | Qué hacer | Qué tiene que pasar |
+|---|---|---|---|
+| 8b.14 | V1 | Entre Vecinos → **Servicios** | Arriba de los chips aparece el toggle **🏘️ Vecinos / 🛠️ Prestadores**, arrancando en **Vecinos** |
+| 8b.15 | V1 | Pasar a **Prestadores** | Los chips cambian a **oficios** (Plomería, Herrería…) y aparece el aviso con borde azul |
+| 8b.16 | V1 | Mirar la reputación de la tarjeta | Si el prestador no tiene reseñas dice **"Nuevo en PRONET"** — no inventa estrellas ni pone 0 |
+| 8b.17 | V1 | Tocar 🤍 | Queda en ❤️ y el número sube |
+| 8b.18 | V1 | Tocar **"Contactar"** | Va al alta de pedido con el **cartel del destinatario** y el **rubro ya elegido** |
+| 8b.19 | V1 | Completar y publicar | Se crea un pedido **dirigido sólo a P1** |
+| 8b.20 | P2 | Mirar sus pedidos | **No** ve ese pedido |
+| 8b.21 | P1 | Mirar sus pedidos | Sí lo ve, y puede mandar propuesta como siempre |
+| 8b.22 | P1 | Entre Vecinos → Servicios | **No** ve el toggle: el prestador publica hacia ese espacio, no lo navega |
+
+### 8bis-d · Las métricas
+
+| # | Quién | Qué hacer | Qué tiene que pasar |
+|---|---|---|---|
+| 8b.23 | P1 | Mis avisos | El aviso muestra 👁 vistas · 👍 likes · 👆 clics · 📩 solicitudes |
+| 8b.24 | P1 | Comparar con lo que hizo V1 | Las **solicitudes** cuentan el pedido de 8b.19 |
+| 8b.25 | P1 | Abrir su propia vista previa varias veces | Las vistas **no suben**: sólo cuenta el vecino |
+
+### 8bis-e · Impulsar y renovar *(necesita el checkout MP prendido)*
+
+| # | Quién | Qué hacer | Qué tiene que pasar |
+|---|---|---|---|
+| 8b.26 | Admin | Prender **Venta de impulsos** en Parametrías | Queda activa. Depende del flag de avisos |
+| 8b.27 | P1 | Con el checkout MP **apagado**, tocar Impulsar | Avisa que el cobro está en test — **no cobra** |
+| 8b.28 | Admin | Prender el checkout MP | |
+| 8b.29 | P1 | Tocar **⚡ Impulsar** | Muestra el precio y va a MercadoPago |
+| 8b.30 | P1 | Pagar con la tarjeta de prueba | El aviso queda **⚡ Impulsado hasta …** y pasa **primero** en el feed del vecino |
+| 8b.31 | P1 | Impulsar de nuevo | Los días se **suman**, no se pisan |
+| 8b.32 | Admin | Apagar el checkout y la venta de impulsos | Vuelve a estar en test |
+
+Para el vencimiento y la renovación hace falta que el aviso venza. Se puede
+esperar, o pedir que se adelante la fecha desde la base.
+
+| # | Quién | Qué hacer | Qué tiene que pasar |
+|---|---|---|---|
+| 8b.33 | P1 | Con el aviso vencido, abrir Mis avisos | Aparece **en gris**, marcado **Vencida** |
+| 8b.34 | P1 | Mirar el cupo | El vencido **no ocupa lugar**: puede armar otro sin borrarlo |
+| 8b.35 | P1 | Tocar **🔄 Renovar** | Pide **confirmación** diciendo cuántos días y **cuánto cuesta** |
+| 8b.36 | P1 | Confirmar y pagar | Vuelve al aire, sin pasar de nuevo por moderación |
+| 8b.37 | P1 | Dos días antes de vencer | Llega la **notificación** de que está por vencer |
+
+### 8bis-f · Apagarlo
+
+| # | Quién | Qué hacer | Qué tiene que pasar |
+|---|---|---|---|
+| 8b.38 | Admin | Apagar el flag de avisos de prestadores | Desaparece la fila de Mi perfil, la sección de Moderación y el toggle de Servicios — **sin rastros** |
+
+---
+
+## Bloque 8ter · Comunidad y cobertura
+
+| # | Quién | Qué hacer | Qué tiene que pasar |
+|---|---|---|---|
+| 8t.1 | V1 | Mi perfil → Editar perfil | Hay un campo **"¿En qué comunidad vivís?"** |
+| 8t.2 | V1 | Ver qué trae seleccionado | La comunidad que ya tenía. Si había elegido un **barrio**, muestra la comunidad de ese barrio |
+| 8t.3 | V1 | Cambiarla y guardar | La cabecera de Mi perfil se actualiza **sin recargar** |
+| 8t.4 | V1 | Entrar a Entre Vecinos | El feed dice el mercado de la comunidad nueva |
+| 8t.5 | V1 | Elegir "Prefiero no decirlo" y guardar | Vuelve a ver todo Escobar |
+| 8t.6 | P1 | Editar perfil → zona de cobertura | Puede elegir **en qué comunidades trabaja** |
+| 8t.7 | P1 | Guardar y mirar sus pedidos | Ve los de esas comunidades |
+| 8t.8 | P1 | Sacar una comunidad y guardar | Dejan de aparecer los pedidos de esa zona |
+
+> **Qué se está probando.** Que "dónde vivo" y "dónde trabajo" son **dos
+> datos distintos**. Un prestador tiene los dos y no tienen por qué coincidir.
 
 ---
 
@@ -311,3 +473,26 @@ Cosas que hoy no se pueden probar de punta a punta, para que no las busques:
   responde rápido y eso no dice nada sobre 500.
 - **iPhone y el escaneo de DNI.** Ese navegador no trae el lector, así que el
   botón no aparece. Es lo esperado, no una falla.
+- **El precio de la renovación** está en $1.500 como **placeholder**: se puso
+  para que el circuito funcione, no es un precio decidido.
+- **El mapa del alta de prestador** (el iframe de OpenStreetMap del paso 3
+  del onboarding) **no se ve**: la política de seguridad del sitio bloquea
+  ese `<iframe>`. Es un problema conocido, anterior a todo esto.
+
+---
+
+## Qué cubre cada bloque
+
+Para cuando quieras probar sólo una parte y no el recorrido entero.
+
+| Bloque | Qué se prueba |
+|---|---|
+| 1–2 | Alta del vecino, T&C por cuenta, teléfono único, comunidad |
+| 3–5 | Pedido, propuestas, elección, chat, cierre y reseña |
+| 6 | Entre Vecinos: publicar, lote, likes, comentarios, mapa, resumen, filtros |
+| 7 | Pre-alta de prestadores, QR y DNI |
+| 8 | Banners pagos del carrusel |
+| **8bis** | **Avisos de prestadores en Servicios, impulsar y renovar** |
+| **8ter** | **Comunidad del vecino y cobertura del prestador** |
+| 9 | Panel del admin: moderación, parametrías, denuncias |
+| 10 | PWA, offline y notificaciones |
