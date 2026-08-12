@@ -3632,6 +3632,10 @@ document.addEventListener('focusin', (e) => {
 
   // Coordenadas del centro de Escobar como fallback
   const ESCOBAR_LAT = -34.3486, ESCOBAR_LNG = -58.8100;
+  // La zona de nivel 1, la que contiene a todas las comunidades. Es el valor
+  // que hoy tienen los 20 prestadores en `zonas`, y el que representa "no me
+  // acoto a ninguna comunidad".
+  const ZONA_RAIZ = 'Escobar';
 
   function calcDistanciaKm(lat1, lng1, lat2, lng2) {
     const R = 6371;
@@ -5650,10 +5654,19 @@ document.addEventListener('focusin', (e) => {
       ? prestador.zonas
       : (prestador?.zona ? [prestador.zona] : []);
 
-    wrapZ.innerHTML = comunidades.map(c =>
-      '<div class="sub-opt' + (cubiertas.includes(c.nombre) ? ' on' : '') +
-      '" data-zona="' + escHTML(c.nombre) + '" onclick="toggleZonaCobertura(this,\'' + pref + '\')">' +
-      escHTML(c.nombre) + '</div>').join('');
+    // "Todo Escobar" NO es una comunidad más: es la zona de nivel 1, que las
+    // contiene a todas. Tiene que estar porque HOY los 20 prestadores están
+    // así —`zonas = ['Escobar']`, heredado de la zona suelta que tenían— y
+    // sin esta opción abrirían el selector sin nada marcado y al guardar se
+    // achicarían la cobertura sin querer.
+    const chip = (valor, texto, extra) =>
+      '<div class="sub-opt' + (cubiertas.includes(valor) ? ' on' : '') +
+      '" data-zona="' + escHTML(valor) + '"' + (extra || '') +
+      ' onclick="toggleZonaCobertura(this,\'' + pref + '\')">' + escHTML(texto) + '</div>';
+
+    wrapZ.innerHTML =
+      chip(ZONA_RAIZ, 'Todo ' + ZONA_RAIZ, ' data-raiz="1"') +
+      comunidades.map(c => chip(c.nombre, c.nombre)).join('');
     if (typeof habilitarAccesibilidadTeclado === 'function') habilitarAccesibilidadTeclado(wrapZ);
 
     if (wrapR) {
@@ -5667,6 +5680,17 @@ document.addEventListener('focusin', (e) => {
 
   function toggleZonaCobertura(el, pref) {
     el.classList.toggle('on');
+    // "Todo Escobar" y las comunidades sueltas se excluyen: marcar las dos
+    // cosas guardaría una cobertura redundante y dejaría al prestador sin
+    // saber cuál manda.
+    const todos = [...document.querySelectorAll('#' + pref + '-zonas .sub-opt')];
+    const esRaiz = el.dataset.raiz === '1';
+    if (el.classList.contains('on')) {
+      todos.forEach(o => {
+        if (o === el) return;
+        if (esRaiz || o.dataset.raiz === '1') o.classList.remove('on');
+      });
+    }
     // Elegir a mano deja el radio sin sentido: ya no describe lo marcado.
     document.querySelectorAll('#' + pref + '-radio .r-chip').forEach(c => c.classList.remove('on'));
     const err = document.getElementById(pref + '-zonas-error');
@@ -5687,6 +5711,10 @@ document.addEventListener('focusin', (e) => {
 
     let marcadas = 0;
     document.querySelectorAll('#' + pref + '-zonas .sub-opt').forEach(el => {
+      // "Todo Escobar" queda fuera del radio: tiene coordenada (el centro de
+      // la ciudad) y entraría en casi cualquier radio, marcando la zona
+      // entera cuando el prestador pidió justamente acotar.
+      if (el.dataset.raiz === '1') { el.classList.remove('on'); return; }
       const fila = arbol.find(z => z.nombre === el.dataset.zona);
       // Sin coordenada no se puede decidir: se deja como estaba en vez de
       // desmarcarla y hacerle perder al prestador una zona que había puesto.

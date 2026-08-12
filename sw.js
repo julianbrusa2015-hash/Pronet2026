@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v222'; // v222: la cobertura del prestador existe de verdad
+const CACHE_VERSION = 'pronet-v223'; // v223: Todo Escobar como opcion de cobertura
 
 const SHELL = [
   './',
