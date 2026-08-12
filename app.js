@@ -439,7 +439,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-chats') { if (!chatsFiltroPendiente) chatsFiltroPendiente = 'todos'; renderChats(); }
     // Los toggles de configuración se mudaron con las parametrías, así que
     // renderConfigAdmin() se llama desde ahí y no desde moderación.
-    if (id === 's-moderacion') { renderModeracion(); renderBannersPendientes(); }
+    if (id === 's-moderacion') { renderModeracion(); renderBannersPendientes(); renderPubsPendientes(); }
     if (id === 's-parametrias') { renderConfigAdmin(); }
     if (id === 's-param-planes')   { renderParamPlanes(); }
     if (id === 's-param-features') { renderParamFeatures(); }
@@ -8718,6 +8718,17 @@ document.addEventListener('focusin', (e) => {
                                : 'Desactivada · el carrusel es sólo editorial';
       estBn.style.color = bnOn ? 'var(--green)' : 'var(--ink3)';
     }
+    const chkPp = document.getElementById('cfg-pubs-prestador');
+    const estPp = document.getElementById('cfg-pubs-prestador-estado');
+    const ppOn  = pubsPrestadorActivo();
+    if (chkPp) chkPp.checked = ppOn;
+    if (estPp) {
+      estPp.textContent = ppOn
+        ? 'Activo · los prestadores pueden armar avisos (pasan por Moderación)'
+        : 'Desactivado · sin rastros en la app';
+      estPp.style.color = ppOn ? 'var(--green)' : 'var(--ink3)';
+    }
+
     // El conteo de espacios se pide aparte: es una consulta, no un flag.
     if (bnOn && estBn) {
       PronetDB.bannersEspaciosLibres().then(n => {
@@ -8793,6 +8804,26 @@ document.addEventListener('focusin', (e) => {
       : '🔒 Venta de espacios desactivada. El carrusel vuelve a ser sólo tuyo.');
   }
   window.toggleBannersPagos = toggleBannersPagos;
+
+  async function togglePubsPrestador(el) {
+    const nuevo = !!el.checked;
+    el.disabled = true;
+    const res = await PronetDB.guardarConfigApp('publicaciones_prestador', nuevo ? 'true' : 'false');
+    el.disabled = false;
+    if (!res.ok) {
+      el.checked = !nuevo;
+      showToast && showToast('⚠️ No se pudo guardar. ' + (res.error || ''));
+      return;
+    }
+    configApp.publicaciones_prestador = nuevo ? 'true' : 'false';
+    // La fila de Mi Perfil del prestador aparece o desaparece sin recargar.
+    reflejarUsuario();
+    renderConfigAdmin();
+    showToast && showToast(nuevo
+      ? '🛠️ Avisos de prestadores activos. Lo que envíen te llega a Moderación.'
+      : '🔒 Avisos de prestadores desactivados. Sin rastros en la app.');
+  }
+  window.togglePubsPrestador = togglePubsPrestador;
 
   async function togglePromarket(el) {
     const nuevo = !!el.checked;
@@ -10207,6 +10238,59 @@ document.addEventListener('focusin', (e) => {
     renderBannersPendientes();
   }
   window.modResolverBanner = modResolverBanner;
+
+  // ── Moderación de avisos de prestadores (admin) ──────────────────────
+  // Mismo molde que los banners: nada sale al aire sin pasar por acá, y el
+  // motivo del rechazo le llega al prestador tal cual (por notificación,
+  // cosa que el RPC hace solo).
+  const _pubsModCache = new Map();
+
+  async function renderPubsPendientes() {
+    const cont = document.getElementById('mod-pubs-lista');
+    const wrap = document.getElementById('mod-pubs-prestador');
+    if (!cont || !wrap) return;
+    if (!pubsPrestadorActivo()) { wrap.style.display = 'none'; return; }
+    wrap.style.display = '';
+    cont.innerHTML = '<div style="padding:16px 0;text-align:center;font-size:12.5px;color:var(--ink3)">⏳ Cargando…</div>';
+    const lista = await PronetDB.listarPubsPrestadorPendientes();
+    if (!lista.length) {
+      cont.innerHTML = '<div style="padding:16px 14px;text-align:center;font-size:12.5px;color:var(--ink3)">No hay avisos de prestadores esperando revisión.</div>';
+      return;
+    }
+    _pubsModCache.clear();
+    lista.forEach(p => _pubsModCache.set(p.id, p));
+    cont.innerHTML = lista.map(p => {
+      const quien = p.prestadores?.nombre || 'Prestador';
+      return '<div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">' +
+        (p.foto_url
+          ? '<img src="' + escHTML(p.foto_url) + '" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block;margin-bottom:9px">'
+          : '') +
+        '<div style="font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(p.titulo) + '</div>' +
+        '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(quien) + ' · ' + escHTML(rubroDeCat(p.rubro)) + '</div>' +
+        (p.descripcion ? '<div style="font-size:12px;color:var(--ink2);margin-top:6px;line-height:1.45">' + escHTML(p.descripcion) + '</div>' : '') +
+        '<div style="display:flex;gap:8px;margin-top:10px">' +
+          '<button onclick="modResolverPub(\'' + escHTML(p.id) + '\',true)" style="flex:1;padding:9px;font-size:12.5px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:\'Inter\',sans-serif">Aprobar</button>' +
+          '<button onclick="modResolverPub(\'' + escHTML(p.id) + '\',false)" style="flex:1;padding:9px;font-size:12.5px;font-weight:700;background:var(--surface);color:#BE123C;border:1.5px solid #FECACA;border-radius:10px;cursor:pointer;font-family:\'Inter\',sans-serif">Rechazar</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  window.renderPubsPendientes = renderPubsPendientes;
+
+  async function modResolverPub(id, aprobar) {
+    const p = _pubsModCache.get(id);
+    if (!p) return;
+    let motivo = null;
+    if (!aprobar) {
+      motivo = prompt('¿Por qué se rechaza? El prestador va a leer esto.');
+      if (motivo === null) return;
+    }
+    const res = await PronetDB.resolverPubPrestador(id, aprobar, motivo);
+    if (!res?.ok) { showToast && showToast('⚠️ ' + (res?.error || 'No se pudo resolver')); return; }
+    showToast && showToast(aprobar ? '✅ Publicado. El prestador ya recibió el aviso.' : 'Rechazado. Le llegó el motivo al prestador.');
+    renderPubsPendientes();
+  }
+  window.modResolverPub = modResolverPub;
 
   const _misBannersCache = new Map();
 

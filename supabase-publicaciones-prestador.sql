@@ -232,10 +232,22 @@ as $$
 declare
   v_dias integer;
   v_plan text;
+  v_titulo text;
+  v_dueno uuid;
 begin
   if not public.es_admin() then
     raise exception 'solo_admin' using errcode = 'P0001';
   end if;
+
+  -- El dueño (perfil) y el título, para avisarle el resultado. Los banners
+  -- no notifican y el vecino se entera entrando a mirar; acá el prestador
+  -- recibe la noti — la revisión sin respuesta se siente como un rechazo.
+  select p.titulo, pf.id into v_titulo, v_dueno
+    from publicaciones_prestador p
+    join perfiles pf on pf.prestador_id = p.prestador_id
+    where p.id = p_id and p.estado = 'pendiente'
+    limit 1;
+  if v_titulo is null then return; end if;  -- no existe o ya se resolvió
 
   if p_aprobar then
     select plan_de_prestador(p.prestador_id) into v_plan
@@ -251,6 +263,11 @@ begin
           moderado_en  = now(),
           motivo_rechazo = null
       where p.id = p_id and p.estado = 'pendiente';
+
+    insert into notificaciones (usuario_id, tipo, titulo, cuerpo)
+    values (v_dueno, 'pub_prestador',
+      '✅ Tu aviso está publicado',
+      '"' || v_titulo || '" ya se ve en Servicios por ' || coalesce(v_dias, 7) || ' días.');
   else
     update publicaciones_prestador p
       set estado = 'rechazada',
@@ -258,6 +275,13 @@ begin
           moderado_en  = now(),
           motivo_rechazo = nullif(trim(coalesce(p_motivo, '')), '')
       where p.id = p_id and p.estado = 'pendiente';
+
+    insert into notificaciones (usuario_id, tipo, titulo, cuerpo)
+    values (v_dueno, 'pub_prestador',
+      'Tu aviso necesita cambios',
+      '"' || v_titulo || '" no se publicó.' ||
+      coalesce(' Motivo: ' || nullif(trim(coalesce(p_motivo, '')), ''), '') ||
+      ' Podés corregirlo y volver a enviarlo.');
   end if;
 end;
 $$;

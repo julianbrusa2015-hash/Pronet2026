@@ -2018,6 +2018,29 @@ const PronetDB = (() => {
       return res;
     },
 
+    /** Cola de moderación (admin): avisos de prestadores esperando revisión.
+     *  El nombre del prestador viene por el embed del FK. */
+    async listarPubsPrestadorPendientes() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('publicaciones_prestador')
+        .select('id, titulo, descripcion, rubro, foto_url, creado, prestador_id, prestadores:prestador_id (nombre, rubro)')
+        .eq('estado', 'pendiente')
+        .order('creado', { ascending: true });
+      if (error) { console.warn('[PronetDB] listarPubsPrestadorPendientes', error.message); return []; }
+      return data || [];
+    },
+
+    /** Aprueba o rechaza un aviso. Sólo admin (lo valida el RPC), que además
+     *  le avisa al prestador el resultado por notificación. */
+    async resolverPubPrestador(id, aprobar, motivo) {
+      if (!remoto) return { ok: false };
+      const { error } = await sb.rpc('resolver_pub_prestador', {
+        p_id: id, p_aprobar: !!aprobar, p_motivo: motivo || null,
+      });
+      if (error) { console.warn('[PronetDB] resolverPubPrestador', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
+    },
+
     // ── FOTOS DE TRABAJO ─────────────────────────────────────────────────
 
     /** Lista las fotos de un trabajo específico. */

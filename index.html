@@ -4975,6 +4975,13 @@
       <div id="mod-banners-lista"></div>
     </div>
 
+    <!-- Avisos de prestadores en Servicios esperando revisión. Sólo con el
+         flag `publicaciones_prestador` prendido; lo controla su render. -->
+    <div id="mod-pubs-prestador" style="display:none;margin:0 14px 14px">
+      <div style="font-size:13px;font-weight:800;color:var(--ink);margin-bottom:8px">🛠️ Avisos de prestadores por revisar</div>
+      <div id="mod-pubs-lista"></div>
+    </div>
+
     <!-- Filtros -->
     <div class="filter-row" style="background:white;border-bottom:1px solid var(--border);padding:8px 14px">
       <div class="chip on" onclick="filtrarMod('todas',this)">Todas</div>
@@ -5180,6 +5187,24 @@
           <strong>Desactivado</strong>: el carrusel es sólo tuyo, se carga desde Parametrías → Banners. <strong>Activado</strong>: cualquier vecino puede comprar un espacio — lo carga, vos lo aprobás o rechazás, y recién ahí paga.
           Se modera <strong>antes</strong> de cobrar, así nunca hay que devolver plata.
           Depende también del interruptor de MercadoPago de arriba: con el checkout en modo test, el pago se simula.
+        </div>
+      </div>
+
+      <!-- Publicaciones de prestadores en Servicios -->
+      <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">Avisos de prestadores en Servicios</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:2px" id="cfg-pubs-prestador-estado">Cargando...</div>
+          </div>
+          <label class="toggle-sw" style="flex-shrink:0">
+            <input type="checkbox" id="cfg-pubs-prestador" onchange="togglePubsPrestador(this)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <strong>Desactivado</strong>: sin rastros — el prestador no ve el panel y nada aparece en Servicios. <strong>Activado</strong>: el prestador arma sus avisos desde Mi Perfil, vos los aprobás o rechazás en Moderación, y recién ahí los ven los vecinos.
+          Los cupos por plan (cantidad y días) se ajustan en la base, tabla <code>planes_limites</code>.
         </div>
       </div>
     </div>
