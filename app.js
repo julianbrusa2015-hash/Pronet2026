@@ -5446,8 +5446,8 @@ document.addEventListener('focusin', (e) => {
     }
 
     const filas = await PronetDB.contarPublicacionesPorBarrio({
-      categoria: mktFiltroActivo, busqueda: mktBusqueda,
-      barrios, zona: mktZonaActiva,
+      categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
+      busqueda: mktBusqueda, barrios, zona: mktZonaActiva,
     }).catch(() => []);
 
     if (!filas.length) { cont.style.display = 'none'; return; }
@@ -5975,7 +5975,8 @@ document.addEventListener('focusin', (e) => {
     const comunidadMapa = await comunidadDelUsuario();
     const barriosMapa = (comunidadMapa && !mktAmpliado) ? await barriosDeComunidad(comunidadMapa) : null;
     const counts = await PronetDB.contarPublicacionesPorBarrio({
-      categoria: mktFiltroActivo, busqueda: mktBusqueda, barrios: barriosMapa,
+      categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
+      busqueda: mktBusqueda, barrios: barriosMapa,
       // El desplegable de zona acota el feed; sin esto el mapa mostraba
       // pines de publicaciones que la lista no tenía.
       zona: mktZonaActiva,

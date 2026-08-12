@@ -1,47 +1,57 @@
 -- ═══════════════════════════════════════════════════════════════════════
--- Resumen de búsqueda por barrio: cuántos VECINOS, no cuántas publicaciones
+-- Resumen por barrio: cuántos VECINOS, y acotado a la sección activa
 -- ═══════════════════════════════════════════════════════════════════════
 --
--- El feed te da una lista; no te dice cuántos hay ni dónde están. La
--- pregunta real del vecino es "busco pizza: ¿cuántos la hacen y en qué
--- barrios?".
+-- Dos cosas, y la segunda apareció recién al verificar en vivo.
 --
--- `contar_publicaciones_por_barrio` ya contaba publicaciones por lugar, que
--- es lo que necesita el mapa. Para el resumen hace falta además el número de
--- PERSONAS: decir "3 vecinos" cuando son 3 publicaciones de la misma persona
--- sería inflar el mercado, que es justo la impresión que no queremos dar en
--- un marketplace que arranca.
+-- ── 1 · Vecinos, no publicaciones ──
+-- El feed te da una lista; no dice cuántos hay ni dónde. La pregunta real es
+-- "busco pizza: ¿cuántos la hacen y en qué barrios?". Y tiene que contar
+-- PERSONAS: decir "2 vecinos" cuando son 2 avisos de la misma persona infla
+-- el mercado, que es justo la impresión que no queremos dar arrancando.
+-- Medido en la base: Araucarias tiene 2 publicaciones y 1 solo vecino.
 --
--- ── Por qué un DROP y no un CREATE OR REPLACE ──
--- Cambia el tipo de retorno (se agrega una columna), y eso `create or
--- replace` no lo permite. Se dropea la firma EXACTA de cuatro parámetros y
--- se recrea con la misma: si se creara con otra firma quedarían dos
--- funciones conviviendo y PostgREST no podría elegir — el error "Could not
--- choose the best candidate function" que ya dejó a los prestadores sin feed
--- una vez (ver supabase-chequeo-overloads.sql).
+-- ── 2 · La sección importa ──
+-- La función no distinguía servicios de productos, pero el feed sí: el tab
+-- Servicios pide `categorias = slugsDeTipo('servicio')`. Resultado, visto en
+-- vivo: el resumen prometía "Araucarias (2)", se tocaba, y el feed mostraba
+-- CERO — esas dos eran productos. El mapa ya tenía el mismo desfasaje desde
+-- antes; los pines contaban de más y nadie lo había notado porque el número
+-- no era tocable.
+--
+-- ── Por qué DROP y no CREATE OR REPLACE ──
+-- Cambian el tipo de retorno y la firma. Se dropea la anterior EXACTA y se
+-- crea la nueva: dos versiones conviviendo rompen PostgREST con "Could not
+-- choose the best candidate function", que ya dejó a los prestadores sin
+-- feed una vez (ver supabase-chequeo-overloads.sql).
 
 begin;
 
 drop function if exists public.contar_publicaciones_por_barrio(text, text, text[], text);
+drop function if exists public.contar_publicaciones_por_barrio(text, text, text[], text, text[]);
 
-create or replace function public.contar_publicaciones_por_barrio(
-  p_categoria text     default null,
-  p_busqueda  text     default null,
-  p_barrios   text[]   default null,
-  p_zona      text     default null
+create function public.contar_publicaciones_por_barrio(
+  p_categoria  text     default null,
+  p_busqueda   text     default null,
+  p_barrios    text[]   default null,
+  p_zona       text     default null,
+  p_categorias text[]   default null
 )
 returns table(lugar text, cantidad bigint, vecinos bigint)
 language sql
 stable
 set search_path to 'public'
 as $$
-  select coalesce(p.barrio, p.zona)              as lugar,
-         count(*)::bigint                        as cantidad,
-         count(distinct p.autor_id)::bigint    as vecinos
+  select coalesce(p.barrio, p.zona)           as lugar,
+         count(*)::bigint                     as cantidad,
+         count(distinct p.autor_id)::bigint   as vecinos
     from public.publicaciones p
    where p.activa = true
      and coalesce(p.barrio, p.zona) is not null
      and (p_categoria is null or p_categoria = 'todos' or p.categoria = p_categoria)
+     -- Acota a la sección activa (servicios o productos). Sin esto el conteo
+     -- no coincide con lo que el feed va a mostrar.
+     and (p_categorias is null or p.categoria = any(p_categorias))
      and (
        p_busqueda is null or btrim(p_busqueda) = ''
        or p.titulo      ilike '%' || btrim(p_busqueda) || '%'
@@ -54,12 +64,14 @@ as $$
    group by coalesce(p.barrio, p.zona);
 $$;
 
-grant execute on function public.contar_publicaciones_por_barrio(text, text, text[], text) to anon, authenticated;
+grant execute on function public.contar_publicaciones_por_barrio(text, text, text[], text, text[]) to anon, authenticated;
 
 commit;
 
 notify pgrst, 'reload schema';
 
--- Verificación: una sola función con ese nombre, y que devuelva las 3 columnas.
-select (select count(*) from pg_proc where proname = 'contar_publicaciones_por_barrio') as cuantas_funciones;
-select * from public.contar_publicaciones_por_barrio(null, null, null, null);
+-- Verificación: UNA sola función, y el conteo por sección distinto del total.
+select (select count(*) from pg_proc where proname = 'contar_publicaciones_por_barrio') as cuantas_funciones,
+       (select coalesce(sum(cantidad),0) from public.contar_publicaciones_por_barrio(null,null,null,null,null)) as todas,
+       (select coalesce(sum(cantidad),0) from public.contar_publicaciones_por_barrio(null,null,null,null,
+          array['belleza','eventos','exterior','fotografia','hogar','mascotas','salud-bienestar','profesionales','talleres-clases','vehiculos','otros-servicios','cerrajeria'])) as solo_servicios;

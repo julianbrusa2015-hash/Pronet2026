@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v225'; // v225: resumen de busqueda por barrio en Entre Vecinos
+const CACHE_VERSION = 'pronet-v226'; // v226: el resumen y el mapa cuentan solo la seccion activa
 
 const SHELL = [
   './',
