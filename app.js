@@ -6030,16 +6030,19 @@ document.addEventListener('focusin', (e) => {
         },
       });
       const info = new google.maps.InfoWindow({
-        content: `<div style="font-family:'Inter',sans-serif;min-width:160px;padding:4px 0">
+        content: `<div style="font-family:'Inter',sans-serif;min-width:190px;padding:4px 0">
           <div style="font-weight:700;font-size:14px;margin-bottom:4px">${escHTML(lugar)}</div>
-          <div style="font-size:12px;color:#555;margin-bottom:8px">${count} ${count === 1 ? 'publicación' : 'publicaciones'}</div>
-          <button onclick="mktVerBarrioDelMapa(${idx})"
-            style="background:#2B5BFF;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;width:100%">Ver publicaciones</button>
+          <div style="font-size:12px;color:#555">${count} ${count === 1 ? 'publicación' : 'publicaciones'}</div>
+          <div style="font-size:11px;color:#888;margin-top:8px">⏳ Cargando…</div>
         </div>`,
       });
-      marker.addListener('click', () => {
+      // El primer toque ya no lleva un número solo: trae las publicaciones
+      // del barrio con su foto. El número decía cuántas hay pero no qué son,
+      // y para saberlo había que salir del mapa.
+      marker.addListener('click', async () => {
         mktMarcadores.forEach(m => m._info && m._info.close());
         info.open(mapaGoogleMkt, marker);
+        info.setContent(await mktContenidoPin(lugar, count, idx));
       });
       marker._info = info;
       mktMarcadores.push(marker);
@@ -6057,6 +6060,73 @@ document.addEventListener('focusin', (e) => {
    *  barrio. Filtra por BARRIO y no por zona — antes usaba mktFiltrarZona,
    *  que compara contra `publicaciones.zona` ('Escobar') y con un pin de
    *  barrio habría devuelto un feed vacío. */
+  // Publicaciones mostradas en el globo del pin abierto. El onclick manda el
+  // índice y no el id: mismo criterio que _mktPins — nada que venga del
+  // usuario viaja adentro de un handler inline.
+  const _mktPinPosts = [];
+
+  /** Arma el contenido del globo: miniaturas de las publicaciones de ese
+   *  barrio. Se pide al abrir y no al dibujar los pines para no traer las
+   *  publicaciones de todos los barrios cuando el vecino va a mirar uno. */
+  async function mktContenidoPin(lugar, count, idx) {
+    const posts = await PronetDB.listarPublicaciones({
+      categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
+      busqueda: mktBusqueda, zona: mktZonaActiva,
+      barrios: [lugar], incluirSinBarrio: false, offset: 0,
+    }).catch(() => []);
+
+    _mktPinPosts.length = 0;
+    posts.forEach(p => _mktPinPosts.push(p.id));
+
+    const cabecera =
+      '<div style="font-weight:700;font-size:14px;margin-bottom:2px">' + escHTML(lugar) + '</div>' +
+      '<div style="font-size:11.5px;color:#555;margin-bottom:8px">' +
+        count + ' ' + (count === 1 ? 'publicación' : 'publicaciones') + '</div>';
+
+    if (!posts.length) {
+      return '<div style="font-family:\'Inter\',sans-serif;min-width:190px;padding:4px 0">' + cabecera +
+        '<button onclick="mktVerBarrioDelMapa(' + idx + ')" style="background:#2B5BFF;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;width:100%">Ver publicaciones</button></div>';
+    }
+
+    const filas = posts.slice(0, 4).map((p, i) => {
+      const precio = p.precio_convenir ? 'A convenir'
+        : (p.precio ? '$' + Number(p.precio).toLocaleString('es-AR') : '');
+      const foto = p.foto_url
+        ? '<div style="width:42px;height:42px;border-radius:7px;flex-shrink:0;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/cover"></div>'
+        : '<div style="width:42px;height:42px;border-radius:7px;flex-shrink:0;background:#EEF1F6;display:flex;align-items:center;justify-content:center;font-size:17px">🛍️</div>';
+      return '<div onclick="mktIrAPublicacionDelPin(' + i + ',' + idx + ')" ' +
+        'style="display:flex;gap:8px;align-items:center;padding:6px 4px;cursor:pointer;border-bottom:1px solid #EEF1F6">' +
+        foto +
+        '<div style="min-width:0;flex:1">' +
+          '<div style="font-size:12.5px;font-weight:600;color:#1F2733;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHTML(p.titulo) + '</div>' +
+          (precio ? '<div style="font-size:11.5px;font-weight:700;color:#2B5BFF">' + escHTML(precio) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    const resto = posts.length > 4
+      ? '<button onclick="mktVerBarrioDelMapa(' + idx + ')" style="background:none;border:none;color:#2B5BFF;font-size:11.5px;font-weight:700;cursor:pointer;padding:7px 0 0;width:100%;font-family:\'Inter\',sans-serif">Ver las ' + count + ' →</button>'
+      : '';
+
+    return '<div style="font-family:\'Inter\',sans-serif;min-width:210px;max-width:250px;padding:4px 0">' +
+      cabecera + filas + resto + '</div>';
+  }
+
+  /** Segundo toque: va al feed, acotado a ese barrio, con la ficha abierta.
+   *  No hay pantalla de detalle en Entre Vecinos — la ficha se expande en el
+   *  lugar, así que "llevar a la publicación" es filtrar, expandir y hacer
+   *  scroll hasta ella. */
+  async function mktIrAPublicacionDelPin(i, idxBarrio) {
+    const pubId = _mktPinPosts[i];
+    const lugar = _mktPins[idxBarrio];
+    if (!pubId || !lugar) return;
+    mktBarrioFiltro = lugar;
+    if (mktModo === 'mapa') toggleMapaMercado();
+    await renderMercado(true);
+    mktVerCompleta(pubId);
+  }
+  window.mktIrAPublicacionDelPin = mktIrAPublicacionDelPin;
+
   function mktVerBarrioDelMapa(idx) {
     const lugar = _mktPins[idx];
     if (!lugar) return;
