@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v228'; // v228: el impulso respeta el interruptor de MercadoPago
+const CACHE_VERSION = 'pronet-v229'; // v229: el cupo cuenta publicados y la renovacion se paga
 
 const SHELL = [
   './',

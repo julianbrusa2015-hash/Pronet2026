@@ -211,6 +211,26 @@ Deno.serve(async (req) => {
       return new Response('ok', { status: 200 });
     }
 
+    // Renovación de un aviso vencido: vuelve al aire por otro período del
+    // plan. Como el impulso, corta acá — no es suscripción ni crédito.
+    if (plan === 'renovacion') {
+      if (!ref) {
+        await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[webhook-mp] pago de renovacion sin ref', pago.id);
+        return new Response('ok', { status: 200 });
+      }
+      const { data: resRen, error: errRen } = await supabase.rpc('activar_renovacion_pagada', {
+        p_pub_id: ref,
+        p_usuario_id: usuarioId,
+      });
+      if (errRen || !resRen?.ok) {
+        await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[webhook-mp] error activando renovacion', errRen?.message || resRen?.error);
+        return new Response('error', { status: 500 });
+      }
+      return new Response('ok', { status: 200 });
+    }
+
     const { error } = await supabase.from('suscripciones').upsert({
       usuario_id: usuarioId,
       plan,

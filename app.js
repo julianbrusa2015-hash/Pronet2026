@@ -10969,7 +10969,10 @@ document.addEventListener('focusin', (e) => {
     _ppLista = await PronetDB.listarMisPubsPrestador();
     const slots = limitePlan('pub_slots') ?? 1;
     const dias  = limitePlan('pub_duracion_dias') ?? 7;
-    if (cupo) cupo.textContent = _ppLista.length + ' de ' + slots + ' avisos usados · ' + dias + ' días al aire por aviso';
+    // El cupo es de PUBLICADOS a la vez, no de filas: los vencidos y los
+    // borradores quedan en el panel sin ocupar lugar.
+    const vivos = _ppLista.filter(p => p.estado === 'activa' && new Date(p.vigencia_hasta) > new Date()).length;
+    if (cupo) cupo.textContent = vivos + ' de ' + slots + ' publicados · ' + dias + ' días al aire por aviso';
 
     const metricas = await PronetDB.metricasPubsPrestador(_ppLista.map(p => p.id));
 
@@ -10985,9 +10988,14 @@ document.addEventListener('focusin', (e) => {
       // que nadie puede ver sería cobrar por nada.
       const impulsado = p.impulso_hasta && new Date(p.impulso_hasta) > new Date();
       const impulsable = p.estado === 'activa' && !vencida && impulsosActivos();
-      return '<div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px">' +
+      // La vencida queda a la vista pero apagada: sigue siendo tuya, con sus
+      // métricas y su historial, sólo que ya no se ve en Servicios. Antes
+      // había que borrarla para publicar otra — ahora no ocupa lugar.
+      return '<div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px' +
+        (vencida ? ';opacity:.62' : '') + '">' +
         (p.foto_url
-          ? '<div style="height:110px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/cover"></div>'
+          ? '<div style="height:110px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/cover' +
+            (vencida ? ';filter:grayscale(1)' : '') + '"></div>'
           : '<div style="height:56px;background:#EEF1F6;display:flex;align-items:center;justify-content:center;font-size:22px">🛠️</div>') +
         '<div style="padding:11px 13px">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
@@ -11017,12 +11025,17 @@ document.addEventListener('focusin', (e) => {
             ? '<div style="margin-top:8px;font-size:11px;font-weight:700;color:#B9760A">⚡ Impulsado hasta el ' +
                 new Date(p.impulso_hasta).toLocaleDateString('es-AR') + '</div>' : '') +
           (impulsable && !impulsado
-            ? '<button style="width:100%;margin-top:9px;border:1px solid #F59E0B;background:#FFF8EC;color:#B9760A;border-radius:9px;padding:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppImpulsar(\'' + p.id + '\')">⚡ Impulsar · aparece primero</button>'
+            ? '<button style="width:100%;margin-top:9px;border:1px solid #F59E0B;background:#FFF8EC;color:#B9760A;border-radius:9px;padding:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppImpulsar(\'' + p.id + '\')">⚡ Impulsar · ' + precioSuelto('impulso') + '</button>' +
+              // Las dos compras se confunden, así que cada una dice en una
+              // línea qué NO hace la otra.
+              '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.4">Aparece primero en la lista por ' +
+                (configApp.impulso_dias || 7) + ' días. No cambia la fecha de vencimiento.</div>'
             : '') +
           (renovable
             ? '<div style="margin-top:9px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:9px 11px">' +
-                '<div style="font-size:11.5px;color:#9A3412;line-height:1.4">Salió de Servicios. Renovalo y vuelve al aire sin pasar de nuevo por revisión.</div>' +
-                '<button style="width:100%;margin-top:8px;border:0;background:#EA580C;color:white;border-radius:9px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppRenovar(\'' + p.id + '\')">🔄 Renovar</button>' +
+                '<div style="font-size:11.5px;color:#9A3412;line-height:1.4">Salió de Servicios. Renovalo y vuelve al aire con la misma foto y el mismo texto, sin pasar de nuevo por revisión.</div>' +
+                '<button style="width:100%;margin-top:8px;border:0;background:#EA580C;color:white;border-radius:9px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppRenovar(\'' + p.id + '\')">🔄 Renovar · ' + precioSuelto('renovacion') + '</button>' +
+                '<div style="font-size:10.5px;color:#9A3412;opacity:.8;margin-top:4px;line-height:1.4">Le da más tiempo. No cambia el orden en que aparece.</div>' +
               '</div>' : '') +
           '<div style="display:flex;gap:8px;margin-top:10px">' +
             '<button style="flex:1;border:1px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppVistaPrevia(\'' + p.id + '\')">👀 Vista previa</button>' +
@@ -11038,14 +11051,16 @@ document.addEventListener('focusin', (e) => {
       '</div>';
     }).join('');
 
-    const libres = Math.max(0, slots - _ppLista.length);
+    // Contra los PUBLICADOS, no contra el total: antes un vencido seguía
+    // ocupando el lugar y la única salida que ofrecía el mensaje era borrarlo.
+    const libres = Math.max(0, slots - vivos);
     const slotVacio = libres > 0
       ? '<div role="button" tabindex="0" onclick="ppAbrirForm(null)" style="border:2px dashed var(--border);border-radius:14px;padding:22px;text-align:center;cursor:pointer;background:var(--surface)">' +
           '<div style="font-size:22px">＋</div>' +
           '<div style="font-size:13px;font-weight:700;color:var(--blue);margin-top:4px">Agregar aviso</div>' +
           '<div style="font-size:11px;color:var(--ink3);margin-top:2px">' + libres + (libres === 1 ? ' lugar libre' : ' lugares libres') + '</div>' +
         '</div>'
-      : '<div style="border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;font-size:12px;color:var(--ink3);background:var(--surface)">Usaste todos los avisos de tu plan. Eliminá uno para armar otro.</div>';
+      : '<div style="border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;font-size:12px;color:var(--ink3);background:var(--surface)">Tenés ' + slots + (slots === 1 ? ' aviso publicado' : ' avisos publicados') + ', el máximo de tu plan. Esperá a que venza alguno o subí de plan para tener más al aire.</div>';
 
     cont.innerHTML = tarjetas + slotVacio;
   }
@@ -11175,13 +11190,42 @@ document.addEventListener('focusin', (e) => {
   }
   window.ppImpulsar = ppImpulsar;
 
+  /** Renovar es una COMPRA, no un botón gratis: el plan incluye N avisos
+   *  publicados por X días, y estirar más allá se paga. Por eso pasa por el
+   *  mismo circuito que el impulso en vez de llamar a un RPC.
+   *
+   *  Las dos se confunden fácil, así que el texto tiene que separarlas:
+   *    renovar  = más TIEMPO (vuelve al aire), no cambia el orden
+   *    impulsar = más VISIBILIDAD (aparece primero), no cambia el vencimiento
+   */
   async function ppRenovar(id) {
-    const res = await PronetDB.renovarPubPrestador(id);
-    if (!res.ok) { showToast('⚠️ ' + (res.error || 'No se pudo renovar.')); return; }
-    showToast('🔄 Renovado por ' + res.dias + ' días. Ya está de nuevo en Servicios.');
-    renderPubsPrestador();
+    const p = _ppLista.find(x => x.id === id);
+    if (!p) return;
+    if (!mpCheckoutActivo()) {
+      showToast && showToast('🧪 El cobro está en modo test: pedile al admin que lo active.');
+      return;
+    }
+    const dias = limitePlan('pub_duracion_dias') ?? 7;
+    if (!confirm('Renovar «' + p.titulo + '»\n\n' +
+        'Vuelve a Servicios por ' + dias + ' días más, con la misma foto y el mismo texto ' +
+        '(no pasa de nuevo por revisión).\n\n' +
+        'Precio: ' + precioSuelto('renovacion') + '\n\n¿Seguimos al pago?')) return;
+    showToast && showToast('Abriendo el pago…');
+    const res = await PronetDB.crearPreferenciaMP('renovacion', 'mes', id);
+    if (res?.init_point) { window.location.href = res.init_point; return; }
+    showToast && showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
   }
   window.ppRenovar = ppRenovar;
+
+  /** Precio de una compra suelta (impulso, renovación) tal como está en la
+   *  base. Se lee de PRONET_CONFIG.PLANES, que el arranque sincroniza desde
+   *  `planes_limites` — la misma fila de la que crear-preferencia saca el
+   *  monto real del cobro. Si se escribiera a mano acá, la pantalla podría
+   *  prometer un precio y el checkout cobrar otro. */
+  function precioSuelto(id) {
+    const monto = ((window.PRONET_CONFIG || {}).SUELTOS || {})[id]?.precio;
+    return monto ? '$' + Number(monto).toLocaleString('es-AR') : 'a confirmar';
+  }
 
   async function ppEliminar(id) {
     const p = _ppLista.find(x => x.id === id);
@@ -14933,6 +14977,19 @@ document.addEventListener('focusin', (e) => {
     // del cobro). precio_mes/precio_anual quedan sin tocar si la fila no los
     // tiene (fallback a lo que ya trae config.js) — nunca se pisa con null.
     const limitesDB = await PronetDB.listarPlanesLimites().catch(() => []);
+    // Las compras sueltas (impulso, renovación, banner, crédito) viven en la
+    // misma tabla pero NO son planes, así que no están en PRONET_CONFIG.PLANES.
+    // Se guardan aparte para que la pantalla muestre el mismo precio que
+    // crear-preferencia va a cobrar: escribirlo a mano en el cliente es como
+    // se llega a prometer un número y cobrar otro.
+    if (limitesDB.length && window.PRONET_CONFIG) {
+      window.PRONET_CONFIG.SUELTOS = {};
+      limitesDB.forEach(row => {
+        window.PRONET_CONFIG.SUELTOS[row.plan] = {
+          nombre: row.nombre, precio: row.precio_mes,
+        };
+      });
+    }
     if (limitesDB.length && window.PRONET_CONFIG?.PLANES) {
       limitesDB.forEach(row => {
         const p = window.PRONET_CONFIG.PLANES.find(p => p.id === row.plan);

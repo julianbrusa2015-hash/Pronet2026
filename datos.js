@@ -2052,15 +2052,11 @@ const PronetDB = (() => {
       return (data && data.length) ? data : null;
     },
 
-    /** Renueva un aviso ya publicado por otro período de su plan.
-     *  No vuelve a moderación: el admin ya aprobó ESE contenido. Editarlo
-     *  sí obliga a revisar, y eso lo garantiza el RLS (with check). */
-    async renovarPubPrestador(id) {
-      if (!remoto || !id) return { ok: false };
-      const { data, error } = await sb.rpc('renovar_pub_prestador', { p_id: id });
-      if (error) { console.warn('[PronetDB] renovarPubPrestador', error.message); return { ok: false, error: error.message }; }
-      return data || { ok: false, error: 'Sin respuesta' };
-    },
+    // La renovación NO tiene método acá a propósito: pasa por
+    // crearPreferenciaMP('renovacion', …) y la activa el webhook, como el
+    // impulso y el banner. El RPC `renovar_pub_prestador` que llamaba este
+    // método fue eliminado de la base — dejarlo ejecutable por el cliente
+    // era la puerta de atrás del cobro.
 
     /** Feed del vecino: avisos activos y vigentes. El RLS ya filtra estado,
      *  vigencia y prestador suspendido; los eq/gt de acá son para que el

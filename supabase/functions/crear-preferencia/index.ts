@@ -102,6 +102,42 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Renovar un aviso vencido. Al revés que el impulso: exige que NO esté
+    // al aire, y que haya lugar libre en el plan — cobrar una renovación que
+    // después no se va a poder activar obligaría a devolver la plata, que es
+    // exactamente la operación que el circuito de banners evita moderando
+    // antes de cobrar.
+    if (plan === 'renovacion') {
+      if (typeof ref !== 'string' || !/^[0-9a-f-]{36}$/i.test(ref)) {
+        return json({ error: 'Falta el aviso a renovar' }, 400);
+      }
+      const { data: pub } = await supabase
+        .from('publicaciones_prestador')
+        .select('id, estado, vigencia_hasta, prestador_id, moderado_en')
+        .eq('id', ref)
+        .maybeSingle();
+      if (!pub) return json({ error: 'Ese aviso no existe' }, 404);
+
+      const { data: miPerfil } = await supabase
+        .from('perfiles').select('prestador_id').eq('id', user.id).maybeSingle();
+      if (!miPerfil?.prestador_id || miPerfil.prestador_id !== pub.prestador_id) {
+        return json({ error: 'Ese aviso no es tuyo' }, 403);
+      }
+      if (!pub.moderado_en) {
+        return json({ error: 'Ese aviso todavía no se publicó nunca' }, 409);
+      }
+      const vigente = pub.estado === 'activa' && new Date(pub.vigencia_hasta) > new Date();
+      if (vigente) {
+        return json({ error: 'Ese aviso sigue publicado: no hace falta renovarlo' }, 409);
+      }
+      const { data: hayLugar } = await supabase.rpc('hay_lugar_pub_prestador', {
+        p_pid: pub.prestador_id, p_excluir: ref,
+      });
+      if (hayLugar === false) {
+        return json({ error: 'Tu plan no permite otro aviso publicado a la vez' }, 409);
+      }
+    }
+
     const { data: precioPlan, error: precioError } = await supabase
       .from('planes_limites')
       .select('nombre, precio_mes, precio_anual')
