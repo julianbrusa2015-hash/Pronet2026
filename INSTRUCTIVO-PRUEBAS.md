@@ -5,9 +5,9 @@ cada bloque deja el estado que necesita el siguiente.
 
 ## Antes de empezar
 
-**Cuentas necesarias.** Vas a necesitar cuatro, y conviene tener los mails
-anotados. Si tenés dos teléfonos usalos; si no, alcanza con el navegador en
-ventana normal + una ventana de incógnito.
+**Cuentas: las que ya existen.** Este instructivo **no prueba el alta** —
+se usan cuatro cuentas ya creadas. Anotá cuál es cuál antes de empezar; de
+acá en adelante se las nombra por el alias.
 
 | Alias | Rol | Para qué |
 |---|---|---|
@@ -16,10 +16,12 @@ ventana normal + una ventana de incógnito.
 | **P2** | Prestador | Manda la segunda — la que se rechaza |
 | **V2** | Vecino | Compra en Entre Vecinos |
 
-**Teléfonos: uno por cuenta.** Desde v199 un teléfono no puede repetirse
-entre cuentas. Si usás el mismo en dos, la segunda va a fallar — y eso es lo
-correcto, no un bug. Tené cuatro números distintos (pueden ser inventados con
-formato válido, ej. `11 4000-0001`, `11 4000-0002`…).
+Si tenés dos teléfonos usalos; si no, alcanza con el navegador en ventana
+normal + una ventana de incógnito.
+
+**Teléfonos: uno por cuenta.** Un teléfono no puede repetirse entre cuentas.
+Las cuatro tienen que tener el suyo cargado antes de arrancar — el bloque 1
+lo verifica. Si falta alguno, cargalo con formato válido (ej. `11 4000-0001`).
 
 **Estado esperado de los interruptores** (Panel admin → Parametrías):
 
@@ -50,30 +52,30 @@ número del paso antes de seguir: los bloques siguientes dependen de éste.
 
 ---
 
-## Bloque 1 · Alta del vecino V1
+## Bloque 1 · Punto de partida
+
+No se prueban las altas: se usan las cuentas que ya existen. Sólo hay que
+dejarlas en un estado conocido antes de arrancar.
 
 | # | Qué hacer | Qué tiene que pasar |
 |---|---|---|
-| 1.1 | Abrir la app sin sesión | Se ve la portada de login con el logo ProNet y una frase que **va cambiando** cada 3,5 s, en minúsculas |
-| 1.2 | Tocar "Crear cuenta". Completar nombre **sin apellido** | Rechaza: pide nombre y apellido |
-| 1.3 | Poner contraseña de menos de 8 caracteres | Rechaza |
-| 1.4 | Completar todo pero **sin tildar** T&C ni mayoría de edad | Rechaza y lleva el foco al checkbox que falta |
-| 1.5 | Tildar los dos y crear la cuenta como **"🔍 Servicios"** | Entra a la app |
-| 1.6 | Cerrar sesión y volver a entrar | **No vuelve a pedir los T&C** (quedan en la cuenta, no en el dispositivo) |
+| 1.1 | Entrar con **V1** | Entra sin pedir los T&C — ya están aceptados en la cuenta |
+| 1.2 | Mi perfil → confirmar que tenga **teléfono** cargado | Si no lo tiene, cargarlo ahora (uno distinto por cuenta) |
+| 1.3 | Repetir con **V2**, **P1** y **P2** | Las cuatro entran y tienen teléfono |
+| 1.4 | Con **P1** y **P2**, mirar el inicio | Es el **tablero del prestador**, distinto al del vecino |
 
-> **Qué se está probando.** El consentimiento se guarda contra la cuenta
-> (`perfiles.tyc_aceptado_en`), no contra el navegador. Si te lo vuelve a
-> pedir desde otro dispositivo, eso sí es un bug.
+> **Si alguna vez querés probar el alta**, los pasos están en el historial de
+> este archivo. Se sacaron porque crear cuentas en cada corrida ensucia la
+> base y consume teléfonos, que no se pueden repetir entre cuentas.
 
-## Bloque 2 · Perfil de V1
+## Bloque 2 · Perfil y comunidad de V1
 
 | # | Qué hacer | Qué tiene que pasar |
 |---|---|---|
-| 2.1 | Mi perfil → Editar perfil. Cargar teléfono y guardar | Guarda |
-| 2.2 | Entrar a **Vecinos** (Entre Vecinos) por primera vez | Aparece un modal preguntando **en qué comunidad vivís** |
-| 2.3 | Elegir "Puertos del Lago" | Guarda y entra. El feed dice **"Mercado de Puertos del Lago"** |
-| 2.4 | Volver a entrar a Vecinos | **No vuelve a preguntar** |
-| 2.5 | Mi perfil → Editar perfil → poner el teléfono **de otra cuenta ya creada** | Rechaza con "Ese teléfono ya está registrado en otra cuenta" |
+| 2.1 | Mi perfil → Editar perfil → **"¿En qué comunidad vivís?"** | Trae la comunidad que ya tenía seleccionada |
+| 2.2 | Cambiarla a **"Puertos del Lago"** y guardar | La cabecera de Mi perfil se actualiza sin recargar |
+| 2.3 | Entrar a **Vecinos** | El feed dice **"Mercado de Puertos del Lago"** |
+| 2.4 | Poner el teléfono **de otra cuenta ya creada** y guardar | Rechaza con "Ese teléfono ya está registrado en otra cuenta" |
 
 ## Bloque 3 · V1 publica un pedido
 
@@ -88,21 +90,23 @@ número del paso antes de seguir: los bloques siguientes dependen de éste.
 > exige el servidor, no sólo la pantalla. El modal es la versión amable del
 > mismo control.
 
-## Bloque 4 · Alta de los prestadores P1 y P2
+## Bloque 4 · Preparar a P1 y P2
 
-Repetir para **cada uno**, en ventana de incógnito o en el otro teléfono.
+Con las cuentas que ya existen. En ventana de incógnito o en el otro teléfono.
 
 | # | Qué hacer | Qué tiene que pasar |
 |---|---|---|
-| 4.1 | Crear cuenta eligiendo **"🔧 Trabajar"** | Aparece el selector de rubros |
-| 4.2 | Intentar crear **sin elegir rubro** | Rechaza: pide al menos uno |
-| 4.3 | Elegir **Plomería** y crear | Entra, y el inicio es el **tablero del prestador** (distinto al del vecino) |
-| 4.4 | Mi perfil → Editar perfil: teléfono (distinto al de V1), especialidades, medios de pago, zona | Guarda |
-| 4.5 | Subir 1 o 2 fotos al portfolio | Suben |
+| 4.1 | P1 → Editar perfil: dejar **Plomería** como rubro | Guarda |
+| 4.2 | Sacarle **todos** los rubros y guardar | Rechaza: pide al menos uno |
+| 4.3 | P1 → zona de cobertura: elegir **Puertos del Lago** | Guarda |
+| 4.4 | Subir 1 o 2 fotos al portfolio | Suben |
+| 4.5 | Repetir con **P2**, mismo rubro y misma cobertura | Los dos quedan iguales, para competir por el mismo pedido |
 
-> **Ojo con el límite de fotos.** El plan Base recibe hoy los límites de Plus
-> (etapa fundadora): **10 fotos**. Si intentás la número 11 tiene que
-> rechazarte el servidor, no sólo la pantalla.
+> **Ojo con el límite de fotos.** Con los planes pagos **apagados** rige la
+> etapa fundadora y Base recibe los límites de Plus: **10 fotos**. Prendidos,
+> Base baja a los suyos. Si el número no coincide, mirá ese interruptor antes
+> de reportar. La número que sobre tiene que rechazarla **el servidor**, no
+> sólo la pantalla.
 
 ## Bloque 5 · Las dos propuestas, elección y cierre
 
@@ -151,8 +155,8 @@ Repetir para **cada uno**, en ventana de incógnito o en el otro teléfono.
 
 ## Bloque 6 · Entre Vecinos, con V1 y V2
 
-Antes: dar de alta **V2** (bloques 1 y 2, eligiendo la **misma comunidad** que
-V1 — Puertos del Lago).
+Antes: entrar con **V2** y dejarle la **misma comunidad** que V1 — Puertos
+del Lago — desde Editar perfil.
 
 ### 6a · V1 publica
 
@@ -224,6 +228,24 @@ V1 — Puertos del Lago).
 > **Qué se está probando.** El desplegable ofrece **comunidades**, pero la
 > publicación guarda `zona = "Escobar"` y el barrio aparte. Se comparaba
 > contra la columna equivocada y elegir cualquier zona vaciaba todo.
+
+### 6f-bis · Los chips de categoría
+
+Los chips no entran en el ancho de la pantalla: son casi el triple. Se
+comportan distinto según dónde estés, y **las dos cosas hay que probarlas**.
+
+| # | Dónde | Qué hacer | Qué tiene que pasar |
+|---|---|---|---|
+| 6.29a | Teléfono | Deslizar la fila de chips con el dedo | Se mueve, y aparecen los que faltaban |
+| 6.29b | Ambos | Mirar el borde derecho de la fila | Se **desvanece**, avisando que hay más |
+| 6.29c | Ambos | Llegar al final | El desvanecido pasa al borde **izquierdo** |
+| 6.29d | **Computadora** | Poner el mouse encima y girar la **rueda** | La fila se mueve **de costado** |
+| 6.29e | Notebook | Deslizar de costado con el **trackpad** | Se mueve normal, sin ir al doble de rápido |
+
+> **Por qué está separado.** En el teléfono esto siempre anduvo — se desliza
+> con el dedo. Lo que estaba roto era la computadora: la barra de scroll está
+> oculta a propósito y la rueda hace scroll vertical, así que la fila quedaba
+> inmóvil y no se podía llegar a los últimos chips.
 
 ### 6g · El aviso de publicar se puede cerrar
 
@@ -314,8 +336,10 @@ Es lo más nuevo y lo que más piezas toca. Se prende en **Parametrías →
 
 | # | Quién | Qué hacer | Qué tiene que pasar |
 |---|---|---|---|
-| 8b.14 | V1 | Entre Vecinos → **Servicios** | Arriba de los chips aparece el toggle **🏘️ Vecinos / 🛠️ Prestadores**, arrancando en **Vecinos** |
-| 8b.15 | V1 | Pasar a **Prestadores** | Los chips cambian a **oficios** (Plomería, Herrería…) y aparece el aviso con borde azul |
+| 8b.14 | V1 | Entre Vecinos → **Servicios** | Arriba de los chips aparece un **interruptor** con 🏘️ Vecinos a la izquierda y 🛠️ Prestadores a la derecha, arrancando en **Vecinos** |
+| 8b.14b | V1 | Tocar la **perilla** | La perilla viaja a la derecha y la pista se pinta de **azul** |
+| 8b.14c | V1 | Tocar directamente la palabra **"Vecinos"** | Vuelve, sin necesidad de acertarle a la perilla |
+| 8b.15 | V1 | Estando en **Prestadores** | Los chips cambian a **oficios** (Plomería, Herrería…) y aparece el aviso con borde azul |
 | 8b.16 | V1 | Mirar la reputación de la tarjeta | Si el prestador no tiene reseñas dice **"Nuevo en PRONET"** — no inventa estrellas ni pone 0 |
 | 8b.17 | V1 | Tocar 🤍 | Queda en ❤️ y el número sube |
 | 8b.18 | V1 | Tocar **"Contactar"** | Va al alta de pedido con el **cartel del destinatario** y el **rubro ya elegido** |
@@ -487,7 +511,7 @@ Para cuando quieras probar sólo una parte y no el recorrido entero.
 
 | Bloque | Qué se prueba |
 |---|---|
-| 1–2 | Alta del vecino, T&C por cuenta, teléfono único, comunidad |
+| 1–2 | Punto de partida, telefono unico, comunidad del vecino |
 | 3–5 | Pedido, propuestas, elección, chat, cierre y reseña |
 | 6 | Entre Vecinos: publicar, lote, likes, comentarios, mapa, resumen, filtros |
 | 7 | Pre-alta de prestadores, QR y DNI |
