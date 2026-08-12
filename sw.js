@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v230'; // v230: elegir una zona vaciaba el feed y el mapa de Entre Vecinos
+const CACHE_VERSION = 'pronet-v231'; // v231: el aviso de publicar se puede cerrar y no aparece sobre el mapa
 
 const SHELL = [
   './',

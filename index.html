@@ -485,6 +485,11 @@
           <path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>
           <path d="M12 12.6c1-1.1 2.8-.4 2.8 1 0 1.3-1.6 2.2-2.8 3.3-1.2-1.1-2.8-2-2.8-3.3 0-1.4 1.8-2.1 2.8-1z"/>
         </svg>
+        <!-- Se puede cerrar, pero vuelve: a las 24 hs o al reabrir la app.
+             Un aviso que no se puede sacar no vale más — molesta más, y esa
+             molestia se le pega a quien lo publica. -->
+        <button onclick="mktCerrarCta()" aria-label="Cerrar"
+          style="position:absolute;top:8px;right:8px;z-index:2;background:rgba(255,255,255,.18);border:none;border-radius:50%;width:26px;height:26px;color:#fff;font-size:15px;line-height:1;cursor:pointer;font-family:inherit">×</button>
         <div style="position:relative">
           <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;color:rgba(255,255,255,.6)">DESTACADO</div>
           <div style="font-size:17px;font-weight:800;color:#fff;line-height:1.3;margin-top:5px">Publicá lo que tenés<br>o lo que sabés hacer</div>

@@ -5359,7 +5359,7 @@ document.addEventListener('focusin', (e) => {
       incluirSinBarrio: !mktBarrioFiltro,
     }).catch(() => []);
     mktCargando = false;
-    if (reset) { mktPintarAmbito(comunidad); mktPintarResumen(barrios); }
+    if (reset) { mktPintarAmbito(comunidad); mktPintarResumen(barrios); mktPintarCta(); }
     if (reset) { cont.innerHTML = ''; mktUltimoResultCount = posts.length; }
     posts.forEach(p => mktPostsCache.set(p.id, p));
     // Cargar qué publicaciones likeó el usuario actual (merge con el Set existente)
@@ -5426,6 +5426,46 @@ document.addEventListener('focusin', (e) => {
     cont.style.display = 'flex';
     if (txt) txt.textContent = mktAmpliado ? 'Viendo toda la zona' : 'Mercado de ' + comunidad;
     if (btn) btn.textContent = mktAmpliado ? 'Volver a mi comunidad' : 'Ver también otros barrios';
+  }
+
+  // ── El aviso "Publicá lo que tenés" se puede cerrar ─────────────────
+  //
+  // Vuelve a las 24 hs o al reabrir la app, lo que pase primero. Ese es el
+  // punto medio entre las tres opciones posibles: cerrarlo para siempre
+  // apagaría el aviso que más empuja a publicar, y no poder cerrarlo lo
+  // convierte en algo que estorba — y esa molestia se le pega a quien
+  // publica, no a la app.
+  //
+  // Dos marcas porque son dos condiciones distintas:
+  //   sessionStorage → muere al cerrar la app (reapertura de sesión)
+  //   localStorage   → guarda CUÁNDO se cerró (el tope de 24 hs)
+  const CTA_MKT_KEY = 'pronet_cta_mercado_oculto';
+
+  function mktCtaOculto() {
+    try {
+      if (!sessionStorage.getItem(CTA_MKT_KEY)) return false;   // app reabierta
+      const ts = Number(localStorage.getItem(CTA_MKT_KEY) || 0);
+      return ts > 0 && (Date.now() - ts) < 24 * 3600 * 1000;
+    } catch (e) { return false; }
+  }
+
+  function mktCerrarCta() {
+    try {
+      sessionStorage.setItem(CTA_MKT_KEY, '1');
+      localStorage.setItem(CTA_MKT_KEY, String(Date.now()));
+    } catch (e) {}
+    mktPintarCta();
+  }
+  window.mktCerrarCta = mktCerrarCta;
+
+  /** Decide si el aviso se ve. Dos motivos para esconderlo:
+   *  el vecino lo cerró, o estamos en el mapa — ahí queda entre el mapa y el
+   *  pie, partiendo la pantalla al medio y dejando un hueco. Es una
+   *  invitación a publicar que acompaña al FEED; sobre el mapa sólo estorba. */
+  function mktPintarCta() {
+    const cta = document.getElementById('mkt-cta-publicar');
+    if (!cta) return;
+    cta.style.display = (mktModo === 'mapa' || mktCtaOculto()) ? 'none' : '';
   }
 
   function mktToggleAmbito() {
@@ -5962,6 +6002,8 @@ document.addEventListener('focusin', (e) => {
     // El formato es del feed: en el mapa no tiene nada que cambiar.
     const btnFmt = document.getElementById('mkt-toggle-formato');
     if (btnFmt) btnFmt.style.display = mktModo === 'lista' ? '' : 'none';
+    // El aviso de publicar acompaña al feed: en el mapa parte la pantalla.
+    mktPintarCta();
     if (mktModo === 'mapa') renderMapaMercado();
   }
   window.toggleMapaMercado = toggleMapaMercado;
