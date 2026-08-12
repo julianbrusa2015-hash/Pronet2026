@@ -47,14 +47,21 @@ Las fases 1–3 no dependen de esta decisión; se puede arrancar ya.
 | F2 · Panel del prestador | ✅ hecha y verificada (v216) |
 | F3 · Moderación + toggle admin | ✅ hecha y verificada (v217) |
 | F4 · Feed del vecino | ✅ hecha y verificada (v218/v219) |
-| F5 · Vencimiento y renovación | ⏸️ pendiente — parcialmente resuelta |
-| F6 · Monetización (Impulsar) | ⏸️ pendiente |
-| F7 · Métricas visibles | ⏸️ pendiente — lo básico ya se muestra |
+| F5 · Vencimiento y renovación | ✅ hecha y verificada (v220) |
+| F6 · Monetización (Impulsar) | ✅ hecha y verificada (v220) — venta apagada |
+| F7 · Solicitudes y conversión | ✅ hecha y verificada (v220) |
 
-**El flag `publicaciones_prestador` está APAGADO.** Con él apagado no hay
-rastros: ni la fila en Mi Perfil del prestador, ni la sección en Moderación,
-ni el toggle en Servicios. Se prende desde Parametrías → "Avisos de
-prestadores en Servicios".
+**El plan está completo.** Lo único que queda sin probar de punta a punta es
+un pago real de MercadoPago en sandbox que ejercite el webhook del impulso;
+el RPC de activación sí está probado directo.
+
+**Dos interruptores, en Parametrías:**
+- `publicaciones_prestador` — la feature entera. Apagado no deja rastros:
+  ni la fila en Mi Perfil, ni la sección en Moderación, ni el toggle en
+  Servicios. **Al 2026-08-12 quedó PRENDIDO** (el usuario lo activó para
+  probar y hay un aviso real al aire).
+- `impulsos_activos` — sólo la venta de impulsos. **Apagado.** Depende del
+  anterior: se puede tener los avisos sin vender nada.
 
 ### Lo que salió distinto de lo planeado
 
