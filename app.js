@@ -363,6 +363,11 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-mis-consultas-mkt') { renderMisConsultasMkt(); }
     if (id === 's-mis-consultas-enviadas') { renderMisConsultasEnviadas(); }
     if (id === 's-mis-alertas') { renderMisAlertas(); }
+    // Las filas de chips de la pantalla que se abre: el degradado que avisa
+    // que hay más y la rueda del mouse para moverlas. Se hace acá y no en
+    // cada render porque hay seis filas en la app y varias son estáticas.
+    document.getElementById(id)?.querySelectorAll('.filter-row')
+      .forEach(f => activarScrollChips(f));
     // Si va a Mercado, renderizar el feed (sin resetear búsqueda si vuelve desde chat)
     if (id === 's-mercado') {
       const inp = document.getElementById('mkt-buscador');
@@ -4565,6 +4570,7 @@ document.addEventListener('focusin', (e) => {
           '<div class="chip' + (mktFiltroActivo === c.slug ? ' on' : '') +
           '" onclick="filtrarMercado(this,\'' + escHTML(c.slug) + '\')">' +
           escHTML(c.emoji + ' ' + c.nombre) + '</div>').join('');
+      activarScrollChips(chips);
     }
 
     // El buscador nombra lo que hay en la sección: buscar "productos" en
@@ -4684,6 +4690,43 @@ document.addEventListener('focusin', (e) => {
     renderMercado(true);
   }
   window.mktSetOrigen = mktSetOrigen;
+
+  /** Hace usable la fila de chips cuando no entra.
+   *
+   *  Dos problemas distintos, y el segundo sólo se ve en una computadora:
+   *
+   *  1. Nada avisa que hay más. La barra de scroll está oculta a propósito
+   *     —en el teléfono se desliza con el dedo— y el último chip queda
+   *     cortado, que parece un error de maquetado y no una invitación.
+   *     El degradado de los bordes lo dice sin agregar botones.
+   *  2. Con mouse no se puede mover. La rueda hace scroll VERTICAL, así que
+   *     en desktop la fila queda trabada: se ven los primeros chips y no hay
+   *     forma de llegar al resto sin arrastrar la barra, que está oculta.
+   *     Se convierte la rueda en desplazamiento horizontal.
+   *
+   *  Es idempotente: se puede llamar cada vez que se repintan los chips. */
+  function activarScrollChips(fila) {
+    if (!fila) return;
+    const pintar = () => {
+      const resto = fila.scrollWidth - fila.clientWidth - fila.scrollLeft;
+      fila.classList.toggle('mas-derecha', resto > 4);
+      fila.classList.toggle('mas-izquierda', fila.scrollLeft > 4);
+    };
+    if (!fila.dataset.scrollChips) {
+      fila.dataset.scrollChips = '1';
+      fila.addEventListener('scroll', pintar, { passive: true });
+      fila.addEventListener('wheel', (e) => {
+        // Sólo si el gesto es vertical: un trackpad que ya manda deltaX
+        // horizontal funciona solo, y robárselo lo haría ir al doble.
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+        if (fila.scrollWidth <= fila.clientWidth) return;
+        e.preventDefault();
+        fila.scrollLeft += e.deltaY;
+      }, { passive: false });
+    }
+    // Tras repintar, el ancho cambia recién en el frame siguiente.
+    requestAnimationFrame(pintar);
+  }
 
   /** La perilla del interruptor: alterna entre los dos lados. Las etiquetas
    *  siguen eligiendo directo — tocar "Prestadores" estando ahí no hace

@@ -485,6 +485,21 @@
   .search-input:focus { border-color: var(--blue); }
   .filter-row { display: flex; gap: 7px; padding: 10px 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; flex-wrap: nowrap; }
   .filter-row::-webkit-scrollbar { display: none; }
+  /* Aviso de que hay más chips al costado.
+     La barra está oculta a propósito (en el teléfono se desliza con el
+     dedo), pero eso deja la fila sin ninguna señal de que sigue: el último
+     chip queda cortado y parece un error de maquetado en vez de una
+     invitación a deslizar. El degradado lo dice sin agregar controles.
+     Las clases las pone activarScrollChips() según dónde esté el scroll,
+     así el borde no se desvanece cuando ya no hay nada más de ese lado. */
+  .filter-row.mas-derecha  { mask-image: linear-gradient(to right, #000 84%, transparent 100%);
+                             -webkit-mask-image: linear-gradient(to right, #000 84%, transparent 100%); }
+  .filter-row.mas-izquierda { mask-image: linear-gradient(to left, #000 84%, transparent 100%);
+                              -webkit-mask-image: linear-gradient(to left, #000 84%, transparent 100%); }
+  .filter-row.mas-izquierda.mas-derecha {
+    mask-image: linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  }
   .chip {
     flex-shrink: 0; border-radius: 20px; padding: 5px 12px;
     font-size: 11px; font-weight: 500; cursor: pointer;
