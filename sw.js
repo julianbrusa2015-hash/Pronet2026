@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v221'; // v221: el vecino puede elegir su comunidad desde Editar perfil
+const CACHE_VERSION = 'pronet-v222'; // v222: la cobertura del prestador existe de verdad
 
 const SHELL = [
   './',

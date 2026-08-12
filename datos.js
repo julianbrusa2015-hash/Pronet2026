@@ -2024,6 +2024,21 @@ const PronetDB = (() => {
       return res;
     },
 
+    /** Las zonas cuyos pedidos le corresponden al prestador logueado, ya
+     *  expandidas hacia abajo (quien cubre "Puertos del Lago" recibe los de
+     *  Araucarias y los demás barrios).
+     *
+     *  Se resuelve en el servidor para que el feed y el push usen el MISMO
+     *  criterio. Antes el feed salía de la zona que el prestador estaba
+     *  mirando en su dispositivo, así que tocar el filtro de navegación le
+     *  cambiaba los pedidos que recibía. */
+    async miCobertura() {
+      if (!remoto) return null;
+      const { data, error } = await sb.rpc('mi_cobertura');
+      if (error) { console.warn('[PronetDB] miCobertura', error.message); return null; }
+      return (data && data.length) ? data : null;
+    },
+
     /** Renueva un aviso ya publicado por otro período de su plan.
      *  No vuelve a moderación: el admin ya aprobó ESE contenido. Editarlo
      *  sí obliga a revisar, y eso lo garantiza el RLS (with check). */

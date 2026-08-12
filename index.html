@@ -1047,15 +1047,12 @@
           <label for="pub-direccion" class="form-label">Tu dirección base</label>
           <input id="pub-direccion" name="pub-direccion" class="ob-input" placeholder="Ej: Mitre 1245, Escobar">
         </div>
-        <div class="form-group">
-          <label id="lbl-grupo-4" class="form-label">¿Cómo definís tu zona?</label>
-          <div role="group" aria-labelledby="lbl-grupo-4" class="form-options">
-            <div class="form-opt on" onclick="selZona(this)"><div class="opt-icon">📍</div><div class="opt-lbl">Radio en km</div></div>
-            <div class="form-opt" onclick="selZona(this)"><div class="opt-icon">🏘️</div><div class="opt-lbl">Barrios / Zonas</div></div>
-            <div class="form-opt" onclick="selZona(this)"><div class="opt-icon">🏙️</div><div class="opt-lbl">Toda la ciudad</div></div>
-            <div class="form-opt" onclick="selZona(this)"><div class="opt-icon">🚗</div><div class="opt-lbl">A domicilio</div></div>
-          </div>
-        </div>
+        <!-- Acá había un "¿Cómo definís tu zona?" con cuatro métodos (radio,
+             barrios, toda la ciudad, a domicilio). Ninguno se guardaba, y
+             ahora contradice al selector de abajo: el radio dejó de ser un
+             método alternativo para pasar a ser el atajo que marca zonas.
+             Ofrecer las dos cosas obligaba a elegir entre dos caminos que
+             terminan en el mismo lugar. -->
         <div id="zona-mapa-wrap" class="zona-map-wrap">
           <iframe id="zona-mapa-iframe"
             src="https://www.openstreetmap.org/export/embed.html?bbox=-58.8841%2C-34.4203%2C-58.7095%2C-34.2763&amp;layer=mapnik&amp;marker=-34.3483%2C-58.7968"
@@ -1063,20 +1060,19 @@
             loading="lazy"
             title="Zona de cobertura"></iframe>
         </div>
+        <!-- Antes acá había chips de radio y una lista de barrios escrita a
+             mano en el HTML. Ninguna de las dos cosas se guardaba: el radio
+             quedaba en null en los 20 prestadores y la lista era la misma
+             para todos. Ahora se eligen las comunidades de verdad, con el
+             radio como atajo — el mismo componente que Editar perfil. -->
         <div class="form-group">
-          <label id="lbl-grupo-5" class="form-label">Radio de cobertura</label>
-          <div role="group" aria-labelledby="lbl-grupo-5" class="radius-chips">
-            <div class="r-chip" onclick="selectChip(this)">3 km</div>
-            <div class="r-chip" onclick="selectChip(this)">5 km</div>
-            <div class="r-chip on" onclick="selectChip(this)">8 km</div>
-            <div class="r-chip" onclick="selectChip(this)">12 km</div>
-            <div class="r-chip" onclick="selectChip(this)">20 km</div>
+          <label id="lbl-grupo-5" class="form-label">¿Dónde trabajás?</label>
+          <div style="font-size:11px;color:var(--ink3);margin:-2px 0 8px;line-height:1.5">
+            Definen qué pedidos te avisamos y dónde te encuentran los vecinos.
           </div>
-        </div>
-        <div class="form-group">
-          <div style="background:var(--blue-s);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--blue);font-weight:500">
-            📍 Puertos del Lago · El Cantón · San Matías · El Naudir · CUBE
-          </div>
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">Atajo: marcá todo lo que esté a…</div>
+          <div role="group" aria-labelledby="lbl-grupo-5" class="radius-chips" id="pub-radio"></div>
+          <div class="sub-opts" id="pub-zonas" style="margin-top:10px"></div>
         </div>
         <div style="height:80px"></div>
         <div class="pub-footer"><button class="btn-p" onclick="pubNext(4)">Continuar →</button></div>
@@ -5516,13 +5512,22 @@
           </select>
         </div>
 
-        <!-- Zona -->
-        <div class="ob-field" style="margin-top:12px">
-          <label id="lbl-grupo-24" class="ob-label">Zona de cobertura</label>
-          <div role="group" aria-labelledby="lbl-grupo-24" style="display:flex;align-items:center;gap:10px;border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;cursor:pointer" onclick="abrirZonaModal()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span style="flex:1;font-size:14px;color:var(--ink)" id="edit-zona-txt">Escobar · Radio 8 km</span>
-            <span style="color:var(--blue);font-size:12px;font-weight:600">Cambiar</span>
+        <!-- Dónde trabajo. Es del PRESTADOR (prestadores.zonas) y decide qué
+             pedidos me llegan y dónde me encuentran. Distinto de la comunidad
+             de arriba, que es dónde vivo.
+             Lo que había acá era decorativo: un texto fijo "Escobar · Radio
+             8 km" y un botón que abría el modal del FILTRO DE NAVEGACIÓN,
+             que escribe en localStorage. La cobertura no se guardaba. -->
+        <div class="ob-field" style="margin-top:12px" id="edit-cobertura-field">
+          <label id="lbl-grupo-24" class="ob-label">¿Dónde trabajás?</label>
+          <div style="font-size:11px;color:var(--ink3);margin:-4px 0 8px;line-height:1.5">
+            Elegí las comunidades donde tomás trabajos. Definen qué pedidos te avisamos y dónde te encuentran los vecinos.
+          </div>
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">Atajo: marcá todo lo que esté a…</div>
+          <div role="group" aria-labelledby="lbl-grupo-24" class="radius-chips" id="edit-radio"></div>
+          <div class="sub-opts" id="edit-zonas" style="margin-top:10px"></div>
+          <div id="edit-zonas-error" style="display:none;font-size:11px;color:#BE123C;margin-top:6px;font-weight:600">
+            Elegí al menos una zona: sin cobertura no te llega ningún pedido.
           </div>
         </div>
 

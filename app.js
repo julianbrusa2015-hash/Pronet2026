@@ -349,7 +349,12 @@ document.addEventListener('focusin', (e) => {
     const nb = navMap[id];
     if (nb) { const btn = document.getElementById(nb); if(btn) btn.classList.add('active'); }
     // Si va a Publicar, siempre arrancar en paso 1
-    if (id === 's-publicar') { pubNext(1); }
+    if (id === 's-publicar') {
+      pubNext(1);
+      // El selector de cobertura del paso 3 sale del catálogo de zonas, así
+      // que se arma al entrar y no en el HTML.
+      pintarCobertura('pub', usuarioActual?.prestador_id ? prestadorActual : null);
+    }
     // Si va a Nuevo Pedido, siempre arrancar en paso 1
     // Entrar al alta limpia el destinatario: si viene de recontratar, lo
     // vuelve a setear después de este goTo.
@@ -1009,13 +1014,14 @@ document.addEventListener('focusin', (e) => {
       tagsEl.innerHTML = tags.map(t => '<div class="prof-tag">' + t + '</div>').join('')
         + (p.verificado ? '<div class="b-verified"><svg width="10" height="11" viewBox="0 0 18 20" fill="none"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Verificado</div>' : '');
     }
-    // Zona de cobertura dinámica
+    // Cobertura real: TODAS las zonas donde trabaja, no la suelta. Es lo que
+    // el vecino vino a saber acá — "¿me llega hasta mi barrio?".
     const zonaTxt = document.getElementById('prof-zona-txt');
     if (zonaTxt) {
-      const partes = [];
-      if (p.zona) partes.push(p.zona);
-      if (p.radio_cobertura) partes.push('<span style="color:var(--blue)">Radio: ' + escHTML(p.radio_cobertura) + '</span>');
-      zonaTxt.innerHTML = partes.length ? partes.join('<br>') : 'No especificada';
+      const cubre = (p.zonas && p.zonas.length) ? p.zonas : (p.zona ? [p.zona] : []);
+      zonaTxt.innerHTML = cubre.length
+        ? cubre.map(z => escHTML(z)).join(' · ')
+        : 'No especificada';
     }
 
     // Chips de pago dinámicos
@@ -1647,6 +1653,11 @@ document.addEventListener('focusin', (e) => {
     const rubroFicha = ficha?.rubro || '';
     const rubro = /^general$/i.test(rubroFicha.trim()) ? '' : rubroFicha;
 
+    // Se resuelve ANTES del Promise.all: puesto adentro del array, el await
+    // se evalúa al armarlo y bloquea el arranque de las otras seis consultas
+    // en vez de correr con ellas.
+    const zonasCobertura = await zonasDeMiCobertura();
+
     const [chats, sinLeerPorChat, cupo, analitica, ranking, feed, misPropuestas, resenasNuevas] = await Promise.all([
       PronetDB.listarChats().catch(() => []),
       // Desglose por chat, no el total de mensajes: ver más abajo por qué.
@@ -1657,7 +1668,7 @@ document.addEventListener('focusin', (e) => {
         ? PronetDB.obtenerPosicionPrestador(pid).catch(() => null)
         : Promise.resolve(null),
       PronetDB.listarPedidosDisponibles({
-        zonas: zonasDelFiltro(),
+        zonas: zonasCobertura,
         excluirUsuario: usuarioActual?.id || null,
         miPrestadorId: usuarioActual?.prestador_id || null,
       }).catch(() => ({ pedidos: [], total: 0 })),
@@ -2084,7 +2095,7 @@ document.addEventListener('focusin', (e) => {
     wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando pedidos...</div>';
     // Publicados, ajenos y de la zona: filtrado en el servidor.
     const feedCat = await PronetDB.listarPedidosDisponibles({
-      zonas: zonasDelFiltro(),
+      zonas: await zonasDeMiCobertura(),
       excluirUsuario: usuarioActual?.id || null,
       miPrestadorId: usuarioActual?.prestador_id || null,
     }).catch(() => ({ pedidos: [], total: 0 }));
@@ -4166,6 +4177,28 @@ document.addEventListener('focusin', (e) => {
    *  El filtro por zona comparaba zona-madre en JS, y para eso había que
    *  traerse la tabla entera. Con la lista de hijas se filtra en el servidor
    *  con `.in('zona', ...)` y viaja sólo lo que se usa. */
+  /** Las zonas cuyos pedidos le corresponden al prestador.
+   *
+   *  Es SU COBERTURA, no la zona que está mirando. Antes esto salía de
+   *  `zonasDelFiltro()`, o sea del filtro de navegación guardado en el
+   *  dispositivo: cambiar la zona que mirás te cambiaba los pedidos que
+   *  recibías, y encima no coincidía con el criterio del push, que sí usa la
+   *  cobertura. Eran dos respuestas distintas a la misma pregunta.
+   *
+   *  Se cachea por sesión: la cobertura cambia cuando el prestador edita su
+   *  perfil, y ahí se invalida a mano. Si el RPC falla se cae a
+   *  `zonasDelFiltro()` — peor criterio, pero mejor que un feed vacío. */
+  let _coberturaCache = null;
+
+  async function zonasDeMiCobertura() {
+    if (_coberturaCache) return _coberturaCache;
+    const c = await PronetDB.miCobertura().catch(() => null);
+    _coberturaCache = c || zonasDelFiltro();
+    return _coberturaCache;
+  }
+
+  function invalidarCoberturaCache() { _coberturaCache = null; }
+
   function zonasDelFiltro() {
     const raiz = zonaParaFiltro();
     if (!raiz) return null;
@@ -5580,6 +5613,103 @@ document.addEventListener('focusin', (e) => {
       comunidades.map(c =>
         '<option value="' + escHTML(c.nombre) + '"' + (c.nombre === actual ? ' selected' : '') + '>' +
         escHTML(c.nombre) + '</option>').join('');
+  }
+
+  // ── Cobertura del prestador: dónde trabaja ──────────────────────────
+  //
+  // Los km NO son un filtro paralelo a las zonas: son la herramienta para
+  // elegirlas. Tener las dos cosas filtrando sería tener dos verdades que se
+  // contradicen (¿mando el radio de 8 km o las zonas marcadas?). Acá el
+  // radio preselecciona y después se ajusta a mano, y lo único que se guarda
+  // como cobertura es `zonas` — la que ya usan buscar_prestadores, el push y
+  // el feed. `radio_cobertura` se guarda sólo para recordar el atajo elegido.
+
+  const RADIOS_COBERTURA = [3, 5, 8, 12, 20];
+
+  /** Distancia en km entre dos puntos (haversine). */
+  function kmEntre(lat1, lng1, lat2, lng2) {
+    const R = 6371, rad = Math.PI / 180;
+    const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+
+  /** Pinta el selector de cobertura. `pref` es el prefijo de los ids, para
+   *  que Editar perfil ('edit') y el alta ('pub') compartan el componente en
+   *  vez de tener dos copias que se desincronizan. */
+  async function pintarCobertura(pref, prestador) {
+    const wrapZ = document.getElementById(pref + '-zonas');
+    const wrapR = document.getElementById(pref + '-radio');
+    if (!wrapZ) return;
+
+    const comunidades = await listarComunidades().catch(() => []);
+    // Las que ya cubre. Los que nunca tocaron esto tienen `zonas` con su
+    // única zona vieja, que el trigger de la base les puso.
+    const cubiertas = (prestador?.zonas && prestador.zonas.length)
+      ? prestador.zonas
+      : (prestador?.zona ? [prestador.zona] : []);
+
+    wrapZ.innerHTML = comunidades.map(c =>
+      '<div class="sub-opt' + (cubiertas.includes(c.nombre) ? ' on' : '') +
+      '" data-zona="' + escHTML(c.nombre) + '" onclick="toggleZonaCobertura(this,\'' + pref + '\')">' +
+      escHTML(c.nombre) + '</div>').join('');
+    if (typeof habilitarAccesibilidadTeclado === 'function') habilitarAccesibilidadTeclado(wrapZ);
+
+    if (wrapR) {
+      const guardado = parseInt(prestador?.radio_cobertura, 10);
+      wrapR.innerHTML = RADIOS_COBERTURA.map(km =>
+        '<div class="r-chip' + (km === guardado ? ' on' : '') +
+        '" data-km="' + km + '" onclick="aplicarRadioCobertura(' + km + ',\'' + pref + '\')">' + km + ' km</div>').join('');
+      if (typeof habilitarAccesibilidadTeclado === 'function') habilitarAccesibilidadTeclado(wrapR);
+    }
+  }
+
+  function toggleZonaCobertura(el, pref) {
+    el.classList.toggle('on');
+    // Elegir a mano deja el radio sin sentido: ya no describe lo marcado.
+    document.querySelectorAll('#' + pref + '-radio .r-chip').forEach(c => c.classList.remove('on'));
+    const err = document.getElementById(pref + '-zonas-error');
+    if (err) err.style.display = 'none';
+  }
+  window.toggleZonaCobertura = toggleZonaCobertura;
+
+  /** Marca las comunidades que caen dentro del radio, medido desde la
+   *  comunidad donde vive el prestador. Sin comunidad propia se mide desde
+   *  el centro de Escobar, que es lo mejor que se puede hacer sin inventar
+   *  una ubicación. */
+  async function aplicarRadioCobertura(km, pref) {
+    const arbol = await cargarZonasArbol().catch(() => []);
+    const propia = await comunidadDelUsuario().catch(() => null);
+    const centro = arbol.find(z => z.nombre === propia && z.lat != null);
+    const cLat = centro ? Number(centro.lat) : ESCOBAR_LAT;
+    const cLng = centro ? Number(centro.lng) : ESCOBAR_LNG;
+
+    let marcadas = 0;
+    document.querySelectorAll('#' + pref + '-zonas .sub-opt').forEach(el => {
+      const fila = arbol.find(z => z.nombre === el.dataset.zona);
+      // Sin coordenada no se puede decidir: se deja como estaba en vez de
+      // desmarcarla y hacerle perder al prestador una zona que había puesto.
+      if (!fila || fila.lat == null) return;
+      const dentro = kmEntre(cLat, cLng, Number(fila.lat), Number(fila.lng)) <= km;
+      el.classList.toggle('on', dentro);
+      if (dentro) marcadas++;
+    });
+
+    document.querySelectorAll('#' + pref + '-radio .r-chip').forEach(c =>
+      c.classList.toggle('on', Number(c.dataset.km) === km));
+    const err = document.getElementById(pref + '-zonas-error');
+    if (err) err.style.display = marcadas ? 'none' : 'block';
+    showToast(marcadas
+      ? '📍 ' + marcadas + (marcadas === 1 ? ' comunidad marcada' : ' comunidades marcadas') + ' a ' + km + ' km' + (centro ? ' de ' + propia : '')
+      : 'No hay ninguna comunidad a ' + km + ' km. Elegilas a mano.');
+  }
+  window.aplicarRadioCobertura = aplicarRadioCobertura;
+
+  /** Las comunidades marcadas en un selector de cobertura. */
+  function zonasMarcadas(pref) {
+    return Array.from(document.querySelectorAll('#' + pref + '-zonas .sub-opt.on'))
+      .map(e => e.dataset.zona);
   }
 
   /** La comunidad del usuario, o null si su zona todavía es de nivel 1.
@@ -7112,6 +7242,8 @@ document.addEventListener('focusin', (e) => {
         if (typeof habilitarAccesibilidadTeclado === 'function') habilitarAccesibilidadTeclado(wrapR);
       }
 
+      pintarCobertura('edit', p);
+
       // Especialidades del rubro, marcando las guardadas
       const wrap = document.getElementById('edit-especialidades');
       if (wrap) {
@@ -7222,23 +7354,54 @@ document.addEventListener('focusin', (e) => {
           if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
           return;
         }
+        // Cobertura: sin zonas el prestador no recibe NINGÚN pedido y no
+        // aparece en ninguna búsqueda. Es el mismo caso que quedarse sin
+        // rubro, así que se corta igual en vez de dejarlo invisible.
+        const zonasCob = zonasMarcadas('edit');
+        if (zonasCob.length === 0) {
+          const err = document.getElementById('edit-zonas-error');
+          if (err) err.style.display = 'block';
+          document.getElementById('edit-zonas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (btn) { btn.textContent = 'Guardar'; btn.disabled = false; }
+          return;
+        }
+        const radioSel = document.querySelector('#edit-radio .r-chip.on');
+
         const iniciales = nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
         const cambios = {
           nombre, iniciales,
           descripcion: val('edit-desc'),
           especialidades,
           rubros,   // el trigger de la base sincroniza `rubro` = rubros[1]
+          zonas: zonasCob,  // ídem: el trigger sincroniza `zona` = zonas[1]
+          radio_cobertura: radioSel ? radioSel.dataset.km : null,
           medios_pago: medios_pago.length ? medios_pago : ['Efectivo'],
           subrubro: especialidades[0] || null,
         };
         if (fotoPerfilNueva) cambios.foto_url = fotoPerfilNueva;
-        // Geocodificar zona para actualizar coordenadas en el mapa
-        if (PRONET_CONFIG.MAPS_KEY && usuarioActual.zona) {
-          const coords = await geocodificarDireccion(usuarioActual.zona);
+        // El pin del mapa va en la PRIMERA ZONA DE COBERTURA, no en donde
+        // vive: al vecino le sirve saber desde dónde sale a trabajar, no
+        // dónde duerme — y el mapa del prestador existe para contestar
+        // "¿me llega hasta acá?".
+        //
+        // La coordenada sale del catálogo de zonas, que ya las tiene todas
+        // cargadas y verificadas. Geocodificar el nombre era pedirle a una
+        // API que adivine algo que ya sabemos, con la chance de que falle o
+        // devuelva otro punto.
+        const arbolCoord = await cargarZonasArbol().catch(() => []);
+        const filaCoord = arbolCoord.find(z => z.nombre === zonasCob[0] && z.lat != null);
+        if (filaCoord) {
+          cambios.lat = Number(filaCoord.lat);
+          cambios.lng = Number(filaCoord.lng);
+        } else if (PRONET_CONFIG.MAPS_KEY) {
+          const coords = await geocodificarDireccion(zonasCob[0]);
           if (coords) { cambios.lat = coords.lat; cambios.lng = coords.lng; }
         }
         const r = await PronetDB.actualizar('prestadores', usuarioActual.prestador_id, cambios);
         ok = !!r;
+        // Sin esto el feed sigue mostrando los pedidos de la cobertura vieja
+        // hasta que recargue la app: zonasDeMiCobertura() cachea por sesión.
+        if (ok) invalidarCoberturaCache();
       }
     } catch(e) { ok = false; }
     // La cabecera de Mi Perfil muestra la zona; sin esto sigue diciendo la
@@ -11826,11 +11989,14 @@ document.addEventListener('focusin', (e) => {
     const especialidades = Array.from(document.querySelectorAll('#pub-2 .sub-opt.on'))
       .map(e => e.textContent.trim()).filter(Boolean);
 
-    // Paso 3 — zona y radio
+    // Paso 3 — cobertura
     const direccion = val('pub-direccion');
-    const radioEl   = document.querySelector('#pub-3 .r-chip.on');
-    const radio     = radioEl?.textContent?.trim() || '';
-    const zonaTexto = [direccion, radio].filter(Boolean).join(' · ') || usuarioActual.zona || 'Escobar';
+    const zonasCobPub = zonasMarcadas('pub');
+    if (!zonasCobPub.length) {
+      showToast && showToast('⚠️ Elegí dónde trabajás en el paso 3: sin cobertura no te llega ningún pedido');
+      pubNext(3); return;
+    }
+    const radioEl = document.querySelector('#pub-radio .r-chip.on');
 
     // Paso 4 — precio y tarifa
     const tipoTarifa = document.querySelector('#pub-4 .pt-chip.on')?.textContent?.trim() || 'Por visita';
@@ -11851,8 +12017,10 @@ document.addEventListener('focusin', (e) => {
       descripcion: descripcion || null,
       especialidades,
       subrubro: especialidades[0] || null,
-      zona: direccion || usuarioActual.zona || 'Escobar',
-      radio_cobertura: radio || null,
+      // `zonas` es la cobertura; el trigger de la base sincroniza `zona`
+      // con la primera, así que no se manda por separado.
+      zonas: zonasCobPub,
+      radio_cobertura: radioEl ? radioEl.dataset.km : null,
       medios_pago: mediosPago,
       precio_min: precioMin,
       precio_max: precioMax,
@@ -11874,7 +12042,10 @@ document.addEventListener('focusin', (e) => {
     // Poblar pantalla de éxito con datos reales
     const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
     set('pub-ex-rubro', rubroIcono + ' ' + rubroNombre);
-    set('pub-ex-zona', zonaTexto);
+    // La pantalla de éxito confirma la cobertura real, que es lo que acaba
+    // de definir. La dirección exacta no se muestra: es un dato privado que
+    // el prestador cargó para ubicarse, no para publicarlo.
+    set('pub-ex-zona', zonasCobPub.join(' · '));
     const tarifaTxt = tipoTarifa === 'A convenir' ? 'A convenir'
       : (precioMin && precioMax ? `$${precioMin.toLocaleString('es-AR')}–$${precioMax.toLocaleString('es-AR')} / ${tipoTarifa.toLowerCase()}`
         : precioMin ? `desde $${precioMin.toLocaleString('es-AR')} / ${tipoTarifa.toLowerCase()}`
