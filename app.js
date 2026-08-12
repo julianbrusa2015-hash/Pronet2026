@@ -505,6 +505,43 @@ document.addEventListener('focusin', (e) => {
     }
   }
 
+  /** Cuándo vence un pedido, en un solo lugar.
+   *
+   *  La fórmula estaba escrita cuatro veces y con defaults distintos: una
+   *  usaba 72 horas y las otras 168. O sea que la misma pantalla podía decir
+   *  que un pedido está por vencer y otra que le quedan días.
+   *
+   *  Espeja `pedido_vence_en()` de la base (supabase-aviso-vencimiento.sql):
+   *  `expira_en` si está, y si no la fecha de creación más la ventana
+   *  configurada. El default de 168 es el mismo que usa el SQL. */
+  function vencimientoDePedido(pedido) {
+    if (!pedido) return null;
+    if (pedido.expira_en) return new Date(pedido.expira_en);
+    if (!pedido.creado) return null;
+    const hs = Number(window.PRONET_CONFIG?.PROPUESTA_EXPIRACION_HS) || 168;
+    return new Date(new Date(pedido.creado).getTime() + hs * 3600000);
+  }
+
+  /** "18 hs" / "7 días", según cuánto falte.
+   *
+   *  Hasta 48 horas se cuenta en horas y de ahí en más en días: "167 horas"
+   *  es un número que nadie traduce mentalmente, y el vecino que lo lee sólo
+   *  quiere saber si tiene que apurarse hoy o si puede esperar.
+   *  Devuelve '' si ya venció — el que llama decide qué decir en ese caso. */
+  function restanteLegible(fecha) {
+    if (!fecha) return '';
+    const ms = new Date(fecha) - Date.now();
+    if (ms <= 0) return '';
+    const horas = Math.floor(ms / 3600000);
+    if (horas < 1) {
+      const min = Math.max(1, Math.floor(ms / 60000));
+      return min + ' min';
+    }
+    if (horas <= 48) return horas + ' hs';
+    const dias = Math.round(horas / 24);
+    return dias + (dias === 1 ? ' día' : ' días');
+  }
+
   let catActiva = 'todos';
 
   // ── Búsqueda en el feed de Inicio (vista vecino) ─────────────────────
@@ -1762,7 +1799,6 @@ document.addEventListener('focusin', (e) => {
     // reloj corriendo y él todavía no ofertó. Si no aparece acá, se entera
     // cuando ya cerró.
     if (pid) {
-      const HS = window.PRONET_CONFIG?.PROPUESTA_EXPIRACION_HS || 72;
       const UMBRAL_HS = 24; // "por vencer" = le queda menos de un día
       const ahora = Date.now();
 
@@ -1774,8 +1810,8 @@ document.addEventListener('focusin', (e) => {
         if (rubro && !matchRubro(p.rubro, rubro)) return false;
         if (yaOferte.has(p.id)) return false;
         if (!p.creado) return false;
-        const vence = p.expira_en ? new Date(p.expira_en)
-                                  : new Date(new Date(p.creado).getTime() + HS * 3600000);
+        const vence = vencimientoDePedido(p);
+        if (!vence) return false;
         const restan = (vence - ahora) / 3600000;
         return restan > 0 && restan <= UMBRAL_HS;
       }).length;
@@ -2025,7 +2061,6 @@ document.addEventListener('focusin', (e) => {
     // 24hs de reloj y sin propuesta mía. Excluir los que ya oferté es lo que
     // lo vuelve accionable — si no, la lista repite trabajo ya hecho.
     if (filtrosPresto.porVencer) {
-      const HS = window.PRONET_CONFIG?.PROPUESTA_EXPIRACION_HS || 168;
       const ahora = Date.now();
       let yaOferte = new Set();
       if (window._sb && pid) {
@@ -2035,8 +2070,8 @@ document.addEventListener('focusin', (e) => {
       }
       pedidos = pedidos.filter(p => {
         if (!p.creado || yaOferte.has(p.id)) return false;
-        const vence = p.expira_en ? new Date(p.expira_en)
-                                  : new Date(new Date(p.creado).getTime() + HS * 3600000);
+        const vence = vencimientoDePedido(p);
+        if (!vence) return false;
         const restan = (vence - ahora) / 3600000;
         return restan > 0 && restan <= 24;
       });
@@ -2137,8 +2172,31 @@ document.addEventListener('focusin', (e) => {
   let pedidoActual = null;
 
   /** Abre el detalle de un pedido poblándolo con datos reales */
+  /** El contador del encabezado del detalle.
+   *
+   *  Se pinta con la fecha real del pedido y con el mismo formateador que el
+   *  "Expira en …" del cuerpo, para que los dos digan lo mismo. Se marca
+   *  urgente sólo cuando falta menos de un día: el rojo permanente no
+   *  distingue lo que corre de lo que no, y deja de significar algo. */
+  function pintarTimerPedido(pedido) {
+    const el = document.getElementById('pd-timer');
+    if (!el) return;
+    const vence = vencimientoDePedido(pedido);
+    if (!vence) { el.style.display = 'none'; return; }
+    const ms = vence - Date.now();
+    el.style.display = '';
+    if (ms <= 0) {
+      el.textContent = '🕐 Vencido';
+      el.classList.add('urgent');
+      return;
+    }
+    el.textContent = '🕐 ' + restanteLegible(vence) + ' restantes';
+    el.classList.toggle('urgent', ms <= 24 * 3600000);
+  }
+
   async function abrirDetallePedido(p) {
     pedidoActual = p;
+    pintarTimerPedido(p);
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set('pd-rubro', (p.icono || '📋') + ' ' + (p.rubro || 'Servicio'));
     set('pd-titulo', p.titulo || 'Pedido sin título');
@@ -2310,13 +2368,9 @@ document.addEventListener('focusin', (e) => {
       else tiempoPub = Math.floor(diff / 1440) + ' día' + (Math.floor(diff / 1440) > 1 ? 's' : '');
     }
 
-    // Expiración
-    let expiraTxt = '';
-    if (pedido.expira_en || pedido.creado) {
-      const base = pedido.expira_en ? new Date(pedido.expira_en) : new Date(new Date(pedido.creado).getTime() + PRONET_CONFIG.PROPUESTA_EXPIRACION_HS * 3600000);
-      const horas = Math.max(0, Math.floor((base - Date.now()) / 3600000));
-      if (horas > 0) expiraTxt = horas + ' horas';
-    }
+    // Expiración. Mismo formateador que el contador del encabezado: los dos
+    // números están a la vista al mismo tiempo y tienen que coincidir.
+    const expiraTxt = restanteLegible(vencimientoDePedido(pedido));
 
     // Construir HTML
     let html = '<div style="padding:14px">';
@@ -12142,9 +12196,7 @@ document.addEventListener('focusin', (e) => {
       // Aviso de vencimiento + renovar. Se muestra cuando quedan menos de
       // 24hs o cuando ya venció, que son los dos momentos en que el vecino
       // puede hacer algo al respecto.
-      const HS_V = window.PRONET_CONFIG?.PROPUESTA_EXPIRACION_HS || 168;
-      const vence = p.expira_en ? new Date(p.expira_en)
-                                : new Date(new Date(p.creado).getTime() + HS_V * 3600000);
+      const vence = vencimientoDePedido(p);
       const hsRestan = (vence - Date.now()) / 3600000;
       const yaVencio = (p.estado === 'Vencido');
       if (yaVencio || (pedidoAbierto && hsRestan > 0 && hsRestan <= 24)) {
@@ -14609,10 +14661,10 @@ document.addEventListener('focusin', (e) => {
 
     // — Expira en —
     let expiraTxt = '';
-    if (pedido.expira_en || pedido.creado) {
-      const base = pedido.expira_en ? new Date(pedido.expira_en) : new Date(new Date(pedido.creado).getTime() + PRONET_CONFIG.PROPUESTA_EXPIRACION_HS * 3600000);
-      const horas = Math.max(0, Math.floor((base - Date.now()) / 3600000));
-      if (horas > 0) expiraTxt = ' · Expira en ' + horas + 'hs';
+    const venceEn = vencimientoDePedido(pedido);
+    if (venceEn) {
+      const t = restanteLegible(venceEn);
+      if (t) expiraTxt = ' · Expira en ' + t;
     }
 
     // — Presupuesto del pedido —

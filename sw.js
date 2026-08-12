@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v236'; // v236: los chips avisan que siguen y se mueven con la rueda del mouse
+const CACHE_VERSION = 'pronet-v237'; // v237: el contador del pedido era fijo en 18hs; ahora es real y en dias si pasa de 48
 
 const SHELL = [
   './',

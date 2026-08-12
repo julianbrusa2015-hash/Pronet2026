@@ -2971,7 +2971,10 @@
       <div class="nprop-header">
         <div class="back-btn" onclick="goTo('s-pedidos')" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>
         <h2>Detalle del pedido</h2>
-        <div class="ped-timer urgent" style="margin-left:auto">🕐 18hs restantes</div>
+        <!-- Lo pinta pintarTimerPedido() con la fecha real. Antes estaba
+             escrito a mano y decía 18hs siempre, contradiciendo al "Expira
+             en …" del cuerpo, que sí se calculaba. -->
+        <div class="ped-timer" id="pd-timer" style="margin-left:auto;display:none"></div>
       </div>
 
       <div class="pd-scroll-body">
