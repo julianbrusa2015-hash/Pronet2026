@@ -4610,15 +4610,8 @@ document.addEventListener('focusin', (e) => {
     // pedir el teléfono en otro momento sería incoherente.
     if (!tieneTelefono()) return abrirTelefonoGate(() => pubPrestContactar(pubId));
 
-    recontratarDestino = {
-      prestadorId: p.prestador_id,
-      nombre: p.prestadores?.nombre || 'este profesional',
-    };
-    goTo('s-nuevo-pedido');
-    const banner = document.getElementById('np-dirigido-banner');
-    const nom    = document.getElementById('np-dirigido-nombre');
-    if (nom) nom.textContent = recontratarDestino.nombre;
-    if (banner) banner.style.display = 'flex';
+    const nombre = p.prestadores?.nombre || 'este profesional';
+    dirigirPedidoA(p.prestador_id, nombre);
     // Prefijar el rubro del aviso: el vecino ya eligió qué necesita al
     // tocar esa tarjeta, volver a preguntárselo es un paso de más.
     // Las opciones no tienen id — se generan desde RUBROS con el nombre en
@@ -4627,7 +4620,7 @@ document.addEventListener('focusin', (e) => {
     document.querySelectorAll('#np-rubro-opts .form-opt').forEach(o => {
       if (o.querySelector('.opt-lbl')?.textContent.trim() === nombreRubro) o.click();
     });
-    showToast('Contale a ' + recontratarDestino.nombre + ' qué necesitás');
+    showToast('Contale a ' + nombre + ' qué necesitás');
   }
   window.pubPrestContactar = pubPrestContactar;
 
@@ -11595,13 +11588,29 @@ document.addEventListener('focusin', (e) => {
   }
 
   /** Abre el alta de pedido con el destinatario fijado. */
-  function abrirRecontratar() {
-    if (!recontratarDestino) return;
+  /** Abre el alta de pedido con el destinatario fijado.
+   *
+   *  El orden importa y es la razón de que esto sea un helper: goTo() llama
+   *  a quitarRecontratar() al entrar a s-nuevo-pedido (limpia un destino que
+   *  haya quedado colgado de otra vez, que está bien). Si se setea el
+   *  destino ANTES del goTo, se pierde — y peor: el `nombre` se lee después,
+   *  contra null, y tira TypeError, así que el banner nunca se muestra y el
+   *  pedido termina saliendo ABIERTO a todo el rubro. El vecino cree que le
+   *  está escribiendo a una persona y le escribe a cualquiera.
+   *  Por eso se navega primero y se fija el destino después. */
+  function dirigirPedidoA(prestadorId, nombre) {
+    if (!prestadorId) return;
     goTo('s-nuevo-pedido');
+    recontratarDestino = { prestadorId, nombre: nombre || 'esta persona' };
     const banner = document.getElementById('np-dirigido-banner');
     const nom    = document.getElementById('np-dirigido-nombre');
     if (nom) nom.textContent = recontratarDestino.nombre;
     if (banner) banner.style.display = 'flex';
+  }
+
+  function abrirRecontratar() {
+    if (!recontratarDestino) return;
+    dirigirPedidoA(recontratarDestino.prestadorId, recontratarDestino.nombre);
   }
   window.abrirRecontratar = abrirRecontratar;
 
