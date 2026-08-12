@@ -136,8 +136,11 @@ create policy pub_prestador_insertar on public.publicaciones_prestador
 
 -- El dueño edita contenido y puede mandar a revisión, pero NO puede
 -- autoactivarse: 'activa' sólo la pone el RPC del admin. El USING deja
--- tocar sólo lo no-activo (editar una activa la sacaría de la moderación
--- que ya pasó); el WITH CHECK acota a qué estados puede llevarla.
+-- tocar lo no-activo (editar una activa al aire la sacaría de la moderación
+-- que ya pasó) — CON UNA EXCEPCIÓN: una activa cuya vigencia ya venció.
+-- Esa es la renovación: el prestador la retoca y la re-envía, y como el
+-- WITH CHECK sólo permite dejarla en borrador/pendiente, renovarla implica
+-- pasar por la moderación de nuevo. Nunca vuelve al aire por su cuenta.
 drop policy if exists pub_prestador_editar on public.publicaciones_prestador;
 create policy pub_prestador_editar on public.publicaciones_prestador
   for update to authenticated
@@ -147,7 +150,11 @@ create policy pub_prestador_editar on public.publicaciones_prestador
       where pf.id = auth.uid()
         and pf.prestador_id = publicaciones_prestador.prestador_id
     )
-    and publicaciones_prestador.estado in ('borrador','pendiente','rechazada','vencida')
+    and (
+      publicaciones_prestador.estado in ('borrador','pendiente','rechazada','vencida')
+      or (publicaciones_prestador.estado = 'activa'
+          and publicaciones_prestador.vigencia_hasta <= now())
+    )
   )
   with check (publicaciones_prestador.estado in ('borrador','pendiente'));
 

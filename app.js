@@ -295,10 +295,11 @@ document.addEventListener('focusin', (e) => {
     's-resena':           'nb-pedidos',
     's-invitar':          'nb-perfil',
     's-promocionar':      'nb-perfil',
+    's-pubs-prestador':   'nb-perfil',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-vecinos-portada','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
     's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners','s-param-mkt-cats','s-carrito',
-    's-invitar','s-prealta','s-promocionar'];
+    's-invitar','s-prealta','s-promocionar','s-pubs-prestador'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -9028,6 +9029,10 @@ document.addEventListener('focusin', (e) => {
     // habilitó. Con el interruptor apagado la fila no existe.
     const menuPromo = document.getElementById('menu-promocionar');
     if (menuPromo) menuPromo.style.display = bannersPagosActivos() ? '' : 'none';
+    // Mis avisos en Servicios: sólo prestadores, y con el flag prendido.
+    const menuPubs = document.getElementById('menu-pubs-prestador');
+    if (menuPubs) menuPubs.style.display =
+      (esPrestador() && pubsPrestadorActivo()) ? '' : 'none';
 
     const loyaltyMenu = document.querySelector('.menu-item[data-feature="loyalty"]');
     if (loyaltyMenu) loyaltyMenu.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
@@ -10263,6 +10268,264 @@ document.addEventListener('focusin', (e) => {
     showToast && showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
   }
   window.promoPagar = promoPagar;
+
+  // ══ MIS AVISOS EN SERVICIOS (panel del prestador) ═══════════════════
+  //
+  // Fase 2 de PLAN-PUBLICACIONES-PRESTADOR.md. El prestador arma hasta
+  // pub_slots avisos con foto y los manda a revisión; el admin los aprueba
+  // (Fase 3) y recién ahí los ve el vecino (Fase 4). El prestador NO navega
+  // ese espacio: su ventana a cómo quedó es la vista previa de acá.
+
+  function pubsPrestadorActivo() {
+    return configApp.publicaciones_prestador === 'true';
+  }
+
+  let _ppLista = [];          // cache de la última carga
+  let _ppEditando = null;     // id en edición, o null si es alta
+  let _ppFotoNueva = null;    // File elegido en el form, todavía sin subir
+  let _ppMiPrestador = null;  // fila de `prestadores` propia (para la preview)
+
+  function abrirPubsPrestador() {
+    if (!esPrestador() || !pubsPrestadorActivo()) return;
+    goTo('s-pubs-prestador');
+    ppCerrarForm();
+    renderPubsPrestador();
+  }
+  window.abrirPubsPrestador = abrirPubsPrestador;
+
+  /** Etiqueta de estado para el slot. La 'vencida' es lógica: el estado en
+   *  la base sigue siendo 'activa', pero la vigencia ya pasó y el RLS del
+   *  feed ya no la muestra. */
+  function ppEstadoInfo(p) {
+    if (p.estado === 'activa') {
+      const resta = Math.ceil((new Date(p.vigencia_hasta) - Date.now()) / 86400000);
+      if (resta <= 0) return { label: 'Vencida', bg: '#F1F3F7', color: '#8A94A3' };
+      return { label: 'Publicada · ' + resta + (resta === 1 ? ' día' : ' días'), bg: '#E7F6EF', color: '#127A52' };
+    }
+    if (p.estado === 'pendiente') return { label: 'En revisión', bg: '#FFF4E0', color: '#B9760A' };
+    if (p.estado === 'rechazada') return { label: 'Rechazada', bg: '#FEF2F2', color: '#DC2626' };
+    return { label: 'Borrador', bg: '#F1F3F7', color: '#5A6272' };
+  }
+
+  async function renderPubsPrestador() {
+    const cont = document.getElementById('pp-slots');
+    const cupo = document.getElementById('pp-cupo');
+    if (!cont) return;
+    cont.innerHTML = '<div style="padding:20px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+
+    _ppLista = await PronetDB.listarMisPubsPrestador();
+    const slots = limitePlan('pub_slots') ?? 1;
+    const dias  = limitePlan('pub_duracion_dias') ?? 7;
+    if (cupo) cupo.textContent = _ppLista.length + ' de ' + slots + ' avisos usados · ' + dias + ' días al aire por aviso';
+
+    const metricas = await PronetDB.metricasPubsPrestador(_ppLista.map(p => p.id));
+
+    const tarjetas = _ppLista.map(p => {
+      const e = ppEstadoInfo(p);
+      const m = metricas[p.id] || { vistas: 0, clics: 0, likes: 0 };
+      const vencida = p.estado === 'activa' && new Date(p.vigencia_hasta) <= new Date();
+      const editable = p.estado !== 'activa' || vencida;
+      return '<div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px">' +
+        (p.foto_url
+          ? '<div style="height:110px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/cover"></div>'
+          : '<div style="height:56px;background:#EEF1F6;display:flex;align-items:center;justify-content:center;font-size:22px">🛠️</div>') +
+        '<div style="padding:11px 13px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+            '<div style="font-size:14px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHTML(p.titulo) + '</div>' +
+            '<span style="flex-shrink:0;font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;background:' + e.bg + ';color:' + e.color + '">' + e.label + '</span>' +
+          '</div>' +
+          '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(rubroDeCat(p.rubro)) + '</div>' +
+          (p.estado === 'rechazada' && p.motivo_rechazo
+            ? '<div style="font-size:11.5px;color:#DC2626;margin-top:6px;line-height:1.4">Motivo: ' + escHTML(p.motivo_rechazo) + '</div>' : '') +
+          (p.estado === 'activa'
+            ? '<div style="display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--ink3);font-weight:600">' +
+                '<span>👁 ' + m.vistas + '</span><span>👍 ' + m.likes + '</span><span>👆 ' + m.clics + '</span>' +
+              '</div>' : '') +
+          '<div style="display:flex;gap:8px;margin-top:10px">' +
+            '<button style="flex:1;border:1px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppVistaPrevia(\'' + p.id + '\')">👀 Vista previa</button>' +
+            (editable
+              ? '<button style="flex:1;border:1px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppAbrirForm(\'' + p.id + '\')">✏️ Editar</button>'
+              : '') +
+            ((p.estado === 'borrador' || p.estado === 'rechazada')
+              ? '<button style="flex:1.2;border:0;background:var(--blue);color:white;border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppEnviarRevision(\'' + p.id + '\')">Enviar a revisión</button>'
+              : '') +
+            '<button aria-label="Eliminar" style="border:1px solid var(--border);background:white;border-radius:10px;padding:8px 10px;font-size:12px;cursor:pointer" onclick="ppEliminar(\'' + p.id + '\')">🗑️</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    const libres = Math.max(0, slots - _ppLista.length);
+    const slotVacio = libres > 0
+      ? '<div role="button" tabindex="0" onclick="ppAbrirForm(null)" style="border:2px dashed var(--border);border-radius:14px;padding:22px;text-align:center;cursor:pointer;background:var(--surface)">' +
+          '<div style="font-size:22px">＋</div>' +
+          '<div style="font-size:13px;font-weight:700;color:var(--blue);margin-top:4px">Agregar aviso</div>' +
+          '<div style="font-size:11px;color:var(--ink3);margin-top:2px">' + libres + (libres === 1 ? ' lugar libre' : ' lugares libres') + '</div>' +
+        '</div>'
+      : '<div style="border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;font-size:12px;color:var(--ink3);background:var(--surface)">Usaste todos los avisos de tu plan. Eliminá uno para armar otro.</div>';
+
+    cont.innerHTML = tarjetas + slotVacio;
+  }
+
+  function ppLlenarRubros(sel, actual) {
+    sel.innerHTML = RUBROS.map(r =>
+      '<option value="' + escHTML(r.slug) + '"' + (r.slug === actual ? ' selected' : '') + '>' +
+        r.emoji + ' ' + escHTML(r.n) + '</option>').join('');
+  }
+
+  function ppAbrirForm(id) {
+    _ppEditando = id;
+    _ppFotoNueva = null;
+    const p = id ? _ppLista.find(x => x.id === id) : null;
+    const form = document.getElementById('pp-form');
+    if (!form) return;
+    document.getElementById('pp-form-titulo').textContent = p ? 'Editar aviso' : 'Nuevo aviso';
+    document.getElementById('pp-titulo').value = p?.titulo || '';
+    document.getElementById('pp-desc').value = p?.descripcion || '';
+    ppLlenarRubros(document.getElementById('pp-rubro'),
+      p?.rubro || catDeRubro(usuarioActual?.rubro || '') || RUBROS[0].slug);
+    const prev = document.getElementById('pp-img-prev');
+    prev.innerHTML = p?.foto_url
+      ? '<img src="' + escHTML(p.foto_url) + '" alt="" style="width:100%;height:100%;object-fit:cover">'
+      : '<div style="font-size:26px">📷</div><div style="font-size:13px;font-weight:600;color:var(--blue)">Tocá para subir una foto</div>';
+    const err = document.getElementById('pp-error');
+    if (err) { err.style.display = 'none'; err.textContent = ''; }
+    form.style.display = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  window.ppAbrirForm = ppAbrirForm;
+
+  function ppCerrarForm() {
+    _ppEditando = null;
+    _ppFotoNueva = null;
+    const form = document.getElementById('pp-form');
+    if (form) form.style.display = 'none';
+    const inp = document.getElementById('pp-img-input');
+    if (inp) inp.value = '';
+  }
+  window.ppCerrarForm = ppCerrarForm;
+
+  function ppPrevisualizar(input) {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) { showToast('⚠️ La foto no puede superar 5 MB.'); input.value = ''; return; }
+    _ppFotoNueva = f;
+    const prev = document.getElementById('pp-img-prev');
+    const url = URL.createObjectURL(f);
+    prev.innerHTML = '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover">';
+  }
+  window.ppPrevisualizar = ppPrevisualizar;
+
+  async function ppGuardar(estado) {
+    const titulo = document.getElementById('pp-titulo').value.trim();
+    const rubro  = document.getElementById('pp-rubro').value;
+    const desc   = document.getElementById('pp-desc').value.trim();
+    const err    = document.getElementById('pp-error');
+    const mostrar = (m) => { if (err) { err.textContent = m; err.style.display = 'block'; } };
+
+    if (titulo.length < 3) return mostrar('Escribí un título (mínimo 3 letras).');
+    const p = _ppEditando ? _ppLista.find(x => x.id === _ppEditando) : null;
+    if (estado === 'pendiente' && !_ppFotoNueva && !p?.foto_url)
+      return mostrar('Para enviarlo a revisión necesita una foto.');
+
+    const btn1 = document.getElementById('pp-btn-revision');
+    const btn2 = document.getElementById('pp-btn-borrador');
+    [btn1, btn2].forEach(b => { if (b) b.disabled = true; });
+    try {
+      let foto_url = p?.foto_url || null;
+      if (_ppFotoNueva) {
+        foto_url = await PronetDB.subirFotoPubPrestador(_ppFotoNueva);
+        if (!foto_url) return mostrar('No se pudo subir la foto. Probá de nuevo.');
+      }
+      const campos = { titulo, rubro, descripcion: desc || null, foto_url, estado };
+      const res = _ppEditando
+        ? await PronetDB.actualizarPubPrestador(_ppEditando, campos)
+        : await PronetDB.crearPubPrestador(campos);
+      if (!res.ok) {
+        return mostrar(res.codigo === 'limite'
+          ? 'Llegaste al máximo de avisos de tu plan.'
+          : 'No se pudo guardar. ' + (res.error || ''));
+      }
+      showToast(estado === 'pendiente'
+        ? '📨 Enviado. Te avisamos cuando lo revisemos.'
+        : '💾 Guardado como borrador.');
+      ppCerrarForm();
+      renderPubsPrestador();
+    } finally {
+      [btn1, btn2].forEach(b => { if (b) b.disabled = false; });
+    }
+  }
+  window.ppGuardar = ppGuardar;
+
+  async function ppEnviarRevision(id) {
+    const p = _ppLista.find(x => x.id === id);
+    if (p && !p.foto_url) { ppAbrirForm(id); showToast('⚠️ Sumale una foto antes de enviarlo.'); return; }
+    const res = await PronetDB.actualizarPubPrestador(id, { estado: 'pendiente' });
+    if (!res.ok) { showToast('⚠️ ' + (res.error || 'No se pudo enviar.')); return; }
+    showToast('📨 Enviado. Te avisamos cuando lo revisemos.');
+    renderPubsPrestador();
+  }
+  window.ppEnviarRevision = ppEnviarRevision;
+
+  async function ppEliminar(id) {
+    const p = _ppLista.find(x => x.id === id);
+    if (!confirm('¿Eliminar "' + (p?.titulo || 'este aviso') + '"? No se puede deshacer.')) return;
+    const res = await PronetDB.borrarPubPrestador(id);
+    if (!res.ok) { showToast('⚠️ No se pudo eliminar.'); return; }
+    showToast('🗑️ Aviso eliminado.');
+    renderPubsPrestador();
+  }
+  window.ppEliminar = ppEliminar;
+
+  /** La tarjeta como la va a ver el vecino (Fase 4 usa este mismo armado).
+   *  De sólo lectura: no registra vista ni permite interacción — es la
+   *  ventana del prestador a un espacio que no navega. */
+  async function ppVistaPrevia(id) {
+    const p = _ppLista.find(x => x.id === id);
+    const cont = document.getElementById('pp-preview-card');
+    if (!p || !cont) return;
+    // rating/resenas viven en `prestadores`, no en el perfil: se trae la
+    // fila real para que la vista previa muestre la misma reputación que va
+    // a ver el vecino, no un dato inventado.
+    if (!_ppMiPrestador && usuarioActual?.prestador_id) {
+      _ppMiPrestador = await PronetDB.obtener('prestadores', usuarioActual.prestador_id);
+    }
+    cont.innerHTML = pubPrestadorCardHTML(p, {
+      nombre: _ppMiPrestador?.nombre || usuarioActual?.nombre || '',
+      rating: _ppMiPrestador?.rating, resenas: _ppMiPrestador?.resenas,
+    }, true);
+    document.getElementById('pp-preview').classList.add('show');
+  }
+  window.ppVistaPrevia = ppVistaPrevia;
+
+  function ppCerrarPreview() {
+    document.getElementById('pp-preview').classList.remove('show');
+  }
+  window.ppCerrarPreview = ppCerrarPreview;
+
+  /** Tarjeta compartida entre la vista previa (F2) y el feed del vecino
+   *  (F4). Reputación: SOLO la real — rating bayesiano y reseñas
+   *  verificadas del prestador. Sin estrellas si todavía no tiene. */
+  function pubPrestadorCardHTML(p, prestador, esPreview) {
+    const rep = (prestador?.resenas > 0 && prestador?.rating)
+      ? '★ ' + Number(prestador.rating).toFixed(1) + ' · ' + prestador.resenas + (prestador.resenas === 1 ? ' reseña' : ' reseñas')
+      : 'Nuevo en PRONET';
+    return '<div style="background:white;border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:14px;overflow:hidden">' +
+      (p.foto_url ? '<div style="height:140px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/cover"></div>' : '') +
+      '<div style="padding:12px 13px">' +
+        '<span style="font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:#E8F0FF;color:#1A4FC4">Prestador</span>' +
+        '<div style="font-size:14.5px;font-weight:700;color:var(--ink);margin-top:6px">' + escHTML(p.titulo) + '</div>' +
+        '<div style="font-size:12px;color:var(--ink3);margin-top:2px">' +
+          escHTML(prestador?.nombre || '') + ' · ' + escHTML(rubroDeCat(p.rubro)) + '</div>' +
+        (p.descripcion ? '<div style="font-size:12px;color:var(--ink2);margin-top:6px;line-height:1.45">' + escHTML(p.descripcion) + '</div>' : '') +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">' +
+          '<span style="font-size:11.5px;font-weight:700;color:#B9760A">' + rep + '</span>' +
+          '<span style="font-size:11.5px;font-weight:700;color:white;background:var(--blue);padding:6px 12px;border-radius:8px;' +
+            (esPreview ? 'opacity:.5' : '') + '">' + (esPreview ? 'Contactar (vista previa)' : 'Contactar') + '</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
 
   // ══ PRE-ALTA DE PRESTADORES ═════════════════════════════════════════
   //
@@ -13917,6 +14180,11 @@ document.addEventListener('focusin', (e) => {
         if (row.precio_anual           != null) p.precio_anual            = row.precio_anual;
         if (row.mkt_publicaciones_mes  != null) p.mkt_publicaciones_mes   = row.mkt_publicaciones_mes;
         if (row.mkt_publicaciones_anio != null) p.mkt_publicaciones_anio  = row.mkt_publicaciones_anio;
+        // Publicaciones del prestador en Servicios: el panel muestra estos
+        // límites, pero quien los garantiza es el trigger de la base.
+        if (row.pub_slots          != null) p.pub_slots          = row.pub_slots;
+        if (row.pub_duracion_dias  != null) p.pub_duracion_dias  = row.pub_duracion_dias;
+        if (row.pub_destacados_mes != null) p.pub_destacados_mes = row.pub_destacados_mes;
         // El boost que se le PROMETE al usuario tiene que salir de la misma
         // fila que usa acreditar_puntos() para calcularlo. Si quedan en dos
         // lados, la pantalla puede decir ×1.5 mientras la base acredita ×1.25

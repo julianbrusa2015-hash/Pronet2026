@@ -718,7 +718,7 @@ const PronetDB = (() => {
     async listarPlanesLimites() {
       if (!remoto) return [];
       const { data, error } = await sb.from('planes_limites')
-        .select('plan, nombre, precio_mes, precio_anual, propuestas_mes, fotos_portfolio, loyalty_boost');
+        .select('plan, nombre, precio_mes, precio_anual, propuestas_mes, fotos_portfolio, loyalty_boost, pub_slots, pub_duracion_dias, pub_destacados_mes');
       if (error) { console.warn('[PronetDB] listarPlanesLimites', error.message); return []; }
       return data || [];
     },
@@ -1922,6 +1922,100 @@ const PronetDB = (() => {
         if (m) await sb.storage.from('portfolio').remove([m[1]]).catch(() => {});
       }
       return true;
+    },
+
+    // ── PUBLICACIONES DEL PRESTADOR (Servicios · Entre Vecinos) ─────────
+    // Fase 2 del plan PLAN-PUBLICACIONES-PRESTADOR.md. El RLS del servidor
+    // es quien manda: el dueño no puede autoactivarse ('activa' sólo la pone
+    // el RPC del admin) y el trigger de la base limita los slots por plan.
+
+    /** Las publicaciones del prestador logueado, todas, en cualquier estado.
+     *  El filtro por prestador_id es NECESARIO además del RLS: la policy de
+     *  lectura también me deja ver las activas de OTROS (soy "vecino" para
+     *  ellas), así que sin el eq() vendrían mezcladas. */
+    async listarMisPubsPrestador() {
+      if (!remoto) return [];
+      const pid = (await this.usuarioActual())?.prestador_id;
+      if (!pid) return [];
+      const { data, error } = await sb.from('publicaciones_prestador')
+        .select('*').eq('prestador_id', pid).order('creado');
+      if (error) { console.warn('[PronetDB] listarMisPubsPrestador', error.message); return []; }
+      return data || [];
+    },
+
+    /** Crea una publicación (nace como borrador, o directo a revisión).
+     *  Devuelve {ok, data} o {ok:false, error, codigo} — el trigger de
+     *  límite de slots rechaza con P0001. */
+    async crearPubPrestador({ titulo, descripcion, rubro, foto_url, estado = 'borrador' }) {
+      if (!remoto) return { ok: false };
+      const pid = (await this.usuarioActual())?.prestador_id;
+      if (!pid) return { ok: false, error: 'Sin perfil de prestador' };
+      const { data, error } = await sb.from('publicaciones_prestador')
+        .insert({ prestador_id: pid, titulo, descripcion, rubro, foto_url,
+                  estado: estado === 'pendiente' ? 'pendiente' : 'borrador' })
+        .select().maybeSingle();
+      if (error) {
+        console.warn('[PronetDB] crearPubPrestador', error.message);
+        return { ok: false, error: error.message,
+                 codigo: error.message.includes('limite_publicaciones') ? 'limite' : null };
+      }
+      return { ok: true, data };
+    },
+
+    /** Edita contenido y/o estado. El RLS sólo permite dejarla en borrador o
+     *  pendiente — mandar 'activa' desde acá falla a propósito. */
+    async actualizarPubPrestador(id, campos) {
+      if (!remoto || !id) return { ok: false };
+      const permitidos = {};
+      ['titulo', 'descripcion', 'rubro', 'foto_url', 'estado'].forEach(k => {
+        if (campos[k] !== undefined) permitidos[k] = campos[k];
+      });
+      const { data, error } = await sb.from('publicaciones_prestador')
+        .update(permitidos).eq('id', id).select().maybeSingle();
+      if (error) { console.warn('[PronetDB] actualizarPubPrestador', error.message); return { ok: false, error: error.message }; }
+      // maybeSingle sin fila = el RLS no dejó (p.ej. editar una activa)
+      if (!data) return { ok: false, error: 'No se pudo editar en este estado' };
+      return { ok: true, data };
+    },
+
+    async borrarPubPrestador(id) {
+      if (!remoto || !id) return { ok: false };
+      const { error } = await sb.from('publicaciones_prestador').delete().eq('id', id);
+      if (error) { console.warn('[PronetDB] borrarPubPrestador', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
+    },
+
+    /** Foto de la publicación. Reusa el bucket 'portfolio' (misma policy de
+     *  path {prestadorId}/...) con prefijo pub- para distinguirla. */
+    async subirFotoPubPrestador(file) {
+      if (!remoto || !file) return null;
+      const pid = (await this.usuarioActual())?.prestador_id;
+      if (!pid) return null;
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${pid}/pub-${Date.now()}.${ext}`;
+      const { error: upErr } = await sb.storage.from('portfolio').upload(path, file, { upsert: false });
+      if (upErr) { console.warn('[PronetDB] subirFotoPubPrestador', upErr.message); return null; }
+      const { data: { publicUrl } } = sb.storage.from('portfolio').getPublicUrl(path);
+      return publicUrl;
+    },
+
+    /** Métricas de mis publicaciones: {pubId: {vistas, clics, likes}}.
+     *  Los eventos vienen de la tabla (el RLS sólo me muestra los de mis
+     *  publicaciones); se cuentan acá — con estos volúmenes alcanza. */
+    async metricasPubsPrestador(ids) {
+      if (!remoto || !ids?.length) return {};
+      const res = {};
+      ids.forEach(id => { res[id] = { vistas: 0, clics: 0, likes: 0 }; });
+      const [ev, lk] = await Promise.all([
+        sb.from('pub_prestador_eventos').select('publicacion_id, tipo').in('publicacion_id', ids),
+        sb.from('likes_pub_prestador').select('publicacion_id').in('publicacion_id', ids),
+      ]);
+      (ev.data || []).forEach(e => {
+        const m = res[e.publicacion_id]; if (!m) return;
+        if (e.tipo === 'vista') m.vistas++; else if (e.tipo === 'clic_contacto') m.clics++;
+      });
+      (lk.data || []).forEach(l => { const m = res[l.publicacion_id]; if (m) m.likes++; });
+      return res;
     },
 
     // ── FOTOS DE TRABAJO ─────────────────────────────────────────────────

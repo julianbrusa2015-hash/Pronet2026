@@ -1314,6 +1314,17 @@
           </div>
           <div class="m-chev">›</div>
         </div>
+        <!-- Publicaciones del prestador en Servicios. Sólo prestadores y con
+             el flag `publicaciones_prestador` prendido; lo controla
+             reflejarUsuario(). -->
+        <div class="menu-item" id="menu-pubs-prestador" style="display:none" onclick="abrirPubsPrestador()">
+          <div class="m-icon" style="background:#E8F0FF;color:#1A4FC4">🛠️</div>
+          <div class="m-txt">
+            <div class="m-title">Mis avisos en Servicios</div>
+            <div class="m-sub">Mostrá tu trabajo a los vecinos</div>
+          </div>
+          <div class="m-chev">›</div>
+        </div>
         <div class="menu-item" id="menu-invitar" onclick="abrirInvitar()">
           <div class="m-icon" style="background:#FFF7ED;color:#EA580C">🤝</div>
           <div class="m-txt">
@@ -4337,6 +4348,67 @@
       <div id="promo-lista"></div>
     </div>
   </div><!-- /promocionar -->
+
+  <!-- ══ MIS AVISOS EN SERVICIOS (prestador) ═══════════════════════════
+       Fase 2 de PLAN-PUBLICACIONES-PRESTADOR.md. El prestador arma sus
+       publicaciones acá; el vecino las ve en Servicios (Fase 4). Nada sale
+       al aire sin pasar por la moderación del admin (Fase 3). -->
+  <div class="screen" id="s-pubs-prestador">
+    <div class="nprop-header">
+      <div class="back-btn" onclick="goTo('s-miperfil')" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <h2>Mis avisos en Servicios</h2>
+    </div>
+
+    <div style="padding:16px 18px 90px">
+      <div style="background:linear-gradient(135deg,#1E3A8A,#2B5BFF);border-radius:16px;padding:18px;color:#fff;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:800;line-height:1.35">Mostrá tu trabajo</div>
+        <div style="font-size:12.5px;opacity:.85;margin-top:6px;line-height:1.5">
+          Tus avisos aparecen en la solapa Servicios que ven los vecinos. Los revisamos antes de publicarlos.
+        </div>
+        <div id="pp-cupo" style="font-size:12px;font-weight:700;margin-top:10px;opacity:.95"></div>
+      </div>
+
+      <div id="pp-slots"></div>
+
+      <!-- Form de alta/edición: oculto hasta tocar un slot -->
+      <div id="pp-form" style="display:none;background:white;border:1px solid var(--border);border-radius:16px;padding:16px;margin-top:14px">
+        <div id="pp-form-titulo" style="font-size:14px;font-weight:800;color:var(--ink);margin-bottom:12px">Nuevo aviso</div>
+
+        <label class="ob-label">Foto del trabajo <span style="color:#E53E3E">*</span></label>
+        <div id="pp-img-prev" onclick="document.getElementById('pp-img-input').click()"
+          style="width:100%;aspect-ratio:16/9;border-radius:14px;border:2px dashed var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;margin-bottom:14px;overflow:hidden">
+          <div style="font-size:26px">📷</div>
+          <div style="font-size:13px;font-weight:600;color:var(--blue)">Tocá para subir una foto</div>
+        </div>
+        <input type="file" id="pp-img-input" accept="image/*" style="display:none" onchange="ppPrevisualizar(this)">
+
+        <label class="ob-label" for="pp-titulo">Título <span style="color:#E53E3E">*</span></label>
+        <input class="ob-input" id="pp-titulo" name="pp-titulo" type="text" placeholder="Ej: Pintura de interiores" maxlength="80" style="margin-bottom:14px">
+
+        <label class="ob-label" for="pp-rubro">Rubro <span style="color:#E53E3E">*</span></label>
+        <select class="ob-input" id="pp-rubro" name="pp-rubro" style="margin-bottom:14px"></select>
+
+        <label class="ob-label" for="pp-desc">Descripción</label>
+        <textarea class="ob-input" id="pp-desc" name="pp-desc" rows="3" maxlength="600" placeholder="Qué hacés, en qué zona, qué incluye…" style="margin-bottom:14px;resize:none"></textarea>
+
+        <div id="pp-error" role="alert" style="display:none;font-size:12.5px;color:#E53E3E;margin-bottom:12px"></div>
+        <button class="btn-p" id="pp-btn-revision" style="width:100%" onclick="ppGuardar('pendiente')">Enviar a revisión</button>
+        <button id="pp-btn-borrador" style="width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:13.5px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:'Inter',sans-serif" onclick="ppGuardar('borrador')">Guardar como borrador</button>
+        <button style="width:100%;margin-top:4px;background:none;border:none;color:var(--ink3);font-size:13px;padding:10px;cursor:pointer;font-family:'Inter',sans-serif" onclick="ppCerrarForm()">Cancelar</button>
+      </div>
+    </div>
+  </div><!-- /pubs-prestador -->
+
+  <!-- Vista previa: la tarjeta como la va a ver un vecino en Servicios.
+       De sólo lectura y NO registra vista (definición 2/3 del plan). -->
+  <div class="zona-modal-overlay" id="pp-preview">
+    <div class="zona-modal">
+      <div class="zm-handle"></div>
+      <div class="zm-title" style="text-align:center">Así la ve un vecino</div>
+      <div id="pp-preview-card" style="margin-top:10px"></div>
+      <button class="btn-p" style="width:100%;margin-top:14px" onclick="ppCerrarPreview()">Cerrar</button>
+    </div>
+  </div>
 
 
   <!-- ══ INVITAR A UN PRESTADOR ════════════════════════════════════════

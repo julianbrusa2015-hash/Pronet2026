@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v215'; // v215: respetar prefers-reduced-motion en las hojas inferiores
+const CACHE_VERSION = 'pronet-v216'; // v216: panel Mis avisos en Servicios del prestador (flag apagado)
 
 const SHELL = [
   './',
