@@ -39,6 +39,46 @@ Las fases 1–3 no dependen de esta decisión; se puede arrancar ya.
 
 ---
 
+## Estado al 2026-08-12
+
+| fase | estado |
+|---|---|
+| F1 · Base de datos | ✅ hecha y verificada (v216) |
+| F2 · Panel del prestador | ✅ hecha y verificada (v216) |
+| F3 · Moderación + toggle admin | ✅ hecha y verificada (v217) |
+| F4 · Feed del vecino | ✅ hecha y verificada (v218/v219) |
+| F5 · Vencimiento y renovación | ⏸️ pendiente — parcialmente resuelta |
+| F6 · Monetización (Impulsar) | ⏸️ pendiente |
+| F7 · Métricas visibles | ⏸️ pendiente — lo básico ya se muestra |
+
+**El flag `publicaciones_prestador` está APAGADO.** Con él apagado no hay
+rastros: ni la fila en Mi Perfil del prestador, ni la sección en Moderación,
+ni el toggle en Servicios. Se prende desde Parametrías → "Avisos de
+prestadores en Servicios".
+
+### Lo que salió distinto de lo planeado
+
+- **La decisión del contacto se cerró: pedido dirigido**, no chat. Y salió
+  mucho más barata de lo estimado: `pedidos.dirigido_a` y su RLS **ya
+  existían**, construidos para la recontratación. Contactar reusa esa
+  maquinaria tal cual.
+- **La renovación quedó medio resuelta en F1**, por el RLS: una vencida
+  sigue siendo `estado='activa'`, se puede editar, y el `WITH CHECK` sólo
+  deja dejarla en borrador o pendiente — o sea que renovarla obliga a pasar
+  de nuevo por moderación, que es lo que queríamos.
+- **La notificación al prestador se adelantó a F3** (no estaba en el plan):
+  el RPC avisa el resultado de la revisión. Una revisión sin respuesta se
+  siente como un rechazo.
+- **Dos catálogos, no uno.** Las publicaciones de vecinos usan las
+  categorías de Entre Vecinos y los avisos de prestadores usan `RUBROS` (el
+  catálogo de oficios). No son intercambiables: los chips cambian con el
+  origen y el filtro puntual no sobrevive al cambio.
+- **Bug de producción encontrado de paso** (v219): la recontratación estaba
+  rota. `goTo('s-nuevo-pedido')` limpia el destinatario, y las dos entradas
+  lo fijaban antes de navegar → el pedido salía abierto a todo el rubro.
+
+---
+
 ## Fase 1 · Base de datos
 
 **Tabla nueva `publicaciones_prestador`** — no recargar `publicaciones`:
@@ -106,32 +146,64 @@ Copiar el flujo de banners (`renderBannersPendientes` / `resolver_denuncia`):
   ("Pedir presupuesto" A o B). **Gate de teléfono** antes del contacto.
 - Prestador logueado (rol activo prestador): no ve el toggle ni el feed.
 
-## Fase 5 · Vencimiento y renovación
+## Fase 5 · Vencimiento y renovación — ⏸️ PENDIENTE
 
-Patrón de vencimiento de pedidos, tal cual:
+**Ya está resuelto** (en F1): al vencer sale del feed sola, porque el RLS
+del vecino exige `vigencia_hasta > now()`. El panel del prestador la muestra
+como "Vencida" calculándolo del lado del cliente, y la puede editar y
+reenviar — y como el `WITH CHECK` sólo permite borrador/pendiente, renovarla
+pasa de nuevo por moderación.
 
-- Al vencer `vigencia_hasta`: sale del feed (el RLS ya lo garantiza), pasa a
-  `vencida` en el panel del prestador.
-- Aviso **antes** de vencer (push/notificación existente) + al vencer:
-  "Renovala en 1 toque" — nunca un simple "se borró". La renovación re-entra
-  por moderación solo si cambió el contenido; si es idéntica, directo.
+**Falta:**
+1. El **aviso antes de vencer** (a 2 días) y al vencer. Sin esto la
+   renovación depende de que el prestador entre a mirar por casualidad, y
+   ahí es donde se pierden. Hay dos caminos y conviene decidirlo antes:
+   un cron/Edge Function que barra vencimientos (no existe hoy para esto),
+   o calcularlo al vuelo cuando el prestador abre la app (más barato, pero
+   sólo avisa a quien ya entró — que es justo el que menos lo necesita).
+2. Que el estado `'vencida'` se materialice en la base, hoy es sólo lógico.
+   No hace falta para funcionar; sí para poder consultar "cuántas
+   vencieron sin renovar", que es la métrica del negocio.
+3. Renovación en 1 toque cuando el contenido no cambió: hoy tiene que
+   editar y reenviar. Decidir si una re-publicación idéntica puede saltear
+   la moderación (ya se aprobó ese contenido una vez).
 
-## Fase 6 · Monetización (encendido después, como banners)
+## Fase 6 · Monetización — ⏸️ PENDIENTE
 
-- Gating real por plan cuando los pagos se enciendan (los límites ya quedan
-  escritos en Fase 1; esto es apagar la etapa fundadora, no desarrollo).
-- **Impulsar**: compra suelta desde el slot — `crear-preferencia` con
-  `ref` de la publicación + rama en `webhook-mp` que setea `impulso_hasta`.
-  Copiar el circuito del banner **incluyendo el ref en metadata** (el bug
-  que ya nos comimos una vez).
-- Toggle del admin para la venta de impulsos, separado del flag general.
+- Gating real por plan al encender los pagos. **No es desarrollo**: los
+  límites ya están escritos en `planes_limites` (base 1/7d, plus 3/15d,
+  pro 6/30d) y `plan_para_limites()` los aplica; hoy la etapa fundadora le
+  da a todos los de plus. Encender pagos activa la diferenciación sola.
+- **Impulsar**: compra suelta desde el slot. La columna `impulso_hasta` ya
+  existe y el feed **ya ordena por ella** (los impulsados primero), así que
+  falta sólo el cobro: `crear-preferencia` con `ref` de la publicación +
+  rama en `webhook-mp` que setea la fecha. Copiar el circuito del banner
+  **incluyendo el `ref` en metadata** — ese es el bug que ya nos comimos una
+  vez: el ref se validaba y no se mandaba, el webhook no recibía nada y el
+  pago quedaba sin efecto.
+- Toggle del admin para la venta de impulsos, separado del flag general
+  (mismo criterio que banners: se puede tener la feature sin vender).
+- `pub_destacados_mes` ya está en `planes_limites` y hoy no se usa: es el
+  cupo de impulsos incluidos por plan.
 
-## Fase 7 · Métricas visibles
+## Fase 7 · Métricas visibles — ⏸️ PENDIENTE
 
-- En cada slot: vistas, 👍, clics de contacto, solicitudes, conversión.
-- Barra de métricas del detalle del prestador (como el bosquejo).
-- Fuente: los RPCs de Fase 1. Si más adelante se agregan vistas a las
-  publicaciones de vecinos (pedido anotado), usar **la misma mecánica**.
+**Ya se muestran** en cada slot del panel: 👁 vistas, 👍 likes, 👆 clics.
+Los datos son honestos: el RPC excluye a cualquier cuenta prestador y
+deduplica por día.
+
+**Falta:**
+1. **Solicitudes** — cuántos de esos clics terminaron en un pedido dirigido
+   de verdad. Es la métrica que más importa y hoy no se cuenta: el clic se
+   registra al tocar Contactar, pero el vecino puede abandonar el alta. Se
+   saca contando `pedidos` con `dirigido_a` = ese prestador posteriores al
+   clic; conviene guardar la publicación de origen en el pedido para poder
+   atribuirlo bien.
+2. **Conversión** (clics ÷ vistas). Ojo con el timing: con el marketplace
+   arrancando esto va a decir 0% durante semanas, y mostrarle eso a alguien
+   que paga desmotiva. Mismo criterio que se usó para postergar "Actividad
+   reciente": mostrarla recién con un mínimo de vistas.
+3. La barra de métricas del detalle (como el bosquejo), que hoy no existe.
 
 ## Transversal
 
