@@ -106,6 +106,33 @@ async function aceptarTycSiAparece(page, timeout = 5000) {
   await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
 }
 
+/** Scrollea al fondo la hoja de un modal tipo bottom-sheet y toca un control.
+ *
+ *  `.zona-modal` tiene `max-height:90%` y `overflow-y:auto`, y el botón de
+ *  acción es siempre el ÚLTIMO elemento: con la lista llena arranca fuera de
+ *  la parte visible del contenedor. Un usuario scrollea y llega.
+ *
+ *  `scrollIntoViewIfNeeded()` de Playwright NO alcanza acá: reporta "done
+ *  scrolling" sin mover el contenedor, y el click se pasa el timeout entero
+ *  reintentando contra `.phone`. Medido: con la hoja sin scrollear el botón
+ *  queda en y=895 y `elementFromPoint` no lo encuentra; con `scrollTop` a
+ *  mano queda en y=636 y devuelve el BUTTON.
+ *
+ *  No alcanza con scrollear y después usar `locator.click()`: click() hace su
+ *  PROPIO scrollIntoViewIfNeeded y revierte el scroll antes de hit-testear.
+ *  Por eso el click se dispara desde el DOM. Acá no tapa nada —está medido
+ *  que el control es alcanzable de verdad una vez scrolleado— y el onclick
+ *  del HTML se ejecuta igual. */
+async function tocarEnLaHoja(page, selectorModal, selectorBoton) {
+  await page.evaluate(([sm, sb]) => {
+    const hoja = document.querySelector(sm + ' .zona-modal');
+    if (hoja) hoja.scrollTop = hoja.scrollHeight;
+    const btn = document.querySelector(sb);
+    if (!btn) throw new Error('no se encontró ' + sb);
+    btn.click();
+  }, [selectorModal, selectorBoton]);
+}
+
 /** Atraviesa el modal "¿En qué comunidad vivís?" eligiendo "Ahora no".
  *
  *  `entrarAVecinos()` lo interpone cuando `perfiles.zona` no es una comunidad
@@ -114,10 +141,25 @@ async function aceptarTycSiAparece(page, timeout = 5000) {
  *  la cuenta, así el test es repetible y no le cambia el mercado a una cuenta
  *  que otros specs usan. */
 async function omitirComunidadSiAparece(page, timeout = 3000) {
-  const modal = page.locator('#modal-comunidad');
-  try { await modal.waitFor({ state: 'visible', timeout }); } catch { return; }
-  await page.locator('#modal-comunidad button', { hasText: /ahora no/i }).click();
-  await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+  // Se espera por la clase `.show`, NO por state:'visible'. Estos overlays se
+  // ocultan con opacity:0 + pointer-events:none, no con display:none, y la
+  // clase base ya trae display:flex e inset:0. Playwright ignora la opacidad
+  // al decidir visibilidad: mientras tenga caja lo considera visible, así que
+  // `state:'visible'` da verde con el modal CERRADO. El helper creía
+  // encontrarlo siempre, tocaba un botón de un modal que nadie abrió y después
+  // se colgaba esperando que "se ocultara" algo que nunca se mostró.
+  const modal = page.locator('#modal-comunidad.show');
+  try { await modal.waitFor({ state: 'attached', timeout }); } catch { return; }
+  // abrirModalComunidad() muestra la hoja ANTES de terminar de cargar las
+  // comunidades (hace classList.add('show') y recién después await
+  // listarComunidades()). Tocar "Ahora no" en esa ventana dispara el
+  // callback de continuación con el modal a medio armar y la navegación
+  // queda en un estado raro. Esperar a que la lista esté cierra la carrera.
+  await page.locator('#comunidad-list .zona-option').first()
+    .waitFor({ state: 'attached', timeout: 10000 }).catch(() => {});
+  await tocarEnLaHoja(page, '#modal-comunidad', '#modal-comunidad button[onclick*="omitirComunidad"]');
+  // Cerrarse acá es perder la clase `.show`, no volverse display:none.
+  await modal.waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
 }
 
 /** Completa el modal "Necesitamos tu teléfono" que `npFinalizar()` interpone
@@ -127,11 +169,14 @@ async function omitirComunidadSiAparece(page, timeout = 3000) {
  *  (una cuenta por teléfono). Por eso se pasa uno distinto por cuenta en vez
  *  de un fijo compartido, que haría fallar al segundo test que lo use. */
 async function pasarGateTelefono(page, numero, timeout = 3000) {
-  const modal = page.locator('#modal-telefono');
-  try { await modal.waitFor({ state: 'visible', timeout }); } catch { return false; }
+  // Por `.show` y no por state:'visible' — ver la nota en
+  // omitirComunidadSiAparece: estos overlays se ocultan con opacity, y para
+  // Playwright están "visibles" incluso cerrados.
+  const modal = page.locator('#modal-telefono.show');
+  try { await modal.waitFor({ state: 'attached', timeout }); } catch { return false; }
   await page.locator('#tel-gate-input').fill(numero);
-  await page.locator('#tel-gate-btn').click();
-  await modal.waitFor({ state: 'hidden', timeout: 10000 });
+  await tocarEnLaHoja(page, '#modal-telefono', '#tel-gate-btn');
+  await modal.waitFor({ state: 'detached', timeout: 10000 });
   return true;
 }
 

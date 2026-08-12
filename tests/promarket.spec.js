@@ -231,14 +231,25 @@ test.describe('PM-2 · Feed', () => {
     // pregunta la comunidad, ni siquiera llegaba.
     await page.locator('#nb-mercado').click();
     await omitirComunidadSiAparece(page);
-    const portada = page.locator('#s-vecinos-portada.active');
-    if (await portada.isVisible().catch(() => false)) {
+    // La portada se muestra una vez por día por cuenta, así que puede tocar
+    // o no. Hay que ESPERAR a que se defina cuál de las dos pantallas quedó
+    // activa: un isVisible() instantáneo se resuelve antes de que termine la
+    // cadena async de entrarAVecinos y siempre daba "no hay portada".
+    await page.waitForFunction(() => {
+      const a = [...document.querySelectorAll('.screen.active')].map(s => s.id);
+      return a.includes('s-vecinos-portada') || a.includes('s-mercado');
+    }, { timeout: 15000 });
+    if (await page.locator('#s-vecinos-portada.active').count()) {
       await page.locator('#s-vecinos-portada button').first().click();
     }
     await expect(page.locator('#s-mercado')).toHaveClass(/active/, { timeout: 10000 });
+    // Se espera contenido Y que no sea el spinner. Pedir sólo "que no diga
+    // Cargando" lo cumple un feed VACÍO, así que la espera terminaba antes de
+    // que se pintara nada y el assert de abajo leía innerHTML en cero — el
+    // test se caía por su propia condición de salida, no por un feed roto.
     await page.waitForFunction(() => {
       const f = document.getElementById('mkt-feed');
-      return f && !f.textContent.includes('Cargando');
+      return f && f.innerHTML.length > 0 && !f.textContent.includes('Cargando');
     }, { timeout: 15000 });
 
     const html = await page.locator('#mkt-feed').innerHTML();
