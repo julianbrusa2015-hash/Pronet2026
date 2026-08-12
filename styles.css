@@ -1994,6 +1994,16 @@
   .mkt-sec.on { background: var(--white); color: var(--blue); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .mkt-sec:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 
+  /* Servicios / Mercado va en CELESTE, más claro que el azul pleno del
+     selector de origen que viene abajo. Los dos controles están apilados y
+     hacen cosas distintas: el de arriba elige QUÉ mirás (servicios o
+     productos), el de abajo DE QUIÉN. La intensidad del color ordena esa
+     jerarquía — el de abajo pesa más porque es el que cambia la fuente. */
+  #mkt-secciones .mkt-sec.on {
+    background: #CFE0FF; color: var(--blue-d);
+    box-shadow: none;
+  }
+
   /* ── Origen del aviso: vecinos ↔ prestadores ──
      Va apilado justo debajo del selector de sección y con la misma forma, así
      que con el mismo estilo parecían el mismo control repetido dos veces.
