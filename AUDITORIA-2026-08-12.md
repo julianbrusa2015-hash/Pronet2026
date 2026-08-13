@@ -9,7 +9,15 @@ prestador, no por la Management API — esa saltea RLS y da falsos positivos.
 
 ## Hallazgos a corregir
 
-### 1 · Buckets públicos sin límite de tamaño ni lista de tipos — MEDIO
+### 1 · Buckets públicos sin límite de tamaño ni lista de tipos — ✅ CERRADO 2026-08-12
+
+> **Corregido el mismo día.** Los cinco buckets quedaron en 10 MB y allowlist
+> `image/jpeg, image/png, image/webp, image/heic, image/heif`. SQL en
+> `supabase-buckets-limites.sql`. Verificado desde el cliente real: el SVG con
+> `<script>` y el `text/html` rebotan con 415, un jpeg de 12 MB rebota con 413,
+> y una foto normal sigue subiendo. Se eligió 10 MB y no 5 porque la foto más
+> grande ya subida pesaba 4,3 MB — con 5 MB una foto de celular quedaba al
+> filo. Lo que sigue es el hallazgo original.
 
 | bucket | público | límite | tipos permitidos |
 |---|---|---|---|
@@ -144,8 +152,9 @@ cambiazo después de la moderación.
 
 ---
 
-## Recomendación
+## Estado
 
-Lo único que haría ya es el **punto 1** (límites de bucket), porque es
-configuración, no toca código, y el riesgo de costo es el más concreto. El
-punto 2 es una tarde de trabajo cuidadoso y no urge.
+El **punto 1 quedó cerrado el mismo día** (ver la nota arriba). Queda abierto el
+**punto 2**, que es una tarde de trabajo cuidadoso —hay que revisar función por
+función si alguna depende de `extensions`— y no urge, porque está verificado que
+hoy no es explotable.
