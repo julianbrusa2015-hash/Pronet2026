@@ -57,7 +57,37 @@ Corrección sugerida (es configuración de bucket, no toca código):
 - Ojo antes de aplicar: si hoy alguien sube HEIC desde iPhone a `avatares`,
   una allowlist sin `image/heic` lo rompe. Hay que decidir si se incluye.
 
-### 2 · 23 funciones SECURITY DEFINER sin `search_path` fijo — BAJO (deuda)
+### 2 · 23 funciones SECURITY DEFINER sin `search_path` fijo — ✅ CERRADO 2026-08-12
+
+> **Corregido.** SQL en `supabase-search-path.sql`, ya aplicado. Quedaron **90
+> funciones** con `search_path = public, pg_temp` y **cero sin fijar**.
+>
+> Se corrigieron más de 23 porque al mirarlo de cerca aparecieron dos cosas: las
+> otras 67 ya tenían `search_path=public` pero **les faltaba `pg_temp`**, y ese
+> detalle importa — si no se lo nombra, Postgres busca `pg_temp` *antes* que
+> `pg_catalog` para resolver nombres de tabla, y crear tablas temporales sí está
+> permitido para `authenticated`. Nombrarlo último lo deja último. (Para nombres
+> de función `pg_temp` nunca se consulta, así que el hueco era sólo de tablas.)
+>
+> `rls_auto_enable` quedó **sin tocar** a propósito: está en `pg_catalog` porque
+> es un event trigger de DDL que sólo usa catálogo; agregarle `public` sería
+> ampliarle el camino, justo lo contrario de lo que busca el cambio.
+>
+> La precaución sobre pgcrypto que figuraba abajo **resultó infundada**: se
+> revisó una por una y ninguna usa `crypt()` ni `uuid_generate_v4()`. El PIN de
+> admin compara texto plano. `pg_trgm` y `unaccent`, que sí se usan, viven en
+> `public`.
+>
+> Verificado desde el cliente real después del cambio: `es_admin`, `mi_perfil`,
+> `mi_prestador_id`, `plan_para_limites`, `buscar_prestadores`,
+> `contar_propuestas_pedido`, `fn_verificar_pin_admin` y `verificar_rate_limit`
+> responden OK; las lecturas de `perfiles`, `pedidos`, `publicaciones_prestador`
+> y `notificaciones` (policies que dependen de `es_admin()`) siguen andando; y
+> **un registro real creó su perfil correctamente**, que era el riesgo mayor —
+> `fn_handle_new_user` es el trigger de alta y si se rompía nadie podía crear
+> cuenta. El usuario de prueba se borró.
+>
+> Lo que sigue es el hallazgo original.
 
 Entre ellas `es_admin` y `fn_verificar_pin_admin`, que son las dos más
 sensibles. Todas otorgadas a `authenticated`/`anon`/`PUBLIC`.
@@ -154,7 +184,18 @@ cambiazo después de la moderación.
 
 ## Estado
 
-El **punto 1 quedó cerrado el mismo día** (ver la nota arriba). Queda abierto el
-**punto 2**, que es una tarde de trabajo cuidadoso —hay que revisar función por
-función si alguna depende de `extensions`— y no urge, porque está verificado que
-hoy no es explotable.
+**Los dos puntos quedaron cerrados el mismo día.** No hay hallazgos abiertos de
+esta auditoría.
+
+Para la próxima revisión, la consulta que deja el tablero en cero:
+
+```sql
+select p.proname, coalesce(array_to_string(p.proconfig,','),'SIN search_path')
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname = 'public' and p.prosecdef
+   and (p.proconfig is null or not p.proconfig @> array['search_path=public, pg_temp'])
+   and p.proname <> 'rls_auto_enable';
+```
+
+Si devuelve filas, hay funciones nuevas sin fijar: volver a correr
+`supabase-search-path.sql`, que es idempotente.
