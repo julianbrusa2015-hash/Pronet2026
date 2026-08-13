@@ -133,7 +133,17 @@
     min-height: 100dvh;
     overscroll-behavior: none;
     /* FIX responsive: el centrado ahora lo hace margin:auto en .phone (seguro, no recorta) */
+    /* Una palabra larga o una URL pegada por el usuario necesitaba 526px en una
+       caja de 202px: no aparecía scroll porque .screen tiene overflow-x hidden,
+       así que el texto se cortaba en silencio. Se hereda a todo, incluido lo que
+       arma app.js con estilos inline. 'break-word' y no 'anywhere' a propósito:
+       no cambia el tamaño intrínseco, así que no mueve ningún layout existente. */
+    overflow-wrap: break-word;
   }
+
+  /* Red de seguridad para imágenes. Sin height:auto a propósito: PRONET usa
+     mucho alto fijo + object-fit:cover, y forzar auto deformaría esas cajas. */
+  img, video, canvas, svg { max-width: 100%; }
 
   /* ── Phone ── */
   .phone {
@@ -477,6 +487,12 @@
     display: flex; gap: 10px; align-items: center;
   }
   .back-btn { cursor: pointer; flex-shrink: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  /* Un input dentro de un flex row no baja de su ancho intrínseco, porque
+     min-width vale 'auto' para los items de flex. Resultado: el input se
+     plantaba en 241px y empujaba al botón "Mapa" fuera de la fila — 77px que
+     .screen recortaba en silencio. Va sólo sobre el input a propósito: si se
+     aplica a todos los hijos, el .back-btn pierde sus 44px de área táctil. */
+  .search-header > input { min-width: 0; }
   .search-input {
     flex: 1; background: var(--surface); border: 1.5px solid var(--border);
     border-radius: 12px; padding: 9px 14px; font-size: 16px; color: var(--ink);
@@ -1149,6 +1165,9 @@
     background: var(--white); border-top: 1px solid var(--border);
     padding: 10px 14px 24px; display: flex; gap: 8px; align-items: center; flex-shrink: 0;
   }
+  /* Mismo caso que .search-header: el campo de mensaje no achicaba y empujaba
+     el botón de enviar 34px fuera de la fila. */
+  .chat-footer > input, .chat-footer > textarea { min-width: 0; }
   .chat-input {
     flex: 1; background: var(--surface); border: 1.5px solid var(--border);
     border-radius: 22px; padding: 10px 16px; font-size: 16px; color: var(--ink);
@@ -2119,6 +2138,13 @@
     width: 6px; height: 6px; border-radius: 50%;
     background: var(--border); border: none; padding: 0; cursor: pointer;
     transition: background .2s, width .2s;
+    position: relative;
+  }
+  /* El punto se ve de 6px pero se toca en 34px. Agrandar el punto en sí lo
+     volvería un botón, que no es la idea; esto agranda sólo el área sensible.
+     Sin el ::after había que acertarle a 6 píxeles con el dedo. */
+  .ads-dot::after {
+    content: ''; position: absolute; inset: -14px;
   }
   .ads-dot.on { background: var(--blue); width: 16px; border-radius: 3px; }
 
@@ -2576,7 +2602,9 @@
 
   /* Tabs */
   .loyalty-tabs { display:flex; background:white; border-bottom:1px solid var(--border); margin-top:14px; }
-  .lt { flex:1; padding:11px; text-align:center; font-size:12px; font-weight:600; color:var(--ink3); cursor:pointer; border-bottom:2px solid transparent; transition:all .15s; }
+  /* min-width:0 para que las 5 pestañas repartan el ancho en partes iguales.
+     Sin eso cada una se planta en el ancho de su texto y la última se sale. */
+  .lt { flex:1; min-width:0; padding:11px; text-align:center; font-size:12px; font-weight:600; color:var(--ink3); cursor:pointer; border-bottom:2px solid transparent; transition:all .15s; }
   .lt.on { color:var(--blue); border-bottom-color:var(--blue); }
 
   /* Acción card */
