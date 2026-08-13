@@ -372,6 +372,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-mercado') {
       const inp = document.getElementById('mkt-buscador');
       if (inp && !mktBusqueda) inp.value = '';
+      poblarSelectZonaMercado();
       const sel = document.getElementById('mkt-zona-select');
       if (sel) sel.value = mktZonaActiva || '';
       const alertaRow = document.getElementById('mkt-alerta-row');
@@ -5598,7 +5599,9 @@ document.addEventListener('focusin', (e) => {
     if (!cont) return;
     const hayFiltro = (mktBusqueda && mktBusqueda.trim()) ||
                       (mktFiltroActivo && mktFiltroActivo !== 'todos');
-    if (!hayFiltro || mktBarrioFiltro || mktOrigen !== 'vecino') {
+    // Dentro de un barrio no hay nada que resumir, y en el feed de
+    // prestadores contaría publicaciones de vecinos.
+    if (mktBarrioFiltro || mktOrigen !== 'vecino') {
       cont.style.display = 'none';
       return;
     }
@@ -5611,10 +5614,22 @@ document.addEventListener('focusin', (e) => {
     if (!filas.length) { cont.style.display = 'none'; return; }
 
     const totalVecinos = filas.reduce((n, f) => n + f.vecinos, 0);
+
+    // Sin filtro el resumen también sirve —"estoy viendo toda la zona y no
+    // sé cuánto hay"— pero sólo a partir de cierto número. Con el mercado
+    // arrancando, "1 vecino publicando" en la primera línea que ve alguien
+    // que entra es el cartel de que está vacío. Con filtro sí se muestra
+    // cualquier cantidad: ahí un número chico es una respuesta útil.
+    const MINIMO_SIN_FILTRO = 5;
+    if (!hayFiltro && totalVecinos < MINIMO_SIN_FILTRO) {
+      cont.style.display = 'none';
+      return;
+    }
+
     const ordenadas = [...filas].sort((a, b) => b.cantidad - a.cantidad);
     const que = (mktBusqueda && mktBusqueda.trim())
       ? '"' + escHTML(mktBusqueda.trim()) + '"'
-      : escHTML(nombreCategoriaMkt(mktFiltroActivo));
+      : (hayFiltro ? escHTML(nombreCategoriaMkt(mktFiltroActivo)) : '');
 
     // El índice y no el nombre en el onclick: los nombres de barrio los
     // edita el admin, y escHTML no protege adentro de un handler inline
@@ -5626,7 +5641,12 @@ document.addEventListener('focusin', (e) => {
     cont.innerHTML =
       '<div style="background:white;border:1px solid var(--border);border-radius:12px;padding:10px 12px">' +
         '<div style="font-size:12.5px;font-weight:700;color:var(--ink)">' +
-          totalVecinos + (totalVecinos === 1 ? ' vecino ofrece ' : ' vecinos ofrecen ') + que +
+          // Sin búsqueda ni categoría no hay un "ofrecen X": el texto pasa a
+          // decir cuántos están publicando, que es la pregunta de quien mira
+          // toda la zona sin buscar nada.
+          (hayFiltro
+            ? totalVecinos + (totalVecinos === 1 ? ' vecino ofrece ' : ' vecinos ofrecen ') + que
+            : totalVecinos + (totalVecinos === 1 ? ' vecino publicando' : ' vecinos publicando')) +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' +
           ordenadas.map((f, i) =>
@@ -5810,6 +5830,49 @@ document.addEventListener('focusin', (e) => {
     if (zonasArbolCache) return zonasArbolCache;
     zonasArbolCache = await PronetDB.listarZonasArbol().catch(() => []);
     return zonasArbolCache;
+  }
+
+  /** Llena el desplegable de zona de Entre Vecinos desde el catálogo.
+   *
+   *  Estaba escrito a mano en el HTML con 10 nombres, y el catálogo tiene 28:
+   *  faltaban los 17 barrios, así que no se podía filtrar por Araucarias
+   *  desde ahí. Una lista fija de algo que el admin edita en Parametrías se
+   *  desactualiza sola — pasó con los rubros de obra y pasó acá.
+   *
+   *  Los barrios van agrupados bajo su comunidad con <optgroup>: sueltos, 26
+   *  nombres en orden alfabético no dicen cuál pertenece a cuál, y el vecino
+   *  que busca "Araucarias" no sabe si está mirando Puertos o El Cantón. */
+  async function poblarSelectZonaMercado() {
+    const sel = document.getElementById('mkt-zona-select');
+    if (!sel || sel.dataset.poblado) return;
+    const arbol = await cargarZonasArbol();
+    if (!arbol.length) return;   // sin datos: queda sólo "📍 Zona"
+
+    const comunidades = arbol.filter(z => z.nivel === 2)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+    let html = '<option value="">📍 Zona</option>';
+    comunidades.forEach(c => {
+      const barrios = arbol
+        .filter(z => z.nivel === 3 && z.comunidad === c.nombre)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+      if (!barrios.length) {
+        html += '<option value="' + escHTML(c.nombre) + '">' + escHTML(c.nombre) + '</option>';
+        return;
+      }
+      html += '<optgroup label="' + escHTML(c.nombre) + '">';
+      // La comunidad entera primero: es lo que más se elige y quedaría
+      // escondida si sólo se listaran sus barrios.
+      html += '<option value="' + escHTML(c.nombre) + '">Todo ' + escHTML(c.nombre) + '</option>';
+      barrios.forEach(b => {
+        html += '<option value="' + escHTML(b.nombre) + '">' + escHTML(b.nombre) + '</option>';
+      });
+      html += '</optgroup>';
+    });
+
+    sel.innerHTML = html;
+    sel.dataset.poblado = '1';
+    sel.value = mktZonaActiva || '';
   }
 
   /** La comunidad y sus barrios: el conjunto de valores de
