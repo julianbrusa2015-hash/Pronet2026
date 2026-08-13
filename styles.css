@@ -1305,6 +1305,21 @@
     flex-shrink: 0; transition: background .15s;
   }
   .bell-btn:hover { background: var(--blue-s); }
+
+  /* Los tres íconos del encabezado miden 36px y están separados por 8px: chicos
+     y juntos, que es la receta del toque equivocado. El ::after los lleva a
+     44x44 —el mismo estándar que ya usa .back-btn— sin cambiar cómo se ven.
+     44 y no más: con los 8px de separación quedan pegados pero NO superpuestos,
+     que sería peor que el problema original.
+     Se dimensiona explícito y NO con inset negativo: inset se mide contra la
+     caja de padding, y como estos botones tienen borde de 1.5px, un inset:-4px
+     daba 41.33px y el borde de abajo quedaba fuera del área sensible. */
+  #ranking-btn, #bell-btn, #home-avatar { position: relative; }
+  #ranking-btn::after, #bell-btn::after, #home-avatar::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 44px; height: 44px; transform: translate(-50%, -50%);
+    border-radius: 50%;
+  }
   .bell-badge {
     position: absolute; top: -3px; right: -3px;
     width: 16px; height: 16px; border-radius: 50%;

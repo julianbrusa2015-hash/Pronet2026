@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v239'; // v239: auditoria responsive — texto largo ya no se corta, imagenes acotadas, puntos del carrusel tocables
+const CACHE_VERSION = 'pronet-v240'; // v240: area tactil de los tres iconos del encabezado de Inicio (36 -> 44px)
 
 const SHELL = [
   './',
