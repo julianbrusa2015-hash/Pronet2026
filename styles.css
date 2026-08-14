@@ -2931,3 +2931,64 @@
   z-index: 1;
   pointer-events: none;
 }
+
+  /* ══ SAFE AREA: va en la cabecera, no en la pantalla ══════════════════
+     El problema que arregla, visible en la PWA de iOS: .screen tenía
+     padding-top con el safe-area (~59px en iPhone). Pero .screen ES el
+     contenedor que scrollea, así que ese padding forma parte del área
+     desplazable: el contenido subía POR ENCIMA del encabezado y se veía en
+     esa banda, que además es transparente. En pantalla se leía como si el
+     encabezado flotara en el medio con contenido arriba y abajo.
+
+     La forma correcta es que la cabecera se meta ella misma debajo de la
+     barra de estado, con su propio fondo, y el contenido pase por atrás.
+     Por eso el safe-area pasa al padding-top de cada cabecera y sale del
+     padding de .screen.
+
+     El `top` de las cabeceras pasa de env(safe-area-inset-top) a 0: antes
+     compensaba el padding de .screen; sin ese padding, dejarlo las bajaría
+     otra vez. */
+
+  :root {
+    --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-top-fallback, 0px));
+  }
+
+  /* Orden deliberado: primero el caso general (que es el de hoy), después
+     el :has() lo anula donde hay cabecera. Si algún navegador no soporta
+     :has(), queda el comportamiento anterior en lugar de romperse. */
+  .screen { padding-top: var(--safe-top); }
+  .screen:has(> .appbar, > .search-header, > .chats-header, > .chat-header,
+              > .notif-header, > .nprop-header, > .ped-header, > .pub-header,
+              > .rank-header, > .edit-header) {
+    padding-top: 0;
+  }
+
+  /* .ped-header, .edit-header y .rank-header eran static: se iban con el
+     scroll en vez de quedarse. Ahora las diez se comportan igual. */
+  .appbar, .search-header, .chats-header, .chat-header, .notif-header,
+  .nprop-header, .ped-header, .pub-header, .rank-header, .edit-header {
+    position: sticky;
+    top: 0;
+    z-index: 9;
+  }
+
+  /* Cada una conserva su padding original + el safe-area. */
+  .appbar        { padding-top: calc(14px + var(--safe-top)); }
+  .search-header { padding-top: calc(12px + var(--safe-top)); }
+  .chats-header  { padding-top: calc(14px + var(--safe-top)); }
+  .chat-header   { padding-top: calc(12px + var(--safe-top)); }
+  .notif-header  { padding-top: calc(14px + var(--safe-top)); }
+  .nprop-header  { padding-top: calc(14px + var(--safe-top)); }
+  .ped-header    { padding-top: calc(14px + var(--safe-top)); }
+  .pub-header    { padding-top: calc(16px + var(--safe-top)); }
+  .rank-header   { padding-top: calc(20px + var(--safe-top)); }
+  .edit-header   { padding-top: calc(14px + var(--safe-top)); }
+
+  /* Inicio era `relative` para alojar el mapa y el degradado absolutos del
+     fondo. Sticky también crea contenedor para ellos, así que no cambia el
+     fondo, pero además deja el encabezado arriba en lugar de irse con el
+     scroll. Sube acá porque #s-home .appbar le gana en especificidad a la
+     regla general de más arriba.
+     #s-detalle-pedido NO se toca: ahí la pantalla no scrollea (overflow
+     hidden) sino un hijo, así que su cabecera ya queda fija por estructura. */
+  #s-home .appbar { position: sticky; top: 0; }
