@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v241'; // v241: safe-area de la PWA de iOS se aplicaba dos veces (env + parche JS)
+const CACHE_VERSION = 'pronet-v242'; // v242: el FAB de WhatsApp ya no tapa el boton de publicar y se esconde al bajar
 
 const SHELL = [
   './',

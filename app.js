@@ -15708,3 +15708,69 @@ document.addEventListener('focusin', (e) => {
       }
     });
   }
+
+  // ══ BOTÓN FLOTANTE DE WHATSAPP: cuándo estorba ═══════════════════════
+  // Dos problemas distintos con la misma solución de visibilidad:
+  //
+  // A) En s-mercado y s-chats hay otro botón flotante en la misma esquina.
+  //    Medido: el de WhatsApp pisaba 46x38px del "+" de publicar, y como
+  //    tiene z-index 200 contra 20, ganaba él — el vecino que quería
+  //    publicar terminaba abriendo WhatsApp. Se oculta en esas pantallas.
+  //    No se pierde nada: "Soporte por WhatsApp" ya está en el menú.
+  //
+  // B) En el resto queda sobre el contenido. Se esconde al bajar y vuelve
+  //    al subir, que es lo que hace cualquier app con un flotante.
+  (function () {
+    const PANTALLAS_CON_FAB_PROPIO = ['s-mercado', 's-chats'];
+    const UMBRAL = 8; // px de scroll antes de reaccionar, para no titilar
+
+    const fab = document.getElementById('wa-fab');
+    if (!fab) return;
+
+    let ocultoPorScroll = false;
+    let ultimoY = 0;
+
+    const pantallaActiva = () => document.querySelector('.screen.active');
+
+    function aplicar() {
+      const act = pantallaActiva();
+      const tieneFabPropio = act && PANTALLAS_CON_FAB_PROPIO.includes(act.id);
+      const ocultar = tieneFabPropio || ocultoPorScroll;
+      fab.style.opacity = ocultar ? '0' : '1';
+      fab.style.transform = ocultar ? 'translateY(20px) scale(.8)' : '';
+      // pointer-events es lo que evita que siga robando el toque mientras
+      // se desvanece: sin esto, el botón invisible sigue tapando al de abajo.
+      fab.style.pointerEvents = ocultar ? 'none' : '';
+      fab.setAttribute('aria-hidden', ocultar ? 'true' : 'false');
+    }
+
+    function alScrollear(e) {
+      const cont = e.target;
+      if (!cont || !cont.classList || !cont.classList.contains('screen')) return;
+      const y = cont.scrollTop;
+      const dif = y - ultimoY;
+      if (Math.abs(dif) < UMBRAL) return;
+      // Cerca del tope siempre visible: si no, arrancás la pantalla sin verlo.
+      ocultoPorScroll = y > 40 && dif > 0;
+      ultimoY = y;
+      aplicar();
+    }
+
+    // Las pantallas son las que scrollean, no el documento — por eso va en
+    // captura, que es la forma de escuchar el scroll de cualquiera de ellas.
+    document.addEventListener('scroll', alScrollear, true);
+
+    // Cambio de pantalla: goTo() agrega/saca la clase 'active'. Observarlo
+    // evita tener que meter mano adentro de goTo.
+    const obs = new MutationObserver(() => {
+      ocultoPorScroll = false;
+      ultimoY = pantallaActiva()?.scrollTop || 0;
+      aplicar();
+    });
+    document.querySelectorAll('.screen').forEach((s) =>
+      obs.observe(s, { attributes: true, attributeFilter: ['class'] })
+    );
+
+    fab.style.transition = 'opacity .2s, transform .2s';
+    aplicar();
+  })();
