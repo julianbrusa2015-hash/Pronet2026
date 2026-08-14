@@ -8949,6 +8949,12 @@ document.addEventListener('focusin', (e) => {
             '</div>' +
             '<div class="pa-row"><span class="pa-lbl">Orden</span>' +
               '<input id="mc-' + escHTML(c.slug) + '-orden" class="pa-in" style="width:70px;text-align:right" inputmode="numeric" value="' + escHTML(String(c.orden)) + '"></div>' +
+            // Sin esta línea el campo dice sólo "Orden" y no hay forma de
+            // deducir ni que el menor va primero ni por qué saltan de a 10.
+            '<div style="font-size:10.5px;color:var(--ink3);line-height:1.45;margin:2px 0 6px">' +
+              'Posición en los chips y en el selector al publicar: <b>el menor va primero</b>. ' +
+              'Van de a 10 para poder intercalar una categoría nueva sin renumerar las demás ' +
+              '(entre 10 y 20, poné 15).</div>' +
             '<div id="mc-' + escHTML(c.slug) + '-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:4px 0"></div>' +
             '<div style="display:flex;gap:8px">' +
               '<button onclick="guardarMktCatUI(\'' + escHTML(c.slug) + '\')" style="flex:1;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>' +
