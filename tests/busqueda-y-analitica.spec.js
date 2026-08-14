@@ -88,11 +88,21 @@ test.describe('C3 · Búsqueda — pantalla y controles', () => {
     }, { timeout: 15000 });
 
     await page.locator('#search-main').fill('zzzzzznoexistexxx');
-    await page.waitForTimeout(600); // debounce 400 ms + margen
 
-    // "Sin resultados" en el contenedor (texto inline, no el empty-state panel)
-    const texto = await page.locator('#search-results').textContent();
-    expect(texto).toMatch(/no encontramos|sin resultado|0 resultado/i);
+    // Antes esperaba 600 ms fijos —"debounce 400 + margen"—, dando por hecho
+    // que la consulta a producción vuelve en menos de 200 ms. En Edge llegaba
+    // justo, en WebKit no: leía "⏳ Buscando..." y daba rojo. No era el motor,
+    // era un reloj haciendo de aserción.
+    //
+    // Esperar a que NO haya spinner tampoco sirve, y es la trampa de este
+    // test: entre el fill y el disparo del debounce esa condición ya se
+    // cumple —el spinner de la carga inicial se fue hace rato— así que pasa
+    // de largo y lee la lista vieja, sin filtrar.
+    //
+    // La aserción que reintenta es la única forma correcta: espera al texto
+    // que buscamos, sin suponer cuándo aparece.
+    await expect(page.locator('#search-results'))
+      .toContainText(/no encontramos|sin resultado|0 resultado/i, { timeout: 15000 });
   });
 
   test('clicar una card de prestador navega a s-prof', async ({ page }) => {
