@@ -27,8 +27,12 @@ document.addEventListener('DOMContentLoaded', function() {
           else if (h <= 926) paddingTop = 47; // 12, 13, 14
           else paddingTop = 59;               // 15, 16, 17 Pro y futuros
         }
-        const screens = document.querySelector('.screens');
-        if (screens) screens.style.setProperty('padding-top', paddingTop + 'px', 'important');
+        // NO se toca .screens. El padding vive en .screen (ver styles.css), y
+        // escribirlo también acá lo aplicaba DOS veces: el env() del CSS más
+        // este, dejando ~118px de aire muerto arriba del encabezado en iPhone.
+        // Lo único que hace falta es publicar el valor estimado; el CSS lo
+        // combina con max(), así que nunca se suman.
+        document.documentElement.style.setProperty('--safe-top-fallback', paddingTop + 'px');
         console.log('[PWA] safe-area:', paddingTop + 'px (env resolvió:', safeTop + 'px)');
       };
       // Aplicar ahora y también después de que iOS termine de calcular el layout
@@ -14995,13 +14999,11 @@ document.addEventListener('focusin', (e) => {
     let host=document.getElementById('toast-host');
     if(!host){host=document.createElement('div');host.id='toast-host';host.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;width:min(92%,380px)';document.body.appendChild(host);}
     // Ajustar top según safe-area real (se recalcula en cada toast por si cambió)
-    if(window.navigator.standalone){
-      const screens=document.querySelector('.screens');
-      const pt=screens?parseInt(screens.style.paddingTop)||0:0;
-      host.style.top=(pt>0?(pt+8):59+8)+'px';
-    } else {
-      host.style.top='max(env(safe-area-inset-top,0px) + 8px, 14px)';
-    }
+    // Misma fórmula que .screen en styles.css: el mayor entre lo que reporta
+    // iOS y el respaldo estimado, nunca la suma. Antes esta rama leía el
+    // padding de .screens, que ya no se escribe, y caía siempre a un 59
+    // hardcodeado.
+    host.style.top='max(calc(max(env(safe-area-inset-top,0px), var(--safe-top-fallback,0px)) + 8px), 14px)';
     const t=document.createElement('div');
     t.style.cssText='background:var(--ink,#171B2D);color:white;border-radius:14px;padding:12px 14px 12px 16px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:fadeIn .25s ease;display:flex;align-items:center;gap:10px';
     const txt=document.createElement('span');txt.textContent=msg;txt.style.cssText='flex:1;cursor:'+(accion?'pointer':'default');

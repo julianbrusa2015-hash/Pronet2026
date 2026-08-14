@@ -68,9 +68,15 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
     height: calc(80px + env(safe-area-inset-bottom, 0px));
   }
-  /* .screen es position:absolute;inset:0 — el padding va acá, no en .screens */
+  /* .screen es position:absolute;inset:0 — el padding va acá, no en .screens.
+     El max() es lo que evita el bug que teníamos en la PWA de iOS: app.js
+     publica --safe-top-fallback con un valor estimado por si env() devuelve 0
+     (pasaba en iOS viejos al primer render). Antes ese respaldo se aplicaba
+     ADEMÁS del env(), no en su lugar, y los dos se sumaban. Con max() gana el
+     mayor y nunca se acumulan: si env() resuelve bien, el respaldo no hace
+     nada. */
   .screen {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: max(env(safe-area-inset-top, 0px), var(--safe-top-fallback, 0px));
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
   .pub-footer  { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
