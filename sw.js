@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v246'; // v246: la app nativa no registra el Service Worker (bucle de recargas)
+const CACHE_VERSION = 'pronet-v247'; // v247: en el login el boton de WhatsApp va arriba y deja de tapar Ingresar
 
 const SHELL = [
   './',

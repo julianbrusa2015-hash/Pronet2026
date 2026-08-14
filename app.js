@@ -15749,10 +15749,38 @@ document.addEventListener('focusin', (e) => {
 
     const pantallaActiva = () => document.querySelector('.screen.active');
 
+    // En el login el botón se va ARRIBA A LA DERECHA, sobre el hero oscuro.
+    // Abajo tapaba 1092px² de "Ingresar" y se quedaba con el toque: quien
+    // apuntaba al borde derecho del botón principal abría WhatsApp en vez de
+    // entrar. Y no se oculta y listo porque el que no puede entrar es
+    // justamente el que más necesita soporte: si el botón sólo existe
+    // adentro, esa persona se queda sin ningún canal.
+    const login = document.getElementById('login-screen');
+    const loginVisible = () => !!login &&
+      getComputedStyle(login).display !== 'none' &&
+      !login.classList.contains('hidden');
+
+    // El `bottom` original vive en el style inline del HTML, así que ponerlo
+    // en '' no lo "resetea": lo BORRA, y el botón se queda sin anclaje y
+    // aparece arriba de todo. Hay que guardarlo y volver a escribirlo.
+    const bottomOriginal = fab.style.bottom;
+
     function aplicar() {
       const act = pantallaActiva();
+      const enLogin = loginVisible();
       const tieneFabPropio = act && PANTALLAS_CON_FAB_PROPIO.includes(act.id);
-      const ocultar = tieneFabPropio || ocultoPorScroll;
+      // El escondido por scroll no aplica en el login: ahí está arriba y no
+      // molesta, y esconderlo justo cuando alguien busca ayuda sería peor.
+      const ocultar = !enLogin && (tieneFabPropio || ocultoPorScroll);
+
+      if (enLogin) {
+        fab.style.top = 'calc(var(--safe-top, 0px) + 14px)';
+        fab.style.bottom = 'auto';
+      } else {
+        fab.style.top = '';
+        fab.style.bottom = bottomOriginal;
+      }
+
       fab.style.opacity = ocultar ? '0' : '1';
       fab.style.transform = ocultar ? 'translateY(20px) scale(.8)' : '';
       // pointer-events es lo que evita que siga robando el toque mientras
@@ -15784,6 +15812,9 @@ document.addEventListener('focusin', (e) => {
       ultimoY = pantallaActiva()?.scrollTop || 0;
       aplicar();
     });
+    // El login también: se muestra y se oculta con 'class' y con 'style', y de
+    // eso depende si el botón va arriba o abajo.
+    if (login) obs.observe(login, { attributes: true, attributeFilter: ['class', 'style'] });
     document.querySelectorAll('.screen').forEach((s) =>
       obs.observe(s, { attributes: true, attributeFilter: ['class'] })
     );
