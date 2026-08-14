@@ -1280,7 +1280,13 @@
      margen absorbe el espacio sobrante; si es más largo que la
      pantalla, el paso crece con normalidad y .screen scrollea. */
   #s-nuevo-pedido { padding-bottom: 0; }
-  #s-nuevo-pedido > div { min-height: 100%; display: flex; flex-direction: column; }
+  /* El :not() es por el banner de recontratación, que es hermano de los pasos
+     y no un paso. Sin excluirlo se comía las tres reglas: min-height:100% lo
+     estiraba a toda la pantalla, y flex-direction:column hacía que el div
+     interno con flex:1 —pensado para ocupar el ancho sobrante al lado del
+     emoji— ocupara el ALTO. Quedaba el 🔁 arriba, el texto estirado 583px y
+     "Quitar" al fondo de la pantalla. */
+  #s-nuevo-pedido > div:not(#np-dirigido-banner) { min-height: 100%; display: flex; flex-direction: column; }
   #s-nuevo-pedido > div > .pub-footer { margin-top: auto; }
 
   /* Detalle pedido: header fijo arriba, footer fijo abajo, contenido scrollea */

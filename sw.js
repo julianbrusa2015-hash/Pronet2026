@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v244'; // v244: el safe-area pasa a las cabeceras — el contenido ya no sube por encima del encabezado
+const CACHE_VERSION = 'pronet-v245'; // v245: el banner de recontratacion se estiraba a toda la pantalla
 
 const SHELL = [
   './',
