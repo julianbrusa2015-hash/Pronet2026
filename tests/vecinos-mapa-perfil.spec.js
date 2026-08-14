@@ -106,9 +106,23 @@ test.describe('VP-1 · Comunidad del vecino en Editar perfil', () => {
 test.describe('VP-2 · Resumen de búsqueda por barrio', () => {
   test.use({ storageState: sesionVecino });
 
-  test('sin filtro no se muestra', async ({ page }) => {
+  // Este test afirmaba que sin filtro el resumen NUNCA se muestra. Dejó de
+  // ser cierto en v238: sin filtro aparece a partir de 5 vecinos publicando
+  // (abajo de eso, "1 vecino publicando" en la primera línea es el cartel de
+  // que el mercado está vacío). Ahora verifica la regla y no un resultado
+  // fijo, así no se vuelve a pudrir cuando cambien los datos de producción.
+  test('sin filtro sólo se muestra a partir de 5 vecinos', async ({ page }) => {
     await entrarAlMercado(page);
-    await expect(page.locator('#mkt-resumen')).toBeHidden();
+    const totalVecinos = await page.evaluate(async () => {
+      const filas = await PronetDB.contarPublicacionesPorBarrio({
+        categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
+        busqueda: '', zona: mktZonaActiva,
+      });
+      return filas.reduce((n, f) => n + f.vecinos, 0);
+    });
+    const resumen = page.locator('#mkt-resumen');
+    if (totalVecinos < 5) await expect(resumen).toBeHidden();
+    else await expect(resumen).toBeVisible();
   });
 
   test('con búsqueda aparece y cuenta VECINOS, no publicaciones', async ({ page }) => {
@@ -161,7 +175,9 @@ test.describe('VP-2 · Resumen de búsqueda por barrio', () => {
     const hayToggle = await page.locator('#mkt-origen').isVisible().catch(() => false);
     test.skip(!hayToggle, 'la feature de avisos de prestadores está apagada');
     await buscarEnMercado(page, 'a');
-    await page.locator('#mkt-origen .mkt-sec').nth(1).click();  // Prestadores
+    // El selector era '.mkt-sec', que nunca existió en este toggle: quedó de
+    // antes de rehacerlo como interruptor. Las dos opciones son '.mo-lbl'.
+    await page.locator('#mkt-origen .mo-lbl').nth(1).click();  // Prestadores
     await page.waitForTimeout(3000);
     // Contaría publicaciones de VECINOS por barrio, que no es lo que está
     // abajo en este origen.

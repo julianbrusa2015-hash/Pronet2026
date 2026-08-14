@@ -70,5 +70,22 @@ module.exports = defineConfig({
       use: { ...devices['Desktop Edge'], channel: 'msedge' },
       dependencies: ['setup'],
     },
+    // WebKit es el motor de Safari, o sea el único que la app usa en iPhone y
+    // que desde Windows no se puede probar de ninguna otra forma. msedge es
+    // Blink, igual que Chrome del emulador Android: correr ahí sería repetir
+    // el mismo motor.
+    //
+    // Lo que SÍ agarra: diferencias de CSS y de APIs de JS entre motores.
+    // Lo que NO: nada específico de iOS —`navigator.standalone`, el modo PWA
+    // instalado, el safe area—. Esto es WebKit, no Safari de iPhone. El bug
+    // del safe-area de v241 no lo habría detectado; eso sólo lo ve un iPhone.
+    //
+    // No corre por defecto para no duplicar el tiempo de cada corrida:
+    //   npx playwright test --project=webkit
+    {
+      name: 'webkit',
+      use: { ...devices['iPhone 14'], isMobile: false, hasTouch: false },
+      dependencies: ['setup'],
+    },
   ],
 });
