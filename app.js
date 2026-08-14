@@ -370,7 +370,11 @@ document.addEventListener('focusin', (e) => {
     // Las filas de chips de la pantalla que se abre: el degradado que avisa
     // que hay más y la rueda del mouse para moverlas. Se hace acá y no en
     // cada render porque hay seis filas en la app y varias son estáticas.
-    document.getElementById(id)?.querySelectorAll('.filter-row')
+    // .rank-cats va incluida: es una fila de chips como las demás, pero no
+    // lleva la clase .filter-row, así que se quedaba sin la rueda del mouse
+    // ni el degradado que avisa que hay más a la derecha. Con el dedo scrollea
+    // igual —tiene overflow-x— pero con mouse no se movía.
+    document.getElementById(id)?.querySelectorAll('.filter-row, .rank-cats')
       .forEach(f => activarScrollChips(f));
     // Si va a Mercado, renderizar el feed (sin resetear búsqueda si vuelve desde chat)
     if (id === 's-mercado') {
@@ -600,6 +604,19 @@ document.addEventListener('focusin', (e) => {
       wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">No hay prestadores en esta categoría y zona.</div>';
       return;
     }
+
+    // Sin esta línea el orden parece roto: se ve un 5.0 debajo de un 3.8 y no
+    // hay forma de deducir por qué. El número grande es la CALIFICACIÓN, pero
+    // lo que ordena es el promedio bayesiano —que arranca a todos en 3 y los
+    // mueve según se acumulan reseñas—, así que una sola opinión casi no
+    // corre a nadie. Es deliberado: evita que el primero en conseguir una
+    // reseña de un conocido se quede con el podio.
+    const leyenda = document.createElement('div');
+    leyenda.style.cssText = 'padding:10px 14px 2px;font-size:11px;color:var(--ink3);line-height:1.45';
+    leyenda.innerHTML = 'El orden combina la <b>calificación</b> con la <b>cantidad de reseñas</b>: ' +
+      'una sola opinión pesa menos que varias sostenidas en el tiempo.';
+    wrap.appendChild(leyenda);
+
     const medallas = ['🥇','🥈','🥉'];
     const medallaBg = ['var(--gold-s)','#F1F5F9','#FEF3C7'];
     const medallaColor = ['var(--gold)','#64748B','#D97706'];
@@ -623,7 +640,7 @@ document.addEventListener('focusin', (e) => {
           <div class="rank-sub">${escHTML(p.subrubro || p.rubro || '')}</div>
           <div class="rank-score">
             ${stars ? `<div class="stars">${stars}</div>` : ''}
-            <span style="font-size:11px;color:var(--ink3)">${(p.resenas || 0) > 0 ? p.resenas + ' reseñas' : 'Sin reseñas aún'}</span>
+            <span style="font-size:11px;color:var(--ink3)">${(p.resenas || 0) > 0 ? p.resenas + (p.resenas === 1 ? ' reseña' : ' reseñas') : 'Sin reseñas aún'}</span>
           </div>
         </div>
         <div class="rank-right">

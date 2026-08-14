@@ -514,11 +514,16 @@
      invitación a deslizar. El degradado lo dice sin agregar controles.
      Las clases las pone activarScrollChips() según dónde esté el scroll,
      así el borde no se desvanece cuando ya no hay nada más de ese lado. */
-  .filter-row.mas-derecha  { mask-image: linear-gradient(to right, #000 84%, transparent 100%);
+  /* .rank-cats va incluida: es otra fila de chips, con otra clase, que se
+     había quedado sin el degradado y sin la rueda del mouse. */
+  .filter-row.mas-derecha,
+  .rank-cats.mas-derecha   { mask-image: linear-gradient(to right, #000 84%, transparent 100%);
                              -webkit-mask-image: linear-gradient(to right, #000 84%, transparent 100%); }
-  .filter-row.mas-izquierda { mask-image: linear-gradient(to left, #000 84%, transparent 100%);
+  .filter-row.mas-izquierda,
+  .rank-cats.mas-izquierda { mask-image: linear-gradient(to left, #000 84%, transparent 100%);
                               -webkit-mask-image: linear-gradient(to left, #000 84%, transparent 100%); }
-  .filter-row.mas-izquierda.mas-derecha {
+  .filter-row.mas-izquierda.mas-derecha,
+  .rank-cats.mas-izquierda.mas-derecha {
     mask-image: linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%);
   }
@@ -2998,3 +3003,12 @@
      #s-detalle-pedido NO se toca: ahí la pantalla no scrollea (overflow
      hidden) sino un hijo, así que su cabecera ya queda fija por estructura. */
   #s-home .appbar { position: sticky; top: 0; }
+
+  /* Entre Vecinos: "Ver más publicaciones" quedaba flotando en el medio
+     cuando hay pocas —o ninguna— publicación, con un hueco muerto hasta la
+     barra inferior. Con la pantalla como columna flex y margin-top:auto en
+     ese bloque, el botón se apoya abajo cuando sobra espacio y se comporta
+     normal cuando el feed es largo (auto resuelve a 0). Es el mismo patrón
+     que ya usa el pie del formulario de pedido. */
+  #s-mercado { display: flex; flex-direction: column; }
+  #mkt-ver-mas { margin-top: auto; }
