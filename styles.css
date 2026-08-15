@@ -3010,5 +3010,9 @@
      ese bloque, el botón se apoya abajo cuando sobra espacio y se comporta
      normal cuando el feed es largo (auto resuelve a 0). Es el mismo patrón
      que ya usa el pie del formulario de pedido. */
-  #s-mercado { display: flex; flex-direction: column; }
+  /* Sólo cuando está activa: sin el guardado, el id le gana en
+     especificidad a .screen.active y #s-mercado quedaba SIEMPRE en
+     display:flex, tapando cualquier pantalla que se abriera encima
+     (la portada de Entre Vecinos, por ejemplo) aunque no tuviera .active. */
+  #s-mercado.active { display: flex; flex-direction: column; }
   #mkt-ver-mas { margin-top: auto; }

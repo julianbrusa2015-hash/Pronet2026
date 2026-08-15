@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v252'; // v252: revert de Entre Vecinos al toggle original (previo a las solapas planas)
+const CACHE_VERSION = 'pronet-v253'; // v253: #s-mercado tapaba otras pantallas por un id sin .active en el CSS
 
 const SHELL = [
   './',
