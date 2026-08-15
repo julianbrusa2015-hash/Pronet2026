@@ -425,10 +425,10 @@
            La clase .mkt-sec se conserva: hereda el estilo y los tests que la
            usan siguen valiendo. -->
       <div id="mkt-secciones" class="mkt-secciones" role="tablist" aria-label="Qué estás mirando">
-        <button class="mkt-sec on" data-vista="vecino"     role="tab" aria-selected="true"  onclick="mktSetVista('vecino')">🏘️ Vecinos</button>
-        <button class="mkt-sec"    data-vista="prestador"  role="tab" aria-selected="false" onclick="mktSetVista('prestador')">🛠️ Prestadores</button>
-        <button class="mkt-sec"    data-vista="mercado"    role="tab" aria-selected="false" onclick="mktSetVista('mercado')">🛒 Mercado</button>
+        <button class="mkt-sec on" data-vista="vecino"   role="tab" aria-selected="true"  onclick="mktSetVista('vecino')">🛠️ Servicios</button>
+        <button class="mkt-sec"    data-vista="mercado"  role="tab" aria-selected="false" onclick="mktSetVista('mercado')">🛒 Mercado</button>
       </div>
+
 
       <!-- El interruptor Vecinos/Prestadores salió: ahora son dos de las tres
            pestañas de arriba. Era una banda entera de pantalla para un eje
@@ -497,7 +497,11 @@
            aclarar. -->
       <div id="mkt-ambito" style="display:none;align-items:center;gap:8px;margin:0 14px 12px;padding:9px 12px;background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:12px">
         <span style="font-size:14px">🏘️</span>
-        <span id="mkt-ambito-txt" style="flex:1;font-size:12px;font-weight:700;color:var(--blue);min-width:0"></span>
+        <!-- Con los dos botones de vista al lado, el nombre del barrio se
+             partía en dos renglones y engordaba la fila. Se recorta con
+             puntos suspensivos: el barrio se reconoce igual por el principio,
+             y la fila queda siempre de una línea. -->
+        <span id="mkt-ambito-txt" style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
         <button id="mkt-ambito-btn" onclick="mktToggleAmbito()"
           style="background:none;border:none;font-size:11.5px;font-weight:700;color:var(--blue);text-decoration:underline;cursor:pointer;font-family:'Inter',sans-serif;padding:0;flex-shrink:0"></button>
 
@@ -521,6 +525,16 @@
 
       <!-- Feed -->
       <div id="mkt-feed"></div>
+
+      <!-- Salida a los avisos de profesionales. NO es una pestaña: la pantalla
+           entera se llama "Entre Vecinos", así que poner "Vecinos" al mismo
+           nivel que "Prestadores" repetía el título y ponía a los
+           profesionales como si fueran vecinos. Va DESPUÉS del feed: primero
+           lo de los vecinos, que es de lo que trata la pantalla, y después la
+           opción de ir a lo otro.
+           Se dice "profesionales" y no "prestadores": prestador es la palabra
+           interna del sistema, profesional es la que usa la gente. -->
+      <button id="mkt-ir-prestadores" class="mkt-salida" onclick="mktAlternarProfesionales()" style="display:none"></button>
 
       <!-- Ver más -->
       <div id="mkt-ver-mas" style="display:none;padding:8px 14px 24px">

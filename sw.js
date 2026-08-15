@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v249'; // v249: Entre Vecinos con tres pestanias planas y los controles de vista sobre el feed
+const CACHE_VERSION = 'pronet-v250'; // v250: Entre Vecinos vuelve a Servicios y Mercado; profesionales pasa a ser una salida secundaria
 
 const SHELL = [
   './',

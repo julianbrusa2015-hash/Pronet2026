@@ -4611,15 +4611,26 @@ document.addEventListener('focusin', (e) => {
     const sel = document.getElementById('mkt-secciones');
     if (sel) {
       sel.style.display = soloServicios ? 'none' : 'flex';
-      // La vista activa sale de los dos ejes internos: Mercado es tipo
-      // producto, y dentro de Servicios manda el origen.
-      const vistaActiva = mktTipoActivo === 'producto' ? 'mercado' : mktOrigen;
+      // Profesionales NO es una pestaña: es una sub-vista de Servicios, así
+      // que estando ahí la pestaña activa sigue siendo Servicios.
+      const vistaActiva = mktTipoActivo === 'producto' ? 'mercado' : 'vecino';
       sel.querySelectorAll('.mkt-sec').forEach((b) => {
         const suya = b.dataset.vista;
-        if (suya === 'prestador') b.style.display = verPrestadores ? '' : 'none';
         b.classList.toggle('on', suya === vistaActiva);
         b.setAttribute('aria-selected', suya === vistaActiva ? 'true' : 'false');
       });
+    }
+
+    // La salida a profesionales: sólo dentro de Servicios y con el flag.
+    const salida = document.getElementById('mkt-ir-prestadores');
+    if (salida) {
+      const verSalida = verPrestadores && mktTipoActivo === 'servicio';
+      salida.style.display = verSalida ? 'flex' : 'none';
+      const enProfesionales = mktOrigen === 'prestador';
+      salida.textContent = enProfesionales
+        ? '← Volver a los avisos de vecinos'
+        : '🛠️ Ver profesionales de la zona →';
+      salida.classList.toggle('volver', enProfesionales);
     }
 
     const chips = document.getElementById('mkt-chips');
@@ -4829,6 +4840,19 @@ document.addEventListener('focusin', (e) => {
     renderMercado(true);
   }
   window.mktSetVista = mktSetVista;
+
+  /** El acceso a profesionales es de ida y vuelta con el mismo botón: no hay
+   *  pestaña propia donde "volver", así que el mismo control tiene que
+   *  ofrecer la salida. Si no, el vecino entra y queda sin camino de regreso
+   *  más que el botón atrás del sistema. */
+  function mktAlternarProfesionales() {
+    mktSetVista(mktOrigen === 'prestador' ? 'vecino' : 'prestador');
+    // Al volver de profesionales conviene ver el principio del feed de
+    // vecinos, no la posición donde se estaba antes de salir.
+    const p = document.getElementById('s-mercado');
+    if (p) p.scrollTop = 0;
+  }
+  window.mktAlternarProfesionales = mktAlternarProfesionales;
 
   // ══ CARRITO DE MERCADO ═════════════════════════════════════════════
   //
