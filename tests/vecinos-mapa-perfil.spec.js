@@ -38,13 +38,10 @@ async function entrarAlMercado(page, tipo = 'producto') {
   }
   await expect(page.locator('#s-mercado')).toHaveClass(/active/, { timeout: 10000 });
 
-  // Sección: se elige por data-vista y no por posición. Las pestañas pasaron
-  // de dos (Servicios/Mercado) a tres (Vecinos/Prestadores/Mercado), así que
-  // un índice fijo apuntaría a otra cosa según la versión.
-  const vista = tipo === 'producto' ? 'mercado' : 'vecino';
-  const seccion = page.locator(`#mkt-secciones .mkt-sec[data-vista="${vista}"]`);
-  if (await seccion.count()) {
-    await seccion.click();
+  // Sección: los botones son los del selector, no una variable.
+  const secciones = page.locator('#mkt-secciones .mkt-sec');
+  if (await secciones.count()) {
+    await secciones.nth(tipo === 'producto' ? 1 : 0).click();
     await page.waitForTimeout(2000);
   }
 
@@ -175,14 +172,12 @@ test.describe('VP-2 · Resumen de búsqueda por barrio', () => {
 
   test('no aparece en el feed de prestadores', async ({ page }) => {
     await entrarAlMercado(page, 'servicio');
-    // Profesionales no es una pestaña: es una salida que aparece DESPUÉS del
-    // feed de vecinos, porque la pantalla entera trata de vecinos. Si la
-    // feature está apagada, el botón no se muestra.
-    const salida = page.locator('#mkt-ir-prestadores');
-    const hayPrestadores = await salida.isVisible().catch(() => false);
-    test.skip(!hayPrestadores, 'la feature de avisos de prestadores está apagada');
+    const hayToggle = await page.locator('#mkt-origen').isVisible().catch(() => false);
+    test.skip(!hayToggle, 'la feature de avisos de prestadores está apagada');
     await buscarEnMercado(page, 'a');
-    await salida.click();
+    // El selector era '.mkt-sec', que nunca existió en este toggle: quedó de
+    // antes de rehacerlo como interruptor. Las dos opciones son '.mo-lbl'.
+    await page.locator('#mkt-origen .mo-lbl').nth(1).click();  // Prestadores
     await page.waitForTimeout(3000);
     // Contaría publicaciones de VECINOS por barrio, que no es lo que está
     // abajo en este origen.

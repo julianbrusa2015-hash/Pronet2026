@@ -395,11 +395,15 @@
           <div class="logo" style="font-size:17px">Entre Vecinos</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-          <!-- Formato del feed y mapa bajaron a la línea de ámbito, arriba
-               del feed: son controles de la LISTA, no de la pantalla, y acá
-               le comían el ancho al título, que quedaba partido en dos
-               renglones. El carrito se queda porque no es un control de
-               vista: lleva a otra pantalla. -->
+          <button id="mkt-toggle-formato" class="mkt-formato-btn" onclick="mktToggleFormato()" title="Cambiar formato del feed">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span id="mkt-formato-lbl">Fichas</span>
+          </button>
+          <button id="mkt-toggle-mapa" onclick="toggleMapaMercado()" title="Ver mapa"
+            style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--ink3);font-family:'Inter',sans-serif">
+            <svg id="mkt-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            <span id="mkt-toggle-lbl">Mapa</span>
+          </button>
           <!-- Sólo aparece con algo adentro: un carrito vacío permanente en
                la barra es ruido. -->
           <button id="mkt-carrito-btn" onclick="goTo('s-carrito')" aria-label="Ver carrito" style="display:none;position:relative;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;font-size:15px;font-family:'Inter',sans-serif">
@@ -418,22 +422,25 @@
 
       <!-- Las dos secciones. Para el prestador no se muestra: él sólo ve
            Servicios del Barrio (ver mktPintarSecciones en app.js). -->
-      <!-- Tres destinos planos en vez de dos ejes anidados (Servicios/Mercado
-           + interruptor Vecinos/Prestadores). "Prestadores" sólo existía
-           dentro de Servicios, así que anidarlo costaba una banda entera de
-           pantalla y un interruptor cuyo lado activo no se leía de un vistazo.
-           La clase .mkt-sec se conserva: hereda el estilo y los tests que la
-           usan siguen valiendo. -->
-      <div id="mkt-secciones" class="mkt-secciones" role="tablist" aria-label="Qué estás mirando">
-        <button class="mkt-sec on" data-vista="vecino"   role="tab" aria-selected="true"  onclick="mktSetVista('vecino')">🛠️ Servicios</button>
-        <button class="mkt-sec"    data-vista="mercado"  role="tab" aria-selected="false" onclick="mktSetVista('mercado')">🛒 Mercado</button>
+      <div id="mkt-secciones" class="mkt-secciones" role="tablist" aria-label="Sección de ProMarket">
+        <button class="mkt-sec on" role="tab" aria-selected="true"  onclick="mktSetTipo('servicio')">🛠️ Servicios</button>
+        <button class="mkt-sec"    role="tab" aria-selected="false" onclick="mktSetTipo('producto')">🛒 Mercado</button>
       </div>
 
-
-      <!-- El interruptor Vecinos/Prestadores salió: ahora son dos de las tres
-           pestañas de arriba. Era una banda entera de pantalla para un eje
-           que sólo aplicaba dentro de Servicios, y el lado activo no se leía
-           de un vistazo. -->
+      <!-- Origen del aviso, sólo dentro de Servicios: publicaciones de
+           vecinos o de prestadores. Es el mismo rubro, dos orígenes. Lo
+           muestra/oculta mktPintarSecciones() según el flag. -->
+      <div id="mkt-origen" class="mkt-origen" role="tablist" aria-label="Origen del aviso"
+           data-origen="vecino" style="display:none">
+        <!-- Las etiquetas van a los costados y son las que llevan la
+             semántica (role=tab): un interruptor solo dejaría una de las dos
+             opciones sin nombre visible. Las tres cosas son clickeables. -->
+        <button class="mo-lbl on" role="tab" aria-selected="true" onclick="mktSetOrigen('vecino')">🏘️ Vecinos</button>
+        <button class="mo-switch" onclick="mktToggleOrigen()" aria-hidden="true" tabindex="-1">
+          <span class="mo-knob"></span>
+        </button>
+        <button class="mo-lbl" role="tab" aria-selected="false" onclick="mktSetOrigen('prestador')">🛠️ Prestadores</button>
+      </div>
 
       <!-- Chips de categoría: cambian según la sección activa -->
       <div class="filter-row" id="mkt-chips"></div>
@@ -497,25 +504,9 @@
            aclarar. -->
       <div id="mkt-ambito" style="display:none;align-items:center;gap:8px;margin:0 14px 12px;padding:9px 12px;background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:12px">
         <span style="font-size:14px">🏘️</span>
-        <!-- Con los dos botones de vista al lado, el nombre del barrio se
-             partía en dos renglones y engordaba la fila. Se recorta con
-             puntos suspensivos: el barrio se reconoce igual por el principio,
-             y la fila queda siempre de una línea. -->
-        <span id="mkt-ambito-txt" style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+        <span id="mkt-ambito-txt" style="flex:1;font-size:12px;font-weight:700;color:var(--blue)"></span>
         <button id="mkt-ambito-btn" onclick="mktToggleAmbito()"
           style="background:none;border:none;font-size:11.5px;font-weight:700;color:var(--blue);text-decoration:underline;cursor:pointer;font-family:'Inter',sans-serif;padding:0;flex-shrink:0"></button>
-
-        <!-- Vista del feed: sólo íconos, como en cualquier plataforma que
-             alterna grilla y mapa. Con texto no entraban acá junto al nombre
-             del barrio en pantallas de 360px. -->
-        <button id="mkt-toggle-formato" class="mkt-vista-btn" onclick="mktToggleFormato()" title="Cambiar formato del feed" aria-label="Cambiar formato del feed">
-          <svg id="mkt-formato-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          <span id="mkt-formato-lbl" class="sr-only">Fichas</span>
-        </button>
-        <button id="mkt-toggle-mapa" class="mkt-vista-btn" onclick="toggleMapaMercado()" title="Ver mapa" aria-label="Ver en el mapa">
-          <svg id="mkt-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-          <span id="mkt-toggle-lbl" class="sr-only">Mapa</span>
-        </button>
       </div>
 
       <!-- Resumen de la búsqueda por barrio: "3 vecinos ofrecen pizza ·
@@ -525,16 +516,6 @@
 
       <!-- Feed -->
       <div id="mkt-feed"></div>
-
-      <!-- Salida a los avisos de profesionales. NO es una pestaña: la pantalla
-           entera se llama "Entre Vecinos", así que poner "Vecinos" al mismo
-           nivel que "Prestadores" repetía el título y ponía a los
-           profesionales como si fueran vecinos. Va DESPUÉS del feed: primero
-           lo de los vecinos, que es de lo que trata la pantalla, y después la
-           opción de ir a lo otro.
-           Se dice "profesionales" y no "prestadores": prestador es la palabra
-           interna del sistema, profesional es la que usa la gente. -->
-      <button id="mkt-ir-prestadores" class="mkt-salida" onclick="mktAlternarProfesionales()" style="display:none"></button>
 
       <!-- Ver más -->
       <div id="mkt-ver-mas" style="display:none;padding:8px 14px 24px">

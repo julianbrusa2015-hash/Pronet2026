@@ -4602,35 +4602,30 @@ document.addEventListener('focusin', (e) => {
     // El toggle de origen vive sólo en Servicios, con el flag prendido y
     // para quien NO es prestador: el prestador publica hacia este espacio,
     // no lo navega — su ventana es la vista previa de su panel.
-    // "Prestadores" es una pestaña más, pero sólo existe con el flag prendido
-    // y para quien NO es prestador: él publica hacia este espacio, no lo
-    // navega — su ventana es la vista previa de su panel.
-    const verPrestadores = !soloServicios && pubsPrestadorActivo();
-    if (!verPrestadores && mktOrigen === 'prestador') mktOrigen = 'vecino';
+    const origenSel = document.getElementById('mkt-origen');
+    const verOrigen = !soloServicios && mktTipoActivo === 'servicio' && pubsPrestadorActivo();
+    if (!verOrigen) mktOrigen = 'vecino';
+    if (origenSel) {
+      origenSel.style.display = verOrigen ? 'flex' : 'none';
+      // La pastilla que se desliza sale de este atributo (ver .mkt-origen en
+      // styles.css): mover un fondo entre dos botones distintos no se puede
+      // animar, así que la pastilla vive en el contenedor.
+      origenSel.dataset.origen = mktOrigen;
+      origenSel.querySelectorAll('.mo-lbl').forEach((b, i) => {
+        const suyo = i === 0 ? 'vecino' : 'prestador';
+        b.classList.toggle('on', suyo === mktOrigen);
+        b.setAttribute('aria-selected', suyo === mktOrigen ? 'true' : 'false');
+      });
+    }
 
     const sel = document.getElementById('mkt-secciones');
     if (sel) {
       sel.style.display = soloServicios ? 'none' : 'flex';
-      // Profesionales NO es una pestaña: es una sub-vista de Servicios, así
-      // que estando ahí la pestaña activa sigue siendo Servicios.
-      const vistaActiva = mktTipoActivo === 'producto' ? 'mercado' : 'vecino';
-      sel.querySelectorAll('.mkt-sec').forEach((b) => {
-        const suya = b.dataset.vista;
-        b.classList.toggle('on', suya === vistaActiva);
-        b.setAttribute('aria-selected', suya === vistaActiva ? 'true' : 'false');
+      sel.querySelectorAll('.mkt-sec').forEach((b, i) => {
+        const suyo = i === 0 ? 'servicio' : 'producto';
+        b.classList.toggle('on', suyo === mktTipoActivo);
+        b.setAttribute('aria-selected', suyo === mktTipoActivo ? 'true' : 'false');
       });
-    }
-
-    // La salida a profesionales: sólo dentro de Servicios y con el flag.
-    const salida = document.getElementById('mkt-ir-prestadores');
-    if (salida) {
-      const verSalida = verPrestadores && mktTipoActivo === 'servicio';
-      salida.style.display = verSalida ? 'flex' : 'none';
-      const enProfesionales = mktOrigen === 'prestador';
-      salida.textContent = enProfesionales
-        ? '← Volver a los avisos de vecinos'
-        : '🛠️ Ver profesionales de la zona →';
-      salida.classList.toggle('volver', enProfesionales);
     }
 
     const chips = document.getElementById('mkt-chips');
@@ -4809,8 +4804,14 @@ document.addEventListener('focusin', (e) => {
     requestAnimationFrame(pintar);
   }
 
-  // mktToggleOrigen() se eliminó junto con el interruptor: el origen ahora se
-  // elige con las pestañas de arriba, que llaman a mktSetVista().
+  /** La perilla del interruptor: alterna entre los dos lados. Las etiquetas
+   *  siguen eligiendo directo — tocar "Prestadores" estando ahí no hace
+   *  nada, pero tocar la perilla siempre cambia, que es lo que se espera de
+   *  un interruptor. */
+  function mktToggleOrigen() {
+    mktSetOrigen(mktOrigen === 'vecino' ? 'prestador' : 'vecino');
+  }
+  window.mktToggleOrigen = mktToggleOrigen;
 
   function mktSetTipo(tipo) {
     if (tipo === mktTipoActivo) return;
@@ -4822,37 +4823,6 @@ document.addEventListener('focusin', (e) => {
     renderMercado(true);
   }
   window.mktSetTipo = mktSetTipo;
-
-  /** Las tres pestañas de arriba. Traduce un destino plano —lo que el vecino
-   *  elige— a los dos ejes internos que ya existían (tipo + origen), que se
-   *  siguen usando en todo el resto del módulo.
-   *
-   *  Se mantienen mktSetTipo y mktSetOrigen porque los llama otro código
-   *  (por ejemplo el botón "Ver avisos de vecinos" del estado vacío). */
-  function mktSetVista(vista) {
-    const tipo   = vista === 'mercado' ? 'producto' : 'servicio';
-    const origen = vista === 'prestador' ? 'prestador' : 'vecino';
-    if (tipo === mktTipoActivo && origen === mktOrigen) return;
-    mktTipoActivo = tipo;
-    mktOrigen = origen;
-    mktFiltroActivo = 'todos';   // los catálogos no se comparten entre vistas
-    mktPintarSecciones();
-    renderMercado(true);
-  }
-  window.mktSetVista = mktSetVista;
-
-  /** El acceso a profesionales es de ida y vuelta con el mismo botón: no hay
-   *  pestaña propia donde "volver", así que el mismo control tiene que
-   *  ofrecer la salida. Si no, el vecino entra y queda sin camino de regreso
-   *  más que el botón atrás del sistema. */
-  function mktAlternarProfesionales() {
-    mktSetVista(mktOrigen === 'prestador' ? 'vecino' : 'prestador');
-    // Al volver de profesionales conviene ver el principio del feed de
-    // vecinos, no la posición donde se estaba antes de salir.
-    const p = document.getElementById('s-mercado');
-    if (p) p.scrollTop = 0;
-  }
-  window.mktAlternarProfesionales = mktAlternarProfesionales;
 
   // ══ CARRITO DE MERCADO ═════════════════════════════════════════════
   //
@@ -5577,30 +5547,15 @@ document.addEventListener('focusin', (e) => {
     const btn = document.getElementById('mkt-ambito-btn');
     // El barrio elegido en el mapa se muestra aunque el vecino no tenga
     // comunidad: si no, el feed quedaría filtrado sin que nada lo diga.
-    // La fila ya NO se oculta: además del ámbito lleva los botones de vista
-    // (grilla y mapa), que tienen que estar siempre. Lo que se muestra o se
-    // esconde ahora es el texto y su acción, no el contenedor.
-    cont.style.display = 'flex';
-
-    const mostrar = (hayTexto) => {
-      if (txt) txt.style.display = hayTexto ? '' : 'none';
-      if (btn) btn.style.display = hayTexto ? '' : 'none';
-      // Sin texto la fila queda sólo con los íconos: van a la derecha y el
-      // fondo azul del bloque sobra, así que se atenúa.
-      cont.style.background = hayTexto ? '' : 'transparent';
-      cont.style.border = hayTexto ? '' : 'none';
-      cont.style.justifyContent = hayTexto ? '' : 'flex-end';
-    };
-
     if (mktBarrioFiltro) {
-      mostrar(true);
+      cont.style.display = 'flex';
       if (txt) txt.textContent = 'Publicaciones en ' + mktBarrioFiltro;
       if (btn) { btn.textContent = 'Quitar filtro'; btn.setAttribute('onclick', 'mktQuitarBarrioFiltro()'); }
       return;
     }
     if (btn) btn.setAttribute('onclick', 'mktToggleAmbito()');
-    if (!comunidad) { mostrar(false); return; }
-    mostrar(true);
+    if (!comunidad) { cont.style.display = 'none'; return; }
+    cont.style.display = 'flex';
     if (txt) txt.textContent = mktAmpliado ? 'Viendo toda la zona' : 'Mercado de ' + comunidad;
     if (btn) btn.textContent = mktAmpliado ? 'Volver a mi comunidad' : 'Ver también otros barrios';
   }
