@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v250'; // v250: Entre Vecinos vuelve a Servicios y Mercado; profesionales pasa a ser una salida secundaria
+const CACHE_VERSION = 'pronet-v251'; // v251: bump para forzar cache bust en iOS con app.js cacheado viejo
 
 const SHELL = [
   './',
