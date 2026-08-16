@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v256'; // v256: modal-contacto vivía dentro de #s-chat-mercado y quedaba invisible al abrirse desde el chat de pedidos
+const CACHE_VERSION = 'pronet-v257'; // v257: PRONET Points sin rastros al apagar el flag — modal de primer trabajo, push, y textos de "boost" en Mi Perfil y Planes
 
 const SHELL = [
   './',

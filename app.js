@@ -254,6 +254,18 @@ document.addEventListener('focusin', (e) => {
     if (pedBanner && pedBanner.dataset.prestadorActivo === 'true') {
       pedBanner.style.display = FEATURES.bolsaTrabajo ? 'flex' : 'none';
     }
+
+    // El "boost" (loyalty_boost) mueve dos cosas a la vez: cuánto rinde el
+    // programa de puntos Y el ranking zonal. s-subs es Nivel 1 —siempre
+    // accesible, plan y pago no dependen de loyalty— así que estas dos
+    // filas no se ocultan con el flag apagado: sólo dejan de prometer
+    // puntos y canjes que no están.
+    const bulletBoost = document.getElementById('subs-bullet-boost-txt');
+    if (bulletBoost) bulletBoost.textContent = FEATURES.loyalty
+      ? 'El loyalty boost de Pro acumula puntos más rápido y desbloquea canjes exclusivos'
+      : 'El boost de Pro te posiciona más arriba en el ranking zonal';
+    const checkoutBoostLbl = document.getElementById('checkout-boost-lbl');
+    if (checkoutBoostLbl) checkoutBoostLbl.textContent = FEATURES.loyalty ? 'Loyalty boost' : 'Boost de ranking';
   }
 
   const navMap = {
@@ -10051,6 +10063,12 @@ document.addEventListener('focusin', (e) => {
   // ── Celebración primer trabajo ───────────────────────────────────────
   async function verificarCelebracionPrimerTrabajo() {
     if (!PronetDB.esRemoto() || !usuarioActual?.id) return;
+    // No dispara el modal de puntos con el flag apagado, ni siquiera si
+    // quedó una notificación pendiente de antes de apagarlo (la inserción
+    // ya está gateada más abajo, pero esto cubre lo que ya estaba en la
+    // base). No se marca como leída: si loyalty vuelve a prenderse, el
+    // prestador todavía ve la celebración.
+    if (!FEATURES.loyalty) return;
     const storageKey = 'pronet_celebracion_primer_trabajo_' + usuarioActual.id;
     if (localStorage.getItem(storageKey)) return;
     // Buscar notificación pendiente de primer trabajo
@@ -13932,7 +13950,13 @@ document.addEventListener('focusin', (e) => {
             .select('id', { count: 'exact', head: true })
             .eq('prestador_id', prestadorActual.id);
           const esPrimero = (count ?? 0) === 1;
-          if (esPrimero) {
+          // trg_acreditar_por_resena corre siempre, con el flag en el estado
+          // que esté — el servidor no sabe de FEATURES.loyalty. Lo que sí se
+          // puede evitar es avisarle al prestador que ganó puntos: con el
+          // flag apagado ("primera salida", ver commit) el aviso y el modal
+          // de después prometerían una pantalla (#s-loyalty) que goTo() va a
+          // rechazar en silencio.
+          if (esPrimero && FEATURES.loyalty) {
             // Los +400 los acredita trg_acreditar_por_resena; acá solo se avisa.
             PronetDB.notificar({
               destino: 'usuario',
