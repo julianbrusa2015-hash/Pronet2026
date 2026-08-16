@@ -700,38 +700,6 @@
         </div>
       </div>
 
-      <!-- Modal contacto directo: Llamar / WhatsApp / Copiar número -->
-      <div id="modal-contacto" style="display:none;position:absolute;inset:0;z-index:401;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center" onclick="if(event.target===this)cerrarModalContacto()">
-        <div style="background:var(--white);border-radius:20px 20px 0 0;padding:22px 18px 36px;width:100%;box-shadow:0 -4px 24px rgba(0,0,0,.15)">
-          <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:var(--ink);margin-bottom:18px" id="contacto-titulo">Contactar</div>
-
-          <a id="contacto-llamar" href="#" style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);text-decoration:none">
-            <div style="width:34px;text-align:center;font-size:20px">📞</div>
-            <div>
-              <div style="font-size:15px;font-weight:700;color:var(--ink)">Llamar</div>
-              <div id="contacto-tel-label" style="font-size:13px;color:var(--ink3)"></div>
-            </div>
-          </a>
-          <a id="contacto-whatsapp" href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);text-decoration:none">
-            <div style="width:34px;text-align:center;font-size:20px">💬</div>
-            <div>
-              <div style="font-size:15px;font-weight:700;color:var(--ink)">WhatsApp</div>
-              <div style="font-size:13px;color:var(--ink3)">Enviar mensaje</div>
-            </div>
-          </a>
-          <div onclick="copiarNumeroContacto()" style="display:flex;align-items:center;gap:14px;padding:12px 0;cursor:pointer">
-            <div style="width:34px;text-align:center;font-size:20px">📋</div>
-            <div>
-              <div style="font-size:15px;font-weight:700;color:var(--ink)">Copiar número</div>
-              <div style="font-size:13px;color:var(--ink3)">Copiar al portapapeles</div>
-            </div>
-          </div>
-
-          <div style="text-align:right;margin-top:14px">
-            <span onclick="cerrarModalContacto()" style="font-size:14px;font-weight:700;color:#B91C1C;cursor:pointer">Cancelar</span>
-          </div>
-        </div>
-      </div>
     </div><!-- /chat-mercado -->
 
     <!-- ══ MIS PUBLICACIONES PROMARKET ══════════════════════════════════ -->
@@ -5787,6 +5755,45 @@
     </div>
     <div style="padding:12px 20px 20px">
       <button id="btn-enviar-reporte" class="btn-p" onclick="enviarReportePub()" style="width:100%">Enviar reporte</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: CONTACTO DIRECTO (Llamar / WhatsApp / Copiar) ═══════════
+     Lo usan dos chats distintos —Entre Vecinos (cmk-contactar-btn) y el
+     de pedidos (chat-contactar-btn)— así que vive a nivel global y no
+     dentro de una pantalla puntual. Vivió antes adentro de #s-chat-mercado
+     y por eso, al abrirlo desde el chat de pedidos, el click corría bien
+     pero no se veía nada: el padre .screen sin .active tiene display:none,
+     y eso oculta a cualquier hijo aunque el hijo mismo diga display:flex. -->
+<div id="modal-contacto" style="display:none;position:fixed;inset:0;z-index:9601;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center" onclick="if(event.target===this)cerrarModalContacto()">
+  <div style="background:var(--white);border-radius:20px 20px 0 0;padding:22px 18px 36px;width:100%;max-width:430px;box-shadow:0 -4px 24px rgba(0,0,0,.15)">
+    <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:var(--ink);margin-bottom:18px" id="contacto-titulo">Contactar</div>
+
+    <a id="contacto-llamar" href="#" style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);text-decoration:none">
+      <div style="width:34px;text-align:center;font-size:20px">📞</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink)">Llamar</div>
+        <div id="contacto-tel-label" style="font-size:13px;color:var(--ink3)"></div>
+      </div>
+    </a>
+    <a id="contacto-whatsapp" href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);text-decoration:none">
+      <div style="width:34px;text-align:center;font-size:20px">💬</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink)">WhatsApp</div>
+        <div style="font-size:13px;color:var(--ink3)">Enviar mensaje</div>
+      </div>
+    </a>
+    <div onclick="copiarNumeroContacto()" style="display:flex;align-items:center;gap:14px;padding:12px 0;cursor:pointer">
+      <div style="width:34px;text-align:center;font-size:20px">📋</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink)">Copiar número</div>
+        <div style="font-size:13px;color:var(--ink3)">Copiar al portapapeles</div>
+      </div>
+    </div>
+
+    <div style="text-align:right;margin-top:14px">
+      <span onclick="cerrarModalContacto()" style="font-size:14px;font-weight:700;color:#B91C1C;cursor:pointer">Cancelar</span>
     </div>
   </div>
 </div>
