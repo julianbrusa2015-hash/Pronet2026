@@ -238,7 +238,7 @@
 
       <div class="filter-row">
         <div class="chip on" onclick="filterSearch(this,'todos')">Todos</div>
-        <div class="chip" onclick="filterSearch(this,'premium')">⭐ Premium</div>
+        <div class="chip" data-feature="suscripcionPro" onclick="filterSearch(this,'premium')">⭐ Premium</div>
         <div class="chip" onclick="filterSearch(this,'top')">★ +4.5</div>
         <div class="chip" onclick="filterSearch(this,'cercano')">📍 &lt;5 km</div>
         <div class="chip" onclick="filterSearch(this,'urgencias')">⚡ Urgencias</div>
@@ -1258,7 +1258,7 @@
         <div class="prog-bg"><div class="prog"></div></div>
         <div class="prog-meta">
           <span><span id="perfil-propuestas-usadas">–</span> / <span id="perfil-servicios-max">3</span> propuestas este mes</span>
-          <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goTo('s-analytics')">📊 Ver analítica →</span>
+          <span data-feature="analyticsAvanzado" style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goTo('s-analytics')">📊 Ver analítica →</span>
         </div>
       </div>
 
@@ -1608,7 +1608,7 @@
             <div class="map-chip" id="mchip-elec" data-filtro="rubro" data-valor="Electricistas" onclick="toggleMapChip(this)">⚡ Electricistas</div>
             <div class="map-chip" id="mchip-limp" data-filtro="rubro" data-valor="Limpieza" onclick="toggleMapChip(this)">🧹 Limpieza</div>
             <div class="map-chip" id="mchip-cuid" data-filtro="rubro" data-valor="Cuidado" onclick="toggleMapChip(this)">👶 Cuidado</div>
-            <div class="map-chip" id="mchip-prem" data-filtro="premium" onclick="toggleMapChip(this)">⭐ Premium</div>
+            <div class="map-chip" id="mchip-prem" data-feature="suscripcionPro" data-filtro="premium" onclick="toggleMapChip(this)">⭐ Premium</div>
           </div>
 
           <!-- PINS dinámicos — generados por renderPinesMapa() -->

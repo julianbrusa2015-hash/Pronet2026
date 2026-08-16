@@ -9891,10 +9891,12 @@ document.addEventListener('focusin', (e) => {
     const loyaltyMenu = document.querySelector('.menu-item[data-feature="loyalty"]');
     if (loyaltyMenu) loyaltyMenu.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
 
-    // Para admin: botón Pedidos del nav lleva al Panel de Moderación
+    // Para admin: botón Pedidos del nav lleva al Panel de Moderación —
+    // pero sólo si la feature está prendida. Si no, repurposearlo dejaría
+    // un ícono que no hace nada al tocarlo (goTo lo bloquea en silencio).
     const nbPedidos = document.getElementById('nb-pedidos');
     if (nbPedidos) {
-      if (esAdmin()) {
+      if (esAdmin() && FEATURES.denuncias) {
         nbPedidos.onclick = () => goTo('s-moderacion');
       } else {
         nbPedidos.onclick = () => goTo('s-pedidos');
@@ -13209,9 +13211,11 @@ document.addEventListener('focusin', (e) => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    // Mostrar link de denuncia solo para el vecino del chat
+    // Mostrar link de denuncia solo para el vecino del chat, y sólo si la
+    // feature está prendida — si no, goTo('s-denuncia') lo bloquearía en
+    // silencio y el link quedaría ahí sin hacer nada al tocarlo.
     const denLink = document.getElementById('chat-denuncia-link');
-    if (denLink && soyVecino) denLink.style.display = 'block';
+    if (denLink && soyVecino && FEATURES.denuncias) denLink.style.display = 'block';
     reflejarRecontratar(chat);
     const show = id => { const el = document.getElementById(id); if (el) el.style.display = 'flex'; };
     const showBlock = id => { const el = document.getElementById(id); if (el) el.style.display = 'block'; };
@@ -13700,7 +13704,7 @@ document.addEventListener('focusin', (e) => {
           '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
         // Mostrar link de denuncia directamente con vecino_id del chat de la lista
         const denLink = document.getElementById('chat-denuncia-link');
-        if (denLink) denLink.style.display = (c.vecino_id === usuarioActual?.id) ? 'block' : 'none';
+        if (denLink) denLink.style.display = (FEATURES.denuncias && c.vecino_id === usuarioActual?.id) ? 'block' : 'none';
         cargarContactoChatTrabajo(c.id);
         await cargarMensajesChat();
         // Abrir el chat es haberlo visto. Esta llamada faltaba: la

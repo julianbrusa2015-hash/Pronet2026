@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v257'; // v257: PRONET Points sin rastros al apagar el flag — modal de primer trabajo, push, y textos de "boost" en Mi Perfil y Planes
+const CACHE_VERSION = 'pronet-v258'; // v258: rastros sin gatear en denuncias, analyticsAvanzado y suscripcionPro (link de denuncia en chat, "Ver analítica", chips Premium)
 
 const SHELL = [
   './',
