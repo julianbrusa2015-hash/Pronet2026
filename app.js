@@ -6662,6 +6662,7 @@ document.addEventListener('focusin', (e) => {
     if (llamarEl) llamarEl.href = 'tel:' + tel;
     const waEl = document.getElementById('contacto-whatsapp');
     if (waEl) waEl.href = 'https://wa.me/' + tel.replace('+', '') + '?text=' + encodeURIComponent('Hola! Te escribo por tu publicación en Entre Vecinos');
+    modal.dataset.telefonoActivo = chatMercadoContraparteTelefono;
     modal.style.display = 'flex';
   }
   window.abrirModalContacto = abrirModalContacto;
@@ -6673,8 +6674,12 @@ document.addEventListener('focusin', (e) => {
   window.cerrarModalContacto = cerrarModalContacto;
 
   function copiarNumeroContacto() {
-    if (!chatMercadoContraparteTelefono) return;
-    navigator.clipboard?.writeText(chatMercadoContraparteTelefono).then(() => {
+    // El modal es compartido entre el chat de Entre Vecinos y el de
+    // pedidos; leer directo de chatMercadoContraparteTelefono copiaba el
+    // número equivocado cuando el modal lo abrió el otro chat.
+    const tel = document.getElementById('modal-contacto')?.dataset.telefonoActivo;
+    if (!tel) return;
+    navigator.clipboard?.writeText(tel).then(() => {
       showToast('📋 Número copiado');
       cerrarModalContacto();
     }).catch(() => showToast('⚠️ No se pudo copiar'));
@@ -14000,6 +14005,48 @@ document.addEventListener('focusin', (e) => {
   let chatActualId = null;
   let chatSuscripcion = null;
   let chatOrigen = 's-pedidos';
+  // Contraparte del chat de pedido, para el botón de Llamar/WhatsApp del
+  // header. Se resuelve una vez que sabemos si somos vecino o prestador
+  // del chat — ver el bloque de abrirChat() que llama a esta función.
+  let chatContraparteId = null;
+  let chatContraparteNombre = null;
+  let chatContraparteTelefono = null;
+
+  /** Trae el teléfono de la contraparte del chat de pedido (si ya lo
+   *  compartió) y muestra el botón de contacto. Mismo patrón que
+   *  cargarTelefonoContraparte() para el chat de Entre Vecinos, pero la
+   *  RPC obtener_telefono_contacto() valida esta relación vía
+   *  chats_trabajo (ver supabase-telefono-chat-trabajo.sql). */
+  async function cargarTelefonoContraparteChat(userId, nombre) {
+    chatContraparteId = userId;
+    chatContraparteNombre = nombre || null;
+    const tel = await PronetDB.obtenerTelefonoUsuario(userId).catch(() => null);
+    if (chatContraparteId !== userId) return; // cambió de chat mientras resolvía
+    chatContraparteTelefono = tel;
+    const btn = document.getElementById('chat-contactar-btn');
+    if (btn) btn.style.display = tel ? '' : 'none';
+  }
+
+  function abrirModalContactoChat() {
+    if (!chatContraparteTelefono) return;
+    const modal = document.getElementById('modal-contacto');
+    if (!modal) return;
+    const tel = chatContraparteTelefono.replace(/[^\d+]/g, '');
+    const nombre = chatContraparteNombre || 'esta persona';
+    const titEl = document.getElementById('contacto-titulo');
+    if (titEl) titEl.textContent = `Contactar a ${nombre}`;
+    const telLbl = document.getElementById('contacto-tel-label');
+    if (telLbl) telLbl.textContent = chatContraparteTelefono;
+    const llamarEl = document.getElementById('contacto-llamar');
+    if (llamarEl) llamarEl.href = 'tel:' + tel;
+    const waEl = document.getElementById('contacto-whatsapp');
+    if (waEl) waEl.href = 'https://wa.me/' + tel.replace('+', '') + '?text=' + encodeURIComponent('Hola! Te escribo por PRONET');
+    // copiarNumeroContacto() lee chatMercadoContraparteTelefono a secas —
+    // se replica acá para que "Copiar número" funcione desde este chat.
+    modal.dataset.telefonoActivo = chatContraparteTelefono;
+    modal.style.display = 'flex';
+  }
+  window.abrirModalContactoChat = abrirModalContactoChat;
   let chatMercadoActualId = null;
   let chatMercadoSuscripcion = null;
   let chatMercadoContraparteId = null;
@@ -14034,6 +14081,12 @@ document.addEventListener('focusin', (e) => {
       const subEl = document.getElementById('chat-service-sub');
       if (subEl) subEl.textContent = (ped.rubro || '') + (p ? ' · $' + (p.precio || 0).toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita') : '');
     }
+    // Se limpia acá y no al cerrar: si no, el botón del chat anterior queda
+    // visible un instante mientras este todavía no sabe si tiene teléfono.
+    chatContraparteId = null;
+    chatContraparteTelefono = null;
+    const contactBtnChat = document.getElementById('chat-contactar-btn');
+    if (contactBtnChat) contactBtnChat.style.display = 'none';
     goTo('s-chat');
     document.getElementById('chat-body').innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Abriendo chat...</div>';
     const res = await PronetDB.abrirChatPropuesta(propuestaId);
@@ -14063,6 +14116,16 @@ document.addEventListener('focusin', (e) => {
           avEl2.style.color = soyVecinoChat ? '#92400E' : '#2B5BFF';
         }
       }
+      // Teléfono de la contraparte: si soy vecino necesito el usuario dueño
+      // del prestador (chats_trabajo.prestador_id no es un id de usuario);
+      // si soy prestador, el vecino_id del chat ya es directo.
+      if (soyVecinoChat) {
+        PronetDB.usuarioIdDePrestador(chatData.prestador_id).then(uid => {
+          if (uid) cargarTelefonoContraparteChat(uid, contraparteNombre);
+        });
+      } else if (chatData.vecino_id) {
+        cargarTelefonoContraparteChat(chatData.vecino_id, contraparteNombre);
+      }
     }
     await actualizarBannersChat(chatActualId);
     if (chatSuscripcion) chatSuscripcion();
@@ -14091,7 +14154,19 @@ document.addEventListener('focusin', (e) => {
       const subEl = document.getElementById('chat-service-sub');
       if (subEl) subEl.textContent = (p.rubro || '') + ' · $' + (p.precio || 0).toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita');
     }
+    chatContraparteId = null;
+    chatContraparteTelefono = null;
+    const contactBtnChat2 = document.getElementById('chat-contactar-btn');
+    if (contactBtnChat2) contactBtnChat2.style.display = 'none';
     goTo('s-chat');
+    // openChat() siempre lo llama un vecino mirando un perfil de prestador
+    // (p es la ficha del prestador) — acá el sentido no se ambigua como en
+    // abrirChat(), así que resuelve directo sin esperar a soyVecinoChat.
+    if (p?.id) {
+      PronetDB.usuarioIdDePrestador(p.id).then(uid => {
+        if (uid) cargarTelefonoContraparteChat(uid, p.nombre);
+      });
+    }
     // Buscar el chat existente con este prestador y cargarlo
     (async () => {
       if (!p?.id) return;
