@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v254'; // v254: botón de Llamar/WhatsApp en el chat de pedidos, no sólo en Entre Vecinos
+const CACHE_VERSION = 'pronet-v255'; // v255: el botón de contacto faltaba en el chat de "consultar antes de proponer" y en la lista de Mis chats
 
 const SHELL = [
   './',

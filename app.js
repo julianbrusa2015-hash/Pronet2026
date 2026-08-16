@@ -13284,6 +13284,10 @@ document.addEventListener('focusin', (e) => {
     if (!res?.ok) { showToast && showToast('⚠️ ' + (res?.error || 'No se pudo abrir el chat')); return; }
     chatActualId = res.chat_id;
     chatOrigen = 's-detalle-pedido';
+    chatContraparteId = null;
+    chatContraparteTelefono = null;
+    const contactBtnConsulta = document.getElementById('chat-contactar-btn');
+    if (contactBtnConsulta) contactBtnConsulta.style.display = 'none';
     // Obtener nombre del vecino desde el chat/perfil (pedidoActual puede no tenerlo)
     let vecinoNombre = pedidoActual.vecino_nombre || pedidoActual.usuario_nombre || null;
     if (!vecinoNombre) {
@@ -13309,6 +13313,7 @@ document.addEventListener('focusin', (e) => {
       '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">💬 Consultá al vecino antes de enviar tu propuesta.</div>';
     await cargarMensajesChat();
     await actualizarBannersChat(chatActualId);
+    cargarContactoChatTrabajo(chatActualId);
     if (chatSuscripcion) chatSuscripcion();
     chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
       if (payload.new && payload.new.chat_id === chatActualId) {
@@ -13668,12 +13673,17 @@ document.addEventListener('focusin', (e) => {
         if (subEl) subEl.textContent = c.rubro || '';
         chatActualId = c.id;
         chatOrigen = 's-chats';
+        chatContraparteId = null;
+        chatContraparteTelefono = null;
+        const contactBtnLista = document.getElementById('chat-contactar-btn');
+        if (contactBtnLista) contactBtnLista.style.display = 'none';
         goTo('s-chat');
         document.getElementById('chat-body').innerHTML =
           '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
         // Mostrar link de denuncia directamente con vecino_id del chat de la lista
         const denLink = document.getElementById('chat-denuncia-link');
         if (denLink) denLink.style.display = (c.vecino_id === usuarioActual?.id) ? 'block' : 'none';
+        cargarContactoChatTrabajo(c.id);
         await cargarMensajesChat();
         // Abrir el chat es haberlo visto. Esta llamada faltaba: la
         // suscripción de abajo sólo marca los mensajes que llegan CON el chat
@@ -14025,6 +14035,24 @@ document.addEventListener('focusin', (e) => {
     chatContraparteTelefono = tel;
     const btn = document.getElementById('chat-contactar-btn');
     if (btn) btn.style.display = tel ? '' : 'none';
+  }
+
+  /** Resuelve y muestra el contacto de la contraparte de un chat de pedido
+   *  ya abierto. Punto único para los cuatro lugares que abren s-chat
+   *  (abrirChat, openChat, consultarAntesDeProponer y la lista de
+   *  s-chats): cada uno tiene datos parciales distintos, así que ésta
+   *  siempre re-consulta el chat en vez de confiar en lo que cada llamador
+   *  ya tenía a mano. */
+  async function cargarContactoChatTrabajo(chatId) {
+    const chatData = await PronetDB.obtenerChat(chatId).catch(() => null);
+    if (!chatData || chatActualId !== chatId) return; // se cambió de chat mientras resolvía
+    const soyVecinoChat = chatData.vecino_id === usuarioActual?.id;
+    if (soyVecinoChat) {
+      const uid = await PronetDB.usuarioIdDePrestador(chatData.prestador_id).catch(() => null);
+      if (uid) cargarTelefonoContraparteChat(uid, chatData.prestadores?.nombre || chatData.prestador_nombre || null);
+    } else if (chatData.vecino_id) {
+      cargarTelefonoContraparteChat(chatData.vecino_id, chatData.vecino_nombre || null);
+    }
   }
 
   function abrirModalContactoChat() {
