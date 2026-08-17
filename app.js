@@ -897,6 +897,10 @@ document.addEventListener('focusin', (e) => {
       '<button class="mkt-sec' + (g.id === guiaTabActiva ? ' on' : '') + '" role="tab" aria-selected="' + (g.id === guiaTabActiva ? 'true' : 'false') +
       '" onclick="seleccionarGuiaTab(\'' + g.id + '\')">' + escHTML(g.tab) + '</button>'
     ).join('');
+    activarScrollChips(tabsWrap);
+    // Si "Siguiente: X →" activó una solapa fuera de vista, la trae al
+    // encuadre — si no, parece que el click no hizo nada.
+    tabsWrap.querySelector('.mkt-sec.on')?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 
     guiaPasoActual = 0;
     renderGuiaPaso();

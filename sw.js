@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v266'; // v266: 3 solapas más de guías (elegir propuesta, calificar, buscar) + celeste marcado en las solapas
+const CACHE_VERSION = 'pronet-v267'; // v267: las solapas de guías scrollean en vez de apretarse en una fila con texto partido
 
 const SHELL = [
   './',

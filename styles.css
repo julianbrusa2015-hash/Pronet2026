@@ -517,15 +517,30 @@
   /* .rank-cats va incluida: es otra fila de chips, con otra clase, que se
      había quedado sin el degradado y sin la rueda del mouse. */
   .filter-row.mas-derecha,
-  .rank-cats.mas-derecha   { mask-image: linear-gradient(to right, #000 84%, transparent 100%);
+  .rank-cats.mas-derecha,
+  #guias-tabs.mas-derecha   { mask-image: linear-gradient(to right, #000 84%, transparent 100%);
                              -webkit-mask-image: linear-gradient(to right, #000 84%, transparent 100%); }
   .filter-row.mas-izquierda,
-  .rank-cats.mas-izquierda { mask-image: linear-gradient(to left, #000 84%, transparent 100%);
+  .rank-cats.mas-izquierda,
+  #guias-tabs.mas-izquierda { mask-image: linear-gradient(to left, #000 84%, transparent 100%);
                               -webkit-mask-image: linear-gradient(to left, #000 84%, transparent 100%); }
   .filter-row.mas-izquierda.mas-derecha,
-  .rank-cats.mas-izquierda.mas-derecha {
+  .rank-cats.mas-izquierda.mas-derecha,
+  #guias-tabs.mas-izquierda.mas-derecha {
     mask-image: linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  }
+
+  /* Guías rápidas: con 5+ solapas, flex:1 (heredado de .mkt-sec) las
+     apretaba a todas en una sola fila y el texto se partía en 2-3
+     líneas. Acá cada una mide lo que necesita su texto, y la fila entera
+     scrollea — mismo patrón que .filter-row. */
+  #guias-tabs {
+    overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap;
+  }
+  #guias-tabs::-webkit-scrollbar { display: none; }
+  #guias-tabs .mkt-sec {
+    flex: 0 0 auto; white-space: nowrap; font-size: 11.5px; padding: 8px 11px;
   }
   .chip {
     flex-shrink: 0; border-radius: 20px; padding: 5px 12px;
