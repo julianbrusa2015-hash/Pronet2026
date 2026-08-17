@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v259'; // v259: panel admin (niveles, funcionalidades, diagnóstico) sale del PIN escondido y pasa a ser parte de Parametrías
+const CACHE_VERSION = 'pronet-v260'; // v260: boost chico y gratis en ranking para prestadores con identidad verificada
 
 const SHELL = [
   './',

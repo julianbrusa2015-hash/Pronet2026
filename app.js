@@ -606,7 +606,11 @@ document.addEventListener('focusin', (e) => {
     if (cat) filtros.rubro = cat.charAt(0).toUpperCase() + cat.slice(1);
     if (zonaActual) filtros.zona = zonaParaFiltro();
     let prestadores = await PronetDB.listarPrestadores(filtros);
-    const _bs = (p) => ((p.rating||0)*(p.resenas||0)+15)/((p.resenas||0)+5);
+    // +2 al numerador si está verificado — mismo criterio que
+    // buscar_prestadores() en el servidor (supabase-boost-verificado-ranking.sql):
+    // aditivo y chico, nunca le gana a reseñas reales, y separado del
+    // boost ×1.4 de plan pago (ver _boostDePlan en el feed de Inicio).
+    const _bs = (p) => ((p.rating||0)*(p.resenas||0)+15+(p.verificado?2:0))/((p.resenas||0)+5);
     prestadores = [...prestadores].sort((a,b) => _bs(b) - _bs(a));
     wrap.innerHTML = '';
     // Actualizar subtítulo con zona
@@ -1475,7 +1479,11 @@ document.addEventListener('focusin', (e) => {
     let prestadores = await PronetDB.listarPrestadores(filtros);
     // Score Bayesiano: evita que un prestador con 0 reseñas (rating 5.0 por default)
     // le gane a alguien con historial real. M=3.0 (prior neutro), C=5 (peso mínimo).
-    const _bayScore   = (p) => ((p.rating || 0) * (p.resenas || 0) + 15) / ((p.resenas || 0) + 5);
+    // +2 si está verificado — aditivo y chico, va DENTRO del score (no
+    // multiplica como el boost de plan de abajo) para que nunca le gane a
+    // reseñas reales. Mismo criterio que renderRanking() y
+    // buscar_prestadores() en el servidor (supabase-boost-verificado-ranking.sql).
+    const _bayScore   = (p) => ((p.rating || 0) * (p.resenas || 0) + 15 + (p.verificado ? 2 : 0)) / ((p.resenas || 0) + 5);
     const _boostPro    = window.PRONET_CONFIG?.BOOST_PRO     || 1.4;
     const _boostDePlan = (p) => {
       const des = p.plan ? getPlanConfig(p.plan).desempate : false;
@@ -2386,7 +2394,9 @@ document.addEventListener('focusin', (e) => {
       filtros.rubro = alt;
       prestadores = await PronetDB.listarPrestadores(filtros);
     }
-    prestadores = [...prestadores].sort((a,b) => { const s=(p)=>((p.rating||0)*(p.resenas||0)+15)/((p.resenas||0)+5); return s(b)-s(a); }).slice(0, PRONET_CONFIG.SUGERIDOS_PEDIDO);
+    // +2 si está verificado — mismo criterio aditivo que el resto (ver
+    // supabase-boost-verificado-ranking.sql).
+    prestadores = [...prestadores].sort((a,b) => { const s=(p)=>((p.rating||0)*(p.resenas||0)+15+(p.verificado?2:0))/((p.resenas||0)+5); return s(b)-s(a); }).slice(0, PRONET_CONFIG.SUGERIDOS_PEDIDO);
     wrap.innerHTML = '';
     if (prestadores.length === 0) {
       wrap.innerHTML = '<div style="padding:20px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay prestadores de este rubro en la zona.</div>';
