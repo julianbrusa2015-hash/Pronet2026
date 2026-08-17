@@ -977,77 +977,10 @@ document.addEventListener('focusin', (e) => {
     }
   }
 
-  // ── Panel Admin — acceso con PIN desde Mi Perfil ───────────────────
-  // Tocar "PRONET v1.0" al final de Mi Perfil → pide PIN → abre admin
-  // El PIN se guarda en config_app (Supabase) y se verifica server-side via RPC.
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const versionTap = document.getElementById('version-tap');
-    if (versionTap) {
-      versionTap.addEventListener('click', () => {
-        if (!esAdmin()) return;
-        const modal = document.getElementById('admin-pin-modal');
-        if (modal) {
-          modal.style.display = 'flex';
-          const inp = document.getElementById('admin-pin-input');
-          if (inp) { inp.value = ''; inp.focus(); }
-          const err = document.getElementById('admin-pin-error');
-          if (err) err.textContent = '';
-        }
-      });
-    }
-    // Enter para confirmar PIN
-    const pinInp = document.getElementById('admin-pin-input');
-    if (pinInp) pinInp.addEventListener('keydown', e => { if (e.key === 'Enter') verificarPin(); });
-  });
-
-  async function verificarPin() {
-    const inp = document.getElementById('admin-pin-input');
-    const err = document.getElementById('admin-pin-error');
-    if (!inp) return;
-
-    // Verificar PIN server-side — el valor real nunca viaja al cliente
-    if (err) err.textContent = 'Verificando…';
-    inp.disabled = true;
-    let pinOk = false;
-    try {
-      const { data, error } = await window._sb.rpc('fn_verificar_pin_admin', { p_pin: inp.value });
-      pinOk = data === true && !error;
-    } catch (e) { pinOk = false; }
-    inp.disabled = false;
-
-    if (!pinOk) {
-      if (err) err.textContent = 'Código incorrecto o acceso denegado';
-      inp.value = '';
-      inp.style.border = '2px solid #EF4444';
-      setTimeout(() => { inp.style.border = '2px solid var(--border)'; if (err) err.textContent = ''; }, 1500);
-      return;
-    }
-
-    cerrarAdminPin();
-    abrirAdmin();
-  }
-
-  function cerrarAdminPin(ev) {
-    if (ev && ev.target && ev.target.id !== 'admin-pin-modal') return;
-    const modal = document.getElementById('admin-pin-modal');
-    if (modal) modal.style.display = 'none';
-  }
-
-  function abrirAdmin() {
-    const ov = document.getElementById('admin-overlay');
-    if (ov) ov.style.display = 'flex';
-  }
-
-  function cerrarAdmin(ev) {
-    if (ev && ev.target && ev.target.id !== 'admin-overlay') return;
-    const ov = document.getElementById('admin-overlay');
-    if (ov) ov.style.display = 'none';
-  }
-
-  function toggleDevPanel() {
-    abrirAdmin();
-  }
+  // El panel admin (niveles, funcionalidades, "Reiniciar demo") dejó de
+  // vivir atrás de un PIN en Mi Perfil — ver Parametrías → Niveles y
+  // funcionalidades / → Ajustes. fn_verificar_pin_admin() queda sin uso
+  // en el cliente pero no se toca del lado del servidor.
 
   // ═══ RENDERS DINÁMICOS — datos reales desde Supabase ════════════════
 
@@ -4087,7 +4020,6 @@ document.addEventListener('focusin', (e) => {
   // localStorage (sandbox, artifacts, cookies deshabilitadas) la app
   // sigue funcionando solo en memoria, sin romper nada.
   const STORAGE_KEY = 'pronet-estado-v1';
-  let nivelActual = 3;
 
   // Los feature flags NO se guardan acá: su fuente de verdad es
   // config_app.features_off, que se aplica en restaurarSesion() y vale para
@@ -4132,49 +4064,18 @@ document.addEventListener('focusin', (e) => {
   }
 
   function reiniciarDemo() {
+    // Nunca toca el servidor (ver PronetDB.vaciarTodo) — sólo borra caché
+    // local de este dispositivo (sesión, filtros). Igual pide confirmación:
+    // ahora vive en Parametrías sin el PIN que antes era su única traba.
+    if (!confirm('¿Reiniciar la demo de este dispositivo? Se borra la sesión y los filtros guardados localmente. Los datos de Supabase (pedidos, chats, cuentas) no se tocan.')) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
     if (typeof PronetDB !== 'undefined') PronetDB.vaciarTodo(); // pedidos y mensajes guardados
     location.reload();
   }
 
-  function setNivel(n) {
-    if (n === 1) {
-      // Nivel 1: core transaccional + onboarding
-      FEATURES.bolsaTrabajo = true;
-      FEATURES.tutorialOnboarding = true;
-      FEATURES.badgeVerificado = false;
-      FEATURES.suscripcionPro = false;
-      FEATURES.catalogoPrecios = false;
-      FEATURES.editarPerfilPro = false;
-      FEATURES.denuncias = false;
-      FEATURES.loyalty = false;
-      FEATURES.analyticsAvanzado = false;
-    } else if (n === 2) {
-      // Nivel 2: + profesionalización, monetización, denuncias
-      FEATURES.bolsaTrabajo = true;
-      FEATURES.tutorialOnboarding = true;
-      FEATURES.badgeVerificado = true;
-      FEATURES.suscripcionPro = true;
-      FEATURES.catalogoPrecios = true;
-      FEATURES.editarPerfilPro = true;
-      FEATURES.denuncias = true;
-      FEATURES.loyalty = false;
-      FEATURES.analyticsAvanzado = false;
-    } else if (n === 3) {
-      // Nivel 3: todo activo
-      Object.keys(FEATURES).forEach(k => { if (k !== 'mostrarSelectorDemo' && k !== 'panelConfiguracion') FEATURES[k] = true; });
-    }
-    aplicarFeatureFlags();
-    nivelActual = n;
-    // No se persiste: el preset vale para esta sesión. Ver guardarEstado().
-    const status = document.getElementById('dev-panel-status');
-    if (status) status.textContent = `Nivel actual: ${n}`;
-    // Si la pantalla activa quedó deshabilitada, volver a Home
-    const activeScreen = document.querySelector('.screen.active');
-    if (activeScreen && !isScreenEnabled(activeScreen.id)) {
-      goTo('s-home');
-    }
-  }
+  // setNivel() local (sólo este dispositivo, sin persistir) se reemplazó
+  // por aplicarNivelGlobal() — ver la sección de Parametrías más abajo.
+  // Aplica lo mismo pero de verdad, para todos los usuarios.
 
   // ── Zona modal ───────────────────────────────────────────────────────
   let zonaActual = 'Escobar';
@@ -8678,7 +8579,15 @@ document.addEventListener('focusin', (e) => {
       </div>`).join('') + `
       <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">
         Los cambios impactan en la próxima apertura de cada usuario, cuando la app vuelve a leer la configuración.
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin:20px 2px 8px">Diagnóstico</div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px">
+        <div style="font-size:12px;color:var(--ink2);margin-bottom:2px">PRONET v1.0 · Build 2026.07</div>
+        <div id="dev-panel-datos" style="font-size:11.5px;font-weight:600;color:var(--ink3);margin-bottom:12px">Verificando…</div>
+        <button onclick="reiniciarDemo()" style="width:100%;background:#FEE2E2;color:#BE123C;border:1px solid #FECACA;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Reiniciar demo de este dispositivo</button>
       </div>`;
+    mostrarModoDatos();
   }
 
   async function guardarParamAjuste(clave) {
@@ -9395,33 +9304,56 @@ document.addEventListener('focusin', (e) => {
   // deja la app inutilizable, y como el panel vive dentro de la app, el
   // admin podría quedarse sin forma de volver a prenderlos.
   const FEATURES_EDITABLES = [
-    { k: 'badgeVerificado',   n: 'Badge de verificado',    d: 'Escudo verde en los prestadores verificados' },
-    { k: 'suscripcionPro',    n: 'Planes y suscripciones', d: 'Pantalla de planes y todo el circuito de pago' },
-    { k: 'catalogoPrecios',   n: 'Catálogo de precios',    d: 'Precios referenciales en las fichas' },
-    { k: 'editarPerfilPro',   n: 'Perfil profesional',     d: 'Edición completa e historial de trabajos' },
-    { k: 'denuncias',         n: 'Denuncias y moderación', d: 'Reportar usuarios y panel de moderación' },
-    { k: 'loyalty',           n: 'PRONET Points',          d: 'Programa de puntos y canjes' },
-    { k: 'analyticsAvanzado', n: 'Analítica avanzada',     d: 'Métricas detalladas para el prestador' },
-    { k: 'tutorialOnboarding', n: 'Tutorial de bienvenida', d: 'Guía de 4 pasos en el primer ingreso' },
+    { k: 'badgeVerificado',   n: 'Badge de verificado',    d: 'Escudo verde en los prestadores verificados', nivel: 2 },
+    { k: 'suscripcionPro',    n: 'Planes y suscripciones', d: 'Pantalla de planes y todo el circuito de pago', nivel: 2 },
+    { k: 'catalogoPrecios',   n: 'Catálogo de precios',    d: 'Precios referenciales en las fichas', nivel: 2 },
+    { k: 'editarPerfilPro',   n: 'Perfil profesional',     d: 'Edición completa e historial de trabajos', nivel: 2 },
+    { k: 'denuncias',         n: 'Denuncias y moderación', d: 'Reportar usuarios y panel de moderación', nivel: 2 },
+    { k: 'loyalty',           n: 'PRONET Points',          d: 'Programa de puntos y canjes', nivel: 3 },
+    { k: 'analyticsAvanzado', n: 'Analítica avanzada',     d: 'Métricas detalladas para el prestador', nivel: 3 },
+    { k: 'tutorialOnboarding', n: 'Tutorial de bienvenida', d: 'Guía de 4 pasos en el primer ingreso', nivel: null },
     // `mercadoPlaza` NO va acá: ya tiene su propio interruptor en
     // "Configuración de la app", que escribe en config_app.promarket_activo.
     // Ponerlo también en esta lista daría dos switches para lo mismo
     // guardando en claves distintas, y el que se aplicara último ganaría.
   ];
 
-  async function renderParamFeatures() {
-    const wrap = document.getElementById('param-features-lista');
-    if (!wrap) return;
-    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+  // Qué apaga cada preset de Nivel. Nivel 3 no aparece: es "nada apagado".
+  // No incluye tutorialOnboarding (nivel:null) — no es parte de ningún
+  // paquete de crecimiento, se prende/apaga siempre a mano.
+  const NIVELES_PRESET = {
+    1: FEATURES_EDITABLES.filter(f => f.nivel !== null).map(f => f.k),
+    2: FEATURES_EDITABLES.filter(f => f.nivel === 3).map(f => f.k),
+    3: [],
+  };
+  const NIVEL_NOMBRE = { 1: '🟢 Nivel 1 · Núcleo', 2: '🟡 Nivel 2 · Crecimiento', 3: '🔵 Nivel 3 · Completo' };
 
-    const apagadas = await PronetDB.listarFeaturesApagadas().catch(() => []);
-    const off = new Set(apagadas);
+  /** Aplica un preset de Nivel para TODOS los usuarios (persiste en
+   *  config_app, igual que cada interruptor individual). Reemplaza al
+   *  viejo setNivel(), que sólo cambiaba este dispositivo — quedaba
+   *  detrás de un PIN precisamente porque tocar varios flags de golpe
+   *  para todos es más delicado que uno solo. */
+  async function aplicarNivelGlobal(n) {
+    const nombre = NIVEL_NOMBRE[n];
+    if (!confirm(`¿Aplicar "${nombre}" para TODOS los usuarios? Puede prender o apagar varias funciones a la vez.`)) return;
+    const msg = document.getElementById('ft-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+    decir('Aplicando…', 'var(--ink3)');
+    const apagar = NIVELES_PRESET[n];
+    const r = await PronetDB.guardarFeaturesApagadas(apagar);
+    if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
+    FEATURES_EDITABLES.forEach(f => {
+      if (f.k in FEATURES) FEATURES[f.k] = !apagar.includes(f.k);
+    });
+    aplicarFeatureFlags();
+    await renderParamFeatures();
+    const msg2 = document.getElementById('ft-msg');
+    if (msg2) { msg2.textContent = `✅ ${nombre} aplicado para todos`; msg2.style.color = 'var(--green)'; }
+  }
+  window.aplicarNivelGlobal = aplicarNivelGlobal;
 
-    wrap.innerHTML = `
-      <div style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:12px;padding:11px 13px;font-size:11.5px;color:var(--blue);line-height:1.5;margin-bottom:12px">
-        Estos interruptores afectan a <b>todos los usuarios</b>. Antes esta configuración se guardaba sólo en este dispositivo.
-      </div>
-      ${FEATURES_EDITABLES.map(f => `
+  function filaFeature(f, off) {
+    return `
         <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px">
           <div style="flex:1">
             <div style="font-size:13px;font-weight:700;color:var(--ink)">${escHTML(f.n)}</div>
@@ -9433,8 +9365,58 @@ document.addEventListener('focusin', (e) => {
                style="width:46px;height:27px;border-radius:99px;flex-shrink:0;cursor:pointer;position:relative;transition:background .18s;background:${off.has(f.k) ? 'var(--border)' : 'var(--green)'}">
             <div style="position:absolute;top:3px;left:${off.has(f.k) ? '3px' : '22px'};width:21px;height:21px;border-radius:50%;background:white;transition:left .18s;box-shadow:0 1px 3px rgba(0,0,0,.25)"></div>
           </div>
-        </div>`).join('')}
-      <div id="ft-msg" style="font-size:12px;font-weight:600;text-align:center;min-height:18px;margin-top:6px"></div>
+        </div>`;
+  }
+
+  async function renderParamFeatures() {
+    const wrap = document.getElementById('param-features-lista');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
+
+    const apagadas = await PronetDB.listarFeaturesApagadas().catch(() => []);
+    const off = new Set(apagadas);
+
+    // Nivel actual: el que coincide EXACTO con lo apagado ahora mismo —
+    // todo lo que ese preset apaga está apagado, y nada más lo está. Deja
+    // de coincidir con ninguno en cuanto se toca un interruptor suelto
+    // después de aplicar un preset — eso es "personalizado", a propósito.
+    const editables = FEATURES_EDITABLES.filter(f => f.nivel !== null).map(f => f.k);
+    const nivelActual = [1, 2, 3].find(n =>
+      NIVELES_PRESET[n].every(k => off.has(k)) &&
+      editables.filter(k => !NIVELES_PRESET[n].includes(k)).every(k => !off.has(k))
+    );
+
+    const grupoHTML = (nivel, titulo, color) => {
+      const items = FEATURES_EDITABLES.filter(f => f.nivel === nivel);
+      if (!items.length) return '';
+      return `
+        <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.05em;margin:16px 2px 8px">${titulo}</div>
+        ${items.map(f => filaFeature(f, off)).join('')}`;
+    };
+
+    wrap.innerHTML = `
+      <div style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:12px;padding:11px 13px;font-size:11.5px;color:var(--blue);line-height:1.5;margin-bottom:14px">
+        Todo lo de acá afecta a <b>todos los usuarios</b> — no es una vista previa de este dispositivo.
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Presets por nivel</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:6px">
+        ${[1, 2, 3].map(n => `
+          <button onclick="aplicarNivelGlobal(${n})" style="text-align:left;padding:11px 13px;border-radius:12px;cursor:pointer;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:space-between;
+            border:1.5px solid ${nivelActual === n ? 'var(--blue)' : 'var(--border)'};
+            background:${nivelActual === n ? 'var(--blue-s)' : 'var(--white)'};
+            color:${nivelActual === n ? 'var(--blue)' : 'var(--ink)'}">
+            <span>${NIVEL_NOMBRE[n]}</span>
+            ${nivelActual === n ? '<span style="font-size:10px;font-weight:800">ACTUAL</span>' : ''}
+          </button>`).join('')}
+      </div>
+      ${nivelActual == null ? '<div style="font-size:11px;color:var(--ink3);text-align:center;margin-bottom:6px">Combinación personalizada — no coincide con ningún preset</div>' : ''}
+
+      ${grupoHTML(null, '🧩 Independientes', 'var(--ink3)')}
+      ${grupoHTML(2, '🟡 Nivel 2 · Crecimiento', '#92400E')}
+      ${grupoHTML(3, '🔵 Nivel 3 · Completo', 'var(--blue)')}
+
+      <div id="ft-msg" style="font-size:12px;font-weight:600;text-align:center;min-height:18px;margin-top:10px"></div>
       <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5;margin-top:10px">
         Las funciones del núcleo (inicio, buscar, chat, pedidos, perfil) no se pueden apagar desde acá: sin ellas la app no funciona y no habría forma de volver a prenderlas.
       </div>`;
@@ -15685,28 +15667,32 @@ document.addEventListener('focusin', (e) => {
     });
   }
 
-  // Indicador de conexión real: hace una consulta de prueba y muestra el resultado
-  (async function mostrarModoDatos() {
+  // Indicador de conexión real: hace una consulta de prueba y muestra el
+  // resultado. Vive en Parametrías → Ajustes (sección Diagnóstico) y no en
+  // el boot: antes el elemento estaba siempre en el DOM (panel oculto con
+  // display:none en el padre); ahora que renderParamAjustes() lo dibuja
+  // recién al entrar a esa pantalla, el chequeo se dispara desde ahí.
+  async function mostrarModoDatos() {
     const el = document.getElementById('dev-panel-datos');
     if (!el || typeof PronetDB === 'undefined') return;
     if (!PronetDB.esRemoto()) {
       el.textContent = '⚪ Datos: LOCAL (este dispositivo)';
-      el.style.color = 'rgba(255,255,255,.5)';
+      el.style.color = 'var(--ink3)';
       return;
     }
     el.textContent = '⏳ Verificando Supabase...';
-    el.style.color = 'rgba(255,255,255,.5)';
+    el.style.color = 'var(--ink3)';
     try {
       // contar() y no listar(): esto sólo muestra un número, no hace falta
       // traerse las filas para saber cuántas hay.
       const n = await PronetDB.contar('pedidos');
       el.textContent = '🟢 Datos: SUPABASE (' + n + ' pedido' + (n !== 1 ? 's' : '') + ')';
-      el.style.color = '#39FF14';
+      el.style.color = 'var(--green)';
     } catch (e) {
       el.textContent = '🔴 SUPABASE sin respuesta';
-      el.style.color = '#FCA5A5';
+      el.style.color = '#BE123C';
     }
-  })();
+  }
 
   // ── PWA: registro del Service Worker ─────────────────────────────────
   // Solo funciona servido por HTTP/HTTPS (Netlify, localhost, etc.);

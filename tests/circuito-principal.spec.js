@@ -162,22 +162,18 @@ test.describe('PRONET — Circuito principal', () => {
   });
 
   // ── 7. Panel admin solo accesible para admin ─────────────────────────────
-  test('7. Panel admin no se abre para vecino normal', async ({ page }) => {
+  // El panel (niveles, funcionalidades, diagnóstico) dejó de vivir detrás
+  // de un PIN en Mi Perfil — ahora es Parametrías, protegida por el mismo
+  // guard de PANTALLAS_ADMIN que ya cubre el resto de las pantallas admin.
+  test('7. Parametrías no se abre para vecino normal', async ({ page }) => {
     test.skip(!TIENE_CUENTAS_TEST, 'Crear cuentas test en Supabase o definir TEST_VECINO_EMAIL');
     await login(page, VECINO.email, VECINO.pw);
     await expect(page.locator('#nb-perfil')).toBeVisible({ timeout: 10000 });
     await page.locator('#nb-perfil').click();
     await expect(page.locator('#s-miperfil')).toHaveClass(/active/, { timeout: 8000 });
-    // Tocar "version-tap"
-    const versionTap = page.locator('#version-tap');
-    if (await versionTap.isVisible()) {
-      await versionTap.click();
-      // El modal de PIN NO debe aparecer (usuario no es admin)
-      await page.waitForTimeout(800);
-      const modal = page.locator('#admin-pin-modal');
-      const display = await modal.evaluate(el => getComputedStyle(el).display);
-      expect(display).toBe('none');
-    }
+    await page.evaluate(() => window.goTo('s-parametrias'));
+    await page.waitForTimeout(500);
+    await expect(page.locator('#s-parametrias')).not.toHaveClass(/active/);
   });
 
   // ── 8. Validaciones de registro ──────────────────────────────────────────

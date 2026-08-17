@@ -131,19 +131,14 @@ test.describe('C10 · Moderación — no accesible para vecino', () => {
     await expect(page.locator('#s-moderacion')).not.toHaveClass(/active/);
   });
 
-  test('version-tap para vecino no abre el modal de PIN', async ({ page }) => {
+  test('goTo("s-parametrias") para vecino no activa la pantalla', async ({ page }) => {
+    // El panel admin (niveles, funcionalidades, diagnóstico) dejó de vivir
+    // detrás de un PIN en Mi Perfil — ahora es Parametrías, y su única
+    // traba es el mismo guard de PANTALLAS_ADMIN que ya protege el resto.
     await abrir(page);
-    await irA(page, 's-miperfil');
-    const versionTap = page.locator('#version-tap');
-    if (await versionTap.isVisible().catch(() => false)) {
-      await versionTap.click();
-      await page.waitForTimeout(400);
-      // El listener hace `if (!esAdmin()) return` antes de abrir el modal
-      const display = await page.locator('#admin-pin-modal').evaluate(
-        el => getComputedStyle(el).display
-      );
-      expect(display).toBe('none');
-    }
+    await page.evaluate(() => window.goTo('s-parametrias'));
+    await page.waitForTimeout(500);
+    await expect(page.locator('#s-parametrias')).not.toHaveClass(/active/);
   });
 });
 

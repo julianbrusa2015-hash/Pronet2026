@@ -1560,26 +1560,15 @@
         © 2026 PRONET. Todos los derechos reservados.
       </div>
 
-      <!-- Versión — acceso oculto al panel admin -->
+      <!-- El panel admin (niveles, funcionalidades, diagnóstico) ya no
+           vive escondido acá atrás de un PIN — es una sección más de
+           Parametrías, alcanzable por ser admin como cualquier otra. -->
       <div style="text-align:center;padding:20px 14px 8px">
         <div onclick="cerrarSesion()" style="font-size:13px;color:#EF4444;font-weight:600;cursor:pointer;margin-bottom:12px">Cerrar sesión</div>
-        <div id="version-tap" style="font-size:11px;color:var(--ink3);cursor:pointer;user-select:none">PRONET v1.0 · Build 2026.07</div>
+        <div style="font-size:11px;color:var(--ink3)">PRONET v1.0 · Build 2026.07</div>
       </div>
 
     </div><!-- /miperfil -->
-
-    <!-- ══ MODAL PIN ADMIN ═══════════════════════════════════════════════ -->
-    <div id="admin-pin-modal" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:999998;align-items:center;justify-content:center" onclick="cerrarAdminPin(event)">
-      <div style="background:white;border-radius:18px;padding:24px;width:280px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)" onclick="event.stopPropagation()">
-        <div style="font-size:28px;margin-bottom:8px">🔒</div>
-        <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:var(--ink);margin-bottom:4px">Acceso administrador</div>
-        <div style="font-size:13px;color:var(--ink3);margin-bottom:16px">Ingresá el código de acceso</div>
-        <input id="admin-pin-input" name="admin-pin" autocomplete="off" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" style="width:150px;text-align:center;font-size:24px;letter-spacing:8px;padding:12px;border:2px solid var(--border);border-radius:12px;outline:none;font-family:'Inter',sans-serif;margin-bottom:8px">
-        <div id="admin-pin-error" style="font-size:12px;color:#EF4444;min-height:20px;margin-bottom:8px"></div>
-        <button onclick="verificarPin()" style="width:100%;padding:12px;background:var(--blue);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">Ingresar</button>
-        <div onclick="cerrarAdminPin()" style="margin-top:10px;font-size:13px;color:var(--ink3);cursor:pointer">Cancelar</div>
-      </div>
-    </div>
 
 
     <!-- ══ MAPA / CERCA AHORA ═══════════════════════════════════════════ -->
@@ -2519,8 +2508,8 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style="flex:1">
-            <h2>🎛️ Funcionalidades</h2>
-            <p>Prender y apagar features para todos los usuarios</p>
+            <h2>🎛️ Niveles y funcionalidades</h2>
+            <p>Presets por nivel o cada función suelta — para todos los usuarios</p>
           </div>
         </div>
       </div>
@@ -5110,8 +5099,8 @@
       <div role="button" tabindex="0" onclick="goTo('s-param-features')" style="background:white;border:1px solid var(--border);border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer">
         <span style="font-size:19px">🎛️</span>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--ink)">Prender y apagar</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:2px">Afecta a todos los usuarios, no sólo a este dispositivo</div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink)">Niveles y funcionalidades</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">Presets por nivel o cada función suelta — afecta a todos los usuarios</div>
         </div>
         <span style="color:var(--ink3);font-size:15px">›</span>
       </div>
@@ -5714,29 +5703,10 @@
     </div>
   </div>
 
-  <!-- ══ PANEL ADMIN — Oculto por defecto, acceso secreto ══════════════ -->
-  <!-- Se abre desde "Mi perfil" → tocar la versión (#version-tap) y pasar el
-       PIN: sólo para admins. Los presets de Nivel de acá valen para esta
-       sesión y este dispositivo — la configuración real que ven todos los
-       usuarios vive en "Funcionalidades para todos" (s-param-features). -->
-  <div id="admin-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:999998;align-items:center;justify-content:center" onclick="cerrarAdmin(event)">
-    <div id="dev-panel-body" style="background:#1A1A2E;border-radius:14px;padding:18px;width:260px;max-height:80%;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5);font-family:'Inter',sans-serif" onclick="event.stopPropagation()">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:11px;color:#39FF14;font-weight:700;text-transform:uppercase;letter-spacing:.5px">⚙️ Panel Admin</div>
-        <div onclick="cerrarAdmin()" style="color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;padding:0 4px">✕</div>
-      </div>
-      <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px">Presets locales · solo este dispositivo</div>
-      <div onclick="setNivel(1)" style="padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.06);color:white;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px">🟢 Nivel 1 · Núcleo</div>
-      <div onclick="setNivel(2)" style="padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.06);color:white;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px">🟡 Nivel 2 · Crecimiento</div>
-      <div onclick="setNivel(3)" style="padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.06);color:white;font-size:12px;font-weight:600;cursor:pointer">🔵 Nivel 3 · Completo</div>
-      <div onclick="reiniciarDemo()" style="margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(255,80,80,.15);color:#FCA5A5;font-size:11px;font-weight:600;cursor:pointer;text-align:center;border:1px solid rgba(255,80,80,.3)">🔄 Reiniciar demo</div>
-      <div id="dev-panel-datos" style="margin-top:4px;font-size:10px;font-weight:700;text-align:center;color:rgba(255,255,255,.5)">Datos: …</div>
-      <div id="dev-panel-status" style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.5);text-align:center">Nivel actual: 3 (completo)</div>
-      <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12)">
-        <div onclick="cerrarAdmin();goTo('s-param-features')" style="padding:8px 10px;border-radius:8px;background:rgba(43,91,255,.25);color:#93C5FD;font-size:11px;font-weight:600;cursor:pointer;text-align:center;border:1px solid rgba(43,91,255,.4)">🎛️ Funcionalidades para todos →</div>
-      </div>
-    </div>
-  </div>
+  <!-- El panel admin (niveles, funcionalidades, "Reiniciar demo") ya no
+       vive acá atrás de un PIN — está en Parametrías → Niveles y
+       funcionalidades / → Ajustes (Diagnóstico), alcanzable con sólo
+       ser admin, igual que el resto de Parametrías. -->
 
 </div>
 

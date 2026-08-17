@@ -136,7 +136,7 @@ También `roles` está desincronizado de `tipo` en varias filas (ej. `servicios_
 ### C10 · Moderación (admin) 🟡
 **Cubre:** denuncias, canjes pendientes, ABM de beneficios, configuración de la app.
 
-**Prueba:** `busqueda-y-analitica.spec.js` (describe "C10") — el gating está cubierto: `goTo('s-moderacion')` no activa la pantalla ni para vecino ni para prestador, `version-tap` no abre el modal de PIN para no-admins, otras pantallas admin (`s-loyalty-admin`, `s-catalogo`) tampoco son alcanzables.
+**Prueba:** `busqueda-y-analitica.spec.js` (describe "C10") — el gating está cubierto: `goTo('s-moderacion')` no activa la pantalla ni para vecino ni para prestador, `goTo('s-parametrias')` tampoco (el panel de niveles/funcionalidades vive ahí, ya no detrás de un PIN), otras pantallas admin (`s-loyalty-admin`, `s-catalogo`) tampoco son alcanzables.
 
 **Pendiente:** el panel en sí (las tres secciones, aprobar canjes, ABM) sin cobertura — necesita sesión de admin real, no automatizada todavía.
 

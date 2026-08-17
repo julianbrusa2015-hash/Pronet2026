@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v258'; // v258: rastros sin gatear en denuncias, analyticsAvanzado y suscripcionPro (link de denuncia en chat, "Ver analítica", chips Premium)
+const CACHE_VERSION = 'pronet-v259'; // v259: panel admin (niveles, funcionalidades, diagnóstico) sale del PIN escondido y pasa a ser parte de Parametrías
 
 const SHELL = [
   './',
