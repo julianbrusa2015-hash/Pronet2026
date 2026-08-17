@@ -756,9 +756,12 @@ document.addEventListener('focusin', (e) => {
   // propia sombra — así se despega del resto de la página en vez de
   // quedar clavada en el mismo blanco que todo lo demás.
   function guiaMock(innerHTML) {
-    return '<div style="background:var(--blue-s);border-radius:20px;padding:26px 14px 18px;margin:10px 0 20px;position:relative">' +
+    // Gradiente más saturado que var(--blue-s) a secas (#EEF2FF es casi
+    // blanco, se notaba poco) + borde propio, para que el escenario se
+    // distinga de un vistazo del blanco del resto de la pantalla.
+    return '<div style="background:linear-gradient(160deg,#DCE4FF,#C7D2FE);border:1px solid rgba(43,91,255,.25);border-radius:20px;padding:26px 14px 18px;margin:10px 0 20px;position:relative">' +
       '<div style="position:absolute;top:11px;right:16px;background:var(--ink);color:white;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:99px;box-shadow:0 3px 8px rgba(13,15,26,.3)">👁️ Vista previa</div>' +
-      '<div style="background:white;border-radius:16px;padding:16px 14px 14px;box-shadow:0 16px 32px rgba(13,15,26,.2),0 4px 10px rgba(13,15,26,.1);pointer-events:none">' +
+      '<div style="background:white;border-radius:16px;padding:16px 14px 14px;box-shadow:0 16px 32px rgba(13,15,26,.22),0 4px 10px rgba(13,15,26,.12);pointer-events:none">' +
       innerHTML + '</div></div>';
   }
 
@@ -766,7 +769,6 @@ document.addEventListener('focusin', (e) => {
     vecino: [
       {
         id: 'cargar-pedido', tab: '📋 Cargar un pedido',
-        cta: { texto: 'Publicar un pedido ahora →', accion: "goTo('s-nuevo-pedido')" },
         pasos: [
           { titulo: 'Contá qué necesitás', desc: 'Elegí el rubro, escribí un título corto y describí el trabajo con el mayor detalle posible — cuanto más claro, mejores propuestas te llegan.',
             mock: guiaMock(guiaChip('🔌 Electricista', true, true) + guiaChip('🔧 Plomero', false, false) +
@@ -837,6 +839,16 @@ document.addEventListener('focusin', (e) => {
     const p = guia.pasos[guiaPasoActual];
     const esUltimo = guiaPasoActual === guia.pasos.length - 1;
 
+    // El botón final NO dispara una acción real de la app (antes llevaba a
+    // publicar un pedido de verdad, que es justo lo que se quería evitar
+    // en una guía informativa): si hay otra solapa después, pasa a esa;
+    // si es la última, vuelve a Mi Perfil.
+    const idxTab = guias.findIndex(g => g.id === guiaTabActiva);
+    const siguienteTab = guias[idxTab + 1];
+    const btnFinal = siguienteTab
+      ? '<button onclick="seleccionarGuiaTab(\'' + siguienteTab.id + '\')" style="flex:2;background:var(--blue);color:white;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Siguiente: ' + escHTML(siguienteTab.tab) + ' →</button>'
+      : '<button onclick="goTo(\'s-miperfil\')" style="flex:2;background:var(--blue);color:white;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">✓ Listo, volver al perfil</button>';
+
     cont.innerHTML =
       '<div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:6px">Paso ' + (guiaPasoActual + 1) + ' de ' + guia.pasos.length + '</div>' +
       '<div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px">' + escHTML(p.titulo) + '</div>' +
@@ -849,7 +861,7 @@ document.addEventListener('focusin', (e) => {
       '<div style="display:flex;gap:8px">' +
         (guiaPasoActual > 0 ? '<button onclick="guiaPasoAnterior()" style="flex:1;background:white;border:1.5px solid var(--border);color:var(--ink2);border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">← Atrás</button>' : '') +
         (esUltimo
-          ? '<button onclick="' + guia.cta.accion + '" style="flex:2;background:var(--blue);color:white;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">' + escHTML(guia.cta.texto) + '</button>'
+          ? btnFinal
           : '<button onclick="guiaPasoSiguiente()" style="flex:2;background:var(--blue);color:white;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Siguiente →</button>') +
       '</div>';
   }

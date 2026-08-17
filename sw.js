@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v263'; // v263: la maqueta flota sobre un fondo de contraste, no clavada en el mismo blanco de la página
+const CACHE_VERSION = 'pronet-v264'; // v264: el botón final de la guía ya no publica un pedido real; fondo del escenario más marcado
 
 const SHELL = [
   './',
