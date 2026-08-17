@@ -4505,16 +4505,18 @@
 
   <!-- ══ GUÍAS RÁPIDAS ══════════════════════════════════════════════════
        Reemplaza al tutorial de pasos forzado al primer login. Ahora es un
-       llamado en Mi Perfil: solapas por funcionalidad, cada una con su
-       propio mini-carrusel de pasos y una maqueta chica de la pantalla
-       real. Arranca con una sola solapa (vecino → cargar un pedido);
-       GUIAS[] está pensado para sumar más sin tocar la estructura. -->
+       llamado en Mi Perfil: dos niveles de solapas. Arriba, el grupo
+       (Servicios / Mercado — dos mundos con flujo y pantallas distintas);
+       abajo, los temas de ESE grupo, cada uno con su mini-carrusel de
+       pasos y una maqueta chica de la pantalla real. GUIAS[] en app.js
+       está pensado para sumar más temas o grupos sin tocar el render. -->
   <div class="screen" id="s-guias">
     <div class="nprop-header">
       <div class="back-btn" onclick="goTo('s-miperfil')" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>
       <h2>Cómo usar PRONET</h2>
     </div>
-    <div id="guias-tabs" class="mkt-secciones" role="tablist" aria-label="Elegí qué querés aprender" style="margin:14px 14px 0"></div>
+    <div id="guias-grupos" class="mkt-secciones" role="tablist" aria-label="Elegí el grupo" style="margin:14px 14px 0"></div>
+    <div id="guias-tabs" class="mkt-secciones" role="tablist" aria-label="Elegí qué querés aprender" style="margin:8px 14px 0"></div>
     <div id="guias-contenido" style="padding:18px 14px 40px"></div>
   </div><!-- /guias -->
 

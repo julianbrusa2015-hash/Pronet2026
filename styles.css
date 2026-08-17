@@ -2085,9 +2085,16 @@
     box-shadow: none;
   }
 
-  /* Guías rápidas (Mi Perfil → "Cómo usar PRONET"): mismo celeste marcado
-     que las solapas de Entre Vecinos, para que se lean como pestañas de
-     verdad y no como un chip de filtro más. */
+  /* Guías rápidas (Mi Perfil → "Cómo usar PRONET"): dos niveles, dos
+     pesos. El grupo (Servicios/Mercado) es la elección más gruesa, así
+     que lleva el azul pleno; el tema de abajo es la elección fina, con
+     el mismo celeste marcado que ya usan las solapas de Entre Vecinos —
+     mismo criterio de "el de abajo pesa distinto" que ya está documentado
+     unas líneas arriba para #mkt-secciones / #mkt-origen. */
+  #guias-grupos .mkt-sec.on {
+    background: var(--blue); color: white;
+    box-shadow: none;
+  }
   #guias-tabs .mkt-sec.on {
     background: #CFE0FF; color: var(--blue-d);
     box-shadow: none;

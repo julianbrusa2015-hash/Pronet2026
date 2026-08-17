@@ -768,7 +768,7 @@ document.addEventListener('focusin', (e) => {
   const GUIAS = {
     vecino: [
       {
-        id: 'cargar-pedido', tab: '📋 Cargar un pedido',
+        id: 'cargar-pedido', grupo: 'servicios', tab: '📋 Cargar un pedido',
         pasos: [
           { titulo: 'Contá qué necesitás', desc: 'Elegí el rubro, escribí un título corto y describí el trabajo con el mayor detalle posible — cuanto más claro, mejores propuestas te llegan.',
             mock: guiaMock(guiaChip('🔌 Electricista', true, true) + guiaChip('🔧 Plomero', false, false) +
@@ -793,7 +793,7 @@ document.addEventListener('focusin', (e) => {
         ],
       },
       {
-        id: 'mercado', tab: '🛒 Publicar en Mercado',
+        id: 'mercado', grupo: 'mercado', tab: '🛒 Publicar en Mercado',
         pasos: [
           { titulo: 'Foto y dónde lo publicás', desc: 'Subí una foto de lo que ofrecés, elegí "Mercado" (no Servicios) y la categoría que mejor lo describe.',
             mock: guiaMock('<div style="border:2px dashed var(--blue);border-radius:12px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:9px;box-shadow:0 0 0 3px var(--blue-s)">📷</div>' +
@@ -816,7 +816,73 @@ document.addEventListener('focusin', (e) => {
         ],
       },
       {
-        id: 'elegir-propuesta', tab: '📬 Elegir una propuesta',
+        id: 'explorar-mercado', grupo: 'mercado', tab: '🔎 Explorar y filtrar',
+        pasos: [
+          { titulo: 'Elegí qué mirar', desc: 'Entre Vecinos separa Servicios de Mercado — tocá la solapa de arriba para ver lo que tus vecinos ofrecen para vender, no para trabajar.',
+            mock: guiaMock(guiaChip('🛠️ Servicios', false, false) + guiaChip('🛒 Mercado', true, true)) },
+          { titulo: 'Filtrá por categoría', desc: 'Los chips cambian según lo que veas — comida, plantas, ropa, lo que sea que se publique en tu zona.',
+            mock: guiaMock(guiaChip('Todos', true, false) + guiaChip('🍰 Comida', false, true) + guiaChip('🪴 Plantas', false, false) + guiaChip('👕 Ropa', false, false)) },
+          { titulo: 'Buscá o acotá la zona', desc: 'El buscador encuentra por título, y el selector de zona te deja ver sólo tu comunidad o ampliarlo a todo Escobar.',
+            mock: guiaMock(guiaCampo('🔍 Buscá productos, servicios...', true) + guiaCampo('📍 Tu comunidad', true)) },
+          { titulo: 'Mirás las publicaciones', desc: 'Cada tarjeta muestra foto, precio y quién la publicó. Tocás una para ver el detalle completo y consultar.',
+            mock: guiaMock(
+              '<div style="background:white;border:1.5px solid var(--border);border-radius:11px;overflow:hidden">' +
+                '<div style="aspect-ratio:16/9;background:var(--blue-s)"></div>' +
+                '<div style="padding:9px 11px"><div style="font-size:11.5px;font-weight:700;color:var(--ink)">Tortas personalizadas</div>' +
+                '<div style="font-size:11px;font-weight:800;color:var(--blue)">$8.500</div></div></div>') },
+        ],
+      },
+      {
+        id: 'consultar-vendedor', grupo: 'mercado', tab: '💬 Consultar a un vendedor',
+        pasos: [
+          { titulo: 'Abrís el chat de la publicación', desc: 'Desde la tarjeta o el detalle, tocás "Consultar" y se abre un chat privado con quien publicó — sin compartir tu teléfono todavía.',
+            mock: guiaMock(guiaChip('💬 Consultar', true, true)) },
+          { titulo: 'Preguntás lo que necesites', desc: 'Disponibilidad, si queda stock, si hace envío — todo por el chat, igual que con un prestador.',
+            mock: guiaMock(
+              '<div style="background:white;border-radius:14px 14px 14px 4px;padding:9px 12px;font-size:11px;color:var(--ink);max-width:75%;margin-bottom:6px;border:1.5px solid var(--border)">¿Te queda alguna torta de chocolate?</div>' +
+              '<div style="background:var(--blue);border-radius:14px 14px 4px 14px;padding:9px 12px;font-size:11px;color:white;max-width:75%;margin-left:auto;box-shadow:0 0 0 3px var(--blue-s)">¡Sí! Te la aparto</div>') },
+          { titulo: 'Reservá si querés asegurarla', desc: 'El botón "Reservar" le propone al vendedor una fecha y hora — útil para productos limitados, no hace falta pagar nada ahí.',
+            mock: guiaMock(guiaChip('📅 Reservar', true, true)) },
+          { titulo: 'Llamá o mandale WhatsApp', desc: 'Si el vendedor cargó su teléfono, el ícono de contacto te deja llamarlo o escribirle directo por WhatsApp — sin salir de la app.',
+            mock: guiaMock(guiaChip('📞 Llamar', false, false) + guiaChip('💬 WhatsApp', true, true)) },
+        ],
+      },
+      {
+        id: 'carrito', grupo: 'mercado', tab: '🛒 Usar el carrito',
+        pasos: [
+          { titulo: 'Sumá productos al carrito', desc: 'Desde cualquier publicación de Mercado, tocás el carrito para agregarla — podés sumar de varios vendedores distintos.',
+            mock: guiaMock(guiaChip('🛒 Agregar al carrito', true, true)) },
+          { titulo: 'Ajustás cantidades', desc: 'En Mi carrito ves todo lo que sumaste, agrupado por vendedor, con botones para sumar o restar unidades.',
+            mock: guiaMock(
+              '<div style="display:flex;align-items:center;gap:10px">' +
+                '<div style="width:40px;height:40px;border-radius:9px;background:var(--blue-s);flex-shrink:0"></div>' +
+                '<div style="flex:1;font-size:11px;font-weight:700;color:var(--ink)">Tortas personalizadas<div style="font-size:10.5px;font-weight:400;color:var(--ink3)">$8.500</div></div>' +
+                '<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink)">−&nbsp;2&nbsp;+</div></div>') },
+          { titulo: 'Es un pedido por vendedor', desc: 'El carrito NO mezcla el total de todos: cada vendedor es su propio pedido y su propio chat — no hay una compra conjunta.',
+            mock: guiaMock('<div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:4px">🧑 Vendedor: Ana</div><div style="font-size:11px;font-weight:800;color:var(--blue)">Subtotal: $17.000</div>') },
+          { titulo: 'Enviás el pedido por chat', desc: 'Con un toque, le mandás el detalle armado (qué y cuánto) al vendedor por chat. Ahí coordinan el pago y la entrega — la app no cobra nada.',
+            mock: guiaMock(guiaChip('📤 Enviar pedido', true, true)) },
+        ],
+      },
+      {
+        id: 'mapa-mercado', grupo: 'mercado', tab: '🗺️ Ver el mapa',
+        pasos: [
+          { titulo: 'Cambiá a vista de mapa', desc: 'Arriba del feed, el ícono de mapa te muestra las publicaciones ubicadas por barrio en vez de en lista.',
+            mock: guiaMock(guiaChip('☰ Lista', false, false) + guiaChip('🗺️ Mapa', true, true)) },
+          { titulo: 'Cada pin es un barrio', desc: 'Los pines agrupan publicaciones por barrio, no por casa — nadie muestra su dirección exacta por defecto.',
+            mock: guiaMock('<div style="text-align:center"><div style="font-size:26px">📍</div><div style="font-size:10.5px;font-weight:700;color:var(--ink);margin-top:2px">Puertos del Lago · 4 publicaciones</div></div>') },
+          { titulo: 'Tocás el pin y ves una vista previa', desc: 'Se abre un globo con miniaturas de hasta 4 publicaciones de ese barrio, para no tener que entrar una por una.',
+            mock: guiaMock(
+              '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">' +
+                '<div style="aspect-ratio:1;border-radius:8px;background:var(--blue-s)"></div>' +
+                '<div style="aspect-ratio:1;border-radius:8px;background:var(--surface2,#EEF1F6)"></div>' +
+                '<div style="aspect-ratio:1;border-radius:8px;background:var(--surface2,#EEF1F6)"></div></div>') },
+          { titulo: 'Tocás de nuevo y vas a esa publicación', desc: 'Un segundo toque en la miniatura te lleva directo a esa ficha en el feed, ya filtrado por ese barrio.',
+            mock: guiaMock(guiaChip('→ Ver publicación', true, true)) },
+        ],
+      },
+      {
+        id: 'elegir-propuesta', grupo: 'servicios', tab: '📬 Elegir una propuesta',
         pasos: [
           { titulo: 'Te llegan las propuestas', desc: 'Cada prestador de tu zona que se interesa en tu pedido te manda precio y plazo. Vas viendo cuántas llegaron desde el detalle de tu pedido.',
             mock: guiaMock(
@@ -843,7 +909,7 @@ document.addEventListener('focusin', (e) => {
         ],
       },
       {
-        id: 'calificar', tab: '⭐ Calificar y recomendar',
+        id: 'calificar', grupo: 'servicios', tab: '⭐ Calificar y recomendar',
         pasos: [
           { titulo: 'Cuando el trabajo termina', desc: 'El prestador marca el pedido como finalizado y te aparece la pantalla para calificarlo — tu opinión construye el ranking zonal que ven otros vecinos.',
             mock: guiaMock('<div style="text-align:center"><div style="font-size:22px;margin-bottom:4px">🔧</div><div style="font-size:11.5px;font-weight:700;color:var(--ink)">Instalación eléctrica</div><div style="font-size:10.5px;color:var(--ink3)">Prestador B · $8.500</div></div>') },
@@ -857,7 +923,7 @@ document.addEventListener('focusin', (e) => {
         ],
       },
       {
-        id: 'buscar', tab: '🔍 Buscar prestadores',
+        id: 'buscar', grupo: 'servicios', tab: '🔍 Buscar prestadores',
         pasos: [
           { titulo: 'Buscá por nombre o rubro', desc: 'Desde Buscar escribís lo que necesitás — "electricista", "niñera", un nombre — y ves a los prestadores de tu zona.',
             mock: guiaMock(guiaCampo('🔍 Buscar por nombre o rubro...', true)) },
@@ -877,21 +943,53 @@ document.addEventListener('focusin', (e) => {
   };
 
   let guiaTabActiva = null;
+  let guiaGrupoActivo = 'servicios';
   let guiaPasoActual = 0;
 
+  const GUIA_GRUPOS = [
+    { id: 'servicios', label: '🛠️ Servicios' },
+    { id: 'mercado',   label: '🛒 Mercado' },
+  ];
+
+  /** Todas las guías del rol actual, ya filtradas por el grupo activo —
+   *  Servicios y Mercado son mundos separados (distinto flujo, distinta
+   *  pantalla real), así que "Siguiente" nunca cruza de uno a otro: al
+   *  llegar al final de un grupo, vuelve a Mi Perfil en vez de saltar al
+   *  otro grupo sin avisar. */
+  function guiasDelGrupo() {
+    const todas = esPrestador() ? GUIAS.prestador : GUIAS.vecino;
+    return todas.filter(g => g.grupo === guiaGrupoActivo);
+  }
+
   function renderGuias() {
+    const gruposWrap = document.getElementById('guias-grupos');
     const tabsWrap = document.getElementById('guias-tabs');
     const cont = document.getElementById('guias-contenido');
     if (!tabsWrap || !cont) return;
-    const guias = esPrestador() ? GUIAS.prestador : GUIAS.vecino;
+    const todas = esPrestador() ? GUIAS.prestador : GUIAS.vecino;
 
-    if (!guias.length) {
+    if (!todas.length) {
+      if (gruposWrap) gruposWrap.style.display = 'none';
       tabsWrap.style.display = 'none';
       cont.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay guías para tu perfil. Estamos sumando más.</div>';
       return;
     }
+    // Si el grupo activo se quedó sin guías (rol sin nada ahí), cae al
+    // primer grupo que sí tenga algo.
+    if (!todas.some(g => g.grupo === guiaGrupoActivo)) {
+      guiaGrupoActivo = GUIA_GRUPOS.find(gr => todas.some(g => g.grupo === gr.id))?.id || guiaGrupoActivo;
+    }
+    if (gruposWrap) {
+      gruposWrap.style.display = 'flex';
+      gruposWrap.innerHTML = GUIA_GRUPOS.filter(gr => todas.some(g => g.grupo === gr.id)).map(gr =>
+        '<button class="mkt-sec' + (gr.id === guiaGrupoActivo ? ' on' : '') + '" role="tab" aria-selected="' + (gr.id === guiaGrupoActivo ? 'true' : 'false') +
+        '" onclick="seleccionarGuiaGrupo(\'' + gr.id + '\')">' + escHTML(gr.label) + '</button>'
+      ).join('');
+    }
+
+    const guias = guiasDelGrupo();
     tabsWrap.style.display = 'flex';
-    if (!guiaTabActiva || !guias.some(g => g.id === guiaTabActiva)) guiaTabActiva = guias[0].id;
+    if (!guiaTabActiva || !guias.some(g => g.id === guiaTabActiva)) guiaTabActiva = guias[0]?.id || null;
 
     tabsWrap.innerHTML = guias.map(g =>
       '<button class="mkt-sec' + (g.id === guiaTabActiva ? ' on' : '') + '" role="tab" aria-selected="' + (g.id === guiaTabActiva ? 'true' : 'false') +
@@ -907,6 +1005,14 @@ document.addEventListener('focusin', (e) => {
   }
   window.renderGuias = renderGuias;
 
+  function seleccionarGuiaGrupo(grupo) {
+    if (grupo === guiaGrupoActivo) return;
+    guiaGrupoActivo = grupo;
+    guiaTabActiva = null; // fuerza a tomar la primera solapa del grupo nuevo
+    renderGuias();
+  }
+  window.seleccionarGuiaGrupo = seleccionarGuiaGrupo;
+
   function seleccionarGuiaTab(id) {
     if (id === guiaTabActiva) return;
     guiaTabActiva = id;
@@ -917,7 +1023,7 @@ document.addEventListener('focusin', (e) => {
   function renderGuiaPaso() {
     const cont = document.getElementById('guias-contenido');
     if (!cont) return;
-    const guias = esPrestador() ? GUIAS.prestador : GUIAS.vecino;
+    const guias = guiasDelGrupo();
     const guia = guias.find(g => g.id === guiaTabActiva);
     if (!guia) return;
     const p = guia.pasos[guiaPasoActual];
