@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v271'; // v271: guía "Publicar un aviso en Servicios" — nuevo grupo Mercado del lado prestador
+const CACHE_VERSION = 'pronet-v272'; // v272: "Dónde trabajás" y "Tus rubros" en Editar perfil quedaban visibles y vacíos para no-prestadores
 
 const SHELL = [
   './',

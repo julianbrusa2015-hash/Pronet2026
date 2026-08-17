@@ -7783,8 +7783,12 @@ document.addEventListener('focusin', (e) => {
 
   async function cargarEdicionPrestador() {
     const esPrestador = usuarioActual && usuarioActual.prestador_id;
-    // Las secciones de prestador se ocultan para clientes
-    ['edit-desc-field','edit-esp-field','edit-pagos-field','edit-verif-field'].forEach(fid => {
+    // Las secciones de prestador se ocultan para clientes. Faltaban
+    // cobertura y rubros: el título y la ayuda quedaban visibles para
+    // cualquier cuenta, pero sus chips sólo se pintan más abajo si
+    // esPrestador — una cuenta solo-vecino veía la pregunta sin nada para
+    // marcar debajo.
+    ['edit-desc-field','edit-cobertura-field','edit-rubros-field','edit-esp-field','edit-pagos-field','edit-verif-field'].forEach(fid => {
       const f = document.getElementById(fid); if (f) f.style.display = esPrestador ? '' : 'none';
     });
     if (esPrestador) pintarVerificacion();
