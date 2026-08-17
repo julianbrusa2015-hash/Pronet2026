@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v268'; // v268: agrupador Servicios/Mercado en las guías + 4 solapas nuevas de Mercado
+const CACHE_VERSION = 'pronet-v269'; // v269: guías del lado prestador — grupo Servicios con 4 solapas (perfil, pedidos, chat, reputación)
 
 const SHELL = [
   './',

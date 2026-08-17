@@ -939,7 +939,65 @@ document.addEventListener('focusin', (e) => {
         ],
       },
     ],
-    prestador: [], // vacío a propósito — se completa en una próxima etapa
+    prestador: [
+      {
+        id: 'completar-perfil', grupo: 'servicios', tab: '📝 Completar tu perfil',
+        pasos: [
+          { titulo: 'Subí tu foto y descripción', desc: 'Un perfil con foto real y una buena descripción genera más confianza — es lo primero que ve el vecino antes de elegirte.',
+            mock: guiaMock('<div style="width:56px;height:56px;border-radius:50%;background:var(--blue-s);margin:0 auto 10px;border:2px dashed var(--blue);box-shadow:0 0 0 3px var(--blue-s)"></div>' +
+              guiaCampo('Descripción de tu trabajo...', true)) },
+          { titulo: 'Elegí tu zona de cobertura', desc: 'Marcá los barrios donde trabajás — sólo vas a ver pedidos de esas zonas, y sólo esos vecinos te van a encontrar a vos.',
+            mock: guiaMock(guiaChip('Puertos del Lago', true, true) + guiaChip('Escobar Centro', true, true) + guiaChip('Nordelta', false, false)) },
+          { titulo: 'Marcá tus rubros', desc: 'Podés elegir más de uno — electricidad, plomería, lo que hagas. Los pedidos te llegan filtrados por estos rubros.',
+            mock: guiaMock(guiaChip('🔌 Electricidad', true, true) + guiaChip('🔧 Plomería', true, false) + guiaChip('🪚 Carpintería', false, false)) },
+          { titulo: 'Un perfil completo sube en el ranking', desc: 'La foto, la descripción y los rubros bien cargados no son sólo estética: perfiles incompletos rankean peor frente a los vecinos.',
+            mock: guiaMock('<div style="text-align:center"><div style="font-size:24px">⭐</div><div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-top:4px">Perfil completo</div></div>') },
+        ],
+      },
+      {
+        id: 'encontrar-pedidos', grupo: 'servicios', tab: '📬 Encontrar pedidos y ofertar',
+        pasos: [
+          { titulo: 'Los pedidos aparecen en Inicio', desc: 'Los vecinos de tu zona publican lo que necesitan, filtrado por tus rubros — no hace falta buscarlos, te llegan a vos.',
+            mock: guiaMock(
+              '<div style="display:flex;align-items:center;gap:10px;background:white;border:2px solid var(--blue);border-radius:11px;padding:9px 11px;box-shadow:0 0 0 3px var(--blue-s)">' +
+                '<div style="font-size:20px">🔌</div><div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink)">Instalación eléctrica</div><div style="font-size:9.5px;color:var(--ink3)">Puertos del Lago · Hoy</div></div></div>') },
+          { titulo: 'Mirá los insights antes de ofertar', desc: 'Cuántas propuestas ya recibió, el precio de referencia del rubro, y hace cuánto se publicó — para que cotices con esa información a mano.',
+            mock: guiaMock('<div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:11px;padding:9px 11px"><div style="font-size:20px">📬</div><div style="flex:1;font-size:11px;font-weight:700;color:var(--ink)">2 propuestas recibidas<div style="font-size:9.5px;font-weight:400;color:var(--ink3)">Ref: $6.000 – $9.000</div></div></div>') },
+          { titulo: 'Armá tu propuesta', desc: 'Precio fijo, por rango, o "a convenir" si necesitás ver el trabajo antes. Sumá un plazo — eso también lo compara el vecino.',
+            mock: guiaMock(guiaChip('💰 Precio fijo', true, true) + guiaChip('📊 Rango', false, false) + guiaChip('🤝 A convenir', false, false) + guiaCampo('$ 8.000', true)) },
+          { titulo: 'Cuanto antes respondas, mejor tu posición', desc: 'El orden en que el vecino ve las propuestas no es al azar: responder rápido y con buen precio te posiciona más arriba.',
+            mock: guiaMock('<div style="text-align:center"><div style="font-size:22px">⚡</div><div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-top:4px">Propuesta enviada</div></div>') },
+        ],
+      },
+      {
+        id: 'chat-coordinacion', grupo: 'servicios', tab: '💬 Chat y coordinación',
+        pasos: [
+          { titulo: 'Te avisamos si te eligen', desc: 'El vecino compara las propuestas que le llegaron y elige una. Si es la tuya, te llega una notificación al toque.',
+            mock: guiaMock('<div style="text-align:center"><div style="font-size:24px">✅</div><div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-top:4px">¡Te eligieron!</div></div>') },
+          { titulo: 'Coordinás por chat', desc: 'Se abre un chat privado con el vecino para acordar día y hora, y podés mandar fotos si hace falta.',
+            mock: guiaMock(
+              '<div style="background:white;border-radius:14px 14px 14px 4px;padding:9px 12px;font-size:11px;color:var(--ink);max-width:75%;margin-bottom:6px;border:1.5px solid var(--border)">¿Podés mañana a la tarde?</div>' +
+              '<div style="background:var(--blue);border-radius:14px 14px 4px 14px;padding:9px 12px;font-size:11px;color:white;max-width:75%;margin-left:auto;box-shadow:0 0 0 3px var(--blue-s)">Sí, a las 15h estoy</div>') },
+          { titulo: 'Marcás el trabajo como terminado', desc: 'Cuando termines, tocás "Marcar como terminado" — eso le avisa al vecino que ya puede calificarte.',
+            mock: guiaMock(guiaChip('✓ Marcar como terminado', true, true)) },
+          { titulo: 'Esperás la calificación', desc: 'El vecino deja su reseña, que suma a tu ranking zonal y queda visible en tu perfil para el próximo que te busque.',
+            mock: guiaMock('<div style="text-align:center;font-size:20px;letter-spacing:2px;color:#F5A623">★★★★★</div>') },
+        ],
+      },
+      {
+        id: 'reputacion', grupo: 'servicios', tab: '🏆 Tu reputación',
+        pasos: [
+          { titulo: 'Cada reseña mueve tu ranking', desc: 'El Ranking Zonal se calcula con tu calificación promedio y cuántas reseñas tenés — no es sólo el puntaje, también pesa la cantidad.',
+            mock: guiaMock('<div style="display:flex;align-items:center;gap:10px;background:white;border:2px solid var(--blue);border-radius:11px;padding:9px 11px;box-shadow:0 0 0 3px var(--blue-s)"><div style="font-size:18px">🥇</div><div style="flex:1;font-size:11px;font-weight:700;color:var(--ink)">Vos<div style="font-size:9.5px;font-weight:400;color:var(--ink3)">★ 4.8 · 12 reseñas</div></div></div>') },
+          { titulo: 'Un perfil sin reseñas empieza neutro', desc: 'No arrancás en cero ni en cinco estrellas de más: el sistema te da un puntaje base parejo, y a partir de ahí las reseñas reales te mueven.',
+            mock: guiaMock('<div style="text-align:center"><div style="font-size:20px">⚖️</div><div style="font-size:11px;color:var(--ink3);margin-top:4px">Punto de partida parejo para todos</div></div>') },
+          { titulo: 'Mirá tu posición en Ranking Zonal', desc: 'Desde tu perfil ves en qué puesto estás por rubro y por zona, y qué te falta para subir.',
+            mock: guiaMock(guiaChip('📊 Ver mi ranking', true, true)) },
+          { titulo: 'Verificarte suma un empujón extra', desc: 'Verificar tu identidad te da un pequeño plus en el ranking, gratis — además del sello que ven los vecinos en tu perfil.',
+            mock: guiaMock('<div style="text-align:center"><div style="font-size:20px">🪪</div><div style="font-size:11px;font-weight:700;color:var(--ink);margin-top:4px">Verificado</div></div>') },
+        ],
+      },
+    ],
   };
 
   let guiaTabActiva = null;
