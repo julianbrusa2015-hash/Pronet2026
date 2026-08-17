@@ -2070,6 +2070,14 @@
     box-shadow: none;
   }
 
+  /* Guías rápidas (Mi Perfil → "Cómo usar PRONET"): mismo celeste marcado
+     que las solapas de Entre Vecinos, para que se lean como pestañas de
+     verdad y no como un chip de filtro más. */
+  #guias-tabs .mkt-sec.on {
+    background: #CFE0FF; color: var(--blue-d);
+    box-shadow: none;
+  }
+
   /* ── Origen del aviso: vecinos ↔ prestadores ──
      Va apilado justo debajo del selector de sección y con la misma forma, así
      que con el mismo estilo parecían el mismo control repetido dos veces.

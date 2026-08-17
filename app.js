@@ -815,6 +815,63 @@ document.addEventListener('focusin', (e) => {
                 '</div></div>') },
         ],
       },
+      {
+        id: 'elegir-propuesta', tab: '📬 Elegir una propuesta',
+        pasos: [
+          { titulo: 'Te llegan las propuestas', desc: 'Cada prestador de tu zona que se interesa en tu pedido te manda precio y plazo. Vas viendo cuántas llegaron desde el detalle de tu pedido.',
+            mock: guiaMock(
+              '<div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:8px">📬 Propuestas recibidas (2)</div>' +
+              '<div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:11px;padding:9px 11px">' +
+                '<div style="width:26px;height:26px;border-radius:8px;background:var(--blue-s);flex-shrink:0"></div>' +
+                '<div style="flex:1;font-size:11px;font-weight:700;color:var(--ink)">Prestador A</div><div style="font-size:11px;font-weight:800;color:var(--ink)">$8.000</div></div>') },
+          { titulo: 'Comparás precio, plazo y reputación', desc: 'Cada propuesta muestra el precio, cuándo puede empezar, y el ranking del prestador — no hace falta ir a buscarlo aparte.',
+            mock: guiaMock(
+              '<div style="display:flex;align-items:center;gap:10px;background:white;border:1.5px solid var(--border);border-radius:11px;padding:9px 11px;margin-bottom:7px">' +
+                '<div style="width:26px;height:26px;border-radius:8px;background:var(--surface2,#EEF1F6);flex-shrink:0"></div>' +
+                '<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink)">Prestador A</div><div style="font-size:9.5px;color:var(--ink3)">★ 4.8 · Mañana</div></div>' +
+                '<div style="font-size:11px;font-weight:800;color:var(--ink)">$8.000</div></div>' +
+              '<div style="display:flex;align-items:center;gap:10px;background:white;border:2px solid var(--blue);border-radius:11px;padding:9px 11px;box-shadow:0 0 0 3px var(--blue-s)">' +
+                '<div style="width:26px;height:26px;border-radius:8px;background:var(--blue-s);flex-shrink:0"></div>' +
+                '<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink)">Prestador B</div><div style="font-size:9.5px;color:var(--blue)">★ 4.9 · Hoy</div></div>' +
+                '<div style="font-size:11px;font-weight:800;color:var(--blue)">$8.500</div></div>') },
+          { titulo: 'Elegís y se abre el chat', desc: 'Tocás "Elegir" en la que más te convenza. Se abre un chat privado con ese prestador para coordinar día y hora — las otras propuestas quedan cerradas.',
+            mock: guiaMock(guiaChip('✓ Elegir a Prestador B →', true, true)) },
+          { titulo: 'Coordinás por chat', desc: 'Ahí hablás los detalles del trabajo, mandás fotos si hace falta, y cuando termina marcás el pedido como finalizado.',
+            mock: guiaMock(
+              '<div style="background:white;border-radius:14px 14px 14px 4px;padding:9px 12px;font-size:11px;color:var(--ink);max-width:75%;margin-bottom:6px;border:1.5px solid var(--border)">¡Hola! ¿Podés mañana a la tarde?</div>' +
+              '<div style="background:var(--blue);border-radius:14px 14px 4px 14px;padding:9px 12px;font-size:11px;color:white;max-width:75%;margin-left:auto;box-shadow:0 0 0 3px var(--blue-s)">Sí, a las 15h estoy</div>') },
+        ],
+      },
+      {
+        id: 'calificar', tab: '⭐ Calificar y recomendar',
+        pasos: [
+          { titulo: 'Cuando el trabajo termina', desc: 'El prestador marca el pedido como finalizado y te aparece la pantalla para calificarlo — tu opinión construye el ranking zonal que ven otros vecinos.',
+            mock: guiaMock('<div style="text-align:center"><div style="font-size:22px;margin-bottom:4px">🔧</div><div style="font-size:11.5px;font-weight:700;color:var(--ink)">Instalación eléctrica</div><div style="font-size:10.5px;color:var(--ink3)">Prestador B · $8.500</div></div>') },
+          { titulo: '¿Cómo fue el servicio?', desc: 'Elegís de 1 a 5 estrellas. Esto es lo que más pesa en el ranking, así que sé honesto — le sirve al resto del barrio.',
+            mock: guiaMock('<div style="text-align:center;font-size:26px;letter-spacing:3px;color:#F5A623">★★★★★</div><div style="text-align:center;font-size:11px;font-weight:700;color:var(--ink);margin-top:4px">¡Excelente!</div>') },
+          { titulo: 'Destacá lo que estuvo bien', desc: 'Chips opcionales — puntual, prolijo, buen precio, etc. — y un texto libre si querés contar algo más.',
+            mock: guiaMock(guiaChip('✓ Puntual', true, false) + guiaChip('✓ Prolijo', true, false) + guiaChip('✓ Rápido', false, false) +
+              guiaCampo('Contale a tus vecinos (opcional)...', true)) },
+          { titulo: 'Listo, ya suma al ranking', desc: 'Tu reseña queda visible en el perfil del prestador y mueve su posición en el Ranking Zonal — la próxima vez que alguien lo busque, la va a ver.',
+            mock: guiaMock('<div style="text-align:center"><div style="font-size:24px">🏆</div><div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-top:4px">¡Gracias por tu reseña!</div></div>') },
+        ],
+      },
+      {
+        id: 'buscar', tab: '🔍 Buscar prestadores',
+        pasos: [
+          { titulo: 'Buscá por nombre o rubro', desc: 'Desde Buscar escribís lo que necesitás — "electricista", "niñera", un nombre — y ves a los prestadores de tu zona.',
+            mock: guiaMock(guiaCampo('🔍 Buscar por nombre o rubro...', true)) },
+          { titulo: 'Filtrá para achicar la lista', desc: 'Sólo Premium, mejor puntuados, más cerca, o que atiendan urgencias — los filtros se combinan y la lista se actualiza al toque.',
+            mock: guiaMock(guiaChip('Todos', false, false) + guiaChip('★ +4.5', true, true) + guiaChip('📍 <5 km', false, false) + guiaChip('⚡ Urgencias', false, false)) },
+          { titulo: 'Comparás en la lista', desc: 'Cada tarjeta muestra rating, zona y precio referencial de un vistazo, ordenados por ranking zonal — no hace falta entrar a cada perfil para comparar.',
+            mock: guiaMock(
+              '<div style="display:flex;align-items:center;gap:10px;background:white;border:1.5px solid var(--border);border-radius:11px;padding:9px 11px;margin-bottom:7px">' +
+                '<div style="width:26px;height:26px;border-radius:8px;background:var(--blue-s);flex-shrink:0"></div>' +
+                '<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--ink)">Electricista A</div><div style="font-size:9.5px;color:var(--ink3)">★ 4.9 · Escobar</div></div></div>') },
+          { titulo: 'Entrás al perfil y contactás', desc: 'Ves su historial, reseñas y precio referencial completo. Desde ahí lo contactás por chat directo, sin pasar por un pedido.',
+            mock: guiaMock(guiaChip('💬 Contactar', true, true)) },
+        ],
+      },
     ],
     prestador: [], // vacío a propósito — se completa en una próxima etapa
   };
