@@ -12259,17 +12259,16 @@ document.addEventListener('focusin', (e) => {
     const urgEl = document.querySelector('#np-urgencia-group .form-opt.on');
     const urgencia = urgEl ? (urgEl.dataset.urg || 'flexible') : 'flexible';
 
-    // Presupuesto — leer según la modalidad seleccionada (fijo / rango / convenir)
-    const modalPrecioEl = document.querySelector('.np-modal-precio.on');
-    const modalPrecio   = modalPrecioEl?.dataset.modal || 'convenir';
-    let precioMin = null, precioMax = null;
-    if (modalPrecio === 'fijo') {
-      const v = parseInt((document.getElementById('np-precio')?.value || '').replace(/\D/g, ''), 10);
-      if (v > 0) { precioMin = v; precioMax = v; }
-    } else if (modalPrecio === 'rango') {
-      precioMin = parseInt((document.getElementById('np-precio-min')?.value || '').replace(/\D/g, ''), 10) || null;
-      precioMax = parseInt((document.getElementById('np-precio-max')?.value || '').replace(/\D/g, ''), 10) || null;
-    }
+    // "Publicar pedido" nunca tuvo un paso para que el vecino declare
+    // presupuesto — este bloque leía #np-precio / .np-modal-precio.on, que
+    // sólo existen en la pantalla de "Enviar propuesta" del PRESTADOR
+    // (mismo prefijo np- por coincidencia). document.getElementById() los
+    // encontraba igual —viven en el DOM, en otra pantalla— así que nunca
+    // reflejaba nada que el vecino hubiera escrito acá. Confirmado contra
+    // producción: los 68 pedidos reales tienen presupuesto_min/max en null.
+    // Se deja explícito: todo pedido nuevo va "a convenir" hasta que exista
+    // el campo de verdad.
+    const precioMin = null, precioMax = null;
 
     // Puntual o servicio fijo. Si es fijo, la frecuencia viaja con el pedido:
     // es lo que el prestador necesita para cotizar por visita, y lo que
