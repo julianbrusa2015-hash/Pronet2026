@@ -792,6 +792,29 @@ document.addEventListener('focusin', (e) => {
                 '<div style="flex:1;font-size:11px;font-weight:700;color:var(--ink3)">Prestador B</div><div style="font-size:11px;font-weight:800;color:var(--ink3)">$9.500</div></div>') },
         ],
       },
+      {
+        id: 'mercado', tab: '🛒 Publicar en Mercado',
+        pasos: [
+          { titulo: 'Foto y dónde lo publicás', desc: 'Subí una foto de lo que ofrecés, elegí "Mercado" (no Servicios) y la categoría que mejor lo describe.',
+            mock: guiaMock('<div style="border:2px dashed var(--blue);border-radius:12px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:9px;box-shadow:0 0 0 3px var(--blue-s)">📷</div>' +
+              guiaChip('🛠️ Servicios', false, false) + guiaChip('🛒 Mercado', true, true) +
+              guiaCampo('Categoría', false)) },
+          { titulo: 'Contá qué es', desc: 'Un título corto y una descripción ayudan a que te encuentren. El barrio y el lote son opcionales — sin lote, coordinás la entrega por el chat.',
+            mock: guiaMock(guiaCampo('Zona', false) + guiaCampo('Barrio', false) +
+              guiaCampo('Ej: Tortas personalizadas', true) + guiaCampo('Descripción (opcional)...', true)) },
+          { titulo: 'Precio', desc: 'Poné un precio, o dejalo en blanco y marcá "Precio a convenir" si preferís coordinarlo por el chat.',
+            mock: guiaMock(guiaCampo('$ 8.500', true) + guiaChip('☑ Precio a convenir', false, false)) },
+          { titulo: 'Publicá y esperá consultas', desc: 'Tu publicación aparece en el feed de Mercado de tu zona. Los vecinos te consultan por chat, y pueden darle "me gusta" o comentar.',
+            mock: guiaMock(
+              '<div style="background:white;border:2px solid var(--blue);border-radius:11px;overflow:hidden;box-shadow:0 0 0 3px var(--blue-s)">' +
+                '<div style="aspect-ratio:16/9;background:var(--blue-s)"></div>' +
+                '<div style="padding:9px 11px">' +
+                  '<div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-bottom:2px">Tortas personalizadas</div>' +
+                  '<div style="font-size:11px;font-weight:800;color:var(--blue);margin-bottom:6px">$8.500</div>' +
+                  '<div style="display:flex;gap:10px;font-size:10.5px;color:var(--ink3)"><span>🤍 3</span><span>💬 1</span></div>' +
+                '</div></div>') },
+        ],
+      },
     ],
     prestador: [], // vacío a propósito — se completa en una próxima etapa
   };
