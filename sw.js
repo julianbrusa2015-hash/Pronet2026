@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v269'; // v269: guías del lado prestador — grupo Servicios con 4 solapas (perfil, pedidos, chat, reputación)
+const CACHE_VERSION = 'pronet-v270'; // v270: se retira el checklist de "primeros pasos" de Inicio — reemplazado por Guías rápidas
 
 const SHELL = [
   './',

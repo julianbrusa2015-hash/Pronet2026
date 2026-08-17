@@ -186,7 +186,7 @@ document.addEventListener('focusin', (e) => {
     zonaModal:       true,
     miPerfilBasico:  true,
     bolsaTrabajo:    true,   // Pedidos, propuestas, estado de propuesta — ciclo transaccional completo
-    tutorialOnboarding: true, // Checklist de progreso en Inicio + "Cómo usar PRONET" en Mi Perfil
+    tutorialOnboarding: true, // "Cómo usar PRONET" (Guías rápidas) en Mi Perfil
 
     // ── NIVEL 2 · Crecimiento (mes 2-3) ──
     // Profesionalización, monetización y confianza
@@ -1560,102 +1560,6 @@ document.addEventListener('focusin', (e) => {
   }
 
   // Renderiza el home feed según categoría activa
-  // ── Checklist de bienvenida ──────────────────────────────────────────
-  const CHECKLIST_VECINO = [
-    { id: 'perfil',    label: 'Completá tu perfil',         check: () => !!(usuarioActual?.nombre && usuarioActual?.zona) },
-    // listarMios() y no listar(): la pregunta es "¿tengo alguno?", y traer
-    // los pedidos de todo el barrio para responderla no escala.
-    { id: 'pedido',    label: 'Publicá tu primer pedido',   check: async () => { const p = await PronetDB.listarMios('pedidos').catch(()=>[]); return p.length > 0; } },
-    { id: 'elegir',    label: 'Elegí un prestador',         check: async () => { const c = await PronetDB.listarMisChats().catch(()=>[]); return c.some(x=>x.vecino_id===usuarioActual?.id && ['activo','terminado_prestador','terminado_por_vecino','calificado'].includes(x.estado)); } },
-    { id: 'resena',    label: 'Dejá tu primera reseña',     check: async () => { const r = await PronetDB.listar('resenas').catch(()=>[]); return r.some(x=>x.vecino_id===usuarioActual?.id); } },
-  ];
-  const CHECKLIST_PRESTADOR = [
-    { id: 'perfil',    label: 'Completá tu perfil',              check: () => !!(usuarioActual?.nombre && usuarioActual?.descripcion) },
-    { id: 'propuesta', label: 'Respondé tu primer pedido',       check: async () => { const p = await PronetDB.listar('propuestas').catch(()=>[]); return p.some(x=>x.prestador_id===usuarioActual?.prestador_id); } },
-    { id: 'trabajo',   label: 'Completá tu primer trabajo',      check: async () => { const c = await PronetDB.listarMisChats().catch(()=>[]); return c.some(x=>x.prestador_id===usuarioActual?.prestador_id && ['calificado','terminado_por_vecino'].includes(x.estado)); } },
-    { id: 'resena',    label: 'Recibí tu primera reseña',        check: async () => { const r = await PronetDB.listar('resenas').catch(()=>[]); return r.some(x=>x.prestador_id===usuarioActual?.prestador_id); } },
-  ];
-  let _checklistEstados = [];
-  let _checklistItems = [];
-
-  async function renderChecklist() {
-    if (!FEATURES.tutorialOnboarding || !usuarioActual) return;
-    const clKey = 'pronet_checklist_cerrado_' + usuarioActual.id;
-    if (localStorage.getItem(clKey)) return;
-
-    const wrap   = document.getElementById('home-checklist');
-    const bar    = document.getElementById('home-checklist-bar');
-    const label  = document.getElementById('home-checklist-label');
-    if (!wrap) return;
-
-    const esPrest = esPrestador();
-    _checklistItems = esPrest ? CHECKLIST_PRESTADOR : CHECKLIST_VECINO;
-
-    _checklistEstados = await Promise.all(_checklistItems.map(async item => {
-      try { const r = item.check(); return r instanceof Promise ? await r : r; } catch(e) { return false; }
-    }));
-
-    const completados = _checklistEstados.filter(Boolean).length;
-    const total = _checklistItems.length;
-
-    if (completados === total) {
-      wrap.style.display = 'none';
-      localStorage.setItem(clKey, 'true');
-      return;
-    }
-
-    if (label) label.textContent = completados + '/' + total + ' pasos completados';
-    if (bar) bar.style.width = Math.round(completados / total * 100) + '%';
-    wrap.style.display = 'block';
-  }
-
-  function abrirChecklistModal() {
-    const modal = document.getElementById('checklist-modal');
-    const itemsWrap = document.getElementById('checklist-modal-items');
-    if (!modal || !itemsWrap) return;
-
-    itemsWrap.innerHTML = _checklistItems.map((item, i) => `
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:${i < _checklistItems.length-1 ? '1px solid var(--border)' : 'none'}">
-        <div style="width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
-          ${_checklistEstados[i] ? 'background:#16A34A;color:white' : 'background:var(--blue-s);color:var(--blue)'}">
-          ${_checklistEstados[i] ? '✓' : (i+1)}
-        </div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:${_checklistEstados[i] ? 'var(--ink3)' : 'var(--ink)'};${_checklistEstados[i] ? 'text-decoration:line-through' : ''}">${item.label}</div>
-        </div>
-        ${!_checklistEstados[i] ? `<button onclick="cerrarChecklistModal();irAChecklistItem('${item.id}')" style="background:var(--blue);color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Ir →</button>` : ''}
-      </div>
-    `).join('');
-
-    modal.style.display = 'flex';
-  }
-  window.abrirChecklistModal = abrirChecklistModal;
-
-  function cerrarChecklistModal() {
-    const modal = document.getElementById('checklist-modal');
-    if (modal) modal.style.display = 'none';
-  }
-  window.cerrarChecklistModal = cerrarChecklistModal;
-
-  function cerrarChecklist() {
-    const wrap = document.getElementById('home-checklist');
-    if (wrap) wrap.style.display = 'none';
-    if (!usuarioActual) return;
-    localStorage.setItem('pronet_checklist_cerrado_' + usuarioActual.id, 'true');
-  }
-  window.cerrarChecklist = cerrarChecklist;
-
-  function irAChecklistItem(id) {
-    const esPrest = esPrestador();
-    if (id === 'perfil')     goTo('s-miperfil');
-    if (id === 'pedido')     goTo('s-pedidos');
-    if (id === 'elegir')     goTo('s-pedidos');
-    if (id === 'propuesta')  goTo('s-mis-propuestas');
-    if (id === 'trabajo')    goTo('s-mis-propuestas');
-    if (id === 'resena')     goTo(esPrest ? 's-miperfil' : 's-pedidos');
-  }
-  window.irAChecklistItem = irAChecklistItem;
-
   // ── Catálogo único de rubros ────────────────────────────────────────
   //
   // Había TRES listas escritas a mano en el HTML y cada una omitía un
@@ -1787,7 +1691,6 @@ document.addEventListener('focusin', (e) => {
     if (!wrap) return;
     setBannerContextual();
     pintarBanners();   // Carrusel de publicidad (sirve para vecino y prestador)
-    renderChecklist(); // Checklist de primeros pasos
 
     // ── Vista PRESTADOR: tablero de actividad, no un listado ──
     // Antes Inicio repetía el mismo listado de pedidos que la pantalla
@@ -1871,27 +1774,7 @@ document.addEventListener('focusin', (e) => {
   /** Muestra u oculta el cromo del Inicio que sólo aplica a la vista de
    *  vecino (chips de rubro, cabecera del feed, banda de urgencias y el
    *  banner contextual). Para prestador el tablero los reemplaza. */
-  /** Reubica el checklist de primeros pasos dentro del tablero.
-   *
-   *  En el DOM vive arriba de todo, que para un prestador que ya opera es
-   *  el lugar más valioso de la pantalla y se lo lleva por delante a
-   *  "Te esperan". Se mueve el NODO (no se re-dibuja) para no duplicar la
-   *  lógica de renderChecklist ni sus estados. */
-  let _hogarChecklist = null;
-  function moverChecklist(slotId) {
-    const cl = document.getElementById('home-checklist');
-    if (!cl) return;
-    if (!_hogarChecklist) _hogarChecklist = { padre: cl.parentNode, sig: cl.nextSibling };
-    if (slotId) {
-      const slot = document.getElementById(slotId);
-      if (slot) slot.appendChild(cl);
-    } else if (_hogarChecklist.padre) {
-      _hogarChecklist.padre.insertBefore(cl, _hogarChecklist.sig);
-    }
-  }
-
   function cromoHomePrestador(esTablero) {
-    if (!esTablero) moverChecklist(null); // vecino: vuelve a su lugar original
     const v = esTablero ? 'none' : '';
     // `home-banner` y `home-urgencias` ya NO están en esta lista: pasaron a
     // ser slides del carrusel y quedan ocultos para todos. Estaban acá con
@@ -1921,10 +1804,9 @@ document.addEventListener('focusin', (e) => {
    *  de mostrar una caja vacía: con la app recién arrancando ese va a ser
    *  el caso habitual, y una caja vacía es peor que no tenerla. */
   // Generación del render: dos llamadas concurrentes (navegar rápido entre
-  // Inicio y Pedidos) se pisaban entre sí. La vieja terminaba DESPUÉS de la
-  // nueva, reescribía el innerHTML y metía el checklist en su propio slot;
-  // el innerHTML de la nueva lo destruía y el nodo se perdía hasta recargar.
-  // Cada render toma un número y se retira si dejó de ser el vigente.
+  // Inicio y Pedidos) se pisaban entre sí — la vieja terminaba DESPUÉS de
+  // la nueva y le pisaba el innerHTML recién armado. Cada render toma un
+  // número y se retira si dejó de ser el vigente.
   let _genInicio = 0;
 
   /** Fecha desde la que se cuentan los pedidos "nuevos" para el prestador.
@@ -1985,9 +1867,6 @@ document.addEventListener('focusin', (e) => {
     const gen = ++_genInicio;
     const wrap = document.getElementById('home-feed-container');
     if (!wrap) return;
-    // Rescatar el checklist ANTES de pisar el innerHTML: si quedó dentro
-    // del slot de un render anterior, este innerHTML lo destruiría.
-    moverChecklist(null);
     wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
 
     const pid = usuarioActual?.prestador_id || null;
@@ -2228,7 +2107,6 @@ document.addEventListener('focusin', (e) => {
         ${avisoRubro}
         ${bloqueMetricas}
         ${bloquePendientes}
-        <div id="slot-checklist"></div>
         ${!items.length && recientes.length ? `
           <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 8px">
             <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Oportunidades para vos</span>
@@ -2248,8 +2126,6 @@ document.addEventListener('focusin', (e) => {
       </div>`;
 
     if (gen !== _genInicio) return;
-    // Orden del tablero: métricas (azul) → pendientes → checklist → pedidos.
-    moverChecklist('slot-checklist');
 
     // Las tarjetas de pedidos aparecen SÓLO si no hay nada pendiente.
     //
@@ -9655,7 +9531,7 @@ document.addEventListener('focusin', (e) => {
     { k: 'denuncias',         n: 'Denuncias y moderación', d: 'Reportar usuarios y panel de moderación', nivel: 2 },
     { k: 'loyalty',           n: 'PRONET Points',          d: 'Programa de puntos y canjes', nivel: 3 },
     { k: 'analyticsAvanzado', n: 'Analítica avanzada',     d: 'Métricas detalladas para el prestador', nivel: 3 },
-    { k: 'tutorialOnboarding', n: 'Tutorial de bienvenida', d: 'Checklist en Inicio y guías rápidas en Mi Perfil', nivel: null },
+    { k: 'tutorialOnboarding', n: 'Tutorial de bienvenida', d: 'Guías rápidas ("Cómo usar PRONET") en Mi Perfil', nivel: null },
     // `mercadoPlaza` NO va acá: ya tiene su propio interruptor en
     // "Configuración de la app", que escribe en config_app.promarket_activo.
     // Ponerlo también en esta lista daría dos switches para lo mismo
