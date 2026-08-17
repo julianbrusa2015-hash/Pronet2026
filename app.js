@@ -751,10 +751,14 @@ document.addEventListener('focusin', (e) => {
   // que no se confunda con un formulario tocable de verdad: los campos de
   // acá adentro usan los mismos colores que los reales. pointer-events:none
   // refuerza esa misma idea — nada de acá adentro responde a un toque.
+  // El "escenario" (fondo celeste) contrasta con el blanco de la pantalla
+  // real, y la tarjeta blanca de adentro flota sobre ESE fondo con su
+  // propia sombra — así se despega del resto de la página en vez de
+  // quedar clavada en el mismo blanco que todo lo demás.
   function guiaMock(innerHTML) {
-    return '<div style="position:relative;margin:10px 6px 20px">' +
-      '<div style="position:absolute;top:-9px;right:12px;background:var(--ink);color:white;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:99px;box-shadow:0 3px 8px rgba(13,15,26,.3);z-index:1">👁️ Vista previa</div>' +
-      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 14px 14px;box-shadow:0 12px 28px rgba(13,15,26,.14),0 2px 6px rgba(13,15,26,.08);pointer-events:none">' +
+    return '<div style="background:var(--blue-s);border-radius:20px;padding:26px 14px 18px;margin:10px 0 20px;position:relative">' +
+      '<div style="position:absolute;top:11px;right:16px;background:var(--ink);color:white;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:99px;box-shadow:0 3px 8px rgba(13,15,26,.3)">👁️ Vista previa</div>' +
+      '<div style="background:white;border-radius:16px;padding:16px 14px 14px;box-shadow:0 16px 32px rgba(13,15,26,.2),0 4px 10px rgba(13,15,26,.1);pointer-events:none">' +
       innerHTML + '</div></div>';
   }
 
