@@ -747,10 +747,15 @@ document.addEventListener('focusin', (e) => {
       (on ? 'background:var(--blue);color:white' : 'background:white;border:1.5px solid var(--border);color:var(--ink2)') +
       (activo ? ';box-shadow:0 0 0 3px var(--blue-s)' : '') + '">' + escHTML(texto) + '</div>';
   }
+  // Flota con sombra propia y una etiqueta que sobresale del borde, para
+  // que no se confunda con un formulario tocable de verdad: los campos de
+  // acá adentro usan los mismos colores que los reales. pointer-events:none
+  // refuerza esa misma idea — nada de acá adentro responde a un toque.
   function guiaMock(innerHTML) {
-    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:16px">' +
-      '<div style="font-size:9.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Así se ve en la app</div>' +
-      innerHTML + '</div>';
+    return '<div style="position:relative;margin:10px 6px 20px">' +
+      '<div style="position:absolute;top:-9px;right:12px;background:var(--ink);color:white;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:99px;box-shadow:0 3px 8px rgba(13,15,26,.3);z-index:1">👁️ Vista previa</div>' +
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 14px 14px;box-shadow:0 12px 28px rgba(13,15,26,.14),0 2px 6px rgba(13,15,26,.08);pointer-events:none">' +
+      innerHTML + '</div></div>';
   }
 
   const GUIAS = {
