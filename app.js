@@ -997,6 +997,25 @@ document.addEventListener('focusin', (e) => {
             mock: guiaMock('<div style="text-align:center"><div style="font-size:20px">🪪</div><div style="font-size:11px;font-weight:700;color:var(--ink);margin-top:4px">Verificado</div></div>') },
         ],
       },
+      {
+        id: 'publicar-aviso', grupo: 'mercado', tab: '📣 Publicar un aviso en Servicios',
+        pasos: [
+          { titulo: 'Armá tu aviso', desc: 'Es distinto de ofertar en un pedido: acá te promocionás vos, así te encuentran los vecinos que todavía no publicaron nada. Subí una foto de tu trabajo, un título y el rubro.',
+            mock: guiaMock('<div style="border:2px dashed var(--blue);border-radius:12px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:9px;box-shadow:0 0 0 3px var(--blue-s)">📷</div>' +
+              guiaCampo('Ej: Pintura de interiores', true) + guiaCampo('Rubro', true)) },
+          { titulo: 'Contá qué hacés', desc: 'La descripción es donde explicás qué incluye tu servicio, en qué zona trabajás y cualquier detalle que ayude a decidir.',
+            mock: guiaMock(guiaCampo('Qué hacés, en qué zona, qué incluye...', true)) },
+          { titulo: 'Revisá cómo lo ve el vecino', desc: 'Antes de mandarlo, "Así lo ve un vecino" te muestra la tarjeta final — con tu rating y reseñas reales, igual que va a aparecer en el feed.',
+            mock: guiaMock(
+              '<div style="background:white;border:2px solid var(--blue);border-radius:11px;overflow:hidden;box-shadow:0 0 0 3px var(--blue-s)">' +
+                '<div style="aspect-ratio:16/9;background:var(--blue-s)"></div>' +
+                '<div style="padding:9px 11px"><div style="font-size:11.5px;font-weight:700;color:var(--ink)">Pintura de interiores</div>' +
+                '<div style="font-size:9.5px;color:var(--ink3);margin-top:2px">Vos · Pintura</div>' +
+                '<div style="font-size:10.5px;font-weight:700;color:#B9760A;margin-top:4px">★ 4.8 · 12 reseñas</div></div></div>') },
+          { titulo: 'Se revisa antes de publicarse', desc: 'Tu aviso queda "En revisión" un rato — el equipo de PRONET lo aprueba y recién ahí aparece en Servicios, visible para todos los vecinos de tu zona.',
+            mock: guiaMock(guiaChip('🟡 En revisión', true, true) + guiaChip('✓ Publicado', false, false)) },
+        ],
+      },
     ],
   };
 
