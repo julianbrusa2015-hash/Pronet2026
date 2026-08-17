@@ -186,7 +186,7 @@ document.addEventListener('focusin', (e) => {
     zonaModal:       true,
     miPerfilBasico:  true,
     bolsaTrabajo:    true,   // Pedidos, propuestas, estado de propuesta — ciclo transaccional completo
-    tutorialOnboarding: true, // Tutorial de 4 pasos al primer login — guía para usuarios nuevos
+    tutorialOnboarding: true, // Checklist de progreso en Inicio + "Cómo usar PRONET" en Mi Perfil
 
     // ── NIVEL 2 · Crecimiento (mes 2-3) ──
     // Profesionalización, monetización y confianza
@@ -312,10 +312,11 @@ document.addEventListener('focusin', (e) => {
     's-invitar':          'nb-perfil',
     's-promocionar':      'nb-perfil',
     's-pubs-prestador':   'nb-perfil',
+    's-guias':            'nb-perfil',
   };
   const all = ['s-home','s-buscar','s-ranking','s-prof','s-publicar','s-miperfil','s-mapa','s-chat','s-chats','s-notif','s-subs','s-analytics','s-pedidos','s-nuevo-pedido','s-detalle-pedido','s-nueva-propuesta','s-confirmacion','s-catalogo','s-ficha-ref','s-catalogo-form','s-edit-perfil','s-estado-propuesta','s-historial','s-tyc','s-loyalty','s-denuncia','s-moderacion','s-loyalty-admin','s-mis-propuestas','s-resena','s-mercado','s-vecinos-portada','s-pub-mercado','s-chat-mercado','s-mis-publicaciones','s-mis-consultas-mkt','s-mis-consultas-enviadas','s-comentarios-pub','s-privacidad','s-mis-alertas',
     's-param-planes','s-param-features','s-param-rubros','s-param-zonas','s-param-niveles','s-param-ajustes','s-servicios-fijos','s-verificaciones','s-parametrias','s-param-banners','s-param-mkt-cats','s-carrito',
-    's-invitar','s-prealta','s-promocionar','s-pubs-prestador'];
+    's-invitar','s-prealta','s-promocionar','s-pubs-prestador','s-guias'];
 
   function goTo(id) {
     // Bloquear navegación a pantallas de features desactivadas
@@ -488,6 +489,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-subs')    { reflejarPlan(); }
     if (id === 's-catalogo') { renderCatalogo(); }
     if (id === 's-historial') { renderHistorial(); }
+    if (id === 's-guias') { renderGuias(); }
     if (id === 's-notif') { renderNotificaciones(); }
     if (id === 's-analytics') { aplicarTierEstadisticas(); renderAnalytica(analiticaPeriodo || '30d'); }
     // Si va a Ranking, cargar el ranking dinámico
@@ -721,77 +723,140 @@ document.addEventListener('focusin', (e) => {
     await renderLoyaltyScreen();
   }
 
-  // ── Tutorial Onboarding ───────────────────────────────────────────────
-  const TUTORIAL_VECINO = [
-    { step:'1 de 5', title:'¡Bienvenido a PRONET! 👋', desc:'Conectamos vecinos con prestadores de confianza en tu barrio. Ranking zonal, precios referenciales y todo sin salir de la app.' },
-    { step:'2 de 5', title:'Explorá prestadores 🔍', desc:'Buscá por rubro (electricista, plomero, niñera...) y filtrá por zona. Cada prestador tiene puntaje, reseñas y precio referencial.' },
-    { step:'3 de 5', title:'Publicá un pedido 📋', desc:'Describí lo que necesitás, elegí rubro y zona. Los prestadores Pro de tu zona reciben tu pedido y te envían propuestas.' },
-    { step:'4 de 5', title:'Compará y elegí 🤝', desc:'Recibís hasta 3 propuestas con precio, plazo y ranking. Compará y elegí al que más te convenza. Todo transparente.' },
-    { step:'5 de 5', title:'Calificá y recomendá ⭐', desc:'Después del trabajo, dejá tu reseña. Tu opinión construye el ranking zonal y ayuda a otros vecinos a elegir mejor.' },
-  ];
-  const TUTORIAL_PRESTADOR = [
-    { step:'1 de 6', title:'¡Bienvenido a PRONET! 🔧', desc:'Acá los vecinos de tu zona te encuentran, te contactan y te contratan. Tu reputación es tu mejor herramienta.' },
-    { step:'2 de 6', title:'Completá tu perfil 📝', desc:'Agregá foto, descripción, zona y rubros. Un perfil completo genera más confianza y aparece más arriba en el ranking.' },
-    { step:'3 de 6', title:'Encontrá pedidos 📬', desc:'Los vecinos publican pedidos en tu zona. Entrá desde el Home, mirá los insights del pedido y decidí si te interesa.' },
-    { step:'4 de 6', title:'Enviá propuestas 💰', desc:'Ofertá tu precio y plazo. El algoritmo te posiciona según velocidad de respuesta, precio y ranking. Respondé rápido para estar en el Top.' },
-    { step:'5 de 6', title:'Chat y coordinación 💬', desc:'Cuando te eligen, se abre un chat privado para coordinar el trabajo. Podés enviar fotos y marcar el trabajo como terminado.' },
-    { step:'6 de 6', title:'Construí tu reputación ⭐', desc:'Cada reseña positiva sube tu ranking zonal. La velocidad de respuesta y la cantidad de trabajos también cuentan. ¡Cada trabajo suma!' },
-  ];
+  // ── Guías rápidas (Mi Perfil → "Cómo usar PRONET") ─────────────────────
+  //
+  // Reemplaza al tutorial de pasos que se forzaba en el primer login
+  // (2026-08-17): en vez de una interrupción única al entrar, es un llamado
+  // permanente en Mi Perfil. Solapas por funcionalidad — cada una es un
+  // mini-carrusel de pasos con una maqueta chica de la pantalla real, no
+  // sólo texto. Arranca con una sola solapa a propósito; sumar la
+  // siguiente es agregar un objeto acá, sin tocar el render.
+  //
+  // Las maquetas son HTML estático simplificado, no capturas de la
+  // pantalla real ni un iframe: si el formulario real cambia de campos,
+  // esto no se desactualiza solo, pero a cambio es liviano y no depende
+  // de mantener assets de imagen sincronizados.
+  function guiaCampo(texto, activo) {
+    return '<div style="background:white;border:' + (activo ? '2px solid var(--blue)' : '1.5px solid var(--border)') +
+      ';border-radius:9px;padding:' + (activo ? '8px 11px' : '9px 11px') + ';font-size:11.5px;color:' + (activo ? 'var(--ink)' : 'var(--ink3)') +
+      ';font-weight:' + (activo ? '600' : '400') + ';margin-bottom:7px' +
+      (activo ? ';box-shadow:0 0 0 3px var(--blue-s)' : '') + '">' + escHTML(texto) + '</div>';
+  }
+  function guiaChip(texto, on, activo) {
+    return '<div style="display:inline-flex;align-items:center;padding:6px 10px;border-radius:9px;font-size:11px;font-weight:600;margin:0 6px 6px 0;' +
+      (on ? 'background:var(--blue);color:white' : 'background:white;border:1.5px solid var(--border);color:var(--ink2)') +
+      (activo ? ';box-shadow:0 0 0 3px var(--blue-s)' : '') + '">' + escHTML(texto) + '</div>';
+  }
+  function guiaMock(innerHTML) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:16px">' +
+      '<div style="font-size:9.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Así se ve en la app</div>' +
+      innerHTML + '</div>';
+  }
 
-  let tutorialStepsActual = TUTORIAL_VECINO;
-  let tutorialStep = 0;
+  const GUIAS = {
+    vecino: [
+      {
+        id: 'cargar-pedido', tab: '📋 Cargar un pedido',
+        cta: { texto: 'Publicar un pedido ahora →', accion: "goTo('s-nuevo-pedido')" },
+        pasos: [
+          { titulo: 'Contá qué necesitás', desc: 'Elegí el rubro, escribí un título corto y describí el trabajo con el mayor detalle posible — cuanto más claro, mejores propuestas te llegan.',
+            mock: guiaMock(guiaChip('🔌 Electricista', true, true) + guiaChip('🔧 Plomero', false, false) +
+              guiaCampo('Título del pedido', true) + guiaCampo('Descripción detallada...', true)) },
+          { titulo: 'Zona y cuándo', desc: 'Confirmá dónde es el trabajo, si es algo puntual o que se repite, y qué tan urgente es — eso ordena las propuestas que te lleguen.',
+            mock: guiaMock(guiaCampo('Tu dirección', false) +
+              guiaChip('🔧 Puntual', true, false) + guiaChip('🔁 Fijo', false, false) + '<div style="height:6px"></div>' +
+              guiaChip('🔴 Hoy', false, true) + guiaChip('🟡 Esta semana', true, true) + guiaChip('🟢 Flexible', false, true)) },
+          { titulo: 'Sumá fotos (opcional)', desc: 'Una foto del problema ayuda al prestador a cotizar mejor y más rápido — pero no es obligatorio, podés publicar sin fotos.',
+            mock: guiaMock('<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">' +
+              '<div style="aspect-ratio:1;border:2px dashed var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 3px var(--blue-s)">📷</div>' +
+              '<div style="aspect-ratio:1;border:1.5px dashed var(--border);border-radius:10px"></div>' +
+              '<div style="aspect-ratio:1;border:1.5px dashed var(--border);border-radius:10px"></div></div>') },
+          { titulo: 'Recibís propuestas', desc: 'Los prestadores de tu zona ven tu pedido y te mandan precio y disponibilidad. Comparás y elegís al que más te convenza.',
+            mock: guiaMock(
+              '<div style="display:flex;align-items:center;gap:10px;background:white;border:2px solid var(--blue);border-radius:11px;padding:9px 11px;margin-bottom:7px;box-shadow:0 0 0 3px var(--blue-s)">' +
+                '<div style="width:26px;height:26px;border-radius:8px;background:var(--blue-s);flex-shrink:0"></div>' +
+                '<div style="flex:1;font-size:11px;font-weight:700;color:var(--ink)">Prestador A</div><div style="font-size:11px;font-weight:800;color:var(--blue)">$8.000</div></div>' +
+              '<div style="display:flex;align-items:center;gap:10px;background:white;border:1.5px solid var(--border);border-radius:11px;padding:9px 11px">' +
+                '<div style="width:26px;height:26px;border-radius:8px;background:var(--surface2,#EEF1F6);flex-shrink:0"></div>' +
+                '<div style="flex:1;font-size:11px;font-weight:700;color:var(--ink3)">Prestador B</div><div style="font-size:11px;font-weight:800;color:var(--ink3)">$9.500</div></div>') },
+        ],
+      },
+    ],
+    prestador: [], // vacío a propósito — se completa en una próxima etapa
+  };
 
-  function mostrarTutorial(forzar) {
-    if (!FEATURES.tutorialOnboarding) return;
-    // Persistencia: no mostrar si ya lo vió (salvo que sea forzado desde Mi Perfil)
-    const key = 'pronet_tutorial_visto_' + (usuarioActual?.id || 'anon');
-    if (!forzar && localStorage.getItem(key)) return;
-    // Elegir steps según rol
-    const esPrest = esPrestador();
-    tutorialStepsActual = esPrest ? TUTORIAL_PRESTADOR : TUTORIAL_VECINO;
-    tutorialStep = 0;
-    // Ajustar dots dinámicamente
-    const dotsWrap = document.getElementById('tt-dots');
-    if (dotsWrap) {
-      dotsWrap.innerHTML = '';
-      for (let i = 0; i < tutorialStepsActual.length; i++) {
-        const dot = document.createElement('div');
-        dot.className = 'tt-dot' + (i === 0 ? ' on' : '');
-        dotsWrap.appendChild(dot);
-      }
+  let guiaTabActiva = null;
+  let guiaPasoActual = 0;
+
+  function renderGuias() {
+    const tabsWrap = document.getElementById('guias-tabs');
+    const cont = document.getElementById('guias-contenido');
+    if (!tabsWrap || !cont) return;
+    const guias = esPrestador() ? GUIAS.prestador : GUIAS.vecino;
+
+    if (!guias.length) {
+      tabsWrap.style.display = 'none';
+      cont.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no hay guías para tu perfil. Estamos sumando más.</div>';
+      return;
     }
-    renderTutorialStep();
-    document.getElementById('tutorial-overlay').classList.add('show');
-  }
-  window.mostrarTutorial = mostrarTutorial;
+    tabsWrap.style.display = 'flex';
+    if (!guiaTabActiva || !guias.some(g => g.id === guiaTabActiva)) guiaTabActiva = guias[0].id;
 
-  function renderTutorialStep() {
-    const s = tutorialStepsActual[tutorialStep];
-    if (!s) return;
-    document.getElementById('tt-step').textContent  = 'Paso ' + s.step;
-    document.getElementById('tt-title').textContent = s.title;
-    document.getElementById('tt-desc').textContent  = s.desc;
-    const dots = document.getElementById('tt-dots').children;
-    for (let i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i === tutorialStep);
-    const btn = document.getElementById('tt-next-btn');
-    btn.textContent = tutorialStep === tutorialStepsActual.length - 1 ? '¡Empezar! 🚀' : 'Siguiente →';
+    tabsWrap.innerHTML = guias.map(g =>
+      '<button class="mkt-sec' + (g.id === guiaTabActiva ? ' on' : '') + '" role="tab" aria-selected="' + (g.id === guiaTabActiva ? 'true' : 'false') +
+      '" onclick="seleccionarGuiaTab(\'' + g.id + '\')">' + escHTML(g.tab) + '</button>'
+    ).join('');
+
+    guiaPasoActual = 0;
+    renderGuiaPaso();
+  }
+  window.renderGuias = renderGuias;
+
+  function seleccionarGuiaTab(id) {
+    if (id === guiaTabActiva) return;
+    guiaTabActiva = id;
+    renderGuias();
+  }
+  window.seleccionarGuiaTab = seleccionarGuiaTab;
+
+  function renderGuiaPaso() {
+    const cont = document.getElementById('guias-contenido');
+    if (!cont) return;
+    const guias = esPrestador() ? GUIAS.prestador : GUIAS.vecino;
+    const guia = guias.find(g => g.id === guiaTabActiva);
+    if (!guia) return;
+    const p = guia.pasos[guiaPasoActual];
+    const esUltimo = guiaPasoActual === guia.pasos.length - 1;
+
+    cont.innerHTML =
+      '<div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:6px">Paso ' + (guiaPasoActual + 1) + ' de ' + guia.pasos.length + '</div>' +
+      '<div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px">' + escHTML(p.titulo) + '</div>' +
+      '<div style="font-size:12.5px;color:var(--ink2);line-height:1.5;margin-bottom:14px">' + escHTML(p.desc) + '</div>' +
+      p.mock +
+      '<div style="display:flex;gap:6px;justify-content:center;margin-bottom:16px">' +
+        guia.pasos.map((_, i) => '<div style="width:' + (i === guiaPasoActual ? '18px' : '6px') + ';height:6px;border-radius:99px;background:' +
+          (i === guiaPasoActual ? 'var(--blue)' : 'var(--border)') + ';transition:width .18s"></div>').join('') +
+      '</div>' +
+      '<div style="display:flex;gap:8px">' +
+        (guiaPasoActual > 0 ? '<button onclick="guiaPasoAnterior()" style="flex:1;background:white;border:1.5px solid var(--border);color:var(--ink2);border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">← Atrás</button>' : '') +
+        (esUltimo
+          ? '<button onclick="' + guia.cta.accion + '" style="flex:2;background:var(--blue);color:white;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">' + escHTML(guia.cta.texto) + '</button>'
+          : '<button onclick="guiaPasoSiguiente()" style="flex:2;background:var(--blue);color:white;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Siguiente →</button>') +
+      '</div>';
   }
 
-  function nextTutorial() {
-    if (tutorialStep < tutorialStepsActual.length - 1) {
-      tutorialStep++;
-      renderTutorialStep();
-    } else {
-      cerrarTutorial();
-    }
+  function guiaPasoSiguiente() {
+    const guias = esPrestador() ? GUIAS.prestador : GUIAS.vecino;
+    const guia = guias.find(g => g.id === guiaTabActiva);
+    if (!guia) return;
+    if (guiaPasoActual < guia.pasos.length - 1) { guiaPasoActual++; renderGuiaPaso(); }
   }
+  window.guiaPasoSiguiente = guiaPasoSiguiente;
 
-  function cerrarTutorial() {
-    document.getElementById('tutorial-overlay').classList.remove('show');
-    // Marcar como visto
-    const key = 'pronet_tutorial_visto_' + (usuarioActual?.id || 'anon');
-    localStorage.setItem(key, 'true');
+  function guiaPasoAnterior() {
+    if (guiaPasoActual > 0) { guiaPasoActual--; renderGuiaPaso(); }
   }
+  window.guiaPasoAnterior = guiaPasoAnterior;
 
   // ── Historial filter ─────────────────────────────────────────────────
   function filterHist(chip, filtro) {
@@ -9321,7 +9386,7 @@ document.addEventListener('focusin', (e) => {
     { k: 'denuncias',         n: 'Denuncias y moderación', d: 'Reportar usuarios y panel de moderación', nivel: 2 },
     { k: 'loyalty',           n: 'PRONET Points',          d: 'Programa de puntos y canjes', nivel: 3 },
     { k: 'analyticsAvanzado', n: 'Analítica avanzada',     d: 'Métricas detalladas para el prestador', nivel: 3 },
-    { k: 'tutorialOnboarding', n: 'Tutorial de bienvenida', d: 'Guía de 4 pasos en el primer ingreso', nivel: null },
+    { k: 'tutorialOnboarding', n: 'Tutorial de bienvenida', d: 'Checklist en Inicio y guías rápidas en Mi Perfil', nivel: null },
     // `mercadoPlaza` NO va acá: ya tiene su propio interruptor en
     // "Configuración de la app", que escribe en config_app.promarket_activo.
     // Ponerlo también en esta lista daría dos switches para lo mismo
@@ -10380,14 +10445,15 @@ document.addEventListener('focusin', (e) => {
     // Sincronizar zona del usuario con la zona activa de la app
     if (usuarioActual?.zona) { zonaActual = usuarioActual.zona; actualizarZonaLabel(zonaActual); }
     const tipo = usuarioActual?.tipo || userTipo || 'cliente';
+    // El tutorial de pasos forzado se retiró (2026-08-17): la guía ahora
+    // es un llamado permanente en Mi Perfil ("Cómo usar PRONET"), no una
+    // interrupción al primer login. Ver renderGuias().
     if (esPrestador()) {
       goTo('s-home');
       activarHomePrestador();
-      setTimeout(() => mostrarTutorial(), 1000);
     } else {
       goTo('s-home');
       if (!usuarioActual?.zona) mostrarZonaAlLogin();
-      setTimeout(() => mostrarTutorial(), 1000);
     }
     // Render explícito del feed (por si activarHomePrestador pisó el estado)
     setTimeout(() => renderHomeFeed(catActiva || 'todos'), 50);

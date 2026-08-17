@@ -1510,11 +1510,11 @@
           </div>
           <div class="m-chev" style="color:var(--blue)">›</div>
         </div>
-        <div class="menu-item" onclick="mostrarTutorial(true)">
+        <div class="menu-item" data-feature="tutorialOnboarding" onclick="goTo('s-guias')">
           <div class="m-icon" style="background:var(--blue-s)">📖</div>
           <div class="m-txt">
-            <div class="m-title">Tutorial PRONET</div>
-            <div class="m-sub">Aprendé a usar la app paso a paso</div>
+            <div class="m-title">Cómo usar PRONET</div>
+            <div class="m-sub">Guías rápidas por tema, paso a paso</div>
           </div>
           <div class="m-chev">›</div>
         </div>
@@ -4503,26 +4503,20 @@
   </div><!-- /prealta -->
 
 
-  <!-- ══ TUTORIAL OVERLAY ══════════════════════════════════════════════ -->
-  <div class="tutorial-overlay" id="tutorial-overlay">
-    <div id="tutorial-content" style="display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding-bottom:120px">
-      <div class="tooltip-box">
-        <div class="tt-step" id="tt-step">Paso 1 de 4</div>
-        <div class="tt-title" id="tt-title">Bienvenido a PRONET</div>
-        <div class="tt-desc" id="tt-desc">Encontrá prestadores de confianza en tu barrio, con ranking zonal y precios referenciales.</div>
-        <div class="tt-dots" id="tt-dots">
-          <div class="tt-dot on"></div>
-          <div class="tt-dot"></div>
-          <div class="tt-dot"></div>
-          <div class="tt-dot"></div>
-        </div>
-        <div class="tt-btns">
-          <button class="tt-skip" onclick="cerrarTutorial()">Saltar</button>
-          <button class="tt-next" id="tt-next-btn" onclick="nextTutorial()">Siguiente →</button>
-        </div>
-      </div>
+  <!-- ══ GUÍAS RÁPIDAS ══════════════════════════════════════════════════
+       Reemplaza al tutorial de pasos forzado al primer login. Ahora es un
+       llamado en Mi Perfil: solapas por funcionalidad, cada una con su
+       propio mini-carrusel de pasos y una maqueta chica de la pantalla
+       real. Arranca con una sola solapa (vecino → cargar un pedido);
+       GUIAS[] está pensado para sumar más sin tocar la estructura. -->
+  <div class="screen" id="s-guias">
+    <div class="nprop-header">
+      <div class="back-btn" onclick="goTo('s-miperfil')" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <h2>Cómo usar PRONET</h2>
     </div>
-  </div>
+    <div id="guias-tabs" class="mkt-secciones" role="tablist" aria-label="Elegí qué querés aprender" style="margin:14px 14px 0"></div>
+    <div id="guias-contenido" style="padding:18px 14px 40px"></div>
+  </div><!-- /guias -->
 
   <!-- ══ ERROR / SIN CONEXIÓN ═══════════════════════════════════════════ -->
   <div class="error-overlay" id="error-overlay">
