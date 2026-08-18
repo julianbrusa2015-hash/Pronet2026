@@ -15261,6 +15261,35 @@ document.addEventListener('focusin', (e) => {
     props.sort((a,b)=>(peso[a.estado]-peso[b.estado])||(a.precio-b.precio));
     wrap.innerHTML='';
 
+    // — Propuesta candidata: solo si el vecino todavía tiene que elegir y
+    // hay más de una para comparar. Combina reputación (misma fórmula
+    // bayesiana que el ranking) con qué tan competitivo es el precio
+    // dentro de ESTE pedido — no inventa una señal de "recomendación de
+    // vecinos" que hoy no existe en la base.
+    let candidataId = null;
+    const pendientes = props.filter(pr => pr.estado === 'pendiente');
+    if (!hayElegida && pendientes.length > 1) {
+      const preciosValidos = pendientes.map(pr => pr.precio).filter(p => p > 0);
+      const precioMin = preciosValidos.length ? Math.min(...preciosValidos) : null;
+      const _bay = (p) => ((p.rating||0)*(p.resenas||0)+15+(p.verificado?2:0))/((p.resenas||0)+5);
+      let mejor = null, mejorScore = -1;
+      pendientes.forEach(pr => {
+        const p2 = porId[pr.prestador_id] || {};
+        const bayNorm = Math.min(_bay(p2) / 5, 1);
+        const priceScore = (precioMin && pr.precio > 0) ? precioMin / pr.precio : 0.5;
+        const score = bayNorm * 0.6 + priceScore * 0.4;
+        if (score > mejorScore) { mejorScore = score; mejor = pr; }
+      });
+      candidataId = mejor?.id || null;
+      if (candidataId) {
+        const p2 = porId[mejor.prestador_id] || {};
+        const leyenda = document.createElement('div');
+        leyenda.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;background:#EEF2FF;border-radius:10px;margin-bottom:10px;font-size:12px;color:var(--blue);font-weight:600';
+        leyenda.innerHTML = '🏆 Según precio, reputación y verificación, la candidata es ' + escHTML(p2.nombre || 'esta propuesta');
+        wrap.appendChild(leyenda);
+      }
+    }
+
     // Ref PRONET: ayuda a comparar propuestas de alcance distinto — solo si hay ficha activa real.
     try {
       const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
@@ -15282,10 +15311,11 @@ document.addEventListener('focusin', (e) => {
     props.forEach(pr=>{
       const p2=porId[pr.prestador_id]||{};
       const card=document.createElement('div');
-      const esElegida=pr.estado==='elegida',esRechazada=pr.estado==='rechazada';
+      const esElegida=pr.estado==='elegida',esRechazada=pr.estado==='rechazada',esCandidata=pr.id===candidataId;
       card.className='prop-card';
-      card.style.cssText='background:white;border-radius:14px;padding:14px;margin-bottom:10px;border:1.5px solid '+(esElegida?'var(--green,#16A34A)':'var(--border)')+(esRechazada?';opacity:.55':'');
+      card.style.cssText='background:white;border-radius:14px;padding:14px;margin-bottom:10px;border:1.5px solid '+(esElegida?'var(--green,#16A34A)':esCandidata?'var(--blue)':'var(--border)')+(esRechazada?';opacity:.55':'');
       const chip=esElegida?'<div style="margin-left:auto;background:#DCFCE7;color:#16A34A;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">✅ Elegida</div>':esRechazada?'<div style="margin-left:auto;background:var(--surface,#F1F5F9);color:var(--ink3);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">Rechazada</div>':'<div style="margin-left:auto;background:var(--gold-s);color:#92400E;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">⭐ '+(p2.rating||5).toFixed(1)+'</div>';
+      const badgeCandidata=esCandidata?'<div style="display:inline-block;background:var(--blue);color:white;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;margin-bottom:8px">🏆 Candidata</div>':'';
       // Formatear el precio según la modalidad
       const modal = pr.modalidad_precio || 'fijo';
       const precioTxt = modal === 'convenir'
@@ -15305,7 +15335,7 @@ document.addEventListener('focusin', (e) => {
       if(pr.fecha_tentativa) detalleBits.push('📅 '+new Date(pr.fecha_tentativa+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'}));
       if(pr.duracion_aprox) detalleBits.push('⏱ '+(DURACION_LBL[pr.duracion_aprox]||pr.duracion_aprox));
       const detalleHtml=detalleBits.length?'<div class="prop-rank" style="margin-top:2px">'+detalleBits.join(' · ')+'</div>':'';
-      card.innerHTML='<div class="prop-top"><div class="prop-av" style="background:'+escHTML(p2.color_bg||'#EEF2FF')+';color:'+escHTML(p2.color_text||'#2B5BFF')+'">'+avatarInner(p2)+'</div><div style="min-width:0"><div class="prop-name">'+escHTML(p2.nombre||'Prestador')+'</div><div class="prop-rank">📍 '+escHTML(p2.zona||'Escobar')+' · '+escHTML(PLAZO_LBL[pr.plazo]||pr.plazo||'')+'</div>'+detalleHtml+'</div>'+chip+'</div><div style="display:flex;gap:16px;align-items:baseline;margin:8px 0">'+precioTxt+'</div>'+(pr.mensaje?'<div class="prop-msg">"'+escHTML(pr.mensaje)+'"</div>':'')+adjuntoHtml;
+      card.innerHTML=badgeCandidata+'<div class="prop-top"><div class="prop-av" style="background:'+escHTML(p2.color_bg||'#EEF2FF')+';color:'+escHTML(p2.color_text||'#2B5BFF')+'">'+avatarInner(p2)+'</div><div style="min-width:0"><div class="prop-name">'+escHTML(p2.nombre||'Prestador')+'</div><div class="prop-rank">📍 '+escHTML(p2.zona||'Escobar')+' · '+escHTML(PLAZO_LBL[pr.plazo]||pr.plazo||'')+'</div>'+detalleHtml+'</div>'+chip+'</div><div style="display:flex;gap:16px;align-items:baseline;margin:8px 0">'+precioTxt+'</div>'+(pr.mensaje?'<div class="prop-msg">"'+escHTML(pr.mensaje)+'"</div>':'')+adjuntoHtml;
       const btn=document.createElement('button');btn.style.marginTop='10px';
       if(esElegida){btn.className='prop-select-btn gold';btn.textContent='💬 Chatear con '+((p2.nombre||'').split(' ')[0]||'el prestador');btn.addEventListener('click',e=>{e.stopPropagation();prestadorActual=p2;abrirChat(pr.id,{prestador:p2,pedido:pedidoActual});});card.appendChild(btn);}
       else if(!esRechazada&&!hayElegida){btn.className='prop-select-btn';btn.textContent='Elegir a '+((p2.nombre||'este prestador').split(' ')[0])+' →';btn.addEventListener('click',e=>{e.stopPropagation();elegirPropuestaUI(pr,p2);});card.appendChild(btn);}
