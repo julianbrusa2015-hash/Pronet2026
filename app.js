@@ -14352,7 +14352,7 @@ document.addEventListener('focusin', (e) => {
       const tituloEl = document.getElementById('chat-service-titulo');
       if (tituloEl) tituloEl.textContent = ped.titulo || 'Trabajo';
       const subEl = document.getElementById('chat-service-sub');
-      if (subEl) subEl.textContent = (ped.rubro || '') + (p ? ' · $' + (p.precio || 0).toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita') : '');
+      if (subEl) subEl.textContent = (ped.rubro || '') + (p && p.precio ? ' · $' + p.precio.toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita') : '');
     }
     // Se limpia acá y no al cerrar: si no, el botón del chat anterior queda
     // visible un instante mientras este todavía no sabe si tiene teléfono.
@@ -14425,7 +14425,7 @@ document.addEventListener('focusin', (e) => {
       const nameEl = document.getElementById('chat-name');
       if (nameEl) nameEl.textContent = p.nombre || 'Prestador';
       const subEl = document.getElementById('chat-service-sub');
-      if (subEl) subEl.textContent = (p.rubro || '') + ' · $' + (p.precio || 0).toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita');
+      if (subEl) subEl.textContent = (p.rubro || '') + (p.precio ? ' · $' + p.precio.toLocaleString('es-AR') + '/' + (p.precio_unidad || 'visita') : '');
     }
     chatContraparteId = null;
     chatContraparteTelefono = null;

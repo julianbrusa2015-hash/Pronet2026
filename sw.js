@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v278'; // v278: propuesta candidata en "Propuestas recibidas" — badge + leyenda según precio, reputación y verificación
+const CACHE_VERSION = 'pronet-v279'; // v279: fix "$0/visita" en el header del chat cuando el prestador no cargó precio de referencia
 
 const SHELL = [
   './',
