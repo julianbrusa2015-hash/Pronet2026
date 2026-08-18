@@ -4703,10 +4703,21 @@ document.addEventListener('focusin', (e) => {
 
   function mktAplicarFormatoUI() {
     const cont = document.getElementById('mkt-feed');
-    if (cont) cont.classList.toggle('mkt-feed-grid', mktFormatoActual() === 'grid');
+    // Los avisos de PRESTADOR (pubPrestadorCardHTML) no tienen variante de
+    // grilla — son tarjetas anchas con foto/descripción/reputación. Si el
+    // formato quedó en "grid" desde el origen Vecinos y se cambia a
+    // Prestadores, la grilla de 2 columnas seguía aplicada sobre esas
+    // tarjetas anchas y las apretaba/cortaba.
+    const esGrid = mktOrigen !== 'prestador' && mktFormatoActual() === 'grid';
+    if (cont) cont.classList.toggle('mkt-feed-grid', esGrid);
     const lbl = document.getElementById('mkt-formato-lbl');
     // El label nombra el destino, no el estado actual — mismo patrón que el toggle de Mapa/Lista.
-    if (lbl) lbl.textContent = mktFormatoActual() === 'grid' ? 'Tarjetas' : 'Fichas';
+    if (lbl) lbl.textContent = esGrid ? 'Tarjetas' : 'Fichas';
+    // El toggle de formato no aplica a los avisos de Prestador: ocultarlo
+    // evita ofrecer una acción que no cambia nada (mismo criterio que ya
+    // usa toggleMapaMercado con este botón en modo mapa).
+    const btnFmt = document.getElementById('mkt-toggle-formato');
+    if (btnFmt) btnFmt.style.display = mktOrigen === 'prestador' ? 'none' : '';
   }
 
   function mktRepintarFeed() {

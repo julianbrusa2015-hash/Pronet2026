@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v283'; // v283: Fichas/Mapa pasan a solo-ícono (área táctil 44px, nombre en aria-label), como en el commit original
+const CACHE_VERSION = 'pronet-v284'; // v284: fix tarjetas de Prestador cortadas — la grilla de 2 columnas de Fichas quedaba pegada al cambiar de origen
 
 const SHELL = [
   './',
