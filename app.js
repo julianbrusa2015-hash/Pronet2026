@@ -14752,7 +14752,14 @@ document.addEventListener('focusin', (e) => {
       plazoNP=propuestaMia.plazo||null;
       const opt=document.querySelector('#s-nueva-propuesta .form-opt[data-plazo="'+plazoNP+'"]');
       if(opt) opt.classList.add('on');
-    } else { if(precio)precio.value='';if(mensaje)mensaje.value='';plazoNP=null;quitarAdjuntoPropuesta(); }
+      const fechaEl=document.getElementById('np-fecha'),duracionEl=document.getElementById('np-duracion');
+      if(fechaEl) fechaEl.value=propuestaMia.fecha_tentativa||'';
+      if(duracionEl) duracionEl.value=propuestaMia.duracion_aprox||'';
+    } else {
+      if(precio)precio.value='';if(mensaje)mensaje.value='';plazoNP=null;quitarAdjuntoPropuesta();
+      const fechaEl=document.getElementById('np-fecha'),duracionEl=document.getElementById('np-duracion');
+      if(fechaEl) fechaEl.value='';if(duracionEl) duracionEl.value='';
+    }
     const btnEnv=document.getElementById('np-enviar');
     if(btnEnv) btnEnv.textContent=editando?'💾 Actualizar propuesta':'📤 Enviar propuesta';
     goTo('s-nueva-propuesta');
@@ -14950,6 +14957,8 @@ document.addEventListener('focusin', (e) => {
     }
     const mensaje=(document.getElementById('np-mensaje')?.value||'').trim();
     if(!plazoNP){showToast && showToast('⚠️ Elegí tu disponibilidad para este trabajo.');return;}
+    const fecha_tentativa=document.getElementById('np-fecha')?.value||null;
+    const duracion_aprox=document.getElementById('np-duracion')?.value||null;
     // Subir adjunto si hay uno seleccionado
     let adjuntoData = { adjunto_url: null, adjunto_tipo: null, adjunto_nombre: null };
     if (adjuntoPropuesta?.file) {
@@ -14964,7 +14973,7 @@ document.addEventListener('focusin', (e) => {
       // Salvaguarda: si propuestaMia quedó apuntando a otro pedido, ignorarla
       const propuestaValida = (propuestaMia && propuestaMia.pedido_id === pedidoActual.id) ? propuestaMia : null;
       const idExistente = propuestaValida ? propuestaValida.id : null;
-      const datos = { precio, plazo:plazoNP, mensaje, modalidad_precio: modalidad, precio_min, precio_max, ...adjuntoData };
+      const datos = { precio, plazo:plazoNP, mensaje, modalidad_precio: modalidad, precio_min, precio_max, fecha_tentativa, duracion_aprox, ...adjuntoData };
       let propuestaId = idExistente;
       if(idExistente){await PronetDB.actualizar('propuestas',idExistente,{...datos, estado:'pendiente'});}
       else{
@@ -14997,7 +15006,7 @@ document.addEventListener('focusin', (e) => {
       }
       showToast && showToast(idExistente?'✅ Propuesta actualizada.':'✅ ¡Propuesta enviada! Te avisamos cuando el vecino la vea.');
       // Construir objeto propuesta actualizado para poblar la pantalla de estado
-      const propObj = { id: propuestaId, pedido_id: pedidoActual.id, precio, precio_min, precio_max, modalidad_precio: modalidad, plazo: plazoNP, creado: propuestaValida?.creado || new Date().toISOString() };
+      const propObj = { id: propuestaId, pedido_id: pedidoActual.id, precio, precio_min, precio_max, modalidad_precio: modalidad, plazo: plazoNP, fecha_tentativa, duracion_aprox, creado: propuestaValida?.creado || new Date().toISOString() };
       goTo('s-estado-propuesta');
       const epEl=document.getElementById('s-estado-propuesta');if(epEl)epEl.scrollTop=0;
       cargarEstadoPropuesta(pedidoActual, propObj);
@@ -15012,6 +15021,7 @@ document.addEventListener('focusin', (e) => {
 
   // ══ PROPUESTAS · Paso 3+4: comparación y elección ═══════════════════
   const PLAZO_LBL={urgente:'⚡ Urgente',semana:'🗓 Esta semana',coordinar:'📞 A coordinar'};
+  const DURACION_LBL={menos_1_dia:'Menos de 1 día',['1_2_dias']:'1-2 días',['3_5_dias']:'3-5 días',mas_semana:'Más de una semana'};
 
   // ══ ESTADO PROPUESTA · Carga dinámica de la pantalla ══════════════════
   async function cargarEstadoPropuesta(pedido, propuesta) {
@@ -15019,6 +15029,7 @@ document.addEventListener('focusin', (e) => {
 
     const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
     const PLAZO_MAP = { urgente: 'Hoy mismo', semana: 'Esta semana', coordinar: 'A coordinar' };
+    const DURACION_MAP = { menos_1_dia: 'Menos de 1 día', '1_2_dias': '1-2 días', '3_5_dias': '3-5 días', mas_semana: 'Más de una semana' };
     const MOD_MAP   = { fijo: 'fijo', rango: 'rango', convenir: 'a convenir' };
 
     // — Precio legible —
@@ -15123,6 +15134,18 @@ document.addEventListener('focusin', (e) => {
     set('ep-pedido-titulo', pedido.titulo || '—');
     set('ep-precio', precioTxt);
     set('ep-plazo', PLAZO_MAP[propuesta.plazo] || propuesta.plazo || '—');
+
+    const fechaRow = document.getElementById('ep-fecha-row');
+    if (propuesta.fecha_tentativa) {
+      set('ep-fecha', new Date(propuesta.fecha_tentativa + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }));
+      if (fechaRow) fechaRow.style.display = 'flex';
+    } else if (fechaRow) fechaRow.style.display = 'none';
+
+    const duracionRow = document.getElementById('ep-duracion-row');
+    if (propuesta.duracion_aprox) {
+      set('ep-duracion', DURACION_MAP[propuesta.duracion_aprox] || propuesta.duracion_aprox);
+      if (duracionRow) duracionRow.style.display = 'flex';
+    } else if (duracionRow) duracionRow.style.display = 'none';
 
     const refRow = document.getElementById('ep-ref-row');
     if (refTxt) { set('ep-ref', refTxt); if (refRow) refRow.style.display = 'flex'; }
@@ -15286,7 +15309,11 @@ document.addEventListener('focusin', (e) => {
           return '<img src="'+imgUrl+'" onclick="abrirFotoModal(this.src)" style="width:100%;border-radius:8px;margin-top:8px;cursor:pointer;max-height:180px;object-fit:cover" alt="Adjunto de propuesta">';
         }
       })() : '';
-      card.innerHTML='<div class="prop-top"><div class="prop-av" style="background:'+escHTML(p2.color_bg||'#EEF2FF')+';color:'+escHTML(p2.color_text||'#2B5BFF')+'">'+avatarInner(p2)+'</div><div style="min-width:0"><div class="prop-name">'+escHTML(p2.nombre||'Prestador')+'</div><div class="prop-rank">📍 '+escHTML(p2.zona||'Escobar')+' · '+escHTML(PLAZO_LBL[pr.plazo]||pr.plazo||'')+'</div></div>'+chip+'</div><div style="display:flex;gap:16px;align-items:baseline;margin:8px 0">'+precioTxt+'</div>'+(pr.mensaje?'<div class="prop-msg">"'+escHTML(pr.mensaje)+'"</div>':'')+adjuntoHtml;
+      const detalleBits=[];
+      if(pr.fecha_tentativa) detalleBits.push('📅 '+new Date(pr.fecha_tentativa+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'}));
+      if(pr.duracion_aprox) detalleBits.push('⏱ '+(DURACION_LBL[pr.duracion_aprox]||pr.duracion_aprox));
+      const detalleHtml=detalleBits.length?'<div class="prop-rank" style="margin-top:2px">'+detalleBits.join(' · ')+'</div>':'';
+      card.innerHTML='<div class="prop-top"><div class="prop-av" style="background:'+escHTML(p2.color_bg||'#EEF2FF')+';color:'+escHTML(p2.color_text||'#2B5BFF')+'">'+avatarInner(p2)+'</div><div style="min-width:0"><div class="prop-name">'+escHTML(p2.nombre||'Prestador')+'</div><div class="prop-rank">📍 '+escHTML(p2.zona||'Escobar')+' · '+escHTML(PLAZO_LBL[pr.plazo]||pr.plazo||'')+'</div>'+detalleHtml+'</div>'+chip+'</div><div style="display:flex;gap:16px;align-items:baseline;margin:8px 0">'+precioTxt+'</div>'+(pr.mensaje?'<div class="prop-msg">"'+escHTML(pr.mensaje)+'"</div>':'')+adjuntoHtml;
       const btn=document.createElement('button');btn.style.marginTop='10px';
       if(esElegida){btn.className='prop-select-btn gold';btn.textContent='💬 Chatear con '+((p2.nombre||'').split(' ')[0]||'el prestador');btn.addEventListener('click',e=>{e.stopPropagation();prestadorActual=p2;abrirChat(pr.id,{prestador:p2,pedido:pedidoActual});});card.appendChild(btn);}
       else if(!esRechazada&&!hayElegida){btn.className='prop-select-btn';btn.textContent='Elegir a '+((p2.nombre||'este prestador').split(' ')[0])+' →';btn.addEventListener('click',e=>{e.stopPropagation();elegirPropuestaUI(pr,p2);});card.appendChild(btn);}

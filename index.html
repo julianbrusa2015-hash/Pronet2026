@@ -3098,6 +3098,25 @@
         </div>
 
         <div class="form-group">
+          <div style="display:flex;gap:12px">
+            <div style="flex:1">
+              <label for="np-fecha" class="form-label">Fecha tentativa (opcional)</label>
+              <input type="date" name="np-fecha" class="ob-input" id="np-fecha">
+            </div>
+            <div style="flex:1">
+              <label for="np-duracion" class="form-label">Duración aprox. (opcional)</label>
+              <select name="np-duracion" class="ob-input" id="np-duracion">
+                <option value="">—</option>
+                <option value="menos_1_dia">Menos de 1 día</option>
+                <option value="1_2_dias">1-2 días</option>
+                <option value="3_5_dias">3-5 días</option>
+                <option value="mas_semana">Más de una semana</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
           <label for="np-mensaje" class="form-label">Mensaje para el cliente</label>
           <textarea name="np-mensaje" class="ob-input" rows="4" style="resize:none;line-height:1.5" id="np-mensaje" placeholder="Explicá brevemente por qué sos la mejor opción para este trabajo..." required minlength="10"></textarea>
           <div style="font-size:11px;color:var(--ink3);text-align:right;margin-top:4px">Un buen mensaje aumenta tus chances de ser elegido</div>
@@ -4019,6 +4038,8 @@
       <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Pedido</span><span id="ep-pedido-titulo" style="font-weight:600">—</span></div>
       <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Tu precio</span><span id="ep-precio" style="font-weight:700;color:var(--ink)">—</span></div>
       <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Plazo</span><span id="ep-plazo" style="font-weight:600">—</span></div>
+      <div id="ep-fecha-row" style="display:none;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Fecha tentativa</span><span id="ep-fecha" style="font-weight:600">—</span></div>
+      <div id="ep-duracion-row" style="display:none;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Duración aprox.</span><span id="ep-duracion" style="font-weight:600">—</span></div>
       <div id="ep-ref-row" style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Ref. PRONET</span><span id="ep-ref" style="font-weight:600;color:var(--blue)">—</span></div>
       <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Posición estimada</span><span id="ep-posicion" style="font-weight:700;color:var(--gold)">🥇 Top 1 por algoritmo</span></div>
     </div>
