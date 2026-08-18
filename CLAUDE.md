@@ -47,3 +47,13 @@ Netlify en pronetprueba.netlify.app
 **Aviso posterior obligatorio:** después de cada push, informar en el mismo mensaje qué se subió y que el deploy quedó disparado — no es una confirmación previa, es un aviso de lo que ya se ejecutó.
 
 Esta autorización cubre únicamente `git push origin main` normal. Operaciones destructivas o difíciles de revertir (`push --force`, `git reset --hard`, borrar ramas, reescribir historial) siguen requiriendo confirmación explícita como siempre.
+
+### Excepción: sesiones remotas (decidida 2026-08-17)
+
+La autorización de push directo a `main` vale **sólo en sesiones locales**, en la máquina del usuario.
+
+En sesiones de Claude Code en la nube (celular / `claude.ai/code`, que clonan el repo en un sandbox de Anthropic): **nunca pushear a `main`**. Trabajar en una rama y abrir un PR. El merge lo hace el usuario desde la compu.
+
+**Por qué:** desde el celu es mucho más fácil aprobar un cambio sin haberlo leído entero, y el sandbox no tiene `.env` ni `config-secrets.js` — no puede correr los Playwright contra Supabase ni verificar el flujo de MercadoPago, así que ninguna sesión remota puede comprobar lo que está por mandar a producción.
+
+**Cómo detectarlo:** si el entorno no es `C:\Users\julia\Desktop\Pronet Nueva APP V01` (por ejemplo, es un clon en Linux bajo `/home/`), es una sesión remota.
