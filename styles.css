@@ -597,6 +597,28 @@
     padding: 6px 10px; cursor: pointer; display: flex; align-items: center; gap: 5px;
     font-size: 12px; font-weight: 600; color: var(--ink3); font-family: 'Inter', sans-serif;
   }
+  /* Botones de vista del feed (grilla / mapa), debajo del buscador. Sólo
+     ícono — el nombre accesible va en aria-label y en el <span class="sr-only">. */
+  .mkt-vista-btn {
+    flex-shrink: 0;
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink3); font-family: inherit;
+    /* 34px visibles, pero el área sensible llega a 44 con el ::after */
+    width: 34px; height: 34px; position: relative;
+  }
+  .mkt-vista-btn::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 44px; height: 44px; transform: translate(-50%, -50%);
+  }
+  .mkt-vista-btn.on { color: var(--blue); border-color: var(--blue); background: var(--blue-s); }
+
+  /* Texto sólo para lectores de pantalla: fuera de la vista pero anunciado. */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
   .mkt-fab {
     position: fixed; right: 20px; bottom: calc(24px + env(safe-area-inset-bottom, 0px));
     width: 54px; height: 54px; border-radius: 50%;

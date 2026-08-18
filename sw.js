@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v282'; // v282: Fichas/Mapa de Entre Vecinos bajan debajo del buscador (rescatado de 3527e53)
+const CACHE_VERSION = 'pronet-v283'; // v283: Fichas/Mapa pasan a solo-ícono (área táctil 44px, nombre en aria-label), como en el commit original
 
 const SHELL = [
   './',
