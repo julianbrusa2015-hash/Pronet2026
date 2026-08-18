@@ -2568,11 +2568,14 @@ document.addEventListener('focusin', (e) => {
     // Construir HTML
     let html = '<div style="padding:14px">';
 
-    // Propuestas recibidas
-    html += '<div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--blue-s);border-radius:12px;margin-bottom:10px">';
-    html += '<div style="font-size:24px">📬</div>';
-    html += '<div><div style="font-size:13px;font-weight:700;color:var(--ink)">' + nProps + ' propuesta' + (nProps !== 1 ? 's' : '') + ' recibida' + (nProps !== 1 ? 's' : '') + '</div>';
-    html += '<div style="font-size:11px;color:var(--ink3)">' + (nProps === 0 ? 'Sé el primero en ofertar' : 'Mientras más rápido respondas, mejor tu posición') + '</div></div></div>';
+    // Propuestas recibidas — si ya hay competencia, remarcarlo con un tono
+    // de alerta (no solo informativo) para que quede claro que no es el
+    // único que está ofertando.
+    const hayCompetencia = nProps > 0;
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:12px;background:' + (hayCompetencia ? '#FEF3C7' : 'var(--blue-s)') + ';border-radius:12px;margin-bottom:10px">';
+    html += '<div style="font-size:24px">' + (hayCompetencia ? '⚠️' : '📬') + '</div>';
+    html += '<div><div style="font-size:13px;font-weight:700;color:var(--ink)">' + (hayCompetencia ? 'El vecino ya recibió ' + nProps + ' propuesta' + (nProps !== 1 ? 's' : '') : 'Todavía no recibió propuestas') + '</div>';
+    html += '<div style="font-size:11px;color:' + (hayCompetencia ? '#92400E' : 'var(--ink3)') + ';font-weight:' + (hayCompetencia ? '600' : '400') + '">' + (hayCompetencia ? 'Ya está comparando ofertas — respondé rápido para no quedar afuera' : 'Sé el primero en ofertar') + '</div></div></div>';
 
     // Ref PRONET
     if (refTxt) {
