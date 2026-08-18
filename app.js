@@ -15346,7 +15346,7 @@ document.addEventListener('focusin', (e) => {
 
   async function elegirPropuestaUI(pr,prestador) {
     const nombre=(prestador&&prestador.nombre)||'este prestador';
-    const ok=confirm('¿Elegir a '+nombre+' por $'+(pr.precio||0).toLocaleString('es-AR')+'?\n\nLas demás propuestas se rechazarán y el pedido quedará cerrado.');
+    const ok=confirm('¿Elegir a '+nombre+' '+precioPropuestaConPrep(pr)+'?\n\nLas demás propuestas se rechazarán y el pedido quedará cerrado.');
     if(!ok) return;
     const res=await PronetDB.rpc('elegir_propuesta',{p_propuesta_id:pr.id});
     if(!res||res.ok!==true){alert(res&&res.error&&res.error.includes('PROPUESTA_NO_ELEGIBLE')?'Esta propuesta ya no se puede elegir.':'No se pudo confirmar la elección.');if(pedidoActual)renderPropuestasRecibidas(pedidoActual);return;}
@@ -15414,7 +15414,7 @@ document.addEventListener('focusin', (e) => {
       const ped=pedidos.find(p=>p.id===pr.pedido_id)||{},esElegida=pr.estado==='elegida';
       const card=document.createElement('div');
       card.style.cssText='background:white;border-radius:14px;padding:14px;margin-bottom:10px;border:1.5px solid '+(esElegida?'var(--green,#16A34A)':'var(--border)')+(pr.estado==='rechazada'||pr.estado==='retirada'?';opacity:.6':'');
-      card.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:18px">'+(ped.icono||'📋')+'</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHTML(ped.titulo||'Pedido')+'</div><div style="font-size:11px;color:var(--ink3)">📍 '+escHTML(ped.zona||'Escobar')+' · '+escHTML(ped.estado||'Publicado')+'</div></div>'+(CHIP[pr.estado]||'')+'</div><div style="display:flex;gap:12px;align-items:baseline"><div style="font-size:17px;font-weight:800;color:var(--ink)">$'+(pr.precio||0).toLocaleString('es-AR')+'</div><div style="font-size:11px;font-weight:600;color:var(--ink2)">'+escHTML(PLAZO_LBL[pr.plazo]||pr.plazo||'')+'</div></div>';
+      card.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:18px">'+(ped.icono||'📋')+'</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHTML(ped.titulo||'Pedido')+'</div><div style="font-size:11px;color:var(--ink3)">📍 '+escHTML(ped.zona||'Escobar')+' · '+escHTML(ped.estado||'Publicado')+'</div></div>'+(CHIP[pr.estado]||'')+'</div><div style="display:flex;gap:12px;align-items:baseline"><div style="font-size:17px;font-weight:800;color:var(--ink)">'+precioPropuestaTxt(pr)+'</div><div style="font-size:11px;font-weight:600;color:var(--ink2)">'+escHTML(PLAZO_LBL[pr.plazo]||pr.plazo||'')+'</div></div>';
       // Toda card navega a s-estado-propuesta — desde ahí el prestador accede al chat
       card.style.cursor='pointer';
       card.addEventListener('click',()=>{pedidoActual=ped;propuestaMia=pr;goTo('s-estado-propuesta');const ep=document.getElementById('s-estado-propuesta');if(ep)ep.scrollTop=0;cargarEstadoPropuesta(ped,pr);});
@@ -15455,6 +15455,24 @@ document.addEventListener('focusin', (e) => {
     lista.insertBefore(item,lista.firstChild);
   }
 
+  /** Precio legible de una propuesta para toasts/notificaciones — respeta
+   *  la modalidad en vez de asumir precio fijo (evita mostrar "$0" en
+   *  propuestas "a convenir"). */
+  function precioPropuestaTxt(pr) {
+    const mod = pr.modalidad_precio || 'fijo';
+    if (mod === 'convenir') return 'a convenir';
+    if (mod === 'rango' && pr.precio_min && pr.precio_max) return '$' + pr.precio_min.toLocaleString('es-AR') + '–$' + pr.precio_max.toLocaleString('es-AR');
+    return '$' + (pr.precio || 0).toLocaleString('es-AR');
+  }
+
+  /** Igual que precioPropuestaTxt, pero con la preposición correcta para
+   *  frases tipo "Trabajo confirmado ___" — "por $X" pero "a convenir"
+   *  (sin "por", que suena mal: "por a convenir"). */
+  function precioPropuestaConPrep(pr) {
+    const txt = precioPropuestaTxt(pr);
+    return txt === 'a convenir' ? txt : 'por ' + txt;
+  }
+
   let rtIniciado=false;
   function iniciarRealtime(){
     if(rtIniciado||!usuarioActual||!PronetDB.esRemoto()) return;
@@ -15473,11 +15491,12 @@ document.addEventListener('focusin', (e) => {
       const pr=payload.new||{};if(!usuarioActual) return;
       const soyAutor=usuarioActual.prestador_id&&pr.prestador_id===usuarioActual.prestador_id;
       if(payload.eventType==='UPDATE'&&pr.estado==='elegida'&&soyAutor){
-        showToast('🎉 ¡Te eligieron! Trabajo confirmado por $'+(pr.precio||0).toLocaleString('es-AR'),()=>abrirMisPropuestas(),true);
-        agregarNotifCampanita('🎉 ¡Te eligieron! Trabajo confirmado por $'+(pr.precio||0).toLocaleString('es-AR'),()=>abrirMisPropuestas());
+        const precioTxt=precioPropuestaConPrep(pr);
+        showToast('🎉 ¡Te eligieron! Trabajo confirmado '+precioTxt,()=>abrirMisPropuestas(),true);
+        agregarNotifCampanita('🎉 ¡Te eligieron! Trabajo confirmado '+precioTxt,()=>abrirMisPropuestas());
         if (PronetDB.esRemoto() && usuarioActual?.id) {
           PronetDB.insertarNotificacion({ usuario_id: usuarioActual.id, tipo: 'propuesta',
-            titulo: '🎉 ¡Te eligieron! Trabajo confirmado por $'+(pr.precio||0).toLocaleString('es-AR'),
+            titulo: '🎉 ¡Te eligieron! Trabajo confirmado '+precioTxt,
             url: '/#s-mis-propuestas' }).catch(() => {});
         }
         // Refrescar s-estado-propuesta si está activa y es esta propuesta
@@ -15488,12 +15507,13 @@ document.addEventListener('focusin', (e) => {
         return;
       }
       if(payload.eventType==='INSERT'&&!esPrestador()&&!soyAutor){
-        showToast('📬 Nueva propuesta por $'+(pr.precio||0).toLocaleString('es-AR')+' — Tocá para comparar',()=>goTo('s-pedidos'),true); // persistente
-        agregarNotifCampanita('📬 Nueva propuesta por $'+(pr.precio||0).toLocaleString('es-AR'),()=>goTo('s-pedidos'));
+        const precioTxt=precioPropuestaConPrep(pr);
+        showToast('📬 Nueva propuesta '+precioTxt+' — Tocá para comparar',()=>goTo('s-pedidos'),true); // persistente
+        agregarNotifCampanita('📬 Nueva propuesta '+precioTxt,()=>goTo('s-pedidos'));
         updateBellCount();
         if (PronetDB.esRemoto() && usuarioActual?.id) {
           PronetDB.insertarNotificacion({ usuario_id: usuarioActual.id, tipo: 'propuesta',
-            titulo: '📬 Nueva propuesta por $'+(pr.precio||0).toLocaleString('es-AR'),
+            titulo: '📬 Nueva propuesta '+precioTxt,
             url: '/#s-pedidos' }).catch(() => {});
         }
         renderPedidosGuardados();
