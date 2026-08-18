@@ -15481,7 +15481,13 @@ document.addEventListener('focusin', (e) => {
       if (!soyVecino && !soyPrestador) return; // no es mi chat
 
       // — Nuevo chat: notificar al prestador y refrescar lista si está abierta —
-      if (payload.eventType === 'INSERT' && soyPrestador) {
+      // estado:'consulta' es el que crea EL PROPIO PRESTADOR al consultar
+      // antes de proponer (iniciar_consulta_prestador) — avisarle "un
+      // vecino quiere contactarte" ahí sería notificarlo de su propia
+      // acción. El resto de los estados con los que nace un chat nuevo
+      // ('activo', el default cuando el vecino elige una propuesta) sí
+      // los inicia el vecino.
+      if (payload.eventType === 'INSERT' && soyPrestador && chat.estado !== 'consulta') {
         showToast('💬 Un vecino quiere contactarte', () => goTo('s-chats'), true);
         agregarNotifCampanita('💬 Un vecino quiere contactarte', () => goTo('s-chats'));
         const chatsScreen = document.getElementById('s-chats');
