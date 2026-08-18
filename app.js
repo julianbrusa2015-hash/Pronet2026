@@ -2413,17 +2413,6 @@ document.addEventListener('focusin', (e) => {
       urgEl.textContent = urgMap[p.urgencia] || 'Flexible';
       urgEl.className = 'urg-badge ' + (p.urgencia === 'hoy' ? 'urg-hoy' : p.urgencia === 'flexible' ? 'urg-flexible' : 'urg-semana');
     }
-    // Presupuesto (reemplaza el conteo de propuestas que era hardcodeado)
-    const propsEl = document.getElementById('pd-props');
-    if (propsEl) {
-      let presupuesto = 'A convenir';
-      if (p.presupuesto_min && p.presupuesto_max) presupuesto = '$' + p.presupuesto_min.toLocaleString('es-AR') + '–$' + p.presupuesto_max.toLocaleString('es-AR');
-      else if (p.presupuesto_min) presupuesto = 'Desde $' + p.presupuesto_min.toLocaleString('es-AR');
-      propsEl.textContent = presupuesto;
-      propsEl.style.color = 'var(--ink)';
-      const lbl = propsEl.previousElementSibling;
-      if (lbl) lbl.textContent = 'Presupuesto';
-    }
     // Tiempo desde publicación
     let hace = 'Reciente';
     if (p.creado) {
