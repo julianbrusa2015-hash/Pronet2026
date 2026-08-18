@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v280'; // v280: notificaciones/confirm de propuestas ya no muestran "$0" cuando la modalidad es "a convenir"
+const CACHE_VERSION = 'pronet-v281'; // v281: el motivo de cancelación se pega como mensaje del chat, no solo queda en chats_trabajo
 
 const SHELL = [
   './',

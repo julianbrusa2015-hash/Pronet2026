@@ -2420,6 +2420,12 @@ const PronetDB = (() => {
         })
         .eq('id', chatId);
       if (error) { console.warn('[PronetDB] cancelarChat', error.message); return { ok: false, error: error.message }; }
+      // El motivo queda en chats_trabajo, pero la lista de chats y el
+      // historial muestran el ÚLTIMO MENSAJE (mensajes_chat) — sin esto
+      // la conversación queda mostrando "Sin mensajes aún" pese a tener
+      // un motivo de cancelación real.
+      const textoMotivo = '❌ Canceló el trabajo: ' + motivo + (motivoTexto ? ' — ' + motivoTexto : '');
+      await this.enviarMensaje(chatId, textoMotivo).catch(() => {});
       return { ok: true };
     },
 
