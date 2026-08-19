@@ -1447,6 +1447,64 @@ const PronetDB = (() => {
       return !!data;
     },
 
+    // ── Alertas de SERVICIO (equivalente a alertas_busqueda, pero para
+    // Servicios: avisa cuando se da de alta un prestador nuevo que matchea
+    // rubro/nombre + zona). El matching corre por trigger de servidor
+    // (ver supabase-alertas-servicio.sql), no por Edge Function: el alta de
+    // un prestador es un trigger de servidor, no un insert directo del
+    // cliente, así que no hay un punto del cliente donde "invocar" nada. ──
+
+    async crearAlertaServicio(termino, zona) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Sin sesión' };
+      const { error } = await sb.from('alertas_servicio')
+        .upsert({ usuario_id: uid, termino: termino.trim().toLowerCase(), zona: zona || '', activa: true },
+                 { onConflict: 'usuario_id,termino,zona', ignoreDuplicates: false });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+
+    async eliminarAlertaServicio(termino, zona) {
+      if (!remoto) return { ok: false };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false };
+      await sb.from('alertas_servicio')
+        .delete().eq('usuario_id', uid).eq('termino', termino.trim().toLowerCase()).eq('zona', zona || '');
+      return { ok: true };
+    },
+
+    async eliminarAlertaServicioPorId(id) {
+      if (!remoto) return { ok: false };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false };
+      const { error } = await sb.from('alertas_servicio').delete().eq('id', id).eq('usuario_id', uid);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+
+    async verificarAlertaServicio(termino, zona) {
+      if (!remoto) return false;
+      const uid = await this.usuarioIdActual();
+      if (!uid) return false;
+      const { data } = await sb.from('alertas_servicio')
+        .select('id').eq('usuario_id', uid).eq('termino', termino.trim().toLowerCase())
+        .eq('zona', zona || '').eq('activa', true).maybeSingle();
+      return !!data;
+    },
+
+    async listarMisAlertasServicio() {
+      if (!remoto) return [];
+      const uid = await this.usuarioIdActual();
+      if (!uid) return [];
+      const { data, error } = await sb.from('alertas_servicio')
+        .select('id, termino, zona, creado')
+        .eq('usuario_id', uid).eq('activa', true)
+        .order('creado', { ascending: false });
+      if (error) { console.warn('[PronetDB] listarMisAlertasServicio', error.message); return []; }
+      return data || [];
+    },
+
     /** Lista todos los hilos de chat iniciados por el usuario como consultante. */
     async listarMisConsultasEnviadas() {
       if (!remoto) return [];

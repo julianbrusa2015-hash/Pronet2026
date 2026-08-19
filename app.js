@@ -2728,10 +2728,47 @@ document.addEventListener('focusin', (e) => {
     if (meta) meta.textContent = resultado.length + ' resultado' + (resultado.length !== 1 ? 's' : '') + ' en ' + zonaLabel + ' · ' + getLabelFiltro(filtro);
     if (resultado.length === 0) {
       wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">No encontramos prestadores con esos criterios.</div>';
+      if (hayTexto && usuarioActual) await pintarChipAlertaServicio(wrap, texto);
       return;
     }
     resultado.forEach(p => wrap.appendChild(crearCardPrestador(p)));
   }
+
+  /** Chip "Avisame" cuando una búsqueda de Servicios no da resultados —
+   *  equivalente al de Entre Vecinos, pero avisa cuando se da de alta un
+   *  prestador nuevo que matchea (ver match_alertas_servicio en la base). */
+  async function pintarChipAlertaServicio(wrap, termino) {
+    const zona = zonaActual || null;
+    const termLimpio = termino.trim();
+    const activa = await PronetDB.verificarAlertaServicio(termLimpio, zona).catch(() => false);
+    document.getElementById('chip-alerta-servicio-wrap')?.remove();
+    const div = document.createElement('div');
+    div.id = 'chip-alerta-servicio-wrap';
+    div.style.cssText = 'text-align:center;padding:0 14px 14px';
+    const termJs = termLimpio.replace(/'/g, "\\'");
+    const zonaJs = (zona || '').replace(/'/g, "\\'");
+    div.innerHTML = `<button onclick="toggleAlertaServicio('${termJs}','${zonaJs}')"
+      style="background:${activa ? 'var(--blue-s, #EEF2FF)' : 'none'};border:1.5px solid ${activa ? 'var(--blue)' : 'var(--border)'};color:${activa ? 'var(--blue)' : 'var(--ink3)'};border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
+      🔔 ${activa ? 'Siguiendo "' + escHTML(termLimpio) + '" · Dejar de seguir' : 'Avisame cuando aparezca "' + escHTML(termLimpio) + '"' + (zona ? ' en ' + escHTML(zona) : '')}
+    </button>`;
+    wrap.appendChild(div);
+  }
+
+  async function toggleAlertaServicio(termino, zona) {
+    if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Alertas', sub: 'Necesitás una cuenta para guardar búsquedas.' }); return; }
+    const z = zona || null;
+    const activa = await PronetDB.verificarAlertaServicio(termino, z).catch(() => false);
+    if (activa) {
+      await PronetDB.eliminarAlertaServicio(termino, z).catch(() => {});
+      showToast && showToast('Alerta eliminada');
+    } else {
+      const res = await PronetDB.crearAlertaServicio(termino, z).catch(() => ({ ok: false }));
+      showToast && showToast(res.ok ? '🔔 ¡Listo! Te avisamos cuando aparezca "' + termino + '"' : '⚠️ No se pudo guardar la alerta');
+    }
+    const wrap = document.getElementById('search-results');
+    if (wrap) await pintarChipAlertaServicio(wrap, termino);
+  }
+  window.toggleAlertaServicio = toggleAlertaServicio;
 
   // Renderiza la lista de chats
   async function renderChats() {
@@ -7080,26 +7117,41 @@ document.addEventListener('focusin', (e) => {
     const lista = document.getElementById('mis-alertas-lista');
     if (!lista) return;
     lista.innerHTML = '<div style="padding:32px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
-    const alertas = await PronetDB.listarMisAlertas().catch(() => []);
-    if (!alertas.length) {
-      lista.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--ink3)">Todavía no guardaste ninguna alerta.<br>Buscá algo en Entre Vecinos y tocá "🔔 Avisame" si no hay resultados.</div>';
+    const [alertasMkt, alertasServ] = await Promise.all([
+      PronetDB.listarMisAlertas().catch(() => []),
+      PronetDB.listarMisAlertasServicio().catch(() => []),
+    ]);
+    // Una sola lista, más reciente primero — la etiqueta de cada card ya
+    // dice a qué dominio pertenece, no hace falta separarlas en secciones.
+    const todas = [
+      ...alertasMkt.map(a => ({ ...a, _tipo: 'mercado' })),
+      ...alertasServ.map(a => ({ ...a, _tipo: 'servicio' })),
+    ].sort((a, b) => new Date(b.creado || 0) - new Date(a.creado || 0));
+    if (!todas.length) {
+      lista.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--ink3)">Todavía no guardaste ninguna alerta.<br>Buscá algo en Entre Vecinos o en Servicios y tocá "🔔 Avisame" si no hay resultados.</div>';
       return;
     }
-    lista.innerHTML = alertas.map(mktAlertaCardHTML).join('');
+    lista.innerHTML = todas.map(mktAlertaCardHTML).join('');
   }
   window.renderMisAlertas = renderMisAlertas;
 
   function mktAlertaCardHTML(a) {
     const termino = escHTML(a.termino);
     const fecha = a.creado ? new Date(a.creado).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : '';
+    const esServicio = a._tipo === 'servicio';
+    const dominio = esServicio ? 'Servicios' : 'Mercado';
+    const detalle = esServicio && a.zona ? ' · ' + escHTML(a.zona) : '';
+    const borrar = esServicio
+      ? `mktBorrarAlertaServicio('${escHTML(a.id)}')`
+      : `mktBorrarAlerta('${escHTML(a.id)}')`;
     return `
       <div style="display:flex;gap:10px;align-items:center;padding:12px 14px;background:white;border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
         <div style="font-size:18px">🔔</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;color:var(--ink)">${termino}</div>
-          ${fecha ? `<div style="font-size:11px;color:var(--ink3);margin-top:1px">Desde el ${fecha}</div>` : ''}
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px">${dominio}${detalle}${fecha ? ' · Desde el ' + fecha : ''}</div>
         </div>
-        <button onclick="mktBorrarAlerta('${escHTML(a.id)}')"
+        <button onclick="${borrar}"
           style="background:none;border:none;color:var(--ink3);font-size:13px;font-weight:600;cursor:pointer;padding:6px">Eliminar</button>
       </div>`;
   }
@@ -7111,6 +7163,14 @@ document.addEventListener('focusin', (e) => {
     renderMisAlertas();
   }
   window.mktBorrarAlerta = mktBorrarAlerta;
+
+  async function mktBorrarAlertaServicio(id) {
+    const res = await PronetDB.eliminarAlertaServicioPorId(id);
+    if (!res.ok) { showToast('⚠️ No se pudo eliminar la alerta'); return; }
+    showToast('🔕 Alerta eliminada');
+    renderMisAlertas();
+  }
+  window.mktBorrarAlertaServicio = mktBorrarAlertaServicio;
 
   // ── Pantalla publicar en ProMarket ────────────────────────────────
   let pmFotoArchivo = null;
@@ -8247,6 +8307,7 @@ document.addEventListener('focusin', (e) => {
     }
 
     usuarioActual = await PronetDB.usuarioActual();
+    marcarActividadSesion();
     entrarApp();
   }
 
@@ -10731,6 +10792,7 @@ document.addEventListener('focusin', (e) => {
     }
 
     usuarioActual = await PronetDB.usuarioActual();
+    marcarActividadSesion();
 
     // El trigger de alta sólo crea la fila de `perfiles`. La de
     // `prestadores` la crea `asegurar_ficha_prestador()`, que es idempotente
