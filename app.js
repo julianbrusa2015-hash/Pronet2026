@@ -10733,21 +10733,57 @@ document.addEventListener('focusin', (e) => {
     }
     // Refleja el tipo que esté marcado al abrir.
     mostrarRubrosRegistro(document.querySelector('input[name="reg-tipo"]:checked')?.value === 'prestador');
+    poblarSelectZonaRegistro();
   }
+
+  /** Mismo catálogo y agrupado que poblarSelectZonaMercado(), para no
+   *  mantener dos listas de zonas sincronizadas a mano. */
+  async function poblarSelectZonaRegistro() {
+    const sel = document.getElementById('reg-zona');
+    if (!sel || sel.dataset.poblado) return;
+    const arbol = await cargarZonasArbol();
+    if (!arbol.length) return;   // sin datos: queda sólo "Elegí tu zona"
+    const comunidades = arbol.filter(z => z.nivel === 2)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    let html = '<option value="">Elegí tu zona</option>';
+    comunidades.forEach(c => {
+      const barrios = arbol
+        .filter(z => z.nivel === 3 && z.comunidad === c.nombre)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+      if (!barrios.length) {
+        html += '<option value="' + escHTML(c.nombre) + '">' + escHTML(c.nombre) + '</option>';
+        return;
+      }
+      html += '<optgroup label="' + escHTML(c.nombre) + '">';
+      html += '<option value="' + escHTML(c.nombre) + '">Todo ' + escHTML(c.nombre) + '</option>';
+      barrios.forEach(b => {
+        html += '<option value="' + escHTML(b.nombre) + '">' + escHTML(b.nombre) + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    sel.innerHTML = html;
+    sel.dataset.poblado = '1';
+  }
+
   function cerrarRegistro(ev) {
     if (ev && ev.target && ev.target.id !== 'registro-modal') return;
     const modal = document.getElementById('registro-modal');
     if (modal) modal.style.display = 'none';
   }
   async function hacerRegistro() {
-    if (!reportarInvalidos('reg-nombre', 'reg-email', 'reg-pw')) return;
+    if (!reportarInvalidos('reg-nombre', 'reg-email', 'reg-pw', 'reg-zona')) return;
     const nombre = (document.getElementById('reg-nombre')?.value || '').trim();
     const email  = (document.getElementById('reg-email')?.value || '').trim();
     const pw     = (document.getElementById('reg-pw')?.value || '').trim();
+    const zona   = (document.getElementById('reg-zona')?.value || '').trim();
     const tipo   = document.querySelector('input[name="reg-tipo"]:checked')?.value || 'cliente';
     const err    = document.getElementById('reg-error');
 
     if (!nombre || !email || !pw) { if (err) { err.textContent = 'Completá todos los campos'; err.style.display='block'; } return; }
+    // Sin esto la cuenta quedaba con el default 'Escobar' del cliente,
+    // silencioso — afecta búsqueda, ranking y las alertas de servicio
+    // (matchean por zona real, no por "toda la ciudad").
+    if (!zona) { if (err) { err.textContent = 'Elegí tu zona'; err.style.display = 'block'; } return; }
 
     // Un prestador sin rubro queda invisible: no entra en el push de
     // notificar_rubro ni aparece cuando el vecino filtra por categoría.
@@ -10784,7 +10820,7 @@ document.addEventListener('focusin', (e) => {
 
     const btn = document.getElementById('reg-submit');
     if (btn) btn.innerHTML = 'Creando cuenta...';
-    const res = await PronetDB.registrar(email, pw, nombre, tipo, zonaActual, rubros, tycEn);
+    const res = await PronetDB.registrar(email, pw, nombre, tipo, zona, rubros, tycEn);
     if (btn) btn.innerHTML = 'Crear cuenta';
 
     if (!res.ok) {

@@ -3611,6 +3611,16 @@
       <label for="reg-pw" style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Contraseña</label>
       <input id="reg-pw" name="new-password" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required minlength="8" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:14px;box-sizing:border-box;font-family:'Inter',sans-serif">
 
+      <!-- Zona: antes el registro nunca la pedía y quedaba en el default
+           'Escobar' del cliente (ver zonaActual), silencioso — un prestador
+           de Puertos del Lago aparecía georreferenciado como si fuera de
+           cualquier punto de Escobar, afectando búsqueda, ranking y alertas
+           de servicio. Se pobla igual que el selector de zona de Mercado. -->
+      <label for="reg-zona" style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Tu zona</label>
+      <select id="reg-zona" name="zona" required style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:14px;box-sizing:border-box;font-family:'Inter',sans-serif;background:white;color:var(--ink)">
+        <option value="">Elegí tu zona</option>
+      </select>
+
       <div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:8px">¿Qué buscás?</div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px;border:1.5px solid var(--blue);border-radius:10px;cursor:pointer;background:var(--blue-s);font-size:13px;font-weight:600">
