@@ -2122,6 +2122,15 @@ document.addEventListener('focusin', (e) => {
         <span style="color:#92400E;font-size:15px">›</span>
       </div>` : '';
 
+    // Si ninguno de los "recientes" es del rubro propio, avisarlo ANTES de
+    // mostrarlos — si no, parece que el tablero está sugiriendo un trabajo
+    // ajeno como si fuera relevante, cuando en realidad es el relleno "algo
+    // es mejor que nada" de más arriba.
+    const hayPropioEnRecientes = !rubro || recientes.some(p => matchRubro(p.rubro, rubro));
+    const avisoSinRubro = !hayPropioEnRecientes
+      ? `<div style="font-size:12px;color:var(--ink3);margin:0 2px 10px;line-height:1.4">No hay pedidos de <strong>${escHTML(rubro)}</strong> por ahora en tu zona. Mientras tanto, mirá esto:</div>`
+      : '';
+
     wrap.innerHTML = `
       <div style="padding:0 14px 8px">
         ${avisoRubro}
@@ -2133,6 +2142,7 @@ document.addEventListener('focusin', (e) => {
             <span role="button" tabindex="0" onclick="goTo('s-pedidos')"
                   style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Ver los ${totalDisponibles} →</span>
           </div>
+          ${avisoSinRubro}
           <div id="inicio-recientes"></div>` : `
           <div role="button" tabindex="0" onclick="goTo('s-pedidos')"
                style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
