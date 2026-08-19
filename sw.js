@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v289'; // v289: el chip de alerta de servicio también aparece en el buscador de Inicio, no solo en la pestaña Buscar
+const CACHE_VERSION = 'pronet-v290'; // v290: el registro de prestador mostraba solo 8 rubros hardcodeados en vez de los 13 del catálogo real
 
 const SHELL = [
   './',

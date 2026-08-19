@@ -10713,11 +10713,19 @@ document.addEventListener('focusin', (e) => {
   function mostrarFormRegistro() {
     const modal = document.getElementById('registro-modal');
     if (modal) modal.style.display = 'flex';
-    // Los rubros se pintan al abrir, para que salgan del mismo catálogo
-    // que usa Editar perfil y no haya dos listas que se desincronicen.
+    // Los rubros se pintan al abrir, desde RUBROS (el catálogo real que ya
+    // cargó cargarRubrosDeLaBase() al arrancar — el mismo que arma la
+    // grilla de categorías del Inicio). Antes salían de las claves de
+    // ESPECIALIDADES_POR_RUBRO, un objeto hardcodeado con 8 rubros fijos
+    // (incluía "Chef", ya desactivado, y le faltaban Piletas/Herrería/
+    // Albañilería/Gasista/Carpintería/Refrigeración) que sólo se completa
+    // con rubros nuevos si tienen especialidades cargadas en la base — así
+    // que un rubro sin especialidades quedaba invisible en el registro
+    // aunque estuviera activo y visible en todos lados.
     const cont = document.getElementById('reg-rubros');
     if (cont && !cont.children.length) {
-      cont.innerHTML = Object.keys(ESPECIALIDADES_POR_RUBRO).map(r =>
+      const nombres = RUBROS.length ? RUBROS.map(r => r.n) : Object.keys(ESPECIALIDADES_POR_RUBRO);
+      cont.innerHTML = nombres.map(r =>
         '<div class="sub-opt" data-rubro="' + escHTML(r) + '"' +
         ' onclick="this.classList.toggle(\'on\')">' + escHTML(r) + '</div>'
       ).join('');
