@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v284'; // v284: fix tarjetas de Prestador cortadas — la grilla de 2 columnas de Fichas quedaba pegada al cambiar de origen
+const CACHE_VERSION = 'pronet-v285'; // v285: "Pedidos y consultas"/"Mis consultas" pasan a "Consultas recibidas"/"Consultas enviadas" — se confundían entre sí y con el tab Pedidos
 
 const SHELL = [
   './',
