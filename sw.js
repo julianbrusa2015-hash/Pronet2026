@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v291'; // v291: el registro ahora pide zona real, antes quedaba silenciosamente en 'Escobar'
+const CACHE_VERSION = 'pronet-v292'; // v292: fix zonaParaFiltro() — una comunidad (ej. Puertos del Lago) se subía un nivel de más hasta la ciudad
 
 const SHELL = [
   './',

@@ -4364,7 +4364,16 @@ document.addEventListener('focusin', (e) => {
     'Escobar':          'Escobar',
     'Garín':            'Garín',
   };
-  function zonaParaFiltro() { return ZONA_DB[zonaActual] || zonaActual; }
+  // Sólo BARRIO → comunidad (nivel 3 → nivel 2), a diferencia de ZONA_DB que
+  // encadena TODOS los niveles hacia arriba (barrio→comunidad→ciudad). Antes
+  // zonaParaFiltro() usaba ZONA_DB directo: con zonaActual ya en nivel de
+  // comunidad ("Puertos del Lago"), ZONA_DB la seguía subiendo un nivel más
+  // a "Escobar" — y como prestadores.zona guarda la comunidad, no la ciudad,
+  // la búsqueda por igualdad exacta dejaba afuera a TODOS los prestadores de
+  // esa comunidad. Sin datos de la base (fallback sin barrios) queda vacío,
+  // que es lo correcto: sin barrios no hay nada que subir de nivel.
+  const BARRIO_A_COMUNIDAD = {};
+  function zonaParaFiltro() { return BARRIO_A_COMUNIDAD[zonaActual] || zonaActual; }
 
   /** Trae los niveles de loyalty desde la base a PRONET_CONFIG.
    *
@@ -4418,6 +4427,19 @@ document.addEventListener('focusin', (e) => {
         MKT_ZONA_COORD[z.nombre] = { lat: Number(z.lat), lng: Number(z.lng) };
       }
     });
+
+    // BARRIO_A_COMUNIDAD: sólo nivel 3 → nivel 2. `zonas` es plana (cada fila
+    // sólo sabe su padre inmediato), así que el nivel se infiere: raíz = su
+    // propia madre; comunidad = madre es una raíz; barrio = madre es una
+    // comunidad (no una raíz). Evita que zonaParaFiltro() siga subiendo una
+    // comunidad hasta la ciudad.
+    Object.keys(BARRIO_A_COMUNIDAD).forEach(k => delete BARRIO_A_COMUNIDAD[k]);
+    const raices = new Set(filas.filter(z => z.madre === z.nombre).map(z => z.nombre));
+    const comunidades = new Set(filas.filter(z => z.madre !== z.nombre && raices.has(z.madre)).map(z => z.nombre));
+    filas.forEach(z => {
+      if (z.madre !== z.nombre && comunidades.has(z.madre)) BARRIO_A_COMUNIDAD[z.nombre] = z.madre;
+    });
+
     pintarZonas(filas);
     return true;
   }
