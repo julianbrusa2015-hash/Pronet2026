@@ -1766,6 +1766,7 @@ document.addEventListener('focusin', (e) => {
         ? 'Sin resultados para <strong>' + escHTML(busquedaHome) + '</strong> en ' + escHTML(zonaActual || 'tu zona') + '.<br>Probá con otra palabra o cambiá de zona.'
         : 'No hay prestadores en esta categoría aún.';
       wrap.innerHTML = '<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3);line-height:1.6">' + msg + '</div>';
+      if (busquedaHome && usuarioActual) await pintarChipAlertaServicio(wrap, busquedaHome);
       return;
     }
     prestadores.forEach(p => wrap.appendChild(crearCardPrestador(p)));
