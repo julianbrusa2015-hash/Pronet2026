@@ -66,6 +66,10 @@ Object.assign(window.PRONET_CONFIG, {
   PROPUESTA_EXPIRACION_HS: 168,    // 7 días — el pedido no vence si tiene propuestas pendientes (ver supabase-vencer-pedidos.sql)
   INACTIVIDAD_CIERRE_DIAS: 7,       // días sin actividad para que el vecino pueda cerrar el pedido
 
+  // Sesión: Supabase no vence el refresh token solo — sin esto, una sesión
+  // guardada en el dispositivo sigue entrando sola para siempre.
+  SESION_VENCIMIENTO_DIAS: 30,      // días sin abrir la app para pedir login de nuevo
+
   // Búsqueda / descubrimiento
   RATING_TOP: 4.5,                  // umbral para el filtro "top" en el listado de prestadores
   SUGERIDOS_PEDIDO: 3,              // cantidad de prestadores sugeridos al crear un pedido

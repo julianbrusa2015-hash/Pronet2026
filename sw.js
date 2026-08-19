@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v285'; // v285: "Pedidos y consultas"/"Mis consultas" pasan a "Consultas recibidas"/"Consultas enviadas" — se confundían entre sí y con el tab Pedidos
+const CACHE_VERSION = 'pronet-v286'; // v286: vencimiento lógico de sesión — 30 días sin abrir la app pide login de nuevo
 
 const SHELL = [
   './',

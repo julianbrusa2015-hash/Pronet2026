@@ -8799,6 +8799,7 @@ document.addEventListener('focusin', (e) => {
     { k: 'resenas_preview',         n: 'Reseñas antes de "ver todas"', u: 'reseñas', min: 1,  max: 20,   d: '' },
     { k: 'rate_limit_pedidos_max',  n: 'Pedidos por ventana',      u: 'pedidos',     min: 1,  max: 50,   d: 'Tope anti-spam de publicaciones' },
     { k: 'rate_limit_pedidos_ventana_min', n: 'Ventana del tope',  u: 'minutos',     min: 1,  max: 1440, d: '' },
+    { k: 'sesion_vencimiento_dias', n: 'Vencimiento de sesión',    u: 'días',        min: 1,  max: 365,  d: 'Días sin abrir la app para pedir login de nuevo. Supabase no la vence solo' },
   ];
 
   async function renderParamAjustes() {
@@ -8854,7 +8855,8 @@ document.addEventListener('focusin', (e) => {
     // Reflejarlo en memoria para que el admin vea el efecto sin recargar.
     const mapa = { pedido_vencimiento_hs: 'PROPUESTA_EXPIRACION_HS', inactividad_cierre_dias: 'INACTIVIDAD_CIERRE_DIAS',
                    pedido_fotos_max: 'PEDIDO_FOTOS_MAX', adjunto_max_mb: 'ADJUNTO_MAX_MB', rating_top: 'RATING_TOP',
-                   sugeridos_pedido: 'SUGERIDOS_PEDIDO', mapa_prestadores_max: 'MAPA_PRESTADORES_MAX', resenas_preview: 'RESENAS_PREVIEW' };
+                   sugeridos_pedido: 'SUGERIDOS_PEDIDO', mapa_prestadores_max: 'MAPA_PRESTADORES_MAX', resenas_preview: 'RESENAS_PREVIEW',
+                   sesion_vencimiento_dias: 'SESION_VENCIMIENTO_DIAS' };
     if (mapa[clave] && window.PRONET_CONFIG) window.PRONET_CONFIG[mapa[clave]] = v;
 
     decir('✅ Guardado', 'var(--green)');
@@ -15652,6 +15654,26 @@ document.addEventListener('focusin', (e) => {
   pintarBadgeCarrito();
   renderPedidosGuardados();
 
+  // ── Vencimiento lógico de sesión ────────────────────────────────────
+  // Supabase no vence el refresh token por sí solo: mientras el dispositivo
+  // pueda usarlo para renovar, la sesión guardada sigue entrando sola para
+  // siempre, sin importar cuánto tiempo pasó desde la última apertura. Esto
+  // marca "última vez que se abrió la app con sesión" en localStorage (no
+  // es actividad continua, es a nivel apertura) y fuerza un logout si pasó
+  // más que SESION_VENCIMIENTO_DIAS.
+  const SESION_ULTIMA_KEY = 'pronet_sesion_ultima_apertura';
+  function sesionVencidaPorInactividad() {
+    const dias = Number(window.PRONET_CONFIG?.SESION_VENCIMIENTO_DIAS);
+    if (!dias || dias <= 0) return false; // sin configurar: sin límite
+    let ultima = 0;
+    try { ultima = parseInt(localStorage.getItem(SESION_ULTIMA_KEY) || '0', 10); } catch (e) {}
+    if (!ultima) return false; // primera vez que corre esto en este dispositivo: no forzar de entrada
+    return (Date.now() - ultima) > dias * 86400000;
+  }
+  function marcarActividadSesion() {
+    try { localStorage.setItem(SESION_ULTIMA_KEY, String(Date.now())); } catch (e) {}
+  }
+
   // ── Restaurar sesión y renderizar el Home con el usuario correcto ──
   // renderHomeFeed va DENTRO de restaurarSesion para evitar el flash de
   // contenido de invitado al abrir la PWA en iOS (race condition de timing)
@@ -15716,6 +15738,7 @@ document.addEventListener('focusin', (e) => {
       sugeridos_pedido:         'SUGERIDOS_PEDIDO',
       mapa_prestadores_max:     'MAPA_PRESTADORES_MAX',
       resenas_preview:          'RESENAS_PREVIEW',
+      sesion_vencimiento_dias:  'SESION_VENCIMIENTO_DIAS',
     };
     if (window.PRONET_CONFIG) {
       Object.entries(mapaCfgOp).forEach(([clave, key]) => {
@@ -15762,8 +15785,14 @@ document.addEventListener('focusin', (e) => {
     }
     const quitarAntiFlash = () => { const s = document.getElementById('anti-flash-login'); if (s) s.remove(); };
     try {
-      const u = await PronetDB.usuarioActual();
+      let u = await PronetDB.usuarioActual();
       const loginEl = document.getElementById('login-screen');
+      if (u && sesionVencidaPorInactividad()) {
+        // Mucho tiempo sin abrir la app: pedir login de nuevo en vez de
+        // dejar entrar sola una sesión guardada hace demasiado.
+        await PronetDB.logout().catch(() => {});
+        u = null;
+      }
       if (u) {
         // Bloquear si el email no fue confirmado — verificar directo desde Auth
         const { data: { user: authUser } } = await window._sb.auth.getUser();
@@ -15775,6 +15804,7 @@ document.addEventListener('focusin', (e) => {
           return;
         }
         usuarioActual = u;
+        marcarActividadSesion();
         const tycTs = localStorage.getItem('pronet_tyc_aceptado');
         if (tycTs) PronetDB.registrarAceptacionTyc(tycTs).catch(() => {});
 
