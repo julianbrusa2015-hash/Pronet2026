@@ -7911,7 +7911,13 @@ document.addEventListener('focusin', (e) => {
         const guardados = (p.rubros && p.rubros.length)
           ? p.rubros
           : (p.rubro && !/^general$/i.test(p.rubro) ? [p.rubro] : []);
-        wrapR.innerHTML = Object.keys(ESPECIALIDADES_POR_RUBRO).map(r =>
+        // Mismo catálogo real que el registro (ver hacerRegistro/mostrarFormRegistro):
+        // antes salía de ESPECIALIDADES_POR_RUBRO, un objeto hardcodeado con 8
+        // rubros fijos que le faltaban Piletas/Herrería/Albañilería/Gasista/
+        // Carpintería/Refrigeración — un prestador con uno de esos rubros
+        // guardado ni siquiera lo veía marcado acá.
+        const nombresRubros = RUBROS.length ? RUBROS.map(r => r.n) : Object.keys(ESPECIALIDADES_POR_RUBRO);
+        wrapR.innerHTML = nombresRubros.map(r =>
           '<div class="sub-opt' + (guardados.includes(r) ? ' on' : '') + '" data-rubro="' + escHTML(r) + '"' +
           ' onclick="toggleRubroEdit(this)">' + escHTML(r) + '</div>'
         ).join('');
