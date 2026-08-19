@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v286'; // v286: vencimiento lógico de sesión — 30 días sin abrir la app pide login de nuevo
+const CACHE_VERSION = 'pronet-v287'; // v287: vencimiento lógico de sesión ajustado a 48hs (no 30 días)
 
 const SHELL = [
   './',

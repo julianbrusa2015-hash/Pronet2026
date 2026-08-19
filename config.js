@@ -68,7 +68,7 @@ Object.assign(window.PRONET_CONFIG, {
 
   // Sesión: Supabase no vence el refresh token solo — sin esto, una sesión
   // guardada en el dispositivo sigue entrando sola para siempre.
-  SESION_VENCIMIENTO_DIAS: 30,      // días sin abrir la app para pedir login de nuevo
+  SESION_VENCIMIENTO_DIAS: 2,       // días sin abrir la app para pedir login de nuevo (48hs)
 
   // Búsqueda / descubrimiento
   RATING_TOP: 4.5,                  // umbral para el filtro "top" en el listado de prestadores
