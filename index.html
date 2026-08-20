@@ -5514,6 +5514,18 @@
           </select>
         </div>
 
+        <!-- Sólo el dato — para autocompletar al publicar en Mercado. La
+             decisión de MOSTRARLO sigue siendo por publicación
+             (pm-mostrar-lote), a propósito: guardarlo acá no lo expone en
+             ningún lado por sí solo. -->
+        <div class="ob-field" style="margin-top:12px">
+          <label class="ob-label" for="edit-lote">Tu lote o número</label>
+          <div style="font-size:11px;color:var(--ink3);margin:-4px 0 8px;line-height:1.5">
+            Para no tener que escribirlo cada vez que publicás en Mercado. Vos elegís si mostrarlo en cada aviso.
+          </div>
+          <input class="ob-input" id="edit-lote" name="edit-lote" type="text" placeholder="Ej: 340" maxlength="40">
+        </div>
+
         <!-- Dónde trabajo. Es del PRESTADOR (prestadores.zonas) y decide qué
              pedidos me llegan y dónde me encuentran. Distinto de la comunidad
              de arriba, que es dónde vivo.

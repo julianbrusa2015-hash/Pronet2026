@@ -519,6 +519,7 @@ document.addEventListener('focusin', (e) => {
         telInput.value = usuarioActual.telefono || '';
         if (telInput.value) formatearTel(telInput);
       }
+      setV('edit-lote', usuarioActual.lote || '');
       poblarComunidadEdit();
       cargarEdicionPrestador();
       if (usuarioActual.prestador_id) cargarPortfolioEdit(usuarioActual.prestador_id);
@@ -7412,7 +7413,10 @@ document.addEventListener('focusin', (e) => {
     const suMadre = (await PronetDB.listarZonas().catch(() => []))
       .find(z => z.nombre === suZona)?.madre || '';
     await pmPintarZonas(suMadre, suZona);
-    const loteEl = document.getElementById('pm-lote'); if (loteEl) loteEl.value = '';
+    // El dato se propone desde el perfil (para no volver a tipearlo), pero
+    // el checkbox de "mostrar" arranca siempre apagado: guardar el lote no
+    // es lo mismo que decidir exponerlo en ESTA publicación puntual.
+    const loteEl = document.getElementById('pm-lote'); if (loteEl) loteEl.value = usuarioActual?.lote || '';
     const mlEl = document.getElementById('pm-mostrar-lote'); if (mlEl) mlEl.checked = false;
     const catSel = document.getElementById('pm-categoria');
     if (catSel) catSel.value = '';
@@ -8002,7 +8006,7 @@ document.addEventListener('focusin', (e) => {
     let ok = true;
     try {
       // 1. Perfil del usuario (nombre + teléfono + dónde vive)
-      const perfilCambios = { nombre, telefono };
+      const perfilCambios = { nombre, telefono, lote: val('edit-lote') || null };
       // La comunidad sólo se toca si el selector está y trae algo distinto:
       // mandarla siempre pisaría con '' el barrio de nivel 3 de quien eligió
       // uno, porque el selector ofrece comunidades y no barrios.
@@ -8025,6 +8029,7 @@ document.addEventListener('focusin', (e) => {
       }
       if (perfilGuardado.ok) {
         usuarioActual.nombre = nombre; usuarioActual.telefono = telefono;
+        usuarioActual.lote = perfilCambios.lote;
         if (fotoPerfilNueva) usuarioActual.foto_url = fotoPerfilNueva;
         // Sin esto el feed de Entre Vecinos sigue filtrando por la comunidad
         // vieja hasta la próxima recarga: `comunidadDelUsuario()` lee de
