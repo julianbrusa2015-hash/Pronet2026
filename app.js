@@ -8202,6 +8202,29 @@ document.addEventListener('focusin', (e) => {
   }
   window.quitarCoordenadaPerfil = quitarCoordenadaPerfil;
 
+  /** Alternativa manual a capturarCoordenadaPerfil() para cuando el GPS no
+   *  da (adentro, sin permiso, o el vecino prefiere escribir la dirección).
+   *  Reusa geocodificarDireccion(), la misma que ya arma la cobertura del
+   *  prestador — mismo criterio de "un punto fijo, guardado a pedido". */
+  async function geocodificarCoordenadaPerfil() {
+    if (!usuarioActual) return;
+    const input = document.getElementById('edit-coord-direccion');
+    const direccion = (input?.value || '').trim();
+    if (!direccion) { showToast && showToast('⚠️ Escribí una dirección primero'); return; }
+    const btn = event?.target;
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+    const coords = await geocodificarDireccion(direccion);
+    if (btn) { btn.disabled = false; btn.textContent = 'Ubicar'; }
+    if (!coords) { showToast && showToast('⚠️ No pudimos ubicar esa dirección'); return; }
+    const res = await PronetDB.actualizarMiPerfilBasico({ lat: coords.lat, lng: coords.lng }).catch(() => ({ ok: false }));
+    if (!res.ok) { showToast && showToast('⚠️ No se pudo guardar la coordenada'); return; }
+    usuarioActual.lat = coords.lat; usuarioActual.lng = coords.lng;
+    if (input) input.value = '';
+    pintarCoordenadaEdit();
+    showToast && showToast('✅ Coordenada guardada');
+  }
+  window.geocodificarCoordenadaPerfil = geocodificarCoordenadaPerfil;
+
   async function guardarPerfilReal() {
     if (!usuarioActual) return;
     const btn = document.querySelector('#s-edit-perfil .edit-save');

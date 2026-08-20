@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v301'; // v301: icono de mapa en cada ficha de Mercado + fix búsqueda en modo mapa
+const CACHE_VERSION = 'pronet-v302'; // v302: cargar la coordenada de entrega a mano, con dirección, como alternativa al GPS
 
 const SHELL = [
   './',
