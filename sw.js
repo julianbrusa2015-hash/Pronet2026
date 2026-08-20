@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v302'; // v302: cargar la coordenada de entrega a mano, con dirección, como alternativa al GPS
+const CACHE_VERSION = 'pronet-v303'; // v303: coordenadas o dirección a mano + el mapa usa el punto exacto si mostrar_lote está activo
 
 const SHELL = [
   './',

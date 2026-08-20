@@ -4866,6 +4866,8 @@ document.addEventListener('focusin', (e) => {
   const mktPostsCache = new Map();
   // Lote por publicación, sólo de las que el servidor autorizó a ver.
   const mktLotesCache = new Map();
+  // Coordenada de entrega por publicación, misma gobernanza que el lote.
+  const mktCoordsCache = new Map();
 
   // Sección activa. El prestador arranca —y se queda— en 'servicio'.
   let mktTipoActivo = 'servicio';
@@ -5866,6 +5868,8 @@ document.addEventListener('focusin', (e) => {
     // sólo llegan los que corresponden, así que no hay nada que filtrar.
     const lotes = await PronetDB.listarLotesVisibles(posts.map(p => p.id)).catch(() => new Map());
     lotes.forEach((v, k) => mktLotesCache.set(k, v));
+    const coords = await PronetDB.listarCoordenadasVisibles(posts.map(p => p.id)).catch(() => new Map());
+    coords.forEach((v, k) => mktCoordsCache.set(k, v));
     cont.insertAdjacentHTML('beforeend', posts.map(mktCardHTML).join(''));
     mktFeedIds.push(...posts.map(p => p.id));
     mktOffset  += posts.length;
@@ -6735,15 +6739,44 @@ document.addEventListener('focusin', (e) => {
   }
   window.mktIrAPublicacionDelPin = mktIrAPublicacionDelPin;
 
-  /** Icono 🗺️ de la ficha: lleva al mapa centrado en el pin del barrio de
-   *  ESA publicación, sin tocar el filtro de barrio del feed (a diferencia
-   *  de mktVerBarrioDelMapa, que va en sentido contrario). Dispara el mismo
-   *  click del pin para reusar el globo con las publicaciones del lugar. */
-  async function mktVerEnMapa(lugar) {
-    if (!lugar) { showToast && showToast('⚠️ Esta publicación no tiene barrio cargado'); return; }
+  /** Marcador individual de la publicación puntual, cuando el vendedor
+   *  cargó coordenada Y la publicación la muestra (mostrar_lote). Vive
+   *  aparte de mktMarcadores —los pines agregados por barrio— porque
+   *  desaparece solo con el próximo mktVerEnMapa/renderMapaMercado. */
+  let mktMarcadorPropio = null;
+
+  /** Icono 🗺️ de la ficha: lleva al mapa centrado en ESA publicación. Si el
+   *  vendedor cargó coordenada y la mostró, usa el punto exacto (mejora
+   *  sobre mostrar sólo la puerta del barrio); si no, cae al pin agregado
+   *  del barrio de siempre — mismo criterio que mostrar_lote en el resto de
+   *  la ficha: "si lo habilita reemplaza, sino muestra el barrio". */
+  async function mktVerEnMapa(lugar, coordPropia) {
+    if (!lugar && !coordPropia) { showToast && showToast('⚠️ Esta publicación no tiene ubicación cargada'); return; }
     await (mktModo !== 'mapa' ? toggleMapaMercado() : renderMapaMercado());
+    if (!mapaGoogleMkt) return;
+    if (mktMarcadorPropio) { mktMarcadorPropio.setMap(null); mktMarcadorPropio = null; }
+
+    if (coordPropia) {
+      mapaGoogleMkt.panTo(coordPropia);
+      mapaGoogleMkt.setZoom(17);
+      mktMarcadorPropio = new google.maps.Marker({
+        position: coordPropia,
+        map: mapaGoogleMkt,
+        title: 'Punto de entrega exacto',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#16A34A',
+          fillOpacity: 1,
+          strokeColor: 'white',
+          strokeWeight: 2.5,
+        },
+      });
+      return;
+    }
+
     const coord = MKT_ZONA_COORD[lugar];
-    if (!coord || !mapaGoogleMkt) return;
+    if (!coord) return;
     mapaGoogleMkt.panTo({ lat: coord.lat, lng: coord.lng });
     mapaGoogleMkt.setZoom(15);
     const idx = _mktPins.indexOf(lugar);
@@ -6754,7 +6787,7 @@ document.addEventListener('focusin', (e) => {
 
   function mktVerEnMapaDesdePost(pubId) {
     const p = mktPostsCache.get(pubId);
-    return mktVerEnMapa(p?.barrio || p?.zona);
+    return mktVerEnMapa(p?.barrio || p?.zona, mktCoordsCache.get(pubId) || null);
   }
   window.mktVerEnMapaDesdePost = mktVerEnMapaDesdePost;
 
@@ -8202,20 +8235,33 @@ document.addEventListener('focusin', (e) => {
   }
   window.quitarCoordenadaPerfil = quitarCoordenadaPerfil;
 
+  /** Si el vecino pegó "lat, lng" (copiado de Google Maps, por ejemplo) lo
+   *  usamos directo sin geocodificar. Rango real, no cualquier par de
+   *  números: sin esto "340, 12" (un lote mal pegado en este campo) se
+   *  guardaría como coordenada válida en el medio del océano. */
+  function parseCoordenadasSueltas(texto) {
+    const m = texto.match(/^(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
+    if (!m) return null;
+    const lat = Number(m[1]), lng = Number(m[2]);
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return { lat, lng };
+  }
+
   /** Alternativa manual a capturarCoordenadaPerfil() para cuando el GPS no
    *  da (adentro, sin permiso, o el vecino prefiere escribir la dirección).
-   *  Reusa geocodificarDireccion(), la misma que ya arma la cobertura del
-   *  prestador — mismo criterio de "un punto fijo, guardado a pedido". */
+   *  Acepta una dirección (se geocodifica con geocodificarDireccion(), la
+   *  misma que ya arma la cobertura del prestador) o un par "lat, lng" ya
+   *  armado — mismo criterio de "un punto fijo, guardado a pedido". */
   async function geocodificarCoordenadaPerfil() {
     if (!usuarioActual) return;
     const input = document.getElementById('edit-coord-direccion');
     const direccion = (input?.value || '').trim();
-    if (!direccion) { showToast && showToast('⚠️ Escribí una dirección primero'); return; }
+    if (!direccion) { showToast && showToast('⚠️ Escribí una dirección o coordenadas primero'); return; }
     const btn = event?.target;
     if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
-    const coords = await geocodificarDireccion(direccion);
+    const coords = parseCoordenadasSueltas(direccion) || await geocodificarDireccion(direccion);
     if (btn) { btn.disabled = false; btn.textContent = 'Ubicar'; }
-    if (!coords) { showToast && showToast('⚠️ No pudimos ubicar esa dirección'); return; }
+    if (!coords) { showToast && showToast('⚠️ No pudimos ubicar eso'); return; }
     const res = await PronetDB.actualizarMiPerfilBasico({ lat: coords.lat, lng: coords.lng }).catch(() => ({ ok: false }));
     if (!res.ok) { showToast && showToast('⚠️ No se pudo guardar la coordenada'); return; }
     usuarioActual.lat = coords.lat; usuarioActual.lng = coords.lng;

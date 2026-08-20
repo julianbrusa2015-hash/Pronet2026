@@ -1295,6 +1295,17 @@ const PronetDB = (() => {
       return new Map((data || []).map(r => [r.id, r.lote]));
     },
 
+    /** Coordenada de entrega del vendedor, por publicación. Misma
+     *  gobernanza que el lote (mostrar_lote + comunidad, ver
+     *  coordenadas_visibles en supabase-coordenada-mercado.sql): el
+     *  servidor decide cuáles vienen, acá no hay nada que filtrar. */
+    async listarCoordenadasVisibles(ids) {
+      if (!remoto || !ids?.length) return new Map();
+      const { data, error } = await sb.rpc('coordenadas_visibles', { p_ids: ids });
+      if (error) { console.warn('[PronetDB] listarCoordenadasVisibles', error.message); return new Map(); }
+      return new Map((data || []).map(r => [r.id, { lat: r.lat, lng: r.lng }]));
+    },
+
     /** Crea una publicación nueva. El autor_id lo pone RLS (auth.uid()). */
     async crearPublicacion({ categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, lote, mostrar_lote }) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
