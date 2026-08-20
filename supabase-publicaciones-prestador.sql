@@ -201,9 +201,20 @@ begin
     from planes_limites pl where pl.plan = plan_para_limites(v_plan);
   if v_limite is null then return new; end if;  -- sin límite definido
 
+  -- Sólo cuenta lo que ocupa un slot DE VERDAD: activas vigentes y
+  -- pendientes de revisión (van a consumir un slot si se aprueban). Antes
+  -- contaba TODAS las filas sin filtro — un borrador, rechazado o vencido
+  -- viejo seguía bloqueando para siempre, aunque el cliente (renderPubsPrestador)
+  -- prometiera "el cupo es de publicados a la vez, los vencidos no ocupan
+  -- lugar". Sin este fix, la única forma real de liberar cupo era borrar
+  -- la fila — esperar a que venza una nunca liberaba nada.
   select count(*) into v_usados
     from publicaciones_prestador p
-    where p.prestador_id = new.prestador_id;
+    where p.prestador_id = new.prestador_id
+      and (
+        p.estado = 'pendiente'
+        or (p.estado = 'activa' and (p.vigencia_hasta is null or p.vigencia_hasta > now()))
+      );
 
   if v_usados >= v_limite then
     raise exception 'limite_publicaciones: tu plan permite % publicaciones', v_limite
