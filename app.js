@@ -5577,7 +5577,10 @@ document.addEventListener('focusin', (e) => {
     if (mktFormatoActual() === 'grid') {
       return `
         <div class="mkt-ficha" id="mkt-post-${escHTML(p.id)}" onclick="mktVerCompleta('${escHTML(p.id)}')">
-          <div class="mkt-ficha-foto">${foto}</div>
+          <div class="mkt-ficha-foto" style="position:relative">
+            ${foto}
+            ${(p.barrio || p.zona) ? `<button onclick="event.stopPropagation();mktVerEnMapaDesdePost('${escHTML(p.id)}')" aria-label="Ver en mapa" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);border:none;border-radius:8px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px">🗺️</button>` : ''}
+          </div>
           <div class="mkt-ficha-body">
             <div class="mkt-ficha-title">${escHTML(p.titulo)}</div>
             <div class="mkt-ficha-price">${precio}</div>
@@ -5607,7 +5610,10 @@ document.addEventListener('focusin', (e) => {
             <summary style="font-size:12px;color:var(--blue);font-weight:600;cursor:pointer">Ver detalles</summary>
             <ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--ink2)">${p.detalles.map(d => `<li>${escHTML(d)}</li>`).join('')}</ul>
           </details>` : ''}
-          ${(p.barrio || p.zona) ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px">📍 ${escHTML(p.barrio || p.zona)}${mktLotesCache.get(p.id) ? ' · ' + escHTML(mktLotesCache.get(p.id)) : ''}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</div>` : ''}
+          ${(p.barrio || p.zona) ? `<div style="font-size:12px;color:var(--ink3);margin:6px 0 2px;display:flex;align-items:center;gap:8px">
+            <span>📍 ${escHTML(p.barrio || p.zona)}${mktLotesCache.get(p.id) ? ' · ' + escHTML(mktLotesCache.get(p.id)) : ''}${distLabel ? ' · ' + distLabel.replace('📍 ', '') : ''}</span>
+            <button onclick="mktVerEnMapaDesdePost('${escHTML(p.id)}')" style="background:none;border:none;padding:0;cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:3px;font-family:inherit;flex-shrink:0">🗺️ Ver en mapa</button>
+          </div>` : ''}
           <div style="display:flex;align-items:center;gap:12px;margin:10px 0 8px">
             <button id="like-btn-${escHTML(p.id)}" onclick="mktToggleLike('${escHTML(p.id)}')"
               data-liked="${liked ? '1' : '0'}"
@@ -6054,7 +6060,10 @@ document.addEventListener('focusin', (e) => {
     mktDebounceTimer = setTimeout(async () => {
       mktBusqueda = valor || '';
       const termino = mktBusqueda.trim();
-      await renderMercado(true);
+      // En modo mapa el feed queda oculto (#mkt-feed) — sin esto la
+      // búsqueda actualizaba la lista invisible y los pines del mapa
+      // seguían mostrando todo, como si el buscador no hiciera nada.
+      await (mktModo === 'mapa' ? renderMapaMercado() : renderMercado(true));
       // Registrar la búsqueda (best-effort) para detectar demanda sin oferta.
       // La zona relevante es la del que busca (usuarioActual.zona), no el
       // filtro de zona del feed — la mayoría busca sin filtrar por zona.
@@ -6546,7 +6555,12 @@ document.addEventListener('focusin', (e) => {
     if (btnFmt) btnFmt.style.display = mktModo === 'lista' ? '' : 'none';
     // El aviso de publicar acompaña al feed: en el mapa parte la pantalla.
     mktPintarCta();
-    if (mktModo === 'mapa') renderMapaMercado();
+    // Devuelve la promesa (antes se disparaba sin esperar) para que quien
+    // necesite el mapa YA dibujado — como mktVerEnMapa — pueda hacer await
+    // en vez de disparar un segundo renderMapaMercado() en paralelo, que
+    // pisaba mktMarcadores a mitad de camino y dejaba clicks apuntando a
+    // marcadores ya destruidos.
+    return mktModo === 'mapa' ? renderMapaMercado() : undefined;
   }
   window.toggleMapaMercado = toggleMapaMercado;
 
@@ -6720,6 +6734,29 @@ document.addEventListener('focusin', (e) => {
     mktVerCompleta(pubId);
   }
   window.mktIrAPublicacionDelPin = mktIrAPublicacionDelPin;
+
+  /** Icono 🗺️ de la ficha: lleva al mapa centrado en el pin del barrio de
+   *  ESA publicación, sin tocar el filtro de barrio del feed (a diferencia
+   *  de mktVerBarrioDelMapa, que va en sentido contrario). Dispara el mismo
+   *  click del pin para reusar el globo con las publicaciones del lugar. */
+  async function mktVerEnMapa(lugar) {
+    if (!lugar) { showToast && showToast('⚠️ Esta publicación no tiene barrio cargado'); return; }
+    await (mktModo !== 'mapa' ? toggleMapaMercado() : renderMapaMercado());
+    const coord = MKT_ZONA_COORD[lugar];
+    if (!coord || !mapaGoogleMkt) return;
+    mapaGoogleMkt.panTo({ lat: coord.lat, lng: coord.lng });
+    mapaGoogleMkt.setZoom(15);
+    const idx = _mktPins.indexOf(lugar);
+    const marker = mktMarcadores[idx];
+    if (marker) google.maps.event.trigger(marker, 'click');
+  }
+  window.mktVerEnMapa = mktVerEnMapa;
+
+  function mktVerEnMapaDesdePost(pubId) {
+    const p = mktPostsCache.get(pubId);
+    return mktVerEnMapa(p?.barrio || p?.zona);
+  }
+  window.mktVerEnMapaDesdePost = mktVerEnMapaDesdePost;
 
   function mktVerBarrioDelMapa(idx) {
     const lugar = _mktPins[idx];
