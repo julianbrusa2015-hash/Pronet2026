@@ -5683,6 +5683,7 @@ document.addEventListener('focusin', (e) => {
       // números que no corresponden a lo que está abajo.
       const resumen = document.getElementById('mkt-resumen');
       if (resumen) resumen.style.display = 'none';
+      if (reset) mktPintarCta(); // oculta el banner/FAB de publicar: acá no hay nada que publicar
       await renderFeedPrestadores(cont);
       mktCargando = false;
       return;
@@ -5822,7 +5823,16 @@ document.addEventListener('focusin', (e) => {
   function mktPintarCta() {
     const cta = document.getElementById('mkt-cta-publicar');
     if (!cta) return;
-    cta.style.display = (mktModo === 'mapa' || mktCtaOculto()) ? 'none' : '';
+    // El banner invita a publicar en Mercado (un vecino ofreciendo algo).
+    // En el origen Prestadores no hay nada que publicar ahí: la única forma
+    // de aparecer en esa lista es ser prestador de verdad y cargar el aviso
+    // desde Mi Perfil — mostrarlo acá invita a una acción que no existe en
+    // esta pantalla.
+    cta.style.display = (mktModo === 'mapa' || mktCtaOculto() || mktOrigen === 'prestador') ? 'none' : '';
+    // Mismo motivo, mismo botón: el "+" flotante es la otra entrada a
+    // abrirPublicarMercado().
+    const fab = document.querySelector('.mkt-fab');
+    if (fab) fab.style.display = mktOrigen === 'prestador' ? 'none' : '';
   }
 
   function mktToggleAmbito() {
