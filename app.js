@@ -11470,7 +11470,7 @@ document.addEventListener('focusin', (e) => {
       const quien = p.prestadores?.nombre || 'Prestador';
       return '<div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">' +
         (p.foto_url
-          ? '<img src="' + escHTML(p.foto_url) + '" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block;margin-bottom:9px">'
+          ? '<img src="' + escHTML(p.foto_url) + '" alt="" style="width:100%;aspect-ratio:16/9;object-fit:contain;background:#EEF1F6;border-radius:8px;display:block;margin-bottom:9px">'
           : '') +
         '<div style="font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(p.titulo) + '</div>' +
         '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(quien) + ' · ' + escHTML(rubroDeCat(p.rubro)) + '</div>' +
@@ -11647,7 +11647,7 @@ document.addEventListener('focusin', (e) => {
       return '<div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px' +
         (vencida ? ';opacity:.62' : '') + '">' +
         (p.foto_url
-          ? '<div style="height:110px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/cover' +
+          ? '<div style="height:110px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/contain no-repeat' +
             (vencida ? ';filter:grayscale(1)' : '') + '"></div>'
           : '<div style="height:56px;background:#EEF1F6;display:flex;align-items:center;justify-content:center;font-size:22px">🛠️</div>') +
         '<div style="padding:11px 13px">' +
@@ -11737,7 +11737,7 @@ document.addEventListener('focusin', (e) => {
       p?.rubro || catDeRubro(usuarioActual?.rubro || '') || RUBROS[0].slug);
     const prev = document.getElementById('pp-img-prev');
     prev.innerHTML = p?.foto_url
-      ? '<img src="' + escHTML(p.foto_url) + '" alt="" style="width:100%;height:100%;object-fit:cover">'
+      ? '<img src="' + escHTML(p.foto_url) + '" alt="" style="width:100%;height:100%;object-fit:contain;background:#EEF1F6">'
       : '<div style="font-size:26px">📷</div><div style="font-size:13px;font-weight:600;color:var(--blue)">Tocá para subir una foto</div>';
     const err = document.getElementById('pp-error');
     if (err) { err.style.display = 'none'; err.textContent = ''; }
@@ -11763,7 +11763,12 @@ document.addEventListener('focusin', (e) => {
     _ppFotoNueva = f;
     const prev = document.getElementById('pp-img-prev');
     const url = URL.createObjectURL(f);
-    prev.innerHTML = '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover">';
+    // contain, no cover: mostrar la imagen completa tal cual va a quedar en
+    // la card real (pubPrestadorCardHTML) — antes recortaba a ciegas al
+    // centro y el prestador no se enteraba de qué se cortaba hasta
+    // publicar. Con avisos/banners promocionales (texto cerca de los
+    // bordes) el recorte se comía justo lo importante.
+    prev.innerHTML = '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:contain;background:#EEF1F6">';
   }
   window.ppPrevisualizar = ppPrevisualizar;
 
@@ -11938,7 +11943,7 @@ document.addEventListener('focusin', (e) => {
             'style="border:0;background:var(--blue);color:white;border-radius:8px;padding:7px 13px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif">Contactar</button>' +
         '</div>';
     return '<div style="background:white;border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:14px;overflow:hidden;margin-bottom:11px">' +
-      (p.foto_url ? '<div style="height:140px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/cover"></div>' : '') +
+      (p.foto_url ? '<div style="height:140px;background:#EEF1F6 url(' + escHTML(p.foto_url) + ') center/contain no-repeat"></div>' : '') +
       '<div style="padding:12px 13px">' +
         '<span style="font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:#E8F0FF;color:#1A4FC4">Prestador</span>' +
         '<div style="font-size:14.5px;font-weight:700;color:var(--ink);margin-top:6px">' + escHTML(p.titulo) + '</div>' +

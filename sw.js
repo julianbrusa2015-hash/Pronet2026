@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v294'; // v294: Editar perfil también mostraba solo 8 rubros hardcodeados, faltaban 6 activos
+const CACHE_VERSION = 'pronet-v295'; // v295: fotos de avisos de prestador ya no se recortan a ciegas (object-fit:contain) + notif. al admin en cola de moderación
 
 const SHELL = [
   './',
