@@ -1188,7 +1188,7 @@ const PronetDB = (() => {
 
     /** Lista publicaciones activas, opcionalmente filtradas por categoría.
      *  Orden cronológico inverso, paginado de 10 en 10. */
-    async listarPublicaciones({ categoria = null, busqueda = null, zona = null, offset = 0, categorias = null, barrios = null, incluirSinBarrio = true } = {}) {
+    async listarPublicaciones({ categoria = null, busqueda = null, zona = null, offset = 0, categorias = null, barrios = null, incluirSinBarrio = true, limit = 10 } = {}) {
       if (!remoto) return [];
       let q = sb.from('publicaciones')
         // `lote` NO se trae en el feed: es la dirección del vendedor y no se
@@ -1197,7 +1197,7 @@ const PronetDB = (() => {
                  disponible, likes_count, comentarios_count, perfiles:autor_id (nombre, zona)`)
         .eq('activa', true)
         .order('creado', { ascending: false })
-        .range(offset, offset + 9);
+        .range(offset, offset + limit - 1);
       if (zona) q = q.eq('zona', zona);
       // Mercado acotado a una comunidad: `barrios` trae la comunidad y sus
       // barrios. Las comillas en el in() son necesarias: hay nombres con

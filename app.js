@@ -4866,8 +4866,6 @@ document.addEventListener('focusin', (e) => {
   const mktPostsCache = new Map();
   // Lote por publicación, sólo de las que el servidor autorizó a ver.
   const mktLotesCache = new Map();
-  // Coordenada de entrega por publicación, misma gobernanza que el lote.
-  const mktCoordsCache = new Map();
 
   // Sección activa. El prestador arranca —y se queda— en 'servicio'.
   let mktTipoActivo = 'servicio';
@@ -5868,8 +5866,6 @@ document.addEventListener('focusin', (e) => {
     // sólo llegan los que corresponden, así que no hay nada que filtrar.
     const lotes = await PronetDB.listarLotesVisibles(posts.map(p => p.id)).catch(() => new Map());
     lotes.forEach((v, k) => mktLotesCache.set(k, v));
-    const coords = await PronetDB.listarCoordenadasVisibles(posts.map(p => p.id)).catch(() => new Map());
-    coords.forEach((v, k) => mktCoordsCache.set(k, v));
     cont.insertAdjacentHTML('beforeend', posts.map(mktCardHTML).join(''));
     mktFeedIds.push(...posts.map(p => p.id));
     mktOffset  += posts.length;
@@ -6589,10 +6585,18 @@ document.addEventListener('focusin', (e) => {
     const barriosMapa = mktZonaActiva
       ? await barriosDeComunidad(mktZonaActiva)
       : ((comunidadMapa && !mktAmpliado) ? await barriosDeComunidad(comunidadMapa) : null);
-    const counts = await PronetDB.contarPublicacionesPorBarrio({
+    // Antes se pedía sólo el CONTEO por barrio (un pin por barrio, siempre en
+    // su centroide). Ahora hace falta la publicación entera para saber si
+    // tiene coordenada propia visible, así que se trae la lista y se agrupa
+    // acá — mismo total de datos, la cuenta la hacía el servidor y ahora la
+    // hace el cliente, pero Entre Vecinos es chico (un pueblo, no una app
+    // con miles de publicaciones activas a la vez).
+    const posts = await PronetDB.listarPublicaciones({
       categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
-      busqueda: mktBusqueda, barrios: barriosMapa,
+      busqueda: mktBusqueda, barrios: barriosMapa, incluirSinBarrio: false, offset: 0, limit: 300,
     }).catch(() => []);
+    const coordsVisibles = await PronetDB.listarCoordenadasVisibles(posts.map(p => p.id)).catch(() => new Map());
+
     const container = document.getElementById('mkt-mapa-div');
     if (!container) return;
 
@@ -6611,26 +6615,48 @@ document.addEventListener('focusin', (e) => {
     mktMarcadores.forEach(m => m.setMap(null));
     mktMarcadores = [];
 
+    // Agrupar por UBICACIÓN, no por barrio: si el vendedor mostró su
+    // coordenada, el pin va ahí (con ~11m de margen, para que dos lotes
+    // vecinos con coordenadas casi iguales compartan un solo pin); si no,
+    // cae al centroide del barrio como siempre — mismo criterio en todo
+    // Entre Vecinos, "si lo habilita reemplaza, sino muestra el barrio".
+    const grupos = new Map(); // key -> { lugar, posts:[], position }
+    posts.forEach(p => {
+      const coord = coordsVisibles.get(p.id);
+      const lugar = p.barrio || p.zona;
+      let key, position;
+      if (coord) {
+        key = 'loc:' + coord.lat.toFixed(4) + ':' + coord.lng.toFixed(4);
+        position = coord;
+      } else {
+        const centroide = MKT_ZONA_COORD[lugar];
+        if (!centroide) return; // sin barrio conocido, no hay dónde pinearlo
+        key = 'barrio:' + lugar;
+        position = centroide;
+      }
+      if (!grupos.has(key)) grupos.set(key, { lugar, posts: [], position });
+      grupos.get(key).posts.push(p);
+    });
+
     const bounds = new google.maps.LatLngBounds();
     let hayPins = false;
 
     _mktPins.length = 0;
-    counts.forEach(({ lugar, cantidad: count }) => {
-      const coord = MKT_ZONA_COORD[lugar];
-      if (!coord) return;
-      const pos = new google.maps.LatLng(coord.lat, coord.lng);
+    grupos.forEach((grupo) => {
+      const pos = new google.maps.LatLng(grupo.position.lat, grupo.position.lng);
       bounds.extend(pos);
       hayPins = true;
-      // Sólo el índice (un número) viaja en el onclick. El nombre sale del
-      // array: los nombres de barrio los edita el admin y escHTML() no
-      // protege adentro de un handler inline — el parser decodifica las
-      // entidades antes de que el JS las lea.
-      const idx = _mktPins.push(lugar) - 1;
+      const count = grupo.posts.length;
+      // El índice viaja en el onclick, no el nombre ni los posts: los
+      // nombres de barrio los edita el admin y escHTML() no protege adentro
+      // de un handler inline — el parser decodifica las entidades antes de
+      // que el JS las lea.
+      const idx = _mktPins.push(grupo) - 1;
       const label = count > 9 ? '9+' : String(count);
       const marker = new google.maps.Marker({
         position: pos,
         map: mapaGoogleMkt,
-        title: lugar + ' — ' + count + ' ' + (count === 1 ? 'publicación' : 'publicaciones'),
+        title: grupo.lugar + ' — ' + count + ' ' + (count === 1 ? 'publicación' : 'publicaciones'),
         label: { text: label, color: 'white', fontWeight: '700', fontSize: '12px' },
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
@@ -6641,20 +6667,10 @@ document.addEventListener('focusin', (e) => {
           strokeWeight: 2,
         },
       });
-      const info = new google.maps.InfoWindow({
-        content: `<div style="font-family:'Inter',sans-serif;min-width:190px;padding:4px 0">
-          <div style="font-weight:700;font-size:14px;margin-bottom:4px">${escHTML(lugar)}</div>
-          <div style="font-size:12px;color:#555">${count} ${count === 1 ? 'publicación' : 'publicaciones'}</div>
-          <div style="font-size:11px;color:#888;margin-top:8px">⏳ Cargando…</div>
-        </div>`,
-      });
-      // El primer toque ya no lleva un número solo: trae las publicaciones
-      // del barrio con su foto. El número decía cuántas hay pero no qué son,
-      // y para saberlo había que salir del mapa.
-      marker.addListener('click', async () => {
+      const info = new google.maps.InfoWindow({ content: mktContenidoPin(grupo, idx) });
+      marker.addListener('click', () => {
         mktMarcadores.forEach(m => m._info && m._info.close());
         info.open(mapaGoogleMkt, marker);
-        info.setContent(await mktContenidoPin(lugar, count, idx));
       });
       marker._info = info;
       mktMarcadores.push(marker);
@@ -6665,7 +6681,8 @@ document.addEventListener('focusin', (e) => {
   }
   window.renderMapaMercado = renderMapaMercado;
 
-  // Nombre de cada pin dibujado. El onclick del globo manda el índice.
+  // Grupos dibujados en el mapa: { lugar, posts, position }. El onclick del
+  // globo manda el índice.
   const _mktPins = [];
 
   /** Tocar "Ver publicaciones" en un pin: vuelve a la lista, acotada a ese
@@ -6677,16 +6694,13 @@ document.addEventListener('focusin', (e) => {
   // usuario viaja adentro de un handler inline.
   const _mktPinPosts = [];
 
-  /** Arma el contenido del globo: miniaturas de las publicaciones de ese
-   *  barrio. Se pide al abrir y no al dibujar los pines para no traer las
-   *  publicaciones de todos los barrios cuando el vecino va a mirar uno. */
-  async function mktContenidoPin(lugar, count, idx) {
-    const posts = await PronetDB.listarPublicaciones({
-      categoria: mktFiltroActivo, categorias: slugsDeTipo(mktTipoActivo),
-      busqueda: mktBusqueda,
-      barrios: [lugar], incluirSinBarrio: false, offset: 0,
-    }).catch(() => []);
-
+  /** Arma el contenido del globo: miniaturas de las publicaciones del grupo
+   *  (mismo barrio, o misma coordenada exacta si el vendedor la mostró).
+   *  Los posts ya están en memoria —vinieron con el mapa— así que no hace
+   *  falta re-pedirlos al abrir el globo, a diferencia de antes. */
+  function mktContenidoPin(grupo, idx) {
+    const { lugar, posts } = grupo;
+    const count = posts.length;
     _mktPinPosts.length = 0;
     posts.forEach(p => _mktPinPosts.push(p.id));
 
@@ -6694,11 +6708,6 @@ document.addEventListener('focusin', (e) => {
       '<div style="font-weight:700;font-size:14px;margin-bottom:2px">' + escHTML(lugar) + '</div>' +
       '<div style="font-size:11.5px;color:#555;margin-bottom:8px">' +
         count + ' ' + (count === 1 ? 'publicación' : 'publicaciones') + '</div>';
-
-    if (!posts.length) {
-      return '<div style="font-family:\'Inter\',sans-serif;min-width:190px;padding:4px 0">' + cabecera +
-        '<button onclick="mktVerBarrioDelMapa(' + idx + ')" style="background:#2B5BFF;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;width:100%">Ver publicaciones</button></div>';
-    }
 
     const filas = posts.slice(0, 4).map((p, i) => {
       const precio = p.precio_convenir ? 'A convenir'
@@ -6728,73 +6737,51 @@ document.addEventListener('focusin', (e) => {
    *  No hay pantalla de detalle en Entre Vecinos — la ficha se expande en el
    *  lugar, así que "llevar a la publicación" es filtrar, expandir y hacer
    *  scroll hasta ella. */
-  async function mktIrAPublicacionDelPin(i, idxBarrio) {
+  async function mktIrAPublicacionDelPin(i, idxGrupo) {
     const pubId = _mktPinPosts[i];
-    const lugar = _mktPins[idxBarrio];
-    if (!pubId || !lugar) return;
-    mktBarrioFiltro = lugar;
+    const grupo = _mktPins[idxGrupo];
+    if (!pubId || !grupo) return;
+    mktBarrioFiltro = grupo.lugar;
     if (mktModo === 'mapa') toggleMapaMercado();
     await renderMercado(true);
     mktVerCompleta(pubId);
   }
   window.mktIrAPublicacionDelPin = mktIrAPublicacionDelPin;
 
-  /** Marcador individual de la publicación puntual, cuando el vendedor
-   *  cargó coordenada Y la publicación la muestra (mostrar_lote). Vive
-   *  aparte de mktMarcadores —los pines agregados por barrio— porque
-   *  desaparece solo con el próximo mktVerEnMapa/renderMapaMercado. */
-  let mktMarcadorPropio = null;
-
-  /** Icono 🗺️ de la ficha: lleva al mapa centrado en ESA publicación. Si el
-   *  vendedor cargó coordenada y la mostró, usa el punto exacto (mejora
-   *  sobre mostrar sólo la puerta del barrio); si no, cae al pin agregado
-   *  del barrio de siempre — mismo criterio que mostrar_lote en el resto de
-   *  la ficha: "si lo habilita reemplaza, sino muestra el barrio". */
-  async function mktVerEnMapa(lugar, coordPropia) {
-    if (!lugar && !coordPropia) { showToast && showToast('⚠️ Esta publicación no tiene ubicación cargada'); return; }
+  /** Icono 🗺️ de la ficha: lleva al mapa centrado en el pin de ESA
+   *  publicación y abre su globo. El pin ya sale posicionado en el punto
+   *  exacto si el vendedor lo mostró (ver renderMapaMercado), o en el
+   *  centroide del barrio si no — acá sólo hay que encontrar cuál de los
+   *  grupos ya dibujados contiene este id y simular el click. */
+  async function mktVerEnMapa(pubId) {
     await (mktModo !== 'mapa' ? toggleMapaMercado() : renderMapaMercado());
     if (!mapaGoogleMkt) return;
-    if (mktMarcadorPropio) { mktMarcadorPropio.setMap(null); mktMarcadorPropio = null; }
-
-    if (coordPropia) {
-      mapaGoogleMkt.panTo(coordPropia);
-      mapaGoogleMkt.setZoom(17);
-      mktMarcadorPropio = new google.maps.Marker({
-        position: coordPropia,
-        map: mapaGoogleMkt,
-        title: 'Punto de entrega exacto',
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#16A34A',
-          fillOpacity: 1,
-          strokeColor: 'white',
-          strokeWeight: 2.5,
-        },
-      });
-      return;
-    }
-
-    const coord = MKT_ZONA_COORD[lugar];
-    if (!coord) return;
-    mapaGoogleMkt.panTo({ lat: coord.lat, lng: coord.lng });
-    mapaGoogleMkt.setZoom(15);
-    const idx = _mktPins.indexOf(lugar);
+    const idx = _mktPins.findIndex(g => g.posts.some(p => p.id === pubId));
+    if (idx === -1) { showToast && showToast('⚠️ Esta publicación no tiene ubicación cargada'); return; }
+    mapaGoogleMkt.panTo(_mktPins[idx].position);
+    mapaGoogleMkt.setZoom(coordsVisiblesDelGrupo(idx) ? 17 : 15);
     const marker = mktMarcadores[idx];
     if (marker) google.maps.event.trigger(marker, 'click');
   }
   window.mktVerEnMapa = mktVerEnMapa;
 
+  /** Un grupo tiene coordenada propia (no centroide de barrio) si su
+   *  posición no coincide con ninguna entrada de MKT_ZONA_COORD. */
+  function coordsVisiblesDelGrupo(idx) {
+    const pos = _mktPins[idx]?.position;
+    if (!pos) return false;
+    return !Object.values(MKT_ZONA_COORD).some(c => c.lat === pos.lat && c.lng === pos.lng);
+  }
+
   function mktVerEnMapaDesdePost(pubId) {
-    const p = mktPostsCache.get(pubId);
-    return mktVerEnMapa(p?.barrio || p?.zona, mktCoordsCache.get(pubId) || null);
+    return mktVerEnMapa(pubId);
   }
   window.mktVerEnMapaDesdePost = mktVerEnMapaDesdePost;
 
   function mktVerBarrioDelMapa(idx) {
-    const lugar = _mktPins[idx];
-    if (!lugar) return;
-    mktBarrioFiltro = lugar;
+    const grupo = _mktPins[idx];
+    if (!grupo) return;
+    mktBarrioFiltro = grupo.lugar;
     if (mktModo === 'mapa') toggleMapaMercado();
     renderMercado(true);
   }
