@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v299'; // v299: coordenada de entrega opcional en el perfil (captura única, no tracking)
+const CACHE_VERSION = 'pronet-v300'; // v300: aviso institucional gratis del admin, con color, arriba de Inicio
 
 const SHELL = [
   './',

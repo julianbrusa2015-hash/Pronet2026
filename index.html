@@ -172,6 +172,14 @@
         <div class="ads-dots" id="home-ads-dots"></div>
       </div>
 
+      <!-- Aviso institucional: lo escribe el admin desde Parametrías → Ajustes
+           (config_app: aviso_sistema_*). Distinto del carrusel de arriba —
+           ese es publicidad paga, esto es gratis y lo manda PRONET. -->
+      <div id="home-aviso-sistema" style="display:none;margin:10px 14px 0;border-radius:14px;padding:13px 15px;align-items:center;gap:10px" onclick="cerrarAvisoSistema()">
+        <div id="home-aviso-sistema-texto" style="flex:1;font-size:13px;font-weight:700;line-height:1.4"></div>
+        <div style="font-size:16px;opacity:.6;flex-shrink:0">✕</div>
+      </div>
+
       <!-- El checklist de "primeros pasos" se retiró (2026-08-17): quedaba
            redundante con Guías rápidas ("Cómo usar PRONET" en Mi Perfil),
            que cubre lo mismo con más detalle. -->
@@ -2391,6 +2399,28 @@
             <h2>🎚️ Ajustes</h2>
             <p>Tiempos, topes y umbrales de descubrimiento</p>
           </div>
+        </div>
+      </div>
+      <div style="padding:12px 14px 0">
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:14px">
+          <div style="font-size:13px;font-weight:800;color:var(--ink);margin-bottom:2px">📣 Aviso del sistema</div>
+          <div style="font-size:11.5px;color:var(--ink3);line-height:1.4;margin-bottom:12px">Un mensaje gratis, escrito por PRONET, arriba de Inicio. Distinto de los banners pagos.</div>
+
+          <label style="display:flex;align-items:center;gap:9px;margin-bottom:11px;cursor:pointer">
+            <input type="checkbox" id="aviso-activo" style="width:18px;height:18px;accent-color:var(--blue)">
+            <span style="font-size:12.5px;font-weight:600;color:var(--ink)">Mostrar el aviso</span>
+          </label>
+
+          <textarea id="aviso-mensaje" rows="2" maxlength="140" placeholder="Ej: 🎉 Nueva funcionalidad: Canjes disponibles!"
+                    style="width:100%;resize:none;border:1.5px solid var(--border);border-radius:10px;padding:9px 11px;font-size:13px;font-family:inherit;color:var(--ink);margin-bottom:11px;box-sizing:border-box"></textarea>
+
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">Color</div>
+          <div id="aviso-colores" style="display:flex;gap:8px;margin-bottom:12px"></div>
+
+          <div id="aviso-preview" style="display:none;border-radius:12px;padding:11px 13px;font-size:12.5px;font-weight:700;margin-bottom:12px"></div>
+
+          <div id="aviso-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin-bottom:6px"></div>
+          <button onclick="guardarAvisoSistema()" style="width:100%;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>
         </div>
       </div>
       <div id="param-ajustes-lista" style="padding:12px 14px 90px">

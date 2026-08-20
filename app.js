@@ -478,7 +478,7 @@ document.addEventListener('focusin', (e) => {
     if (id === 's-param-rubros')   { renderParamRubros(); }
     if (id === 's-param-zonas')    { renderParamZonas(); }
     if (id === 's-param-niveles')  { renderParamNiveles(); }
-    if (id === 's-param-ajustes')  { renderParamAjustes(); }
+    if (id === 's-param-ajustes')  { renderParamAjustes(); cargarAvisoSistemaAdmin(); }
     if (id === 's-servicios-fijos'){ renderServiciosFijos(); }
     if (id === 's-verificaciones') { renderVerificaciones(); }
     if (id === 's-param-banners')  { renderParamBanners(); }
@@ -1711,7 +1711,8 @@ document.addEventListener('focusin', (e) => {
     const wrap = document.getElementById('home-feed-container');
     if (!wrap) return;
     setBannerContextual();
-    pintarBanners();   // Carrusel de publicidad (sirve para vecino y prestador)
+    pintarBanners();       // Carrusel de publicidad (sirve para vecino y prestador)
+    pintarAvisoSistema();  // Aviso institucional gratis del admin (sirve para los dos roles)
 
     // ── Vista PRESTADOR: tablero de actividad, no un listado ──
     // Antes Inicio repetía el mismo listado de pedidos que la pantalla
@@ -3761,6 +3762,116 @@ document.addEventListener('focusin', (e) => {
     caja.style.display = 'block';
     arrancarAds(total);
   }
+
+  // ── Aviso del sistema: banner gratis que escribe el admin ──────────────
+  // Separado del carrusel de banners pagos a propósito: uno es publicidad
+  // que alguien compró, esto es un aviso institucional sin cola de
+  // moderación. Vive en config_app (aviso_sistema_activo/mensaje/color).
+  const AVISO_COLORES = {
+    blue:   { bg: '#EEF2FF', fg: '#1D3E8C' },
+    green:  { bg: '#ECFDF5', fg: '#047857' },
+    gold:   { bg: '#FFF8EC', fg: '#92400E' },
+    purple: { bg: '#F3E8FF', fg: '#6D28D9' },
+    orange: { bg: '#FFEDD5', fg: '#C2410C' },
+  };
+
+  function pintarCajaAviso(el, mensaje, color) {
+    const c = AVISO_COLORES[color] || AVISO_COLORES.blue;
+    el.style.background = c.bg;
+    const texto = document.getElementById('home-aviso-sistema-texto');
+    if (texto) { texto.style.color = c.fg; texto.textContent = mensaje; }
+  }
+
+  /** Se cierra por sesión de navegador (sessionStorage), no para siempre:
+   *  un aviso nuevo del admin tiene que poder volver a mostrarse. */
+  async function pintarAvisoSistema() {
+    const caja = document.getElementById('home-aviso-sistema');
+    if (!caja) return;
+    const cfg = await PronetDB.leerConfigApp(['aviso_sistema_activo', 'aviso_sistema_mensaje', 'aviso_sistema_color']).catch(() => ({}));
+    const mensaje = (cfg.aviso_sistema_mensaje || '').trim();
+    const activo = cfg.aviso_sistema_activo === 'true' && !!mensaje;
+    const cerrado = sessionStorage.getItem('aviso-sistema-cerrado') === mensaje;
+    if (!activo || cerrado) { caja.style.display = 'none'; return; }
+    pintarCajaAviso(caja, mensaje, cfg.aviso_sistema_color);
+    caja.style.display = 'flex';
+  }
+
+  function cerrarAvisoSistema() {
+    const texto = document.getElementById('home-aviso-sistema-texto')?.textContent || '';
+    sessionStorage.setItem('aviso-sistema-cerrado', texto);
+    const caja = document.getElementById('home-aviso-sistema');
+    if (caja) caja.style.display = 'none';
+  }
+  window.cerrarAvisoSistema = cerrarAvisoSistema;
+
+  /** Panel admin (Parametrías → Ajustes): carga los valores actuales y
+   *  arma los swatches de color con vista previa en vivo. */
+  async function cargarAvisoSistemaAdmin() {
+    const cont = document.getElementById('aviso-colores');
+    if (!cont) return;
+    const cfg = await PronetDB.leerConfigApp(['aviso_sistema_activo', 'aviso_sistema_mensaje', 'aviso_sistema_color']).catch(() => ({}));
+    const colorActual = cfg.aviso_sistema_color || 'blue';
+
+    document.getElementById('aviso-activo').checked = cfg.aviso_sistema_activo === 'true';
+    document.getElementById('aviso-mensaje').value = cfg.aviso_sistema_mensaje || '';
+
+    cont.innerHTML = Object.entries(AVISO_COLORES).map(([k, c]) =>
+      '<div data-color="' + k + '" onclick="elegirColorAviso(\'' + k + '\')" style="width:32px;height:32px;border-radius:50%;background:' + c.bg + ';border:2.5px solid ' + (k === colorActual ? c.fg : 'transparent') + ';cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)"></div>'
+    ).join('');
+    cont.dataset.actual = colorActual;
+
+    ['aviso-mensaje', 'aviso-activo'].forEach(id =>
+      document.getElementById(id).oninput = document.getElementById(id).onchange = previsualizarAviso
+    );
+    previsualizarAviso();
+  }
+
+  function elegirColorAviso(color) {
+    const cont = document.getElementById('aviso-colores');
+    cont.dataset.actual = color;
+    cont.querySelectorAll('[data-color]').forEach(el => {
+      const c = AVISO_COLORES[el.dataset.color];
+      el.style.borderColor = el.dataset.color === color ? c.fg : 'transparent';
+    });
+    previsualizarAviso();
+  }
+  window.elegirColorAviso = elegirColorAviso;
+
+  function previsualizarAviso() {
+    const prev = document.getElementById('aviso-preview');
+    const activo = document.getElementById('aviso-activo')?.checked;
+    const mensaje = (document.getElementById('aviso-mensaje')?.value || '').trim();
+    if (!prev) return;
+    if (!activo || !mensaje) { prev.style.display = 'none'; return; }
+    const color = document.getElementById('aviso-colores')?.dataset.actual || 'blue';
+    const c = AVISO_COLORES[color];
+    prev.style.background = c.bg; prev.style.color = c.fg;
+    prev.textContent = mensaje;
+    prev.style.display = 'block';
+  }
+  window.previsualizarAviso = previsualizarAviso;
+
+  async function guardarAvisoSistema() {
+    const msg = document.getElementById('aviso-msg');
+    const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
+    const activo = document.getElementById('aviso-activo').checked;
+    const mensaje = document.getElementById('aviso-mensaje').value.trim();
+    const color = document.getElementById('aviso-colores')?.dataset.actual || 'blue';
+
+    if (activo && !mensaje) { decir('⚠️ Escribí un mensaje antes de activarlo', '#BE123C'); return; }
+
+    decir('Guardando…', 'var(--ink3)');
+    const [r1, r2, r3] = await Promise.all([
+      PronetDB.guardarConfigApp('aviso_sistema_activo', activo ? 'true' : 'false'),
+      PronetDB.guardarConfigApp('aviso_sistema_mensaje', mensaje),
+      PronetDB.guardarConfigApp('aviso_sistema_color', color),
+    ]);
+    if (!r1?.ok || !r2?.ok || !r3?.ok) { decir('⚠️ No se pudo guardar', '#BE123C'); return; }
+    sessionStorage.removeItem('aviso-sistema-cerrado');
+    decir('✅ Guardado', 'var(--green)');
+    setTimeout(() => decir('', ''), 2500);
+  }
+  window.guardarAvisoSistema = guardarAvisoSistema;
 
   /** Las tarjetas propias del carrusel: el CTA que cambia según el usuario y
    *  la banda de Urgencias.
