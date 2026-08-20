@@ -5526,6 +5526,23 @@
           <input class="ob-input" id="edit-lote" name="edit-lote" type="text" placeholder="Ej: 340" maxlength="40">
         </div>
 
+        <!-- Coordenada del lote. Punto FIJO, capturado una sola vez a
+             pedido — no es tracking ni ubicación en tiempo real. Mejora el
+             pin del mapa (hoy marca la entrada del barrio) para que apunte
+             al lote exacto. Mismo criterio de privacidad que el lote: se
+             guarda acá, pero no se expone en ningún lado sola. -->
+        <div class="ob-field" style="margin-top:12px">
+          <label class="ob-label">Coordenada de entrega</label>
+          <div style="font-size:11px;color:var(--ink3);margin:-4px 0 8px;line-height:1.5">
+            No es tu ubicación en tiempo real — es un punto fijo de dónde recibís las entregas, para que el pin del mapa marque tu lote y no solo la entrada del barrio. Se captura una sola vez, cuando vos lo pedís.
+          </div>
+          <div id="edit-coord-estado" style="font-size:12px;color:var(--ink3);margin-bottom:8px">Sin cargar</div>
+          <div style="display:flex;gap:8px">
+            <button type="button" id="edit-coord-btn" class="btn-secondary" onclick="capturarCoordenadaPerfil()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:white;color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">📍 Usar mi ubicación actual</button>
+            <button type="button" id="edit-coord-quitar" onclick="quitarCoordenadaPerfil()" style="display:none;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:white;color:#BE123C;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Quitar</button>
+          </div>
+        </div>
+
         <!-- Dónde trabajo. Es del PRESTADOR (prestadores.zonas) y decide qué
              pedidos me llegan y dónde me encuentran. Distinto de la comunidad
              de arriba, que es dónde vivo.

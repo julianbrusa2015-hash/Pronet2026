@@ -520,6 +520,7 @@ document.addEventListener('focusin', (e) => {
         if (telInput.value) formatearTel(telInput);
       }
       setV('edit-lote', usuarioActual.lote || '');
+      pintarCoordenadaEdit();
       poblarComunidadEdit();
       cargarEdicionPrestador();
       if (usuarioActual.prestador_id) cargarPortfolioEdit(usuarioActual.prestador_id);
@@ -7995,6 +7996,63 @@ document.addEventListener('focusin', (e) => {
       img.src = url;
     });
   }
+
+  // ── Coordenada de entrega (perfil) ──────────────────────────────────
+  // Punto FIJO capturado a pedido con getCurrentPosition — nunca
+  // watchPosition, que sería tracking continuo. Se guarda apenas se
+  // captura (no espera al botón "Guardar" general): es una acción
+  // deliberada y puntual, no un campo de texto que se edita de a poco.
+  function pintarCoordenadaEdit() {
+    const estado = document.getElementById('edit-coord-estado');
+    const btnQuitar = document.getElementById('edit-coord-quitar');
+    if (!estado) return;
+    const tiene = usuarioActual?.lat != null && usuarioActual?.lng != null;
+    estado.textContent = tiene
+      ? '✅ Coordenada guardada (' + Number(usuarioActual.lat).toFixed(5) + ', ' + Number(usuarioActual.lng).toFixed(5) + ')'
+      : 'Sin cargar';
+    estado.style.color = tiene ? 'var(--green, #16A34A)' : 'var(--ink3)';
+    if (btnQuitar) btnQuitar.style.display = tiene ? '' : 'none';
+  }
+
+  async function capturarCoordenadaPerfil() {
+    if (!usuarioActual) return;
+    if (!navigator.geolocation) { showToast && showToast('⚠️ Tu navegador no soporta ubicación'); return; }
+    const btn = document.getElementById('edit-coord-btn');
+    const estado = document.getElementById('edit-coord-estado');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Buscando ubicación...'; }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        const res = await PronetDB.actualizarMiPerfilBasico({ lat, lng }).catch(() => ({ ok: false }));
+        if (btn) { btn.disabled = false; btn.textContent = '📍 Usar mi ubicación actual'; }
+        if (!res.ok) { showToast && showToast('⚠️ No se pudo guardar la coordenada'); return; }
+        usuarioActual.lat = lat; usuarioActual.lng = lng;
+        pintarCoordenadaEdit();
+        showToast && showToast('✅ Coordenada guardada');
+      },
+      (err) => {
+        if (btn) { btn.disabled = false; btn.textContent = '📍 Usar mi ubicación actual'; }
+        const msgs = {
+          1: '🔒 Permiso denegado. Activá la ubicación en Ajustes del navegador.',
+          2: '📡 No pudimos detectar tu ubicación.',
+          3: '⏱️ Tardó demasiado, probá de nuevo.',
+        };
+        showToast && showToast(msgs[err.code] || msgs[2]);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+  }
+  window.capturarCoordenadaPerfil = capturarCoordenadaPerfil;
+
+  async function quitarCoordenadaPerfil() {
+    if (!usuarioActual) return;
+    const res = await PronetDB.actualizarMiPerfilBasico({ lat: null, lng: null }).catch(() => ({ ok: false }));
+    if (!res.ok) { showToast && showToast('⚠️ No se pudo quitar la coordenada'); return; }
+    usuarioActual.lat = null; usuarioActual.lng = null;
+    pintarCoordenadaEdit();
+    showToast && showToast('Coordenada quitada');
+  }
+  window.quitarCoordenadaPerfil = quitarCoordenadaPerfil;
 
   async function guardarPerfilReal() {
     if (!usuarioActual) return;
