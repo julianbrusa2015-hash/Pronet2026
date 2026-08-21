@@ -4517,8 +4517,35 @@ document.addEventListener('focusin', (e) => {
       // El último nivel no tiene techo: se le da margen para que la barra
       // de progreso no quede clavada en 100% apenas se entra.
       max:    filas[i + 1] ? filas[i + 1].min_puntos : Math.round(n.min_puntos * 2.5) || 1000,
+      beneficios: n.beneficios || [],
     }));
+    pintarBeneficiosNiveles();
     return true;
+  }
+
+  /** Las tarjetas de #lv-niveles (Bronce/Plata/Oro/Élite) arrancan con el
+   *  texto vigente al momento de este cambio, escrito en el HTML como
+   *  contenido inicial — pero la fuente real pasa a ser loyalty_niveles
+   *  (min_puntos y beneficios), y esto la pisa apenas está disponible.
+   *  Antes ninguna de las dos se podía cambiar sin tocar código y
+   *  desplegar, y el rango ("1.000 – 4.999 pts") ni se corregía solo
+   *  cuando un admin movía el umbral desde Parametrías: quedaba
+   *  desincronizado sin que nada avisara. */
+  function pintarBeneficiosNiveles() {
+    const ids = { Bronce: 'nc-bronce', Plata: 'nc-plata', Oro: 'nc-oro', 'Élite': 'nc-elite' };
+    const niveles = window.PRONET_CONFIG?.LOYALTY_NIVELES || [];
+    niveles.forEach((n, i) => {
+      const card = document.getElementById(ids[n.nombre]);
+      if (!card) return;
+      const box = card.querySelector('.nivel-benefits');
+      if (box && n.beneficios?.length) box.innerHTML = n.beneficios.map(b => '· ' + escHTML(b)).join('<br>');
+      const rango = card.querySelector('.nivel-range');
+      if (rango) {
+        rango.textContent = niveles[i + 1]
+          ? n.min.toLocaleString('es-AR') + ' – ' + (n.max - 1).toLocaleString('es-AR') + ' pts'
+          : n.min.toLocaleString('es-AR') + '+ pts';
+      }
+    });
   }
 
   /** Emoji de un nivel, desde el catálogo.
@@ -9279,36 +9306,50 @@ document.addEventListener('focusin', (e) => {
                  style="width:100px;text-align:right;font-size:13px;font-weight:600;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink)${i === 0 ? ';background:var(--surface);color:var(--ink3)' : ''}">
           <span style="font-size:12px;color:var(--ink3)">pts</span>
         </div>
+        <div style="padding:7px 0;border-top:1px solid var(--border)">
+          <div style="font-size:12.5px;color:var(--ink);margin-bottom:6px">Beneficios (uno por línea)</div>
+          <textarea id="nv-${escHTML(n.nombre)}-benef" rows="${Math.max(3, (n.beneficios || []).length)}"
+                    style="width:100%;resize:vertical;border:1.5px solid var(--border);border-radius:8px;padding:8px 9px;font-size:12.5px;font-family:inherit;color:var(--ink);box-sizing:border-box">${escHTML((n.beneficios || []).join('\n'))}</textarea>
+        </div>
         <div id="nv-${escHTML(n.nombre)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>
-        ${i === 0 ? '' : `<button onclick="guardarParamNivel('${escHTML(n.nombre)}')"
-                  style="width:100%;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>`}
+        <button onclick="guardarParamNivel('${escHTML(n.nombre)}', ${i === 0 ? 'true' : 'false'})"
+                style="width:100%;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>
       </div>`).join('') + `
       <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">
         Mover un umbral <b>reclasifica a todos</b> de inmediato: alguien que estaba en Oro puede volver a Plata. El primer nivel arranca siempre en 0 y por eso no se edita.
       </div>`;
   }
 
-  async function guardarParamNivel(nombre) {
+  async function guardarParamNivel(nombre, minDeshabilitado) {
     const msg = document.getElementById('nv-' + nombre + '-msg');
     const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
-    const min = Number((document.getElementById('nv-' + nombre + '-min')?.value || '').trim());
-    if (!Number.isFinite(min) || min < 0) { decir('⚠️ Tiene que ser un número mayor o igual a 0', '#BE123C'); return; }
+    const beneficios = (document.getElementById('nv-' + nombre + '-benef')?.value || '')
+      .split('\n').map(l => l.trim()).filter(Boolean);
+    const campos = { beneficios };
 
-    // Los umbrales tienen que quedar en orden estricto: si dos niveles
-    // empatan o se cruzan, nivel_para_puntos() elige por min_puntos desc y
-    // uno de los dos se vuelve inalcanzable, sin que nada falle.
-    const filas = await PronetDB.listarLoyaltyNiveles().catch(() => []);
-    const i = filas.findIndex(f => f.nombre === nombre);
-    const anterior = filas[i - 1], siguiente = filas[i + 1];
-    if (anterior && min <= anterior.min_puntos) {
-      decir('⚠️ Tiene que ser mayor que ' + anterior.nombre + ' (' + anterior.min_puntos + ')', '#BE123C'); return;
-    }
-    if (siguiente && min >= siguiente.min_puntos) {
-      decir('⚠️ Tiene que ser menor que ' + siguiente.nombre + ' (' + siguiente.min_puntos + ')', '#BE123C'); return;
+    // El primer nivel arranca siempre en 0 — el input está deshabilitado,
+    // así que ni se lee ni se valida, sólo se guardan los beneficios.
+    if (!minDeshabilitado) {
+      const min = Number((document.getElementById('nv-' + nombre + '-min')?.value || '').trim());
+      if (!Number.isFinite(min) || min < 0) { decir('⚠️ Tiene que ser un número mayor o igual a 0', '#BE123C'); return; }
+
+      // Los umbrales tienen que quedar en orden estricto: si dos niveles
+      // empatan o se cruzan, nivel_para_puntos() elige por min_puntos desc y
+      // uno de los dos se vuelve inalcanzable, sin que nada falle.
+      const filas = await PronetDB.listarLoyaltyNiveles().catch(() => []);
+      const i = filas.findIndex(f => f.nombre === nombre);
+      const anterior = filas[i - 1], siguiente = filas[i + 1];
+      if (anterior && min <= anterior.min_puntos) {
+        decir('⚠️ Tiene que ser mayor que ' + anterior.nombre + ' (' + anterior.min_puntos + ')', '#BE123C'); return;
+      }
+      if (siguiente && min >= siguiente.min_puntos) {
+        decir('⚠️ Tiene que ser menor que ' + siguiente.nombre + ' (' + siguiente.min_puntos + ')', '#BE123C'); return;
+      }
+      campos.min_puntos = min;
     }
 
     decir('Guardando…', 'var(--ink3)');
-    const r = await PronetDB.guardarLoyaltyNivel(nombre, { min_puntos: min });
+    const r = await PronetDB.guardarLoyaltyNivel(nombre, campos);
     if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
     await cargarNivelesLoyalty();
     renderParamNiveles();

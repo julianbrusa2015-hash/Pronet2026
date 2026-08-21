@@ -42,12 +42,19 @@ window.PRONET_CONFIG.SLIDER_RANGOS = {
 };
 
 // ── Niveles del programa Loyalty ──
-// Orden ascendente: cada nivel define su rango de puntos.
+// Orden ascendente: cada nivel define su rango de puntos y sus beneficios.
+//
+// Éste es el FALLBACK offline/inicial, igual que PLANES más abajo: en
+// cargarNivelesLoyalty() (app.js) se pisa con los valores reales de
+// loyalty_niveles apenas arranca la sesión — esa tabla es la fuente de
+// verdad, la que también usa acreditar_puntos() para asignar el nivel. Si
+// se edita un umbral o un beneficio desde Parametrías, actualizar acá es
+// sólo para que este fallback no quede muy desactualizado si la sync falla.
 window.PRONET_CONFIG.LOYALTY_NIVELES = [
-  { nombre: 'Bronce', emoji: '🥉', min: 0,     max: 1000  },
-  { nombre: 'Plata',  emoji: '🥈', min: 1000,  max: 5000  },
-  { nombre: 'Oro',    emoji: '🥇', min: 5000,  max: 10000 },
-  { nombre: 'Élite',  emoji: '💎', min: 10000, max: 25000 },
+  { nombre: 'Bronce', emoji: '🥉', min: 0,     max: 1500,  beneficios: ['Acceso básico al programa', 'Historial de puntos', 'Notificaciones de puntos ganados'] },
+  { nombre: 'Plata',  emoji: '🥈', min: 1500,  max: 5000,  beneficios: ['Todo lo de Bronce', 'Acceso a canjes básicos', 'Soporte por email prioritario', '+10% de puntos en reseñas'] },
+  { nombre: 'Oro',    emoji: '🥇', min: 5000,  max: 10000, beneficios: ['Todo lo de Plata', 'Boost ×1.6 canjeable', 'Badge "Prestador Élite"', 'Informe de competidores', '+20% de puntos en todas las acciones'] },
+  { nombre: 'Élite',  emoji: '💎', min: 10000, max: 25000, beneficios: ['Todo lo de Oro', 'Soporte prioritario 24/7', 'Reseñas pesan 1.5× en el ranking', 'Mes Pro gratis cada 6 meses', 'Acceso anticipado a Beta', 'Badge permanente en el perfil'] },
 ];
 
 // ── FASE 4: Google Maps ──
