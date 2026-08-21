@@ -8047,6 +8047,12 @@ document.addEventListener('focusin', (e) => {
       btn.style.display = resuelta ? 'none' : '';
       btn.textContent = sol ? 'Actualizar datos' : 'Enviar para verificar';
     }
+    // El botón de escanear sólo si el navegador sabe leer un PDF417 y los
+    // campos siguen editables — ya resuelta, escanear encima no serviría.
+    const btnDni = document.getElementById('edit-verif-btn-dni');
+    if (btnDni) {
+      prealtaPuedeEscanear().then(puede => { btnDni.style.display = (puede && !resuelta) ? '' : 'none'; });
+    }
     if (sol?.estado === 'rechazado' && motivo) {
       motivo.textContent = sol.motivo_rechazo
         ? 'Rechazado: ' + sol.motivo_rechazo
@@ -12539,7 +12545,11 @@ document.addEventListener('focusin', (e) => {
   let _escanerStream = null;
   let _escanerTimer  = null;
 
-  async function abrirEscanerDNI() {
+  /** `destino` dice a qué campos escribir. Por default, los de pre-alta —
+   *  Verificación (y cualquier otro formulario futuro) manda los suyos en
+   *  vez de duplicar todo este bloque. */
+  async function abrirEscanerDNI(destino) {
+    const d = Object.assign({ campoNombre: 'prealta-nombre', campoDni: 'prealta-dni', campoFocus: 'prealta-tel' }, destino);
     const cont = document.getElementById('escaner-dni');
     const video = document.getElementById('escaner-video');
     const msg = document.getElementById('escaner-msg');
@@ -12575,10 +12585,10 @@ document.addEventListener('focusin', (e) => {
       }
       cerrarEscanerDNI();
       const setV = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
-      setV('prealta-nombre', datos.nombre);
-      setV('prealta-dni', datos.dni);
+      setV(d.campoNombre, datos.nombre);
+      setV(d.campoDni, datos.dni);
       showToast && showToast('✅ Datos cargados. Revisalos antes de enviar.');
-      document.getElementById('prealta-tel')?.focus();
+      document.getElementById(d.campoFocus)?.focus();
     }, 500);
   }
   window.abrirEscanerDNI = abrirEscanerDNI;

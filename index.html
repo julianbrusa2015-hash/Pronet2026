@@ -5647,6 +5647,14 @@
             los ve sólo el equipo de PRONET para darte el sello de verificado.
           </div>
 
+          <!-- Escanea el dorso del DNI (PDF417) y completa nombre + DNI solo.
+               Mismo lector que la pre-alta — ver abrirEscanerDNI() en app.js.
+               Oculto por default: pintarVerificacion() lo muestra sólo si el
+               navegador soporta BarcodeDetector y la solicitud sigue editable. -->
+          <button type="button" id="edit-verif-btn-dni" style="display:none;width:100%;margin-bottom:10px;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:white;color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif"
+                  onclick="abrirEscanerDNI({campoNombre:'edit-verif-nombre',campoDni:'edit-verif-dni',campoFocus:'edit-verif-dir'})">
+            📷 Escanear el DNI y completar solo
+          </button>
           <div class="ob-field">
             <label for="edit-verif-nombre" class="ob-label">Nombre completo, como figura en el DNI</label>
             <input class="ob-input" id="edit-verif-nombre" autocomplete="name" placeholder="María Elena González">

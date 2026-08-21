@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v306'; // v306: saca 2 beneficios aspiracionales de Oro/Élite (sin mecánica real)
+const CACHE_VERSION = 'pronet-v307'; // v307: escanear el DNI también en Verificación de identidad, no sólo en pre-alta
 
 const SHELL = [
   './',
