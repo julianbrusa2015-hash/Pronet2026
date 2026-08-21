@@ -198,12 +198,15 @@ test.describe('VP-3 · Miniaturas en el pin del mapa', () => {
     test.skip(pines === 0, 'sin pines en este entorno');
 
     const info = await page.evaluate(async () => {
-      const lugar = _mktPins[0];
-      const html = await mktContenidoPin(lugar, 99, 0);
+      // _mktPins agrupa por UBICACIÓN, no sólo por barrio: cada elemento es
+      // { lugar, posts, position }, donde `position` es la coordenada del
+      // vendedor si la mostró, o el centroide del barrio si no.
+      const grupo = _mktPins[0];
+      const html = mktContenidoPin(grupo, 0);
       const tmp = document.createElement('div');
       tmp.innerHTML = html;
       return {
-        lugar,
+        lugar: grupo.lugar,
         miniaturas: tmp.querySelectorAll('[onclick^="mktIrAPublicacionDelPin"]').length,
         cacheadas: _mktPinPosts.length,
         texto: tmp.textContent,
@@ -224,7 +227,7 @@ test.describe('VP-3 · Miniaturas en el pin del mapa', () => {
     test.skip(pines === 0, 'sin pines en este entorno');
 
     const r = await page.evaluate(async () => {
-      await mktContenidoPin(_mktPins[0], 99, 0);
+      mktContenidoPin(_mktPins[0], 0);
       const pubId = _mktPinPosts[0];
       await mktIrAPublicacionDelPin(0, 0);
       await new Promise(res => setTimeout(res, 3000));
@@ -237,7 +240,7 @@ test.describe('VP-3 · Miniaturas en el pin del mapa', () => {
     // Entre Vecinos no tiene pantalla de detalle: "llevar a la publicación"
     // es volver al feed, acotarlo al barrio y expandir esa ficha.
     expect(r.modo).toBe('lista');
-    expect(r.barrio).toBe(await page.evaluate(() => _mktPins[0]));
+    expect(r.barrio).toBe(await page.evaluate(() => _mktPins[0].lugar));
     expect(r.fichaEnElFeed).toBe(true);
   });
 
@@ -252,7 +255,7 @@ test.describe('VP-3 · Miniaturas en el pin del mapa', () => {
     test.skip(pines === 0, 'sin pines en este entorno');
 
     const handlers = await page.evaluate(async () => {
-      const html = await mktContenidoPin(_mktPins[0], 99, 0);
+      const html = mktContenidoPin(_mktPins[0], 0);
       const tmp = document.createElement('div');
       tmp.innerHTML = html;
       return [...tmp.querySelectorAll('[onclick]')].map(e => e.getAttribute('onclick'));
