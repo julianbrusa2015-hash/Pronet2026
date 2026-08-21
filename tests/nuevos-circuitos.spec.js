@@ -203,8 +203,15 @@ test.describe('F.1 · Feed prestador filtrado por rubro', () => {
     if (!loginOk) { test.skip(); return; }
 
     // El tablero se pinta async (trae ficha, chats, analítica). #slot-checklist
-    // sólo lo escribe renderInicioPrestador, así que sirve de señal de "ya está".
-    await expect(page.locator('#slot-checklist')).toBeAttached({ timeout: 15000 });
+    // ya no existe — el checklist de "primeros pasos" se retiró el
+    // 2026-08-17 (ver renderGuias()). Señal de "ya está" ahora: el
+    // contenedor del tablero dejó de mostrar el placeholder de carga, que
+    // es lo único que renderInicioPrestador() siempre escribe (con o sin
+    // pendientes, con o sin rubro).
+    await page.waitForFunction(() => {
+      const el = document.getElementById('home-feed-container');
+      return !!el && !el.textContent.includes('Cargando');
+    }, { timeout: 15000 });
 
     // toBeAttached antes de toBeHidden a propósito: un elemento que no existe
     // también está "hidden", así que borrarlo del HTML dejaría este test en

@@ -318,6 +318,24 @@ async function sesionRestaurada(page) {
   // evaluate() inmediato. 300ms no alcanzaba — se veía como "window.PronetDB
   // is undefined" al azar en toda la suite.
   await page.waitForTimeout(1200);
+  // mostrarZonaAlLogin() (app.js) abre #zona-modal con un setTimeout(600ms)
+  // cuando usuarioActual.zona es null/vacío — el caso real de vecino_test.
+  // El wait de arriba ya cubre esa ventana, pero nada lo cerraba: quedaba
+  // tapando toda la pantalla e interceptando el primer click sobre el nav
+  // de cualquier test posterior (mensaje de Playwright: "<div id="zona-modal"
+  // class="zona-modal-overlay show"> subtree intercepts pointer events").
+  await cerrarZonaModalSiAparece(page);
+}
+
+/** Cierra "¿En qué zona estás?" si mostrarZonaAlLogin() lo auto-abrió.
+ *  Confirma con la zona que venga preseleccionada — no elige una a
+ *  propósito: cambiarle la zona a una cuenta que comparten varios specs
+ *  rompería otros tests que dependen de su valor actual. */
+async function cerrarZonaModalSiAparece(page) {
+  const modal = page.locator('#zona-modal.show');
+  if (!(await modal.isVisible().catch(() => false))) return;
+  await page.locator('#zona-modal button.btn-p').click();
+  await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
 }
 
 /** Abre la app con la sesión que ya trae el contexto (storageState) y espera
@@ -377,4 +395,4 @@ async function visible(page, selector) {
   }, selector);
 }
 
-module.exports = { CUENTAS, esperarDOM, esperarSWListo, cerrarTutorialSiAparece, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece, omitirComunidadSiAparece, pasarGateTelefono };
+module.exports = { CUENTAS, esperarDOM, esperarSWListo, cerrarTutorialSiAparece, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece, omitirComunidadSiAparece, pasarGateTelefono, cerrarZonaModalSiAparece };

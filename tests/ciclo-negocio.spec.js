@@ -30,6 +30,15 @@ async function esperarLoginScreen(page) {
 }
 
 async function cerrarOverlays(page) {
+  // mostrarZonaAlLogin() (app.js) abre #zona-modal con classList.add('show')
+  // en un setTimeout(600ms) cuando usuarioActual.zona es null/vacío — el
+  // caso real de vecino_test hoy. El check de acá comparaba contra
+  // `.active`/style.display, que esta app no usa para este modal, así que
+  // nunca lo cerraba: quedaba tapando la pantalla e interceptando el
+  // primer click sobre el nav ("<div id="zona-modal" class="zona-modal-
+  // overlay show"> subtree intercepts pointer events"). Se espera la
+  // ventana del setTimeout antes de decidir que no apareció.
+  await page.waitForTimeout(700);
   await page.evaluate(() => {
     // Tutorial overlay
     const tut = document.getElementById('tutorial-overlay');
@@ -40,9 +49,8 @@ async function cerrarOverlays(page) {
     });
     // Modal de zona (#zona-modal): cerrarlo si está activo
     const zm = document.getElementById('zona-modal');
-    if (zm && (zm.classList.contains('active') || zm.style.display === 'flex')) {
-      zm.classList.remove('active');
-      zm.style.display = 'none';
+    if (zm && zm.classList.contains('show')) {
+      zm.classList.remove('show');
     }
   });
   await page.waitForTimeout(200);

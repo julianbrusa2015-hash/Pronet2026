@@ -30,20 +30,25 @@ test.describe('C3 · Búsqueda — pantalla y controles', () => {
     await abrir(page);
     await irA(page, 's-buscar');
     // Escopar a #s-buscar: varias pantallas tienen .filter-row .chip
-    const chipTodos   = page.locator('#s-buscar .filter-row .chip').filter({ hasText: /^Todos$/i });
-    const chipPremium = page.locator('#s-buscar .filter-row .chip').filter({ hasText: /premium/i });
+    // "+4.5" y no "Premium": ese chip lleva data-feature="suscripcionPro" y
+    // hoy ese flag está apagado en producción (features_off en config_app),
+    // así que el chip ni se pinta — no es un bug, es la config vigente. El
+    // chip de rating no depende de ningún flag y prueba lo mismo (cambiar
+    // la selección entre chips).
+    const chipTodos = page.locator('#s-buscar .filter-row .chip').filter({ hasText: /^Todos$/i });
+    const chipOtro   = page.locator('#s-buscar .filter-row .chip').filter({ hasText: /\+4\.5/i });
     await expect(chipTodos).toHaveClass(/on/);
 
-    await chipPremium.click();
+    await chipOtro.click();
     await page.waitForTimeout(400);
-    await expect(chipPremium).toHaveClass(/on/);
+    await expect(chipOtro).toHaveClass(/on/);
     await expect(chipTodos).not.toHaveClass(/on/);
 
     // Volver a Todos también funciona
     await page.locator('#s-buscar .filter-row .chip').filter({ hasText: /^Todos$/i }).click();
     await page.waitForTimeout(400);
     await expect(page.locator('#s-buscar .filter-row .chip').filter({ hasText: /^Todos$/i })).toHaveClass(/on/);
-    await expect(chipPremium).not.toHaveClass(/on/);
+    await expect(chipOtro).not.toHaveClass(/on/);
   });
 
   test('#search-results se popula (o muestra empty state) al abrir', async ({ page }) => {
