@@ -1,6 +1,23 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
 
+// Sin dotenv como dependencia: mismo criterio que ya usan los scripts de
+// migración de este proyecto (leer .env.local a mano). No pisa una var que
+// ya venga del shell — así un `TEST_ADMIN_PW=x npx playwright test` puntual
+// sigue ganando sobre el archivo.
+(function cargarEnvLocal() {
+  const fs = require('fs');
+  const path = require('path');
+  const envPath = path.join(__dirname, '.env.local');
+  if (!fs.existsSync(envPath)) return;
+  fs.readFileSync(envPath, 'utf8').split(/\r?\n/).forEach((linea) => {
+    const i = linea.indexOf('=');
+    if (i === -1 || linea.trim().startsWith('#')) return;
+    const clave = linea.slice(0, i).trim();
+    if (clave && !(clave in process.env)) process.env[clave] = linea.slice(i + 1).trim();
+  });
+})();
+
 module.exports = defineConfig({
   testDir: './tests',
   globalSetup: require.resolve('./tests/global-setup.js'),

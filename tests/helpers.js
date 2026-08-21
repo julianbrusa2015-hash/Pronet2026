@@ -14,6 +14,11 @@ const CUENTAS = {
   // Sin default: los tests de doble perfil se saltean si no está configurada,
   // en vez de fallar por una cuenta que puede no existir en cada entorno.
   doble:     { email: process.env.TEST_DOBLE_EMAIL     || null,                          pw: process.env.TEST_DOBLE_PW     || 'Test1234!' },
+  // Mismo criterio: sin default. Es una cuenta admin REAL de producción —
+  // si TEST_ADMIN_PW no está en .env.local (gitignored), los tests de C8/C10
+  // que la necesiten se saltean solos en vez de fallar o, peor, de quedar
+  // con una contraseña de admin hardcodeada en un archivo commiteado.
+  admin:     { email: process.env.TEST_ADMIN_EMAIL     || 'admin@pronet.com.ar',          pw: process.env.TEST_ADMIN_PW     || null },
 };
 
 async function esperarDOM(page) {
@@ -236,7 +241,7 @@ async function completarCredenciales(page, email, pw) {
  *  para dejar estado en localStorage y verificar cómo lo trata el login. */
 async function login(page, cuenta, preparar) {
   const c = CUENTAS[cuenta];
-  if (!c || !c.email) throw new Error(`Cuenta "${cuenta}" sin configurar`);
+  if (!c || !c.email || !c.pw) throw new Error(`Cuenta "${cuenta}" sin configurar`);
   await page.goto('/');
   await limpiarSesion(page);
   if (preparar) await page.evaluate(preparar);
