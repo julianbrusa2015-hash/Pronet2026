@@ -2262,8 +2262,18 @@ document.addEventListener('focusin', (e) => {
     // eso lo resuelve el servidor. Antes viajaba la tabla completa y se
     // descartaba acá. Los demás chips sí filtran en el cliente: operan sobre
     // un conjunto ya chico y cambiar de chip no debería costar otra consulta.
+    // "Tu zona" tiene que ser la COBERTURA real del prestador (zonasDeMiCobertura,
+    // la misma que arma prestadores.zonas en "Dónde trabajo"), no
+    // zonasDelFiltro() — esa camina hacia ABAJO desde la comunidad de
+    // zonaActual (útil para el selector de barrio de Mercado) pero nunca
+    // sube a una zona más amplia. Un prestador que cubre "Escobar" entero
+    // pero tiene zonaActual en un barrio puntual (San Matías) se quedaba
+    // sin ver los pedidos publicados a nivel ciudad, aunque su cobertura
+    // configurada los incluyera — mismo bug que ya se había evitado en el
+    // tablero (renderPedidosDisponibles usa zonasDeMiCobertura desde el
+    // vamos). Encontrado corriendo el ciclo de negocio E2E completo.
     const feed = await PronetDB.listarPedidosDisponibles({
-      zonas: filtrosPresto.zona ? zonasDelFiltro() : null,
+      zonas: filtrosPresto.zona ? await zonasDeMiCobertura() : null,
       excluirUsuario: usuarioActual?.id || null,
       miPrestadorId: usuarioActual?.prestador_id || null,
     }).catch(() => ({ pedidos: [], total: 0 }));
