@@ -53,8 +53,8 @@ window.PRONET_CONFIG.SLIDER_RANGOS = {
 window.PRONET_CONFIG.LOYALTY_NIVELES = [
   { nombre: 'Bronce', emoji: '🥉', min: 0,     max: 1500,  beneficios: ['Acceso básico al programa', 'Historial de puntos', 'Notificaciones de puntos ganados'] },
   { nombre: 'Plata',  emoji: '🥈', min: 1500,  max: 5000,  beneficios: ['Todo lo de Bronce', 'Acceso a canjes básicos', 'Soporte por email prioritario', '+10% de puntos en reseñas'] },
-  { nombre: 'Oro',    emoji: '🥇', min: 5000,  max: 10000, beneficios: ['Todo lo de Plata', 'Boost ×1.6 canjeable', 'Badge "Prestador Élite"', 'Informe de competidores', '+20% de puntos en todas las acciones'] },
-  { nombre: 'Élite',  emoji: '💎', min: 10000, max: 25000, beneficios: ['Todo lo de Oro', 'Soporte prioritario 24/7', 'Reseñas pesan 1.5× en el ranking', 'Mes Pro gratis cada 6 meses', 'Acceso anticipado a Beta', 'Badge permanente en el perfil'] },
+  { nombre: 'Oro',    emoji: '🥇', min: 5000,  max: 10000, beneficios: ['Todo lo de Plata', 'Boost ×1.6 canjeable', 'Badge "Prestador Élite"', '+20% de puntos en todas las acciones'] },
+  { nombre: 'Élite',  emoji: '💎', min: 10000, max: 25000, beneficios: ['Todo lo de Oro', 'Soporte prioritario 24/7', 'Reseñas pesan 1.5× en el ranking', 'Mes Pro gratis cada 6 meses', 'Badge permanente en el perfil'] },
 ];
 
 // ── FASE 4: Google Maps ──

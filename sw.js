@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v305'; // v305: beneficios de loyalty editables + fix de rango desincronizado en Plata
+const CACHE_VERSION = 'pronet-v306'; // v306: saca 2 beneficios aspiracionales de Oro/Élite (sin mecánica real)
 
 const SHELL = [
   './',

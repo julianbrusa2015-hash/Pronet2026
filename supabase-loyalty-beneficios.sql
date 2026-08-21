@@ -13,11 +13,13 @@
 -- se puebla con el texto actual, tal cual, para que el cambio sea
 -- invisible en producción hasta que el admin edite algo.
 --
--- OJO: algunos beneficios listados hoy son aspiracionales, no mecánicas
--- reales todavía (informe de competidores, acceso anticipado a beta, mes
--- Pro gratis cada 6 meses). Migrarlos no los activa — sólo los hace
--- editables. Si se editan para que dejen de prometer algo que no existe,
--- mejor.
+-- ACTUALIZADO 2026-08-20: "Informe de competidores" y "Acceso anticipado a
+-- Beta" se sacaron de Oro/Élite — no había ninguna mecánica real detrás,
+-- puro texto. "Mes Pro gratis cada 6 meses" (Élite) queda por ahora, pero
+-- tampoco tiene nada que lo dispare automáticamente: no hay cron ni RPC,
+-- sólo el catálogo de canjes manual del admin (loyalty_canjes, "Regala 1
+-- mes de plan"), que es redimible con puntos a demanda — otra mecánica
+-- distinta de "cada 6 meses mientras estés en Élite".
 
 alter table public.loyalty_niveles
   add column if not exists beneficios text[] not null default '{}';
@@ -31,11 +33,11 @@ update public.loyalty_niveles set beneficios = array[
 ] where nombre = 'Plata' and beneficios = '{}';
 
 update public.loyalty_niveles set beneficios = array[
-  'Todo lo de Plata', 'Boost ×1.6 canjeable', 'Badge "Prestador Élite"', 'Informe de competidores', '+20% de puntos en todas las acciones'
+  'Todo lo de Plata', 'Boost ×1.6 canjeable', 'Badge "Prestador Élite"', '+20% de puntos en todas las acciones'
 ] where nombre = 'Oro' and beneficios = '{}';
 
 update public.loyalty_niveles set beneficios = array[
-  'Todo lo de Oro', 'Soporte prioritario 24/7', 'Reseñas pesan 1.5× en el ranking', 'Mes Pro gratis cada 6 meses', 'Acceso anticipado a Beta', 'Badge permanente en el perfil'
+  'Todo lo de Oro', 'Soporte prioritario 24/7', 'Reseñas pesan 1.5× en el ranking', 'Mes Pro gratis cada 6 meses', 'Badge permanente en el perfil'
 ] where nombre = 'Élite' and beneficios = '{}';
 
 notify pgrst, 'reload schema';
