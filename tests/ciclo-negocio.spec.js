@@ -299,6 +299,141 @@ test.describe.serial('PRONET — Ciclo de negocio completo', () => {
     expect(estado, 'la propuesta quedó elegida pero el chat no se activó').toBe('activo');
   });
 
+  // ── D2. Prestador marca el trabajo como terminado ─────────────────────────
+  // C6: el prestador declara que terminó. El vecino todavía no confirmó, así
+  // que el chat pasa a 'terminado_prestador' (no a 'calificado' — eso recién
+  // pasa cuando el vecino deja la reseña, test E).
+  test('D2. Prestador marca el trabajo como terminado', async ({ page }) => {
+    await page.goto('/');
+    await login(page, PRESTADOR.email, PRESTADOR.pw);
+
+    const propuestaId = await page.evaluate(async () => {
+      const { data } = await window._sb
+        .from('chats_trabajo')
+        .select('propuesta_id, pedidos!inner(titulo)')
+        .eq('estado', 'activo')
+        .like('pedidos.titulo', '%Test E2E%')
+        .order('ultimo_evento_at', { ascending: false })
+        .limit(1);
+      return data?.[0]?.propuesta_id ?? null;
+    });
+    expect(propuestaId, 'no se encontró el chat activo de la propuesta elegida').not.toBeNull();
+
+    // abrirChat() es la misma función que usa el botón "Chatear" real — se
+    // llama directo para no depender de la lista de Mensajes, que mezcla
+    // chats de otras corridas y no tiene un selector estable por pedido.
+    await page.evaluate((pid) => window.abrirChat(pid), propuestaId);
+    await expect(page.locator('#s-chat')).toHaveClass(/active/, { timeout: 10000 });
+
+    const btnTerminar = page.locator('#chat-terminar-banner button');
+    await expect(btnTerminar).toBeVisible({ timeout: 8000 });
+    await expect(btnTerminar).toHaveText(/marcar/i);
+    await btnTerminar.click();
+
+    // El botón pasa a "esperando confirmación" — señal de que el click surtió
+    // efecto sin tener que esperar el round-trip completo a Supabase.
+    await expect(btnTerminar).toHaveText(/esperando confirmación/i, { timeout: 8000 });
+
+    const estado = await page.evaluate(async (pid) => {
+      const { data } = await window._sb.from('chats_trabajo')
+        .select('estado').eq('propuesta_id', pid).maybeSingle();
+      return data?.estado ?? null;
+    }, propuestaId);
+    expect(estado).toBe('terminado_prestador');
+  });
+
+  // ── E. Vecino confirma el cierre y deja una reseña ────────────────────────
+  // C6 (confirmación) + C7 (reseña): son un solo flujo en la UI — confirmar
+  // el cierre abre la pantalla de reseña directo (confirmarCierreChat(true) →
+  // abrirResena()), así que un test que corte antes de calificar no prueba
+  // el circuito completo. Se verifica además que el rating del prestador y
+  // los puntos de loyalty de las dos cuentas se movieron — no un número
+  // fijo, porque son parametrizables desde Parametrías y podrían cambiar.
+  test('E. Vecino confirma el cierre y deja una reseña', async ({ page }) => {
+    await page.goto('/');
+    await login(page, VECINO.email, VECINO.pw);
+
+    const chat = await page.evaluate(async () => {
+      const { data } = await window._sb
+        .from('chats_trabajo')
+        .select('id, propuesta_id, prestador_id, pedidos!inner(titulo)')
+        .eq('estado', 'terminado_prestador')
+        .like('pedidos.titulo', '%Test E2E%')
+        .order('ultimo_evento_at', { ascending: false })
+        .limit(1);
+      return data?.[0] ?? null;
+    });
+    expect(chat, 'no se encontró el chat esperando confirmación del vecino').not.toBeNull();
+
+    // NO se compara `prestadores.resenas` antes/vs-después: es un contador
+    // desnormalizado que sólo se recalcula DENTRO de dejar_resena(), así que
+    // corridas previas de esta suite en el mismo día (mismo prestador_test,
+    // reseñas viejas ya borradas en cascada junto con sus pedidos) lo dejan
+    // desactualizado — "antes" puede mostrar un valor viejo más alto que la
+    // cantidad real de filas en `resenas`, y la comparación da falso
+    // negativo aunque la reseña se haya guardado bien. Se verifica en cambio
+    // que la fila de ESTE chat puntual exista en `resenas`, que no depende
+    // de ningún contador cacheado.
+    //
+    // Los puntos del PRESTADOR tampoco se leen desde acá: la RLS de
+    // `loyalty` sólo deja ver el saldo propio, y este test corre logueado
+    // como el vecino — así tiene que ser, un vecino no puede espiar cuánto
+    // tiene el prestador.
+    const antes = await page.evaluate(async ({ prestadorId, chatId }) => {
+      const ptsVec = await window._sb.from('loyalty').select('puntos').eq('usuario_id', (await window._sb.auth.getUser()).data.user.id).maybeSingle();
+      const resenaPropia = await window._sb.from('resenas').select('id').eq('chat_id', chatId).maybeSingle();
+      return { puntosVecino: ptsVec.data?.puntos ?? 0, existeResena: !!resenaPropia.data };
+    }, { prestadorId: chat.prestador_id, chatId: chat.id });
+    expect(antes.existeResena, 'ya había una reseña para este chat antes de dejarla').toBe(false);
+
+    await page.evaluate((pid) => window.abrirChat(pid), chat.propuesta_id);
+    await expect(page.locator('#s-chat')).toHaveClass(/active/, { timeout: 10000 });
+
+    const btnConfirmar = page.locator('#chat-confirmar-banner button', { hasText: /confirmar y calificar/i });
+    await expect(btnConfirmar).toBeVisible({ timeout: 8000 });
+    await btnConfirmar.click();
+
+    // confirmarCierreChat(true) abre la reseña directo — sin pantalla
+    // intermedia de "cierre confirmado" que haya que atravesar antes.
+    await expect(page.locator('#s-resena')).not.toHaveClass(/hidden/, { timeout: 8000 });
+
+    // 5 estrellas: la última de #stars-big.
+    const estrellas = page.locator('#stars-big .star-big');
+    await expect(estrellas).toHaveCount(5, { timeout: 5000 });
+    await estrellas.nth(4).click();
+
+    await page.locator('#rev-texto').fill('Test E2E — excelente trabajo, muy prolijo.');
+
+    // Texto inicial real es "Publicar reseña ★" — enviarResena() sólo lo
+    // cambia a "Publicar mi reseña →" en el camino de error, así que matchear
+    // ese texto acá haría que el test dependa de un fallo previo para pasar.
+    const btnEnviar = page.locator('#s-resena button', { hasText: /publicar reseña/i });
+    await expect(btnEnviar).toBeVisible({ timeout: 5000 });
+    await btnEnviar.click();
+
+    // Pantalla de éxito de la reseña — señal de que dejarResena() resolvió ok
+    // (si fallara, el toast de error queda y esto nunca se muestra).
+    await expect(page.locator('#rev-success')).toHaveClass(/show/, { timeout: 10000 });
+
+    const despues = await page.evaluate(async ({ chatId }) => {
+      const [ptsVec, chatFinal, resenaPropia] = await Promise.all([
+        window._sb.from('loyalty').select('puntos').eq('usuario_id', (await window._sb.auth.getUser()).data.user.id).maybeSingle(),
+        window._sb.from('chats_trabajo').select('estado').eq('id', chatId).maybeSingle(),
+        window._sb.from('resenas').select('id, puntos').eq('chat_id', chatId).maybeSingle(),
+      ]);
+      return {
+        puntosVecino: ptsVec.data?.puntos ?? 0,
+        estadoChat: chatFinal.data?.estado ?? null,
+        resenaPropia: resenaPropia.data,
+      };
+    }, { chatId: chat.id });
+
+    expect(despues.estadoChat, 'el chat no quedó calificado tras enviar la reseña').toBe('calificado');
+    expect(despues.resenaPropia, 'no se guardó la fila de reseña para este chat').not.toBeNull();
+    expect(despues.resenaPropia?.puntos, 'la reseña no guardó las 5 estrellas elegidas').toBe(5);
+    expect(despues.puntosVecino, 'el vecino no recibió puntos por reseñar').toBeGreaterThan(antes.puntosVecino);
+  });
+
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
