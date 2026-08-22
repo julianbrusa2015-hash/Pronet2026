@@ -22,8 +22,17 @@ test.describe.serial('C8 · Canje de puntos — de punta a punta', () => {
   // así que no hace falta tocar el saldo de la cuenta para que alcance.
   const NOMBRE_CANJE = '500 puntos bonus Prueba';
 
+  // `loyalty` puede estar apagada en config_app (etapa fundadora). Con la
+  // feature off, goTo() bloquea s-loyalty y el test moría con
+  // "No se pudo navegar a s-loyalty: la app no quedó lista" — un mensaje que
+  // no dice nada del motivo real y costó horas de diagnóstico. Saltearlo es
+  // lo correcto: un rojo permanente por una feature apagada a propósito
+  // enseña a ignorar los rojos.
+  const SIN_LOYALTY = 'loyalty apagada en config_app.features_off';
+
   test('El prestador solicita el canje', async ({ page }) => {
     await page.goto('/');
+    test.skip(!(await H.featureActiva(page, 'loyalty')), SIN_LOYALTY);
     await H.login(page, 'prestador');
     await H.irA(page, 's-loyalty');
     await page.evaluate(() => window.switchLoyalty('canjear'));
@@ -75,6 +84,7 @@ test.describe.serial('C8 · Canje de puntos — de punta a punta', () => {
 
   test('El admin aprueba el canje', async ({ page }) => {
     await page.goto('/');
+    test.skip(!(await H.featureActiva(page, 'loyalty')), SIN_LOYALTY);
     await H.login(page, 'admin');
     await H.irA(page, 's-loyalty-admin');
 

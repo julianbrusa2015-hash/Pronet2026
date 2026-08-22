@@ -391,6 +391,25 @@ async function irA(page, pantalla) {
   throw new Error(`No se pudo navegar a ${pantalla}: la app no quedó lista`);
 }
 
+/** ¿Está encendida esta feature EN PRODUCCIÓN?
+ *
+ *  No alcanza con mirar el objeto FEATURES de app.js: `config_app.features_off`
+ *  lo pisa en runtime (ver app.js, "Se guardan sólo las APAGADAS"). Al
+ *  2026-08-22 hay seis apagadas por la etapa fundadora, y un test que asume
+ *  que están prendidas falla con un mensaje que no dice nada del motivo real
+ *  — C8 tardó en diagnosticarse justamente por eso: el síntoma era
+ *  "no se pudo navegar a s-loyalty".
+ *
+ *  No necesita sesión: config_app es de lectura pública. */
+async function featureActiva(page, clave) {
+  return page.evaluate(async (k) => {
+    const { data } = await window._sb.from('config_app')
+      .select('valor').eq('clave', 'features_off').maybeSingle();
+    const off = ((data && data.valor) || '').split(',').map(s => s.trim()).filter(Boolean);
+    return !off.includes(k);
+  }, clave);
+}
+
 /** true si el elemento existe y está visible (no basta con toBeVisible:
  *  varios se ocultan con style.display en vez de removerse del DOM). */
 async function visible(page, selector) {
@@ -400,4 +419,4 @@ async function visible(page, selector) {
   }, selector);
 }
 
-module.exports = { CUENTAS, esperarDOM, esperarSWListo, cerrarTutorialSiAparece, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece, omitirComunidadSiAparece, pasarGateTelefono, cerrarZonaModalSiAparece };
+module.exports = { CUENTAS, featureActiva, esperarDOM, esperarSWListo, cerrarTutorialSiAparece, limpiarSesion, entrarComoInvitado, login, abrir, sesionRestaurada, irA, visible, aceptarTycSiAparece, omitirComunidadSiAparece, pasarGateTelefono, cerrarZonaModalSiAparece };
