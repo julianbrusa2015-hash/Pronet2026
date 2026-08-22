@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Ninguno de los dos es imprescindible para usar PRONET (el DNI y
+         "Disponible ahora" son opcionales) — sin required="false" Google
+         Play excluye de la Play Store a cualquier dispositivo sin cámara
+         o GPS. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -38,4 +45,15 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Escaneo de DNI (verificación de prestador) y fotos de perfil/trabajo
+         vía getUserMedia. Sin esto, el WebView deniega el acceso a cámara
+         silenciosamente aunque el usuario acepte el prompt del navegador. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- "Disponible ahora" del prestador y feed por zona vía
+         navigator.geolocation. Igual que la cámara: sin el permiso acá, el
+         WebView nunca llega a mostrar el prompt nativo. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 </manifest>
