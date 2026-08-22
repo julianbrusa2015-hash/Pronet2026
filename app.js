@@ -8066,11 +8066,22 @@ document.addEventListener('focusin', (e) => {
     if (sol?.estado === 'rechazado' && motivo) {
       motivo.textContent = sol.motivo_rechazo
         ? 'Rechazado: ' + sol.motivo_rechazo
-        : 'Los datos no pudieron validarse. Escribinos a soporte.';
+        : 'Los datos no pudieron validarse.';
       motivo.style.display = 'block';
     }
-    if (ayuda && sol?.estado === 'verificado') {
-      ayuda.textContent = 'Tu identidad está verificada. Los vecinos ven el sello en tu perfil.';
+    // Ya resuelta: los campos están de sólo lectura y el botón escondido. Sin
+    // esto el usuario ve tres campos con sus datos, toca para corregir, no
+    // puede escribir y no hay nada que se lo explique. Es peor cuando lo
+    // rechazaron: le acaban de decir que algo está mal y la pantalla parece
+    // dejarlo arreglar.
+    if (ayuda && resuelta) {
+      const wa = 'https://wa.me/' + (window.PRONET_CONFIG?.WHATSAPP_SOPORTE || '5491140618983');
+      const base = sol.estado === 'verificado'
+        ? 'Tu identidad está verificada. Los vecinos ven el sello en tu perfil.'
+        : 'Estos datos ya fueron revisados, por eso no se pueden editar acá.';
+      ayuda.innerHTML = escHTML(base) +
+        ' Si necesitás corregirlos, <a href="' + wa + '" target="_blank" rel="noopener"' +
+        ' style="color:var(--blue);font-weight:600">escribinos por WhatsApp</a>.';
     }
   }
 

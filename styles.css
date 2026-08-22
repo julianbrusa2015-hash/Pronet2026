@@ -843,6 +843,18 @@
     transition:border .15s; touch-action:manipulation;
   }
   .ob-input:focus { border-color:var(--blue); }
+  /* Sólo lectura: tiene que VERSE distinto. Un campo bloqueado con aspecto de
+     editable es peor que uno deshabilitado — el usuario toca, no pasa nada, y
+     no hay nada que le explique por qué. Pasa justo en el peor momento: cuando
+     le rechazaron la verificación y quiere corregir los datos.
+     Se estila por atributo y no por clase porque `el.readOnly = true` refleja
+     `readonly` en el DOM: no hace falta que el JS mantenga una clase en
+     sincronía con el estado. */
+  .ob-input[readonly] {
+    background:#F3F4F6; color:var(--ink2); border-style:dashed;
+    cursor:default;
+  }
+  .ob-input[readonly]:focus { border-color:var(--border); }
   .ob-input-row { display:flex; gap:10px; }
   .ob-input-row .ob-field { flex:1; }
 
