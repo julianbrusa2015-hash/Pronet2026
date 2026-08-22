@@ -56,4 +56,8 @@
          WebView nunca llega a mostrar el prompt nativo. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- FCM (push nativas). Sin esto, Android 13+ nunca deja pedir el
+         permiso en tiempo de ejecución — el plugin no lo declara solo. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>
