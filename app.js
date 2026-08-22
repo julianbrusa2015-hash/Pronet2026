@@ -2797,12 +2797,30 @@ document.addEventListener('focusin', (e) => {
     const div = document.createElement('div');
     div.id = 'chip-alerta-servicio-wrap';
     div.style.cssText = 'text-align:center;padding:0 14px 14px';
-    const termJs = termLimpio.replace(/'/g, "\\'");
-    const zonaJs = (zona || '').replace(/'/g, "\\'");
-    div.innerHTML = `<button onclick="toggleAlertaServicio('${termJs}','${zonaJs}')"
-      style="background:${activa ? 'var(--blue-s, #EEF2FF)' : 'none'};border:1.5px solid ${activa ? 'var(--blue)' : 'var(--border)'};color:${activa ? 'var(--blue)' : 'var(--ink3)'};border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">
-      🔔 ${activa ? 'Siguiendo "' + escHTML(termLimpio) + '" · Dejar de seguir' : 'Avisame cuando aparezca "' + escHTML(termLimpio) + '"' + (zona ? ' en ' + escHTML(zona) : '')}
-    </button>`;
+    // El término va por CLOSURE, no por el HTML.
+    //
+    // Antes esto era innerHTML con el término metido dentro de un onclick:
+    //   onclick="toggleAlertaServicio('${termJs}','${zonaJs}')"
+    // y termJs sólo escapaba comillas simples. Como el atributo se delimita con
+    // comillas DOBLES, un término con `"` rompía el atributo y podía inyectar
+    // otro handler. Era self-XSS —el término lo tipea el propio usuario y no
+    // llega por la URL— pero seguía siendo una inyección.
+    //
+    // Escapar mejor arreglaría este caso; sacar el dato del HTML elimina la
+    // clase entera de problema. Con textContent y addEventListener no hay
+    // contexto del que escapar.
+    const btn = document.createElement('button');
+    btn.style.cssText =
+      'background:' + (activa ? 'var(--blue-s, #EEF2FF)' : 'none') +
+      ';border:1.5px solid ' + (activa ? 'var(--blue)' : 'var(--border)') +
+      ';color:' + (activa ? 'var(--blue)' : 'var(--ink3)') +
+      ';border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:600' +
+      ';cursor:pointer;font-family:\'Inter\',sans-serif';
+    btn.textContent = activa
+      ? '🔔 Siguiendo "' + termLimpio + '" · Dejar de seguir'
+      : '🔔 Avisame cuando aparezca "' + termLimpio + '"' + (zona ? ' en ' + zona : '');
+    btn.addEventListener('click', () => toggleAlertaServicio(termLimpio, zona));
+    div.appendChild(btn);
     wrap.appendChild(div);
   }
 
@@ -9496,7 +9514,7 @@ document.addEventListener('focusin', (e) => {
 
   async function toggleBannerUI(id, activo) {
     const r = await PronetDB.guardarBanner(id, { activo });
-    if (!r.ok) { showToast && showToast('⚠️ ' + r.error); return; }
+    if (!r.ok) { showToast && showToast(mensajeDeRechazo(r) || '⚠️ ' + (r.error || 'No se pudo completar la accion')); return; }
     renderParamBanners();
   }
   window.toggleBannerUI = toggleBannerUI;
@@ -9504,7 +9522,7 @@ document.addEventListener('focusin', (e) => {
   async function borrarBannerUI(id) {
     if (!confirm('¿Borrar esta publicidad? No se puede deshacer.')) return;
     const r = await PronetDB.borrarBanner(id);
-    if (!r.ok) { showToast && showToast('⚠️ ' + r.error); return; }
+    if (!r.ok) { showToast && showToast(mensajeDeRechazo(r) || '⚠️ ' + (r.error || 'No se pudo completar la accion')); return; }
     showToast && showToast('🗑 Publicidad borrada');
     renderParamBanners();
   }
@@ -9656,7 +9674,7 @@ document.addEventListener('focusin', (e) => {
 
   async function toggleMktCatUI(slug, activo) {
     const r = await PronetDB.guardarMktCategoria(slug, { activo });
-    if (!r.ok) { showToast && showToast('⚠️ ' + r.error); return; }
+    if (!r.ok) { showToast && showToast(mensajeDeRechazo(r) || '⚠️ ' + (r.error || 'No se pudo completar la accion')); return; }
     mktCatsCargadas = false;
     await cargarMktCategorias();
     renderParamMktCats();
