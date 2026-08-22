@@ -59,6 +59,33 @@ Deno.serve(async (req) => {
       return json({ ok: false, motivo: 'metadata_incompleta' }, 200);
     }
 
+    // ── Productos que esta función NO sabe activar ─────────────────────
+    //
+    // banner, impulso y renovación se activan con RPCs que validan propiedad,
+    // estado y cupo (activar_banner_pagado, activar_impulso_pagado,
+    // activar_renovacion_pagada). Sólo el webhook las llama.
+    //
+    // El corte tiene que estar ACÁ, antes del insert en `pagos_procesados`.
+    // Ese insert es el candado de idempotencia: si esta función lo toma y
+    // después no activa nada, el webhook llega, choca con el 23505, responde
+    // "ya procesado" y el producto NUNCA se entrega. Se cobra y no se da.
+    //
+    // Peor todavía: sin este corte caían al upsert de `suscripciones` de más
+    // abajo, que va con onConflict:'usuario_id' y REEMPLAZA la fila. Un
+    // prestador con plan Pro que compraba un impulso de $1500 quedaba con
+    // plan:'impulso' y perdía su plan pago.
+    //
+    // Es una carrera: si el webhook llega primero, todo funciona y esta
+    // función recibe el 23505 sin hacer daño. El problema aparece cuando gana
+    // el cliente, y los dos ocurren segundos después del pago.
+    //
+    // El cliente ya reintenta leyendo el estado (ver el fallback en app.js),
+    // así que devolver ok:false acá no empeora la experiencia.
+    const ACTIVA_EL_WEBHOOK = ['banner', 'impulso', 'renovacion'];
+    if (ACTIVA_EL_WEBHOOK.includes(plan)) {
+      return json({ ok: false, motivo: 'lo_activa_el_webhook', plan }, 200);
+    }
+
     // Cliente con service_role para poder escribir sin restricciones de RLS
     const sbAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -98,7 +125,21 @@ Deno.serve(async (req) => {
       return json({ ok: true, plan: 'promarket_credito' }, 200);
     }
 
-    // Otros planes: upsert en suscripciones
+    // Planes de suscripción: lista EXPLÍCITA, no un "todo lo demás".
+    //
+    // Antes esto era el else de la cadena, así que cualquier producto nuevo
+    // caía acá y se escribía como si fuera una suscripción. Así es como
+    // impulso y banner terminaban pisando el plan del usuario. Una lista
+    // explícita convierte ese error silencioso en un error visible.
+    const PLANES_SUSCRIPCION = ['plus', 'pro'];
+    if (!PLANES_SUSCRIPCION.includes(plan)) {
+      // Se suelta el candado: si no se sabe qué hacer con este pago, hay que
+      // dejar que el webhook lo intente en vez de bloquearlo para siempre.
+      await sbAdmin.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+      console.error('[verificar-pago-mp] plan desconocido, no se activa nada:', plan);
+      return json({ ok: false, motivo: 'plan_no_reconocido', plan }, 200);
+    }
+
     const { error: errSub } = await sbAdmin.from('suscripciones').upsert({
       usuario_id: user.id,
       plan, estado: 'activo', periodo,
