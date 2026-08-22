@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v314'; // v314: los campos de verificacion ya revisada se ven bloqueados y explican por que
+const CACHE_VERSION = 'pronet-v315'; // v315: los rechazos del servidor (rate limit, permisos) se traducen a mensajes que se entienden
 
 const SHELL = [
   './',

@@ -1266,6 +1266,30 @@ document.addEventListener('focusin', (e) => {
     }
   }
 
+  /** Traduce un rechazo del servidor a algo que el usuario entienda.
+   *
+   *  Los RAISE de la base viajan como códigos secos (RATE_LIMIT_CREAR_DENUNCIA,
+   *  TELEFONO_REQUERIDO). Sin esto, el catch genérico mostraba "Error al
+   *  enviar" tanto para un tope alcanzado como para una caída de red: el
+   *  usuario no sabe si reintentar ahora, esperar, o que se rompió algo.
+   *
+   *  Devuelve null si no lo reconoce, para que quien llama use su mensaje
+   *  genérico: inventar una explicación es peor que admitir que no se sabe. */
+  function mensajeDeRechazo(e) {
+    const txt = String(e?.message || e?.error || e || '');
+    if (/RATE_LIMIT/i.test(txt)) {
+      return '⏳ Llegaste al límite por ahora. Probá de nuevo en un rato.';
+    }
+    if (/TELEFONO_REQUERIDO/i.test(txt)) {
+      return '📱 Necesitás cargar tu teléfono antes de hacer esto.';
+    }
+    if (/row-level security|permission denied/i.test(txt)) {
+      return '🔒 No tenés permiso para esta acción.';
+    }
+    return null;
+  }
+  window.mensajeDeRechazo = mensajeDeRechazo;
+
   async function enviarDenuncia() {
     // Obtener tipo de denuncia seleccionado
     const tipoEl = document.querySelector('.denuncia-tipo.on .dt-name');
@@ -1319,7 +1343,11 @@ document.addEventListener('focusin', (e) => {
         showToast && showToast('❌ Error al enviar la denuncia. Intentá de nuevo.');
       }
     } catch (e) {
-      showToast && showToast('❌ Error al enviar la denuncia.');
+      // PronetDB.crear() tira cuando el servidor rechaza a propósito (ver
+      // esRechazoServidor en datos.js). El caso más común acá es el tope
+      // anti-spam: decirle "error" a alguien que simplemente llegó al límite
+      // lo deja reintentando contra una pared.
+      showToast && showToast(mensajeDeRechazo(e) || '❌ Error al enviar la denuncia.');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '🚨 Enviar denuncia'; }
     }
@@ -12853,7 +12881,12 @@ document.addEventListener('focusin', (e) => {
       if (String(e?.message || '').includes('TELEFONO_REQUERIDO')) {
         return abrirTelefonoGate(npFinalizar);
       }
-      showToast && showToast('⚠️ No se pudo publicar el pedido. Probá de nuevo.');
+      // El teléfono va ANTES del helper a propósito: ahí la respuesta correcta
+      // no es un mensaje sino reabrir el modal y retomar la publicación. El
+      // helper cubre el resto —sobre todo el tope anti-spam, que con el
+      // mensaje genérico dejaba al vecino reintentando contra una pared sin
+      // saber que sólo tenía que esperar.
+      showToast && showToast(mensajeDeRechazo(e) || '⚠️ No se pudo publicar el pedido. Probá de nuevo.');
       console.warn('[npFinalizar]', e?.message || e);
       return;
     }
