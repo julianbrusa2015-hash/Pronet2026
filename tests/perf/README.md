@@ -270,6 +270,19 @@ Métricas segmentadas por operación en lugar de un `http_req_duration` global, 
 | `op_enviar_propuesta` | p95 < 1200 ms | INSERT + `COUNT` de cupo — la escritura más cara |
 | `op_notificar_rubro` | p95 < 1500 ms | Amplificación 1:N |
 
+### Hallazgo dudoso: `op_enviar_propuesta` ~5s contra el branch de staging (2026-08-21)
+
+Corrida completa de E1 (17 min) tras el fix de "Mis pedidos": `op_feed_vecino` pasó limpio (p95 151ms), pero `op_enviar_propuesta` abortó el test con p95 ≈ 5s (umbral 1200ms). Diagnóstico antes de asumirlo como bug real:
+
+- El `COUNT` de `chequear_limite_propuestas` es trivial — `propuestas` en staging tiene 1 sola fila (nunca se sembró volumen ahí).
+- `check_rate_limit_propuestas` usa `rate_limits`, con el índice compuesto correcto y 16 filas totales.
+- Ningún trigger de la cadena (`trg_limite_propuestas`, `trigger_rate_limit_propuestas`, `trg_extender_pedido_por_propuesta`) llama a una función de red ni hace `pg_sleep`.
+- Sin locks pendientes (`pg_locks` vacío) ni queries bloqueantes en `pg_stat_activity`.
+- El delay de ~5s se reprodujo igual con un `INSERT` por SQL directo (Management API), sin pasar por PostgREST — descarta la capa HTTP.
+- `GET /v1/projects/{ref}` sobre el ref del branch devuelve `Project not found`: un branch de Supabase no es un "proyecto" para esa API, lo que sugiere que corre en cómputo separado y más chico que el proyecto principal, independientemente del plan Pro.
+
+**No se encontró causa de código.** A diferencia del bug de "Mis pedidos" (reproducido también fuera del test, con causa identificada y arreglada), esto probablemente es un artefacto del cómputo del branch de staging, no algo que exista en producción. Antes de tratarlo como bug real, repetir la medición contra el proyecto principal (o un branch efímero recién creado) para descartar que sea específico de este branch en particular.
+
 Dos contadores **no** son errores de rendimiento y se reportan aparte:
 
 - **`propuestas_duplicadas_409`** — choque contra el índice único `(pedido_id, prestador_id)`. El asignador determinista los minimiza; un residuo bajo es normal.
