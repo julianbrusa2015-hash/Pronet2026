@@ -227,6 +227,55 @@ test.describe.serial('C10 · Denuncia — de punta a punta', () => {
     expect(creada.estado).toBe('pendiente');
   });
 
+  // A4 · El denunciado no puede ver la denuncia ni quién la hizo.
+  //
+  // Se verifica contra la BASE, no contra la pantalla. Que la UI no muestre la
+  // denuncia no prueba nada: si el RLS la deja leer, el prestador la saca por
+  // la consola en una línea. Es el mismo patrón que dejó forjable el badge
+  // `verificado` — la pantalla decía una cosa y la base permitía otra.
+  //
+  // Importa porque saber QUIÉN denunció convierte la moderación en un riesgo
+  // para el denunciante: si el prestador se entera, la represalia es contra un
+  // vecino que dio su nombre y su dirección para contratarlo.
+  test('A4 · el prestador denunciado no ve la denuncia ni al denunciante', async ({ page }) => {
+    await page.goto('/');
+    await H.login(page, 'prestador');
+
+    const r = await page.evaluate(async (detalle) => {
+      const sb = window._sb;
+      const uid = (await sb.auth.getUser()).data.user.id;
+
+      // 1. ¿Puede leer LA denuncia que lo tiene de denunciado?
+      const propia = await sb.from('denuncias')
+        .select('id, denunciante_id, motivo, detalle').eq('detalle', detalle);
+
+      // 2. ¿Puede leer las denuncias donde figura como denunciado?
+      const contraMi = await sb.from('denuncias')
+        .select('id, denunciante_id').eq('denunciado_id', uid);
+
+      // 3. ¿Puede leer la tabla entera?
+      const todas = await sb.from('denuncias').select('id, denunciante_id, denunciado_id');
+
+      return {
+        porDetalle:  { filas: (propia.data || []).length,  error: propia.error ? propia.error.message : null },
+        contraMi:    { filas: (contraMi.data || []).length, error: contraMi.error ? contraMi.error.message : null },
+        tablaEntera: { filas: (todas.data || []).length,    error: todas.error ? todas.error.message : null },
+        // Lo mas sensible: los ids de quienes denunciaron, si es que se filtran.
+        denunciantesVisibles: [...new Set([
+          ...(propia.data || []).map(d => d.denunciante_id),
+          ...(contraMi.data || []).map(d => d.denunciante_id),
+          ...(todas.data || []).map(d => d.denunciante_id),
+        ])].filter(Boolean).length,
+      };
+    }, DETALLE);
+
+    console.log('[A4] ' + JSON.stringify(r));
+
+    expect(r.porDetalle.filas, 'el prestador puede leer la denuncia hecha contra el').toBe(0);
+    expect(r.contraMi.filas, 'el prestador puede listar las denuncias en su contra').toBe(0);
+    expect(r.denunciantesVisibles, 'se filtro la identidad de quien denuncio').toBe(0);
+  });
+
   test('El admin desestima la denuncia', async ({ page }) => {
     await page.goto('/');
     await H.login(page, 'admin');
