@@ -11299,6 +11299,29 @@ document.addEventListener('focusin', (e) => {
     location.reload();
   }
 
+  async function confirmarEliminarCuenta() {
+    if (!usuarioActual) return;
+    const ok = confirm(
+      '¿Eliminar tu cuenta de PRONET?\n\n' +
+      'Se borran tu perfil, pedidos, chats, reseñas y fotos. No se puede deshacer.'
+    );
+    if (!ok) return;
+
+    const btn = document.activeElement;
+    if (btn) btn.style.pointerEvents = 'none';
+    const r = await PronetDB.eliminarCuenta();
+    if (btn) btn.style.pointerEvents = '';
+
+    if (!r.ok) {
+      alert('No se pudo eliminar la cuenta. Probá de nuevo o escribinos a legal@pronet.app.');
+      return;
+    }
+    alert('Tu cuenta fue eliminada.');
+    await PronetDB.logout();
+    usuarioActual = null;
+    location.reload();
+  }
+
   function togglePw(btn) {
     // FIX: el botón llega como parámetro (this) en vez de depender del global 'event'
     const inp = document.getElementById('login-pw');

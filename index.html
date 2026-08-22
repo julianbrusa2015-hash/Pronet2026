@@ -1563,6 +1563,7 @@
            Parametrías, alcanzable por ser admin como cualquier otra. -->
       <div style="text-align:center;padding:20px 14px 8px">
         <div onclick="cerrarSesion()" style="font-size:13px;color:#EF4444;font-weight:600;cursor:pointer;margin-bottom:12px">Cerrar sesión</div>
+        <div onclick="confirmarEliminarCuenta()" style="font-size:12px;color:var(--ink3);font-weight:600;cursor:pointer;margin-bottom:12px">Eliminar mi cuenta</div>
         <div style="font-size:11px;color:var(--ink3)">PRONET v1.0 · Build 2026.07</div>
       </div>
 
@@ -4282,7 +4283,7 @@
 
       <div class="tc-section">
         <h3>9. Privacidad de datos</h3>
-        <p>Tus datos personales son utilizados exclusivamente para el funcionamiento de la plataforma. No los compartimos con terceros sin tu consentimiento, excepto cuando sea requerido por ley. Para más información consultá nuestra Política de Privacidad.</p>
+        <p>Tus datos personales son utilizados exclusivamente para el funcionamiento de la plataforma. No los compartimos con terceros sin tu consentimiento, excepto cuando sea requerido por ley. Para más información consultá nuestra <a href="/privacidad.html" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">Política de Privacidad completa</a>.</p>
       </div>
 
       <div class="tc-section">
@@ -4309,11 +4310,43 @@
 
     <div class="tc-body">
       <div style="background:var(--blue-s);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--blue);margin-bottom:20px;font-weight:500">
-        Contenido pendiente de publicación.
+        Última actualización: agosto de 2026 · Versión 1.0 · <a href="/privacidad.html" target="_blank" rel="noopener" style="color:var(--blue);font-weight:700">versión web</a>
       </div>
-      <div style="text-align:center;padding:32px 14px;font-size:13px;color:var(--ink3)">
-        Esta sección va a detallar qué datos recolectamos, para qué los usamos y cómo los protegemos. La estamos preparando.
+
+      <div class="tc-section">
+        <h3>1. Qué datos recolectamos</h3>
+        <p><strong>Nombre y email</strong> — para crear tu cuenta e identificarte.</p>
+        <p><strong>Teléfono</strong> — obligatorio para publicar pedidos o enviar propuestas. Usamos los últimos 10 dígitos para prevenir cuentas duplicadas.</p>
+        <p><strong>Zona, barrio o comunidad</strong> — para mostrarte pedidos y prestadores cercanos.</p>
+        <p><strong>Fotos</strong> (perfil, trabajos, chat) — para tu perfil y el portfolio de trabajos.</p>
+        <p><strong>Mensajes de chat</strong> — comunicación entre vecino y prestador dentro de un pedido.</p>
+        <p><strong>Reseñas y calificaciones</strong> — reputación pública de los prestadores.</p>
+        <p><strong>Nombre completo, DNI y dirección</strong> — solo si elegís verificar tu identidad como prestador (opcional).</p>
+        <p><strong>Ubicación en tiempo real</strong> — solo mientras un prestador activa "Disponible ahora"; se apaga al desactivar el toggle.</p>
+        <p><strong>Token de notificaciones push</strong> — para avisarte de mensajes y propuestas nuevas.</p>
+        <p><strong>Datos de suscripción</strong> (plan, estado, vencimiento) — el cobro lo procesa MercadoPago, PRONET nunca ve tu tarjeta o CBU.</p>
       </div>
+
+      <div class="tc-section">
+        <h3>2. Con quién compartimos tus datos</h3>
+        <p>Con la otra parte de una operación (tu nombre y teléfono son visibles para un prestador si le enviás un pedido, y viceversa). Con MercadoPago, sólo para procesar tu suscripción. Con Supabase, nuestro proveedor de base de datos. <strong>Nunca vendemos tus datos a terceros.</strong></p>
+      </div>
+
+      <div class="tc-section">
+        <h3>3. Eliminar tu cuenta y tus datos</h3>
+        <p>Podés borrar tu cuenta cuando quieras desde acá abajo, o escribiendo a <strong>legal@pronet.app</strong> si no tenés la app instalada. Borramos tus datos personales; conservamos de forma anonimizada lo mínimo necesario para prevenir fraude o cumplir obligaciones legales.</p>
+      </div>
+
+      <div class="tc-section">
+        <h3>4. Seguridad</h3>
+        <p>Tus datos están protegidos con reglas de acceso a nivel de fila: cada usuario sólo puede leer y modificar lo que le corresponde.</p>
+      </div>
+
+      <div style="background:var(--surface);border-radius:12px;padding:14px;text-align:center;margin-top:10px">
+        <div style="font-size:12px;color:var(--ink3);margin-bottom:12px">¿Preguntas sobre tus datos?</div>
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">legal@pronet.app</div>
+      </div>
+
       <div style="height:20px"></div>
     </div>
   </div><!-- /privacidad -->

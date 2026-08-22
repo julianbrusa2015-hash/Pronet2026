@@ -1945,6 +1945,19 @@ const PronetDB = (() => {
       } catch (e) { return { ok: false }; }
     },
 
+    /** Borra la cuenta del usuario actual y todos sus datos (requisito de
+     *  Google Play). Irreversible: la Edge Function limpia las tablas que
+     *  bloquearían el borrado por FK y después borra el usuario de auth,
+     *  que cascadea el resto (perfil, chats, pedidos, reseñas, etc.). */
+    async eliminarCuenta() {
+      if (!remoto) return { ok: false, error: 'No disponible en modo local' };
+      try {
+        const { data, error } = await sb.functions.invoke('eliminar-cuenta', { body: {} });
+        if (error) { console.warn('[PronetDB] eliminarCuenta', error.message); return { ok: false, error: error.message }; }
+        return data || { ok: false };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+
     /** Propuestas que el prestador creó en el mes calendario actual.
      *  Ante error devuelve 0 (falla abierta): un límite de plan no debe
      *  bloquear al usuario por una caída transitoria de red. */
