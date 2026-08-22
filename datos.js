@@ -479,12 +479,21 @@ const PronetDB = (() => {
     /** Lista las notificaciones del usuario logueado, más recientes primero. */
     async listarNotificaciones(limite = 50) {
       if (!remoto) return [];
-      // Limpieza lazy: borrar notis leídas hace más de 30 días
-      sb.from('notificaciones')
-        .delete()
-        .eq('leida', true)
-        .lt('leida_at', new Date(Date.now() - 30 * 86400000).toISOString())
-        .then(() => {}).catch(() => {});
+      // La limpieza de notificaciones viejas NO se hace acá.
+      //
+      // Antes había un delete "lazy" en este punto, con el plazo de 30 días
+      // escrito en el código. Tenía tres problemas: sólo limpiaba a quien
+      // volvía a abrir la campana —las cuentas abandonadas no se limpiaban
+      // nunca, que son justo las que más conviene purgar—, se tragaba
+      // cualquier error en silencio, y el plazo exigía un deploy para
+      // cambiarse.
+      //
+      // Ahora lo hace `limpiar_notificaciones_viejas()` por cron, sobre TODOS
+      // los usuarios, leyendo el plazo de `config_app.notif_retencion_dias`
+      // (ver supabase-notif-retencion.sql). Se saca de acá y no se deja como
+      // refuerzo a propósito: con el plazo hardcodeado, subir la parametría a
+      // 60 días haría que el servidor respete 60 y el cliente siga borrando a
+      // los 30. El mismo valor escrito dos veces, contradiciéndose.
       const { data, error } = await sb.from('notificaciones')
         .select('*')
         .order('creado', { ascending: false })
