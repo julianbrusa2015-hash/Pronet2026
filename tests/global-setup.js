@@ -79,6 +79,18 @@ module.exports = async function globalSetup() {
     console.warn('  DELETE: auth.uid() = user_id');
   }
 
+  // 2b. Lo mismo para denuncias. C10 crea una denuncia real por corrida, así
+  // que el vecino agota el límite y el insert vuelve con
+  // "P0001 RATE_LIMIT_CREAR_DENUNCIA". El síntoma no dice "rate limit": la UI
+  // sólo deja #denuncia-exito oculto y el test falla en un toBeVisible.
+  const s2b = await supabaseDelete(token, 'rate_limits', `user_id=eq.${userId}&accion=eq.crear_denuncia`);
+  const rlDen = await supabaseGet(token, 'rate_limits', `user_id=eq.${userId}&accion=eq.crear_denuncia`);
+  console.log(`[setup] DELETE rate_limits (crear_denuncia): status ${s2b} → quedan ${rlDen.length} entradas`);
+  if (rlDen.length > 0) {
+    console.warn('[setup] rate_limits de crear_denuncia NO se limpió para vecino_test.');
+    console.warn(`  DELETE FROM public.rate_limits WHERE user_id = '${userId}' AND accion = 'crear_denuncia';`);
+  }
+
   // ── Autenticar como prestador_test y limpiar su rate limit de propuestas ──
   const { token: tokenPrestador } = await supabaseAuth(PRESTADOR_EMAIL, PRESTADOR_PW);
   if (!tokenPrestador) {

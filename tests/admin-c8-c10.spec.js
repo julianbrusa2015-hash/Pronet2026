@@ -128,6 +128,58 @@ test.describe.serial('C10 · Denuncia — de punta a punta', () => {
 
   const DETALLE = 'Test E2E — denuncia de prueba, se desestima sola.';
 
+  /** Saca de la base las denuncias que dejó este mismo test.
+   *
+   *  Sin esto cada corrida suma una denuncia con el MISMO detalle, y el
+   *  locator `.mod-card` filtrado por texto empieza a matchear varias: el
+   *  test falla por strict mode violation aunque la app funcione perfecto.
+   *  Pasó — llegó a haber 3 acumuladas en producción, mezcladas con las
+   *  denuncias reales del panel de moderación.
+   *
+   *  MEDIDO 2026-08-22: el admin NO puede borrar denuncias — no hay policy de
+   *  delete sobre la tabla, así que el delete vuelve sin error y sin efecto.
+   *  El fallback las marca resueltas: no las saca del panel, pero deja de
+   *  haber pendientes falsas compitiendo con las reales, y el locator de abajo
+   *  filtra por `.mod-actions` para no tropezar con ellas.
+   *
+   *  Sacarlas de verdad requiere SQL Editor — ver
+   *  supabase-limpiar-denuncias-test.sql. */
+  async function limpiarDenunciasDePrueba(page) {
+    await page.goto('/');
+    await H.login(page, 'admin');
+    return page.evaluate(async (detalle) => {
+      const sb = window._sb;
+      const { data: previas } = await sb.from('denuncias').select('id, estado').eq('detalle', detalle);
+      const habia = (previas || []).length;
+      if (!habia) return { habia: 0, via: 'nada que limpiar', quedan: 0 };
+
+      // Ni delete ni update directo funcionan sobre `denuncias`: la tabla no
+      // tiene policies para ninguno de los dos, así que vuelven sin error y
+      // sin efecto. El único camino es la MISMA RPC que usa el panel.
+      let resueltas = 0;
+      for (const d of previas) {
+        if (d.estado === 'resuelta') continue;
+        const { data, error } = await sb.rpc('resolver_denuncia', {
+          p_denuncia_id: d.id, p_resolucion: 'desestimada',
+        });
+        if (!error && data && data.ok) resueltas++;
+      }
+
+      const { data: despues } = await sb.from('denuncias')
+        .select('id').eq('detalle', detalle).neq('estado', 'resuelta');
+      return {
+        habia, resueltas,
+        pendientesQueQuedan: (despues || []).length,
+        nota: 'no se pueden borrar desde el cliente; ver supabase-limpiar-denuncias-test.sql',
+      };
+    }, DETALLE);
+  }
+
+  test('Limpieza de corridas anteriores', async ({ page }) => {
+    const r = await limpiarDenunciasDePrueba(page);
+    console.log('[C10] limpieza previa:', JSON.stringify(r));
+  });
+
   test('El vecino hace una denuncia sobre el prestador', async ({ page }) => {
     await page.goto('/');
     await H.login(page, 'vecino');
@@ -170,16 +222,29 @@ test.describe.serial('C10 · Denuncia — de punta a punta', () => {
     await H.login(page, 'admin');
     await H.irA(page, 's-moderacion');
 
-    const card = page.locator('.mod-card').filter({ hasText: DETALLE });
+    // Sólo la tarjeta SIN resolver. Filtrar por texto a secas matcheaba también
+    // las denuncias de prueba viejas —que no se pueden borrar desde el cliente,
+    // ver limpiarDenunciasDePrueba()— y el test moría por strict mode
+    // violation, sin que la app tuviera nada malo.
+    //
+    // El discriminador es la clase `resuelta`, NO la presencia de
+    // `.mod-actions`: las resueltas también lo tienen, con el botón "↩ Reabrir"
+    // adentro (app.js, rama else de renderModeracion).
+    const card = page.locator('.mod-card:not(.resuelta)').filter({ hasText: DETALLE });
     await expect(card).toBeVisible({ timeout: 10000 });
     await expect(card).toContainText('Pendiente');
 
     await card.locator('.mod-btn-ok', { hasText: /desestimar/i }).click();
 
-    // El badge pasa a "✕ Desestimada" y los botones de acción desaparecen —
-    // señal de que accionDenuncia() resolvió y volvió a pintar la tarjeta.
-    await expect(card.locator('.mod-actions')).toHaveCount(0, { timeout: 10000 });
-    await expect(card).toContainText('Desestimada');
+    // La tarjeta sale del locator —que es `:not(.resuelta)`— porque
+    // accionDenuncia() repinta la lista y la fila pasa a estado 'resuelta'.
+    // Ésa es la señal de que resolvió.
+    //
+    // No se afirma el texto "Desestimada" sobre esta misma tarjeta: ya no
+    // matchea. Y un locator que incluya las resueltas vuelve a ser ambiguo,
+    // porque las denuncias de prueba viejas comparten el detalle exacto. El
+    // estado real se verifica contra la base, abajo.
+    await expect(card).toHaveCount(0, { timeout: 10000 });
 
     const estadoFinal = await page.evaluate(async (detalle) => {
       const { data } = await window._sb.from('denuncias').select('estado, resolucion')
@@ -188,5 +253,12 @@ test.describe.serial('C10 · Denuncia — de punta a punta', () => {
     }, DETALLE);
     expect(estadoFinal?.estado).toBe('resuelta');
     expect(estadoFinal?.resolucion).toBe('desestimada');
+  });
+
+  // Limpiar también al final, no sólo al principio: así el panel de moderación
+  // queda como estaba para quien lo mire después de correr la suite.
+  test('Limpieza final', async ({ page }) => {
+    const r = await limpiarDenunciasDePrueba(page);
+    console.log('[C10] limpieza final:', JSON.stringify(r));
   });
 });
