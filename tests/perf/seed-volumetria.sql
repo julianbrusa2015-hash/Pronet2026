@@ -60,6 +60,14 @@ from generate_series(1, 5000) g;
 -- Fechas distribuidas sobre 12 meses hacia atrás para que los índices por
 -- `creado` tengan una distribución realista y no todas las filas caigan
 -- en el mismo día.
+-- Mismo criterio que en Reseñas más abajo: array precalculado e indexado
+-- en vez de `ORDER BY md5(...) LIMIT 1` por fila (ese patrón sí llegó a
+-- terminar acá con sólo 260 usuarios, pero es el mismo O(n) por fila que
+-- agotó el timeout con 5 000 prestadores — se corrige en las dos partes
+-- para no dejar la trampa a mitad de camino).
+with uids as (
+  select array_agg(id) as ids from auth.users
+)
 insert into public.pedidos
   (titulo, descripcion, rubro, icono, zona, estado, urgencia, usuario_id, fotos, creado)
 select
@@ -71,13 +79,10 @@ select
          'El Cazador','Nordelta','Escobar Centro','Matheu / Garín'])[1 + (g % 9)],
   case when g % 10 < 7 then 'Publicado' else 'Cerrado' end,   -- 70 % abiertos
   (array['hoy','semana','flexible'])[1 + (g % 3)],
-  u.id,
+  uids.ids[1 + floor(random() * array_length(uids.ids, 1))::int],
   '{}',
   now() - (random() * interval '365 days')
-from generate_series(1, 50000) g
-cross join lateral (
-  select id from auth.users order by md5(id::text || g::text) limit 1
-) u;
+from generate_series(1, 50000) g, uids;
 
 -- ── 3 · Reseñas ────────────────────────────────────────────────────────
 -- Distribución sesgada a propósito (Zipf aproximada): el 80 % de las
@@ -85,27 +90,43 @@ cross join lateral (
 -- contención de fila al recalcular `rating` — el riesgo real que el plan
 -- necesita medir, y que una distribución uniforme escondería.
 --
--- resenas.chat_id tiene restricción UNIQUE; se deja null cuando el
--- esquema lo permita. Si es NOT NULL, sembrar antes chats_trabajo.
-insert into public.resenas (prestador_id, vecino_id, puntos, comentario, recomendar, creado)
+-- resenas.chat_id es NOT NULL en el esquema real (confirmado corriendo
+-- este script: la versión anterior asumía que se podía dejar null "si el
+-- esquema lo permite" — no lo permite, y el insert entero se revertía).
+-- Se genera un chats_trabajo por reseña, ya 'calificado', y se usa su id
+-- — mismo par vecino/prestador, misma fecha, en un solo INSERT con CTE
+-- para no repetir la selección aleatoria dos veces.
+--
+-- El sesgo YA NO se arma con `ORDER BY md5(...) LIMIT 1` por fila: eso
+-- ordena las 5 000 filas de prestadores en cada una de las 200 000
+-- iteraciones (hasta mil millones de comparaciones) y agota el timeout de
+-- la conexión. Se precalculan los ids en un array una sola vez (`pids`,
+-- `uids`) y se indexa directo — mismo sesgo (potencia alta concentra el
+-- índice hacia el principio del array), costo O(1) por fila.
+with pids as (
+  select array_agg(id) as ids from public.prestadores where nombre like 'LoadTest%'
+),
+uids as (
+  select array_agg(id) as ids from auth.users
+),
+nuevos_chats as (
+  insert into public.chats_trabajo (vecino_id, prestador_id, estado, creado)
+  select
+    uids.ids[1 + floor(random() * array_length(uids.ids, 1))::int],
+    pids.ids[1 + floor(power(random(), 3) * (array_length(pids.ids, 1) - 1))::int],
+    'calificado',
+    now() - (random() * interval '365 days')
+  from generate_series(1, 200000) g, pids, uids
+  returning id, vecino_id, prestador_id, creado
+)
+insert into public.resenas (chat_id, prestador_id, vecino_id, puntos, comentario, recomendar, creado)
 select
-  p.id,
-  u.id,
+  id, prestador_id, vecino_id,
   3 + (random() * 2)::int,
   'Reseña generada para pruebas de carga.',
   (random() > 0.2),
-  now() - (random() * interval '365 days')
-from generate_series(1, 200000) g
-cross join lateral (
-  -- sesgo: potencia alta concentra la selección en los primeros ids
-  select id from public.prestadores
-   where nombre like 'LoadTest%'
-   order by md5((g * (1 + (power(random(), 3) * 4999)::int))::text)
-   limit 1
-) p
-cross join lateral (
-  select id from auth.users order by md5(id::text || g::text) limit 1
-) u
+  creado
+from nuevos_chats
 on conflict do nothing;
 
 -- ── 4 · Actualizar estadísticas del planner ────────────────────────────

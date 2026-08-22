@@ -16,17 +16,75 @@ Implementación del plan de performance. Ver el plan completo para estrategia, e
 | Script E1 — contratación | ✅ `e1-contratacion.js` |
 | Script E2 — marketplace | ✅ `e2-marketplace.js` |
 | Script E3 — pagos/idempotencia | ✅ `e3-pagos.js` (parcial, ver abajo) |
-| Seed de volumetría | ✅ `seed-volumetria.sql` (requiere staging) |
+| Seed de volumetría | ✅ `seed-volumetria.sql` (corrido y verificado en staging real, 2026-08-21) |
 | RPC de contadores por zona | ✅ aplicado + `datos.js` migrado |
 | Alta de usuarios de prueba | ✅ `seed-usuarios.mjs` |
-| Entorno de staging | ⬜ **pendiente — bloqueante** |
+| Entorno de staging | ✅ **resuelto** — branch de Supabase (`perf-staging`), requiere plan Pro |
 | Pagos de sandbox para idempotencia | ⬜ pendiente (ver E3) |
 
 ## Puesta en marcha
 
 ### 1. Crear el proyecto de staging
 
-Proyecto Supabase separado con el mismo esquema que producción. Aplicar en orden todos los `supabase-*.sql` del repo.
+**Usar Supabase Branching**, no reconstruir el esquema a mano: en el repo no
+existe ningún archivo que cree las tablas base (`perfiles`, `pedidos`,
+`prestadores`, etc.) — los 148 `supabase-*.sql` son parches incrementales que
+asumen que esas tablas ya existen, y replicarlos contra un proyecto vacío
+falla en la primera sentencia. Branching clona el esquema real de
+producción (`public` + funciones + RLS + índices) en un proyecto nuevo, sin
+copiar datos (`with_data: false`).
+
+**Requiere plan Pro o superior** en la organización — en el plan gratuito la
+Management API devuelve `402 entitlement_required`.
+
+```bash
+curl -X POST "https://api.supabase.com/v1/projects/<ref-produccion>/branches" \
+  -H "Authorization: Bearer $SUPABASE_PAT" -H "Content-Type: application/json" \
+  -d '{"branch_name":"perf-staging","persistent":true}'
+```
+
+Devuelve un `project_ref` nuevo (el branch es un proyecto Supabase por
+derecho propio, con su propia URL/claves — se consiguen con
+`GET /v1/projects/<ref-branch>/api-keys`).
+
+#### ⚠️ Lo que el branching NO clona — encontrado corriendo esto en serio
+
+**El `public` schema clona completo. El schema `auth` (gestionado por
+Supabase) no arrastra los triggers que la app le agregó encima.**
+Concretamente, `on_auth_user_created` (dispara `fn_handle_new_user()`, que
+arma la fila en `perfiles` para cada alta) **no existe en el branch** — hay
+que recrearlo a mano después de clonar:
+
+```sql
+create trigger on_auth_user_created after insert on auth.users
+  for each row execute function public.fn_handle_new_user();
+```
+
+Si `seed-usuarios.mjs` ya corrió ANTES de recrear el trigger, sus 260
+`auth.users` quedan sin fila en `perfiles` — hay que backfillear a mano
+(`fn_handle_new_user()` vive en `public`, sí se clonó, así que se puede
+llamar su lógica directo):
+
+```sql
+insert into public.perfiles (id, nombre, tipo, zona, tyc_aceptado_en)
+select u.id,
+       coalesce(u.raw_user_meta_data->>'nombre', split_part(u.email,'@',1)),
+       coalesce(u.raw_user_meta_data->>'tipo', 'cliente'),
+       coalesce(u.raw_user_meta_data->>'zona', 'Escobar'),
+       now()
+from auth.users u
+on conflict (id) do nothing;
+```
+
+**Además**, la ficha en `prestadores` y la fila en `loyalty` **no las crea
+ningún trigger** — el comentario anterior de este README (y de
+`seed-usuarios.mjs`) estaba desactualizado. Se crean *lazy*, del lado
+cliente, cuando la cuenta abre la app de verdad (`asegurar_ficha_prestador()`
+RPC, llamado desde `usuarioActual()` en `app.js`). Las cuentas de prueba
+nunca "abren la app", así que hay que backfillearlas también — ver el bloque
+`do $$ ... $$` que arma la ficha uno por uno (loop de ~200 filas, no hace
+falta que sea rápido) en el historial de esta sesión, o replicar
+`asegurar_ficha_prestador()` a mano.
 
 ### 2. Marcar la base como staging
 
@@ -56,7 +114,7 @@ node tests/perf/seed-usuarios.mjs --limpiar   # borra todas las @load.test
 
 **Por qué hace falta un script y no basta SQL:** `pedidos.usuario_id` y `resenas.vecino_id` referencian `auth.users`, y las cuentas de Auth no se pueden crear por SQL directo — van por la Admin API.
 
-**Lo que hace solo:** el trigger `handle_new_user()` se dispara al crear el usuario y, a partir del metadata, arma la fila en `perfiles`, la ficha en `prestadores`, el enlace `prestador_id` y la fila de `loyalty`. El script solo crea el usuario con el metadata correcto.
+**Lo que hace solo:** el trigger `on_auth_user_created` (`fn_handle_new_user()`) se dispara al crear el usuario y arma la fila en `perfiles` a partir del metadata. **La ficha en `prestadores`, el enlace `prestador_id` y la fila de `loyalty` NO los crea ningún trigger** — se arman lazy, del lado cliente (`asegurar_ficha_prestador()`), la primera vez que la cuenta abre la app de verdad. Como estas cuentas nunca la abren, hay que backfillearlas a mano (ver el aviso de branching más arriba) antes de sembrar `resenas` — si no, el trigger `trg_acreditar_por_resena` falla con FK violation al intentar acreditarle puntos a un `usuario_id` sin fila en `perfiles`.
 
 **Lo que sí tiene que forzar:** la suscripción `pro`. Los prestadores nacen en plan `base` y el trigger `chequear_limite_propuestas` los cortaría a las 3 propuestas del mes (10 en etapa fundadora, porque `plan_para_limites` mapea base→plus). `pro` tiene `propuestas_mes = null` ⇒ ilimitadas. Sin esto la prueba mide el trigger rechazando, no el sistema.
 
@@ -75,7 +133,35 @@ La `SERVICE_ROLE_KEY` saltea RLS por completo: va siempre por variable de entorn
 psql "$STAGING_DB_URL" -f tests/perf/seed-volumetria.sql
 ```
 
+(Sin `psql` a mano, el mismo SQL corre igual pegado en el SQL Editor del
+dashboard, o vía `POST /v1/projects/<ref>/database/query` de la Management
+API — así se corrió y verificó en la práctica.)
+
 Objetivo: 5 000 prestadores · 50 000 pedidos · 200 000 reseñas. El script termina con `ANALYZE` — sin eso Postgres conserva las estimaciones de la tabla vacía y elige planes equivocados.
+
+**Tres trampas de escala que costaron corridas fallidas hasta encontrarlas:**
+
+1. **`resenas.chat_id` es NOT NULL** en el esquema real (una versión vieja del script asumía que se podía dejar en null). Ahora cada reseña genera antes su `chats_trabajo` en un solo INSERT con CTE.
+2. **`ORDER BY md5(...) LIMIT 1` por fila no escala.** Elegir un prestador/vecino "al azar con sesgo" ordenando 5 000 (o 260) filas en cada una de 200 000 iteraciones son hasta mil millones de comparaciones y agota el timeout de la conexión. Se reemplazó por un array precalculado una sola vez (`array_agg`) e indexado directo (`ids[1 + floor(random()*n)]`) — mismo sesgo, costo O(1) por fila.
+3. **Triggers pensados para 1 fila a la vez no toleran un INSERT masivo.** `pedidos` dispara el rate-limit de "10 pedidos por día" en cada fila (50 000 verificaciones con su propio DELETE de limpieza); `resenas` dispara el recálculo de badge y dos sistemas de puntos distintos, cada uno con su propio COUNT/UPDATE. Los tres agotan el timeout a esta escala. Se resuelve con `ALTER TABLE ... DISABLE TRIGGER` antes del INSERT masivo y `ENABLE TRIGGER` después — el seed no necesita que esos triggers corran para datos sintéticos, y quedan activos para cualquier fila que se inserte después por la vía normal (la app, o k6).
+
+```sql
+alter table pedidos disable trigger trg_rate_limit_crear_pedido;
+alter table pedidos disable trigger trigger_rate_limit_pedidos;
+-- ... insert masivo de pedidos ...
+alter table pedidos enable trigger trg_rate_limit_crear_pedido;
+alter table pedidos enable trigger trigger_rate_limit_pedidos;
+
+alter table resenas disable trigger on_resena_insert_update;
+alter table resenas disable trigger trg_acreditar_por_resena;
+alter table resenas disable trigger trg_puntos_resena;
+-- ... insert masivo de resenas ...
+alter table resenas enable trigger on_resena_insert_update;
+alter table resenas enable trigger trg_acreditar_por_resena;
+alter table resenas enable trigger trg_puntos_resena;
+```
+
+(De paso: `resenas` tiene DOS triggers de puntos —`trg_acreditar_por_resena` y `trg_puntos_resena`— hallazgo aparte sin resolver, ver memoria de sesión sobre duplicación de loyalty.)
 
 ### 5. Ejecutar
 
