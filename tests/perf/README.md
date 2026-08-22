@@ -166,7 +166,7 @@ alter table resenas enable trigger trg_acreditar_por_resena;
 alter table resenas enable trigger trg_puntos_resena;
 ```
 
-(De paso: `resenas` tiene DOS triggers de puntos —`trg_acreditar_por_resena` y `trg_puntos_resena`— hallazgo aparte sin resolver, ver memoria de sesión sobre duplicación de loyalty.)
+(De paso: `resenas` tenía DOS triggers de puntos —`trg_acreditar_por_resena` y `trg_puntos_resena`, éste último duplicaba el crédito con umbrales de nivel propios y desactualizados. Cerrado el 2026-08-21, ver `supabase-fix-trigger-puntos-duplicado.sql`.)
 
 ### 5. Ejecutar
 
