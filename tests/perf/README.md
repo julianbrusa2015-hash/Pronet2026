@@ -20,7 +20,12 @@ Implementación del plan de performance. Ver el plan completo para estrategia, e
 | RPC de contadores por zona | ✅ aplicado + `datos.js` migrado |
 | Alta de usuarios de prueba | ✅ `seed-usuarios.mjs` |
 | Entorno de staging | ✅ **resuelto** — branch de Supabase (`perf-staging`), requiere plan Pro |
+| E1 corrido contra staging | ✅ 2026-08-21 — abortó a los 78s por `abortOnFail`, encontró el hallazgo de abajo |
 | Pagos de sandbox para idempotencia | ⬜ pendiente (ver E3) |
+
+### Hallazgo cerrado: "Mis pedidos" del vecino sin `LIMIT` (2026-08-21)
+
+La primera corrida real de E1 contra staging abortó en 78 segundos: `op_feed_vecino` p95 = 7.46s (umbral 500ms), `http_req_failed` 67%. Causa: `PronetDB.listarMios()` en `datos.js` (única consumidora: `renderPedidosGuardados()`, pantalla "Mis pedidos") filtraba por `usuario_id` pero no tenía `.limit()`. Con volumen alto, un vecino con muchos pedidos históricos paga el costo de traer todos. Corregido agregando `limit(100)` (mismo criterio que `listarPedidosDisponibles`). Verificado en staging: 518ms → 304ms para una cuenta con 220 pedidos propios.
 
 ## Puesta en marcha
 
@@ -259,7 +264,7 @@ Métricas segmentadas por operación en lugar de un `http_req_duration` global, 
 
 | Métrica | Umbral | Qué mide |
 |---|---|---|
-| `op_feed_vecino` | p95 < 500 ms | Feed sin filtros (hoy sin `LIMIT`) |
+| `op_feed_vecino` | p95 < 500 ms | `listarMios('pedidos')` — "Mis pedidos" |
 | `op_feed_prestador_filtrado` | p95 < 500 ms | Feed por rubro + zona |
 | `op_publicar_pedido` | p95 < 900 ms | INSERT + triggers |
 | `op_enviar_propuesta` | p95 < 1200 ms | INSERT + `COUNT` de cupo — la escritura más cara |

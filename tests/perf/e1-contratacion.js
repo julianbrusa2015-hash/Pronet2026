@@ -134,9 +134,12 @@ export function setup() {
     p.prestadorId = r.status === 200 ? r.json() : null;
   });
 
+  // pedidos_leer sólo deja ver a un vecino sus propios pedidos: dueño,
+  // admin, o prestador con el feed abierto (dirigido_a null o suyo). Para
+  // chequear el feed general hay que consultar como prestador.
   const r = http.get(
     `${BASE}/rest/v1/pedidos?select=id,rubro,zona&estado=eq.Publicado&limit=500`,
-    { headers: hdr(vecinos[0].token) }
+    { headers: hdr(prestadores[0].token) }
   );
   const pedidos = r.status === 200 ? r.json() : [];
   if (pedidos.length < 50) fail(`Solo ${pedidos.length} pedidos sembrados; se requieren 500+.`);
@@ -168,9 +171,10 @@ export function flujoVecino(data) {
   const sesion = data.vecinos[exec.vu.idInTest % data.vecinos.length];
   const h = hdr(sesion.token);
 
-  // 1 · Feed de inicio (sin LIMIT en la implementación actual)
+  // 1 · "Mis pedidos" (PronetDB.listarMios) — fix 2026-08-21: antes sin
+  // LIMIT (5.3s avg / 7.5s p95 medido con 50k filas), ahora acotado a 100.
   let r = http.get(
-    `${BASE}/rest/v1/pedidos?select=*&order=creado.desc`,
+    `${BASE}/rest/v1/pedidos?select=*&usuario_id=eq.${sesion.uid}&order=creado.desc&limit=100`,
     { headers: h, tags: { op: 'feed_vecino' } }
   );
   tFeedVecino.add(r.timings.duration);

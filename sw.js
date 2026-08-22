@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v308'; // v308: fix — "Tu zona" en Pedidos del prestador usa la cobertura real, no sólo el barrio
+const CACHE_VERSION = 'pronet-v309'; // v309: fix — "Mis pedidos" del vecino tenía consulta sin límite (5s+ con volumen alto)
 
 const SHELL = [
   './',
