@@ -8,7 +8,7 @@
 // Todos los tests son de solo-lectura o ejercitan paths que no mutan datos de producción.
 const { test, expect } = require('@playwright/test');
 const path = require('path');
-const { abrir, irA, CUENTAS } = require('./helpers');
+const { abrir, irA, featureActiva, CUENTAS } = require('./helpers');
 
 const sesion = (rol) => path.join(__dirname, '.auth', `${rol}.json`);
 
@@ -182,6 +182,20 @@ test.describe('C10 · Moderación — no accesible para prestador', () => {
 test.describe('C4/C9 · Analítica — tiers de plan', () => {
   test.use({ storageState: sesion('prestador') });
 
+  // s-analytics esta gateada por analyticsAvanzado, que al 2026-08-22 esta
+  // APAGADA en config_app.features_off (etapa fundadora: solo Nivel 1 en
+  // produccion). Sin esto los tests que abren la pantalla mueren con
+  // "No se pudo navegar a s-analytics: la app no quedo lista", un mensaje que
+  // no dice nada del motivo real.
+  //
+  // Skip y no borrado: la feature esta apagada por ETAPA, no cancelada. El dia
+  // que se encienda Nivel 2 estos tests vuelven solos, sin que nadie tenga que
+  // acordarse de resucitarlos.
+  //
+  // El primer test del grupo NO se saltea: deriva el tier del plan con
+  // _planesAPI y no abre la pantalla, asi que sigue dando cobertura util.
+  const SIN_ANALYTICS = 'analyticsAvanzado apagada en config_app.features_off';
+
   test('el tier efectivo se deriva del plan del usuario', async ({ page }) => {
     await abrir(page);
     // Reproducir la fórmula de tierEstadisticas() con la API expuesta
@@ -196,6 +210,7 @@ test.describe('C4/C9 · Analítica — tiers de plan', () => {
 
   test('las secciones visibles son coherentes con el tier del plan', async ({ page }) => {
     await abrir(page);
+    test.skip(!(await featureActiva(page, 'analyticsAvanzado')), SIN_ANALYTICS);
     await irA(page, 's-analytics');
 
     const r = await page.evaluate(() => {
@@ -220,6 +235,7 @@ test.describe('C4/C9 · Analítica — tiers de plan', () => {
 
   test('#an-upsell es coherente: visible ↔ hay secciones bloqueadas', async ({ page }) => {
     await abrir(page);
+    test.skip(!(await featureActiva(page, 'analyticsAvanzado')), SIN_ANALYTICS);
     await irA(page, 's-analytics');
 
     const { upsellVisible, hayBloqueadas } = await page.evaluate(() => {
@@ -236,6 +252,7 @@ test.describe('C4/C9 · Analítica — tiers de plan', () => {
 
   test('#an-upsell nombra un plan superior cuando está visible', async ({ page }) => {
     await abrir(page);
+    test.skip(!(await featureActiva(page, 'analyticsAvanzado')), SIN_ANALYTICS);
     await irA(page, 's-analytics');
 
     const { visible, texto } = await page.evaluate(() => ({
@@ -252,6 +269,7 @@ test.describe('C4/C9 · Analítica — tiers de plan', () => {
 
   test('la sección de exportar CSV está oculta si el plan no llega al tier export', async ({ page }) => {
     await abrir(page);
+    test.skip(!(await featureActiva(page, 'analyticsAvanzado')), SIN_ANALYTICS);
     await irA(page, 's-analytics');
 
     const { tier, exportVisible } = await page.evaluate(() => {
