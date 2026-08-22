@@ -19,6 +19,13 @@ www/
 styles.min.css
 config-secrets.js
 
+# Firma de release de Android: si esto se pierde o se filtra, no se puede
+# volver a actualizar la app en Play Store nunca más. Guardar el .jks y
+# las contraseñas fuera del repo, en un lugar seguro y con backup.
+android/*.jks
+android/keystore.properties
+android/google-services.json
+
 # Imágenes de ejemplo del carrusel: se generan con scripts/gen-banners-demo.mjs
 # y se suben a Storage. No tiene sentido versionar 1,3 MB de placeholders.
 iconos/banners-demo/
