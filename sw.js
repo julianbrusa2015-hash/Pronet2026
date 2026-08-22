@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v312'; // v312: la limpieza de notificaciones viejas sale del cliente y pasa a cron server-side con plazo parametrizable
+const CACHE_VERSION = 'pronet-v313'; // v313: los tres plazos (impulso, banner, retencion de avisos) aparecen en el panel de Ajustes
 
 const SHELL = [
   './',

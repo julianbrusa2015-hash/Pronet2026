@@ -9220,6 +9220,11 @@ document.addEventListener('focusin', (e) => {
     { k: 'rate_limit_pedidos_max',  n: 'Pedidos por ventana',      u: 'pedidos',     min: 1,  max: 50,   d: 'Tope anti-spam de publicaciones' },
     { k: 'rate_limit_pedidos_ventana_min', n: 'Ventana del tope',  u: 'minutos',     min: 1,  max: 1440, d: '' },
     { k: 'sesion_vencimiento_dias', n: 'Vencimiento de sesión',    u: 'días',        min: 1,  max: 365,  d: 'Días sin abrir la app para pedir login de nuevo. Supabase no la vence solo' },
+    // Los tres de abajo ya eran parametría en la base pero no tenían dónde
+    // tocarse: sólo por SQL. Una parametría sin UI es media parametría.
+    { k: 'impulso_dias',            n: 'Duración del impulso',     u: 'días',        min: 1,  max: 90,   d: 'Cuántos días aparece primero un aviso impulsado. Es lo que se compra' },
+    { k: 'banner_dias',             n: 'Duración del banner',      u: 'días',        min: 1,  max: 365,  d: 'Cuántos días dura un banner del carrusel. Es lo que se compra' },
+    { k: 'notif_retencion_dias',    n: 'Retención de avisos leídos', u: 'días',      min: 7,  max: 365,  d: 'Después de esto se borran las notificaciones ya leídas. Las no leídas nunca se borran' },
   ];
 
   async function renderParamAjustes() {
