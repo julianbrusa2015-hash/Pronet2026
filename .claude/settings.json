@@ -36,6 +36,8 @@
       "Bash(cd * && npx playwright test *)",
       "Bash(node -e *)",
       "Bash(cd * && node -e *)",
+      "Bash(node *)",
+      "Bash(cd * && node *)",
       "Bash(perl -0pi -e *)",
       "Bash(cd * && perl -0pi -e *)",
       "Bash(until curl -s https://pronetprueba.netlify.app/*)",
@@ -72,7 +74,7 @@
       "$defaults",
       "Este proyecto despliega a producción en cada push a main (Netlify). La app procesa pagos reales con MercadoPago y envía push notifications a usuarios reales.",
       "El push a main está explícitamente autorizado por el usuario en CLAUDE.md y NO requiere confirmación.",
-      "No existe entorno de staging todavía: toda verificación se hace contra producción, con cuentas de prueba."
+      "Desde 2026-08-21 existe un entorno de staging real: branch de Supabase 'perf-staging' (ref gczfyvbgelachgjrgedf), con volumetría sembrada. Preferir staging para pruebas de carga y diagnósticos que no necesiten verse en producción; producción sigue siendo el único lugar donde probar con las cuentas reales."
     ]
   }
 }

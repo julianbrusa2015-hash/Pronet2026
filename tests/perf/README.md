@@ -20,7 +20,9 @@ Implementación del plan de performance. Ver el plan completo para estrategia, e
 | RPC de contadores por zona | ✅ aplicado + `datos.js` migrado |
 | Alta de usuarios de prueba | ✅ `seed-usuarios.mjs` |
 | Entorno de staging | ✅ **resuelto** — branch de Supabase (`perf-staging`), requiere plan Pro |
-| E1 corrido contra staging | ✅ 2026-08-21 — abortó a los 78s por `abortOnFail`, encontró el hallazgo de abajo |
+| E1 corrido contra staging (post-fix) | ✅ 2026-08-21 — `op_feed_vecino` OK (p95 151ms); abortó por hallazgo dudoso de `op_enviar_propuesta` (~5s, ver abajo) |
+| Seed de `publicaciones` para E2 | ✅ 50 000 filas, 42 443 activas (2026-08-21) — `mkt_categorias` se copió de producción, staging la clonó vacía |
+| E2 corrido contra staging | ✅ 2026-08-21 — abortó a los 94s, mismo hallazgo dudoso que E1 mucho más marcado (ver abajo) |
 | Pagos de sandbox para idempotencia | ⬜ pendiente (ver E3) |
 
 ### Hallazgo cerrado: "Mis pedidos" del vecino sin `LIMIT` (2026-08-21)
@@ -203,6 +205,16 @@ data.forEach(p => { counts[p.zona] = ... }); // ← agrupa en el cliente
 ```
 
 A 50 000 publicaciones eso transfiere 50 000 filas para construir un contador de 11 números. Por eso E2 mide `bytes_contadores_mapa` además de la latencia: acá el problema es el volumen transferido, no el tiempo de consulta. La corrección es un RPC con `GROUP BY` que devuelva sólo los pares zona→conteo.
+
+*(Ya no reproduce: la corrida real del 2026-08-21 midió `bytes_contadores_mapa` = 2 bytes — confirma que `datos.js` ya está migrado al RPC. Sección dejada como referencia histórica del problema original.)*
+
+### Corrida real 2026-08-21 — mismo hallazgo dudoso que en E1, más marcado
+
+Sembradas 50 000 publicaciones (antes había 0 — `mkt_categorias` tampoco existía en staging, la clonó vacía por ser tabla de referencia; se copió desde producción). Con eso, E2 corrió y abortó a los 94s con ~397 VUs concurrentes.
+
+Lo notable: **las seis operaciones cruzaron su umbral al mismo tiempo y por el mismo orden de magnitud** (7–30s de p95 en `feed_offset_0/50/200`, `filtro_zona_categoria`, `busqueda_texto` y `contadores_mapa` a la vez), no una consulta puntual devorando el resto. Ese patrón — degradación uniforme y simultánea en todo bajo alta concurrencia — es la misma huella que `op_enviar_propuesta` en E1, y refuerza la misma hipótesis: el branch de staging corre en cómputo más chico que el proyecto principal y se satura antes que cualquier query individual llegue a ser el cuello de botella real. A diferencia del bug de "Mis pedidos" (aislado, reproducido fuera de k6, con causa concreta), esto no señala un problema de diseño de una query específica.
+
+**No repetir este resultado contra producción para "confirmarlo" bajo ningún concepto** — evaluar en un branch de staging con más cómputo, o directamente en un ambiente aparte, antes de tratar estos números como reales.
 
 ## E3 — Pagos e idempotencia
 
