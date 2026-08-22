@@ -16572,12 +16572,28 @@ document.addEventListener('focusin', (e) => {
   // arranca sin Service Worker cada vez, así que al registrarlo disparaba
   // 'controllerchange' -> location.reload() en cada apertura, y la app
   // quedaba en un bucle de recargas con la pantalla en blanco.
-  // Tampoco hace falta: las push nativas van por FCM, no por Web Push, y el
-  // caché offline lo resuelve el propio WebView.
+  // Tampoco hace falta: las push nativas van por FCM (ver PronetDB.activarPush
+  // en datos.js), y el caché offline lo resuelve el propio WebView.
   const enAppNativa = !!(window.Capacitor && window.Capacitor.isNativePlatform
     ? window.Capacitor.isNativePlatform() : window.Capacitor);
   if (enAppNativa) {
     console.log('[PWA] app nativa: no se registra el Service Worker');
+
+    // Si el usuario ya había dado permiso en una sesión anterior, el
+    // listener hay que dejarlo activo desde el arranque — Android puede
+    // rotar el token FCM en cualquier momento, y sin este listener puesto
+    // el nuevo token se pierde silenciosamente (activarPush() ya no se
+    // vuelve a llamar una vez que el usuario dijo que sí la primera vez).
+    (async () => {
+      const { PushNotifications } = window.Capacitor.Plugins || {};
+      if (!PushNotifications) return;
+      const perm = await PushNotifications.checkPermissions().catch(() => null);
+      if (perm?.receive !== 'granted') return; // sin permiso todavía: lo pide activarPush()
+      PushNotifications.addListener('registration', (token) => {
+        PronetDB.guardarTokenFCM(token.value).catch(() => {});
+      });
+      PushNotifications.register();
+    })();
   } else if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(err => {

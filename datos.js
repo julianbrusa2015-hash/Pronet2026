@@ -282,15 +282,31 @@ const PronetDB = (() => {
     // NOTIFICACIONES PUSH (Web Push nativo + Edge Function)
     // ══════════════════════════════════════════════════════════════════
 
-    /** true si este navegador/dispositivo puede recibir push y hay clave configurada */
+    /** true dentro de la app nativa (Capacitor) — ahí no hay Service Worker
+     *  a propósito (ver comentario junto al registro del SW en app.js), así
+     *  que push va por FCM en vez de Web Push. */
+    _esNativo() {
+      return !!(window.Capacitor && (window.Capacitor.isNativePlatform ? window.Capacitor.isNativePlatform() : true));
+    },
+
+    /** true si este dispositivo puede recibir push (nativo vía FCM, o
+     *  navegador vía Web Push con clave VAPID configurada). */
     puedePush() {
-      return remoto && !!CONFIG.VAPID_PUBLIC_KEY &&
+      if (!remoto) return false;
+      if (this._esNativo()) return !!(window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications);
+      return !!CONFIG.VAPID_PUBLIC_KEY &&
         'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     },
 
     /** Estado actual: 'activas' | 'inactivas' | 'bloqueadas' | 'no-disponible' */
     async estadoPush() {
       if (!this.puedePush()) return 'no-disponible';
+      if (this._esNativo()) {
+        const { PushNotifications } = window.Capacitor.Plugins;
+        const perm = await PushNotifications.checkPermissions();
+        if (perm.receive === 'denied') return 'bloqueadas';
+        return perm.receive === 'granted' ? 'activas' : 'inactivas';
+      }
       if (Notification.permission === 'denied') return 'bloqueadas';
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
@@ -302,6 +318,27 @@ const PronetDB = (() => {
       if (!this.puedePush()) return { ok: false, error: 'Push no disponible en este dispositivo' };
       const uid = await this.usuarioIdActual();
       if (!uid) return { ok: false, error: 'Necesitás iniciar sesión' };
+
+      if (this._esNativo()) {
+        const { PushNotifications } = window.Capacitor.Plugins;
+        const perm = await PushNotifications.requestPermissions();
+        if (perm.receive !== 'granted') return { ok: false, error: 'Permiso denegado' };
+        return new Promise((resolve) => {
+          let resuelto = false;
+          PushNotifications.addListener('registration', async (token) => {
+            if (resuelto) return; // token refresh posterior — ver guardarTokenFCM
+            resuelto = true;
+            resolve(await this.guardarTokenFCM(token.value));
+          });
+          PushNotifications.addListener('registrationError', (err) => {
+            if (resuelto) return;
+            resuelto = true;
+            resolve({ ok: false, error: String(err?.error || err) });
+          });
+          PushNotifications.register();
+        });
+      }
+
       const permiso = await Notification.requestPermission();
       if (permiso !== 'granted') return { ok: false, error: 'Permiso denegado' };
       const reg = await navigator.serviceWorker.ready;
@@ -321,9 +358,29 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
+    /** Guarda (o renueva) el token FCM del dispositivo actual. Separado de
+     *  activarPush() porque Android puede rotar el token en cualquier
+     *  momento — un listener 'registration' persistente en app.js llama acá
+     *  de nuevo cuando eso pasa, sin volver a pedir permiso. */
+    async guardarTokenFCM(token) {
+      const uid = await this.usuarioIdActual();
+      if (!uid || !token) return { ok: false, error: 'Sin sesión o token' };
+      const { error } = await sb.from('push_suscripciones').upsert(
+        { usuario_id: uid, tipo: 'fcm', fcm_token: token },
+        { onConflict: 'fcm_token' }
+      );
+      if (error) { console.warn('[PronetDB] guardarTokenFCM', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
+    },
+
     /** Desuscribe este dispositivo y borra la suscripción de la base. */
     async desactivarPush() {
       try {
+        if (this._esNativo()) {
+          const uid = await this.usuarioIdActual();
+          if (uid) await sb.from('push_suscripciones').delete().eq('usuario_id', uid).eq('tipo', 'fcm');
+          return { ok: true };
+        }
         const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.getSubscription();
         if (sub) {

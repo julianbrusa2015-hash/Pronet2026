@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v310'; // v310: feat — política de privacidad real + eliminación de cuenta (requisitos Google Play)
+const CACHE_VERSION = 'pronet-v311'; // v311: feat — push notifications nativas por FCM (activarPush/desactivarPush ahora ramifican para Capacitor)
 
 const SHELL = [
   './',
