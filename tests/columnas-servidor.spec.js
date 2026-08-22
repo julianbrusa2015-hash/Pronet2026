@@ -93,3 +93,43 @@ test('C15 · el prestador no puede escribir las columnas del servidor', async ({
   expect(abiertas, 'columnas escribibles por el prestador:\n  - ' +
     abiertas.join('\n  - ')).toEqual([]);
 });
+
+// La otra mitad del fix. Sin esto, un revoke de más pasaría desapercibido:
+// el test de arriba quedaría igual de verde con TODA la tabla cerrada, y el
+// prestador no podría editar su perfil. Postgres rechaza el UPDATE entero si
+// toca una sola columna sin permiso, así que el editor se rompería completo,
+// no sólo el campo afectado.
+test('C15 · el prestador SÍ puede editar lo que le corresponde', async ({ page }) => {
+  await page.goto('/');
+  await H.login(page, 'prestador');
+
+  const PROPIAS = ['descripcion', 'foto_url', 'medios_pago', 'especialidades',
+                   'precio', 'rubro', 'zona', 'lat', 'lng', 'radio_cobertura',
+                   'urgencias_24h', 'activo'];
+
+  const r = await page.evaluate(async (columnas) => {
+    const sb = window._sb;
+    const { data: pid } = await sb.rpc('mi_prestador_id');
+    const salida = [];
+
+    for (const col of columnas) {
+      const { data: antes } = await sb.from('prestadores').select(col).eq('id', pid).maybeSingle();
+      if (!antes) { salida.push({ col, ok: false, error: 'no se pudo leer' }); continue; }
+      const original = antes[col];
+
+      // Reescribir el MISMO valor: prueba el permiso sin cambiar nada. Si el
+      // update esta vedado, PostgREST responde igual con error de permisos.
+      const { error } = await sb.from('prestadores').update({ [col]: original }).eq('id', pid);
+      salida.push({ col, ok: !error, error: error ? error.message : null });
+    }
+    return salida;
+  }, PROPIAS);
+
+  for (const c of r) {
+    if (!c.ok) console.log('[C15] PERDIDA  ' + c.col + '  → ' + c.error);
+  }
+
+  const perdidas = r.filter(c => !c.ok).map(c => c.col + ': ' + c.error);
+  expect(perdidas, 'el prestador ya NO puede editar columnas que si le ' +
+    'corresponden — el revoke se paso de largo:\n  - ' + perdidas.join('\n  - ')).toEqual([]);
+});
