@@ -190,6 +190,32 @@ Y no enciende nada más — no gatea ninguna pantalla ni ningún elemento. Lo ú
 que controla es una regla CSS que oculta las tres clases de badge. El circuito
 ya funcionaba con el flag apagado; lo único que faltaba era que se **viera**.
 
+**Qué significa "verificado".** Confianza básica de identidad, no una feature
+de crecimiento: el prestador sube su DNI, el admin lo revisa y aprueba, se
+enciende `prestadores.verificado = true`. Mide **quién es**, no **qué tan bien
+labura** — por eso el premio que da va aparte de la reputación, no la
+reemplaza.
+
+**Y sí, da mejor exposición — con un límite a propósito.** Entra en la fórmula
+del ranking con **+2 puntos fijos** en el numerador bayesiano:
+
+```
+(rating × reseñas + 15 + 2 si está verificado) / (reseñas + 5)
+```
+
+Anotado 2026-08-23:
+- **Aditivo, no multiplicativo** — a diferencia del boost del plan Pro (×1.4,
+  que escala con el puntaje), éste es fijo. No compite con pagar el plan ni se
+  siente "pagar para ganar".
+- **Nunca le gana a reseñas reales** — un verificado con 0 reseñas sigue por
+  debajo de uno con reseñas buenas de verdad.
+- **Misma fórmula en 4 lugares** — búsqueda (`buscar_prestadores`), Ranking
+  Zonal, el feed de Inicio, y desde hoy también `ranking_propuestas` (el orden
+  en que el vecino ve las propuestas). Si alguna se desincroniza, un
+  prestador verificado deja de tener el mismo empuje según dónde lo mires —
+  ver `supabase-boost-verificado-ranking.sql`, que lleva la cuenta de las
+  cuatro copias.
+
 **5. El circuito de puntos queda APAGADO, y anotado.**
 
 Nunca se definió: qué eventos otorgan puntos, cuántos, y qué se canjea. Un
