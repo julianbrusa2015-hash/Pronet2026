@@ -44,8 +44,28 @@ Deno.serve(async (req) => {
     const prestadorId = perfil?.prestador_id ?? null;
 
     // 1. Tablas con FK NO ACTION hacia el usuario o su ficha de prestador:
-    //    hay que vaciarlas o el DELETE de auth.users falla.
-    await sbAdmin.from('pagos_procesados').delete().eq('usuario_id', uid);
+    //    hay que vaciarlas o el DELETE de auth.users falla. Las que son rastro
+    //    contable o de moderación se ANONIMIZAN en vez de borrarse: liberan la
+    //    FK igual, sin perder el hecho que registran.
+
+    // Los pagos NO se borran: se anonimizan.
+    //
+    // `pagos_procesados` es el rastro contable de cobros reales de
+    // MercadoPago. Borrarlo junto con la cuenta deja a PRONET sin comprobante
+    // ante una disputa con MP o ante una inspección, y esos plazos de
+    // conservación no dependen de que el cliente siga existiendo.
+    //
+    // Poner `usuario_id` en null quita el dato personal —que es lo que el
+    // usuario tiene derecho a que se borre— y conserva payment_id, plan,
+    // periodo, monto y fecha, que son el hecho comercial.
+    //
+    // La columna ya es nullable y la FK es NO ACTION, así que esto la libera
+    // igual que un delete: el DELETE de auth.users no se bloquea.
+    //
+    // No afecta la idempotencia: el candado es el payment_id, que es la PK.
+    // Si MP reenvía la notificación de un pago cuyo usuario ya no existe, el
+    // 23505 sigue cortando antes de intentar activar nada.
+    await sbAdmin.from('pagos_procesados').update({ usuario_id: null }).eq('usuario_id', uid);
     await sbAdmin.from('suscripciones').delete().eq('usuario_id', uid);
     await sbAdmin.from('loyalty_solicitudes').delete().eq('usuario_id', uid);
     await sbAdmin.from('loyalty').delete().eq('usuario_id', uid);
