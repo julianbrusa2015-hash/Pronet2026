@@ -4033,8 +4033,11 @@ document.addEventListener('focusin', (e) => {
 
   function slidesPropias() {
     if (esPrestador()) return [];
-    const tipo = usuarioActual ? usuarioActual.tipo : 'invitado';
-    const cta = tipo === 'cliente'
+    // `tipo === 'cliente'` dejaba afuera al admin logueado — perfiles.tipo
+    // también puede ser 'admin', y caía al mismo cartel "Sumate a PRONET"
+    // que un invitado sin cuenta. Lo que separa a los dos casos no es el
+    // tipo, es si HAY sesión.
+    const cta = usuarioActual
       ? { icono: '📋', titulo: 'Publicá tu pedido gratis', sub: 'Recibí propuestas de prestadores de tu zona' }
       : { icono: '🚀', titulo: 'Sumate a PRONET gratis',   sub: 'Publicá pedidos y contactá prestadores' };
 
@@ -4149,7 +4152,6 @@ document.addEventListener('focusin', (e) => {
     const title = document.getElementById('home-banner-title');
     const sub = document.getElementById('home-banner-sub');
     if (!title || !sub) return;
-    const tipo = usuarioActual ? usuarioActual.tipo : 'invitado';
     // El banner pasó a una sola línea, así que el subtítulo dejó de ser una
     // frase y es sólo la acción. Lo que se decía ahí ("recibí propuestas",
     // "conseguí clientes") se movió al título, que es lo único que se lee.
@@ -4157,7 +4159,7 @@ document.addEventListener('focusin', (e) => {
       if (icon) icon.textContent = '💼';
       title.textContent = 'Mirá los pedidos disponibles';
       sub.textContent = 'Ofertá →';
-    } else if (tipo === 'cliente') {
+    } else if (usuarioActual) {
       if (icon) icon.textContent = '📋';
       title.textContent = 'Publicá tu pedido gratis';
       sub.textContent = 'Publicar →';
@@ -4170,16 +4172,19 @@ document.addEventListener('focusin', (e) => {
 
   // Acción del banner según contexto
   function bannerAction() {
-    const tipo = usuarioActual ? usuarioActual.tipo : 'invitado';
     if (esPrestador()) {
       // Llevar a la pantalla completa de pedidos (con filtros y todos los pedidos)
       goTo('s-pedidos');
-    } else if (tipo === 'cliente') {
-      // Publicar pedido: primero mostrar la pantalla, después resetear al paso 1
+    } else if (usuarioActual) {
+      // Cualquier cuenta logueada que no sea prestador (cliente, admin
+      // navegando como vecino): publicar pedido. Antes esto miraba
+      // `tipo === 'cliente'` a secas, así que un admin logueado caía al
+      // else y le aparecía el FORMULARIO DE REGISTRO — a una cuenta que
+      // ya tiene sesión abierta.
       goTo('s-nuevo-pedido');
       npReset();
     } else {
-      // Invitado: registro
+      // Invitado de verdad, sin sesión: registro.
       mostrarFormRegistro();
     }
   }
