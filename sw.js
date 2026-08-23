@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v334'; // v334: banners de la casa y vencimiento automatico
+const CACHE_VERSION = 'pronet-v335'; // v335: catalogo de rubros sincronizado en Editar perfil
 
 const SHELL = [
   './',

@@ -1669,6 +1669,21 @@ document.addEventListener('focusin', (e) => {
   ];
 
   const RUBRO_POR_SLUG = Object.fromEntries(RUBROS.map(r => [r.slug, r]));
+
+  // Se guarda el promise de la carga inicial (ver el arranque, más abajo)
+  // para que una pantalla que necesita el catálogo COMPLETO —Editar perfil,
+  // donde el prestador elige de verdad— pueda esperarlo. Sin esto había una
+  // carrera real: RUBROS arranca con el respaldo de 8 hardcodeados en el
+  // código (a los rubros agregados después, como Vidriería, no les toca
+  // lugar ahí) y cargarRubrosDeLaBase() lo reemplaza sin que nada bloquee
+  // el arranque — si el prestador entraba a Editar perfil antes de que esa
+  // consulta volviera, veía el catálogo viejo de 8 y ni sabía que faltaban.
+  let _rubrosListosPromise = null;
+  async function rubrosListos() {
+    if (!_rubrosListosPromise) _rubrosListosPromise = cargarRubrosDeLaBase().catch(() => false);
+    return _rubrosListosPromise;
+  }
+
   function rubroDeCat(cat) {
     return RUBRO_POR_SLUG[cat]?.n || (cat.charAt(0).toUpperCase() + cat.slice(1));
   }
@@ -8486,6 +8501,13 @@ document.addEventListener('focusin', (e) => {
       // quedaron en 'General' por defecto) se cae al rubro suelto, salvo
       // que ése también sea 'General' — ahí no se marca nada y el
       // prestador tiene que elegir.
+      //
+      // Se espera el catálogo de la base ANTES de armar los chips: sin
+      // esto, un prestador que entraba a Editar perfil apenas abierta la
+      // app podía ganarle a cargarRubrosDeLaBase() y ver sólo los 8 rubros
+      // hardcodeados de respaldo — Vidriería y el resto de los agregados
+      // después no estaban ahí para elegir.
+      await rubrosListos();
       const wrapR = document.getElementById('edit-rubros');
       if (wrapR) {
         const guardados = (p.rubros && p.rubros.length)
@@ -16906,7 +16928,7 @@ document.addEventListener('focusin', (e) => {
     // dibujados con el respaldo del código, y esto los reemplaza cuando
     // llega. Bloquear el arranque por esto dejaría la pantalla en blanco
     // si la consulta tarda.
-    cargarRubrosDeLaBase().catch(() => {});
+    rubrosListos();
     cargarZonasDeLaBase().catch(() => {});
     cargarNivelesLoyalty().catch(() => {});
 
