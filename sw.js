@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v328'; // v328: "Todo Escobar" se distingue de las comunidades
+const CACHE_VERSION = 'pronet-v329'; // v329: zonas editables y la posicion sale solo con resenas
 
 const SHELL = [
   './',

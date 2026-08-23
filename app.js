@@ -2113,7 +2113,14 @@ document.addEventListener('focusin', (e) => {
 
     // ── Números del mes ──
     const vistas = analitica?.vistas_mes ?? 0;
-    const posTxt = ranking?.pos_zona ? '#' + ranking.pos_zona : '—';
+    // La posición se muestra sólo cuando hay reseñas que la sostengan.
+    // Sin ninguna, el ranking bayesiano le da a todos el mismo 15/5 = 3.0 y
+    // el puesto lo termina decidiendo el desempate — un prestador recién
+    // creado veía "#2 en tu rubro" sin haber hecho un trabajo. Mostrar "—"
+    // es el dato correcto y además es coherente con las otras dos métricas
+    // del bloque, que en una cuenta nueva dicen "0" y "sin reseñas".
+    // `pos_rubro` y no `pos_zona`: el rótulo dice "en tu rubro".
+    const posTxt = (ficha?.resenas > 0 && ranking?.pos_rubro) ? '#' + ranking.pos_rubro : '—';
     const cupoTxt = cupo.limite == null ? '∞' : (cupo.usadas ?? 0) + '/' + cupo.limite;
     // El bloque azul muestra LOGROS, no gestión: "1/10 propuestas" es un
     // límite administrativo del plan, no algo de lo que enorgullecerse. El
@@ -10230,7 +10237,11 @@ document.addEventListener('focusin', (e) => {
 
     const madres = [...new Set(filas.map(z => z.madre))];
 
-    wrap.innerHTML = filas.map(z => `
+    // El id de cada campo va por ÍNDICE y no por nombre: los nombres traen
+    // espacios, acentos y hasta barras ("Matheu / Garín"), y armar ids con
+    // ellos obliga a escapar dos veces —una para el atributo y otra para el
+    // argumento del onclick— cada vez que se agrega un campo.
+    wrap.innerHTML = filas.map((z, i) => `
       <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:10px${z.activo ? '' : ';opacity:.6'}">
         <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
           <span style="font-size:18px">${z.nombre === z.madre ? '🏙️' : '🏘️'}</span>
@@ -10242,14 +10253,26 @@ document.addEventListener('focusin', (e) => {
         </div>
         <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border)">
           <span style="flex:1;font-size:12.5px;color:var(--ink)">Se agrupa en</span>
-          <select id="zn-${escHTML(z.nombre)}-madre"
-                  style="font-size:12.5px;font-weight:600;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink);background:white">
+          <select id="zn-${i}-madre" ${z.nombre === z.madre ? 'disabled title="Es una zona raíz: no se agrupa en ninguna otra"' : ''}
+                  style="font-size:12.5px;font-weight:600;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink);background:${z.nombre === z.madre ? 'var(--surface)' : 'white'}">
             ${madres.map(m => `<option value="${escHTML(m)}"${m === z.madre ? ' selected' : ''}>${escHTML(m)}</option>`).join('')}
           </select>
         </div>
-        <div id="zn-${escHTML(z.nombre)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border)">
+          <span style="flex:1;font-size:12.5px;color:var(--ink)">Coordenadas</span>
+          <input id="zn-${i}-lat" value="${z.lat == null ? '' : escHTML(String(z.lat))}" placeholder="lat" inputmode="decimal" aria-label="Latitud de ${escHTML(z.nombre)}"
+                 style="width:82px;font-size:12px;font-weight:600;padding:6px 7px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink);text-align:center">
+          <input id="zn-${i}-lng" value="${z.lng == null ? '' : escHTML(String(z.lng))}" placeholder="lng" inputmode="decimal" aria-label="Longitud de ${escHTML(z.nombre)}"
+                 style="width:82px;font-size:12px;font-weight:600;padding:6px 7px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink);text-align:center">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border)">
+          <span style="flex:1;font-size:12.5px;color:var(--ink)">Orden en la lista</span>
+          <input id="zn-${i}-orden" value="${z.orden == null ? '' : escHTML(String(z.orden))}" inputmode="numeric" aria-label="Orden de ${escHTML(z.nombre)}"
+                 style="width:72px;font-size:12px;font-weight:600;padding:6px 7px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink);text-align:center">
+        </div>
+        <div id="zn-${i}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>
         <div style="display:flex;gap:8px">
-          <button onclick="guardarParamZona('${escHTML(z.nombre).replace(/'/g, '&#39;')}')"
+          <button onclick="guardarParamZona(${i})"
                   style="flex:1;background:var(--blue);color:white;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>
           <button onclick="toggleZonaActiva('${escHTML(z.nombre).replace(/'/g, '&#39;')}', ${z.activo ? 'false' : 'true'})"
                   style="flex:1;background:${z.activo ? 'var(--surface)' : 'var(--green-s)'};color:${z.activo ? 'var(--ink2)' : 'var(--green)'};border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">
@@ -10258,19 +10281,64 @@ document.addEventListener('focusin', (e) => {
         </div>
       </div>`).join('') + `
       <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">
-        La <b>zona madre</b> es con la que se agrupa al filtrar: un pedido de Puertos del Lago le aparece a un prestador que cubre Escobar. Las coordenadas del mapa se editan por SQL — un valor mal puesto manda el pin a otra provincia.
+        La <b>zona madre</b> es con la que se agrupa al filtrar: un pedido de Puertos del Lago le aparece a un prestador que cubre Escobar. Las <b>coordenadas</b> ubican la zona en el mapa y son las que usa el atajo por kilómetros de la cobertura — si quedan mal, el prestador termina marcando zonas que no pensaba cubrir.
       </div>`;
+
+    // La lista se recuerda para que guardarParamZona sepa qué fila es cada
+    // índice sin volver a pedírsela a la base.
+    zonasEnPantalla = filas;
   }
 
-  async function guardarParamZona(nombre) {
-    const msg = document.getElementById('zn-' + nombre + '-msg');
+  let zonasEnPantalla = [];
+
+  async function guardarParamZona(i) {
+    const z = zonasEnPantalla[i];
+    if (!z) return;
+    const msg = document.getElementById('zn-' + i + '-msg');
     const decir = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c; } };
-    const madre = document.getElementById('zn-' + nombre + '-madre')?.value;
+    const val = (campo) => (document.getElementById('zn-' + i + '-' + campo)?.value || '').trim();
+
+    // Una raíz tiene el select deshabilitado y no manda valor: conserva la
+    // madre que ya tiene (ella misma).
+    const madre = (z.nombre === z.madre) ? z.nombre : val('madre');
     if (!madre) { decir('⚠️ Elegí una zona madre', '#BE123C'); return; }
+    if (madre === z.nombre && z.nombre !== z.madre) {
+      decir('⚠️ Una zona no puede agruparse en sí misma', '#BE123C'); return;
+    }
+
+    // Vacío borra la coordenada; un texto que no es número se rechaza en vez
+    // de guardarse como null, que sería perder el dato sin avisar.
+    const coord = (s) => {
+      if (s === '') return { ok: true, v: null };
+      const n = Number(s);
+      return Number.isFinite(n) ? { ok: true, v: n } : { ok: false, v: null };
+    };
+    const lat = coord(val('lat')), lng = coord(val('lng'));
+    if (!lat.ok || !lng.ok) { decir('⚠️ Las coordenadas tienen que ser números (ej: -34.3521)', '#BE123C'); return; }
+    if ((lat.v === null) !== (lng.v === null)) {
+      decir('⚠️ Cargá las dos coordenadas o ninguna', '#BE123C'); return;
+    }
+    if (lat.v !== null && (Math.abs(lat.v) > 90 || Math.abs(lng.v) > 180)) {
+      decir('⚠️ Fuera de rango: la latitud va de -90 a 90 y la longitud de -180 a 180', '#BE123C'); return;
+    }
+    // Caja alrededor del AMBA. No es un límite del negocio sino una red
+    // contra el error que tuvo esto en SQL durante meses: un signo cambiado
+    // o el par invertido pone el pin en otro continente, y el atajo por km
+    // de la cobertura empieza a marcar zonas al azar.
+    const fueraDelArea = lat.v !== null &&
+      (lat.v < -35.6 || lat.v > -33.2 || lng.v < -60.2 || lng.v > -57.6);
+    if (fueraDelArea && !confirm('Esa coordenada cae fuera del área de Buenos Aires.\n\n¿Seguro que ' + z.nombre + ' va ahí? Revisá que no estén invertidas latitud y longitud.')) return;
+
+    const ordenTxt = val('orden');
+    const orden = ordenTxt === '' ? 500 : parseInt(ordenTxt, 10);
+    if (!Number.isFinite(orden)) { decir('⚠️ El orden tiene que ser un número entero', '#BE123C'); return; }
 
     decir('Guardando…', 'var(--ink3)');
-    const r = await PronetDB.guardarZona(nombre, { madre });
+    const r = await PronetDB.guardarZona(z.nombre, { madre, lat: lat.v, lng: lng.v, orden });
     if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
+    // El árbol en memoria queda viejo: cambiar la madre mueve la zona de
+    // nivel, y el selector de cobertura lee de ese caché.
+    zonasArbolCache = null;
     await cargarZonasDeLaBase();
     decir('✅ Guardado', 'var(--green)');
     setTimeout(() => decir('', ''), 2500);
