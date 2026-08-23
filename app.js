@@ -8201,10 +8201,24 @@ document.addEventListener('focusin', (e) => {
   // agarre un teléfono desbloqueado cambia la clave y deja al dueño afuera de
   // su propia cuenta. Es el escenario realista en una app de barrio que se usa
   // desde el celular.
-  function abrirCambiarPassword() {
+  // `modo` = 'normal' | 'recuperacion'. En recuperación NO se pide la
+  // contraseña actual: el usuario llegó por el link del mail justamente porque
+  // no la sabe. Lo que autoriza el cambio ahí es el token del link, que
+  // supabase-js ya convirtió en sesión.
+  let pwModo = 'normal';
+  function abrirCambiarPassword(modo) {
+    pwModo = modo === 'recuperacion' ? 'recuperacion' : 'normal';
     ['pw-actual', 'pw-nueva', 'pw-repetir'].forEach(id => {
       const e = document.getElementById(id); if (e) e.value = '';
     });
+    const campoActual = document.getElementById('pw-actual')?.closest('.ob-field');
+    if (campoActual) campoActual.style.display = pwModo === 'recuperacion' ? 'none' : '';
+    const titulo = document.getElementById('pw-titulo');
+    const bajada = document.getElementById('pw-bajada');
+    if (titulo) titulo.textContent = pwModo === 'recuperacion' ? 'Elegí una contraseña nueva' : 'Cambiar contraseña';
+    if (bajada) bajada.textContent = pwModo === 'recuperacion'
+      ? 'Entraste por el link que te mandamos. Poné la contraseña nueva y listo.'
+      : 'Pedimos la actual para que nadie pueda cambiarla desde tu teléfono desbloqueado.';
     // Se limpia el TEXTO además de ocultarlo: si sólo se esconde, el mensaje
     // de un intento anterior queda en el DOM y puede reaparecer.
     const err = document.getElementById('pw-error');
@@ -8232,10 +8246,10 @@ document.addEventListener('focusin', (e) => {
     const nueva   = document.getElementById('pw-nueva')?.value || '';
     const repetir = document.getElementById('pw-repetir')?.value || '';
 
-    if (!actual) return fallar('Escribí tu contraseña actual.');
+    if (pwModo === 'normal' && !actual) return fallar('Escribí tu contraseña actual.');
     if (nueva.length < 6) return fallar('La nueva tiene que tener al menos 6 caracteres.');
     if (nueva !== repetir) return fallar('Las dos nuevas no coinciden.');
-    if (nueva === actual) return fallar('La nueva tiene que ser distinta de la actual.');
+    if (pwModo === 'normal' && nueva === actual) return fallar('La nueva tiene que ser distinta de la actual.');
 
     const btn = document.getElementById('pw-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Cambiando...'; }
@@ -8244,14 +8258,18 @@ document.addEventListener('focusin', (e) => {
       const { data: { user } } = await window._sb.auth.getUser();
       if (!user?.email) throw new Error('sin email');
 
-      // Verificar la actual reautenticando. Un signInWithPassword fallido NO
-      // tira la sesión abierta, así que equivocarse acá no desloguea a nadie.
-      const chequeo = await window._sb.auth.signInWithPassword({
-        email: user.email, password: actual,
-      });
-      if (chequeo.error) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
-        return fallar('La contraseña actual no es correcta.');
+      // En recuperación se saltea: lo que autoriza el cambio es el token del
+      // link, no una contraseña que el usuario no tiene.
+      if (pwModo === 'normal') {
+        // Verificar la actual reautenticando. Un signInWithPassword fallido NO
+        // tira la sesión abierta, así que equivocarse acá no desloguea a nadie.
+        const chequeo = await window._sb.auth.signInWithPassword({
+          email: user.email, password: actual,
+        });
+        if (chequeo.error) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
+          return fallar('La contraseña actual no es correcta.');
+        }
       }
 
       const { error } = await window._sb.auth.updateUser({ password: nueva });
@@ -16594,6 +16612,14 @@ document.addEventListener('focusin', (e) => {
         renderHomeFeed(catInicial);
         renderPedidosGuardados();
 
+        // Volvió del link de recuperación: pedirle la contraseña nueva. Se
+        // hace acá y no al leer la URL porque recién en este punto hay sesión
+        // y pantalla; abrir un modal antes sería abrirlo sobre el login.
+        if (window._pendingReset) {
+          delete window._pendingReset;
+          setTimeout(() => abrirCambiarPassword('recuperacion'), 600);
+        }
+
         // Procesar retorno desde MercadoPago (capturado sincrónicamente antes)
         const _mpRes  = window._pendingMpResult;
         const _mpPago = window._pendingMpPayment;
@@ -16771,6 +16797,24 @@ document.addEventListener('focusin', (e) => {
         document.querySelector('#reg-rubros .sub-opt[data-rubro="' + String(r).replace(/"/g, '') + '"]')?.classList.add('on');
       });
     })();
+  })();
+
+  // El link de recuperación del mail vuelve a /?reset=1 (lo fija el
+  // `redirectTo` de resetPasswordForEmail). Hasta ahora NADIE leía ese
+  // parámetro: el usuario pedía recuperar, recibía el mail, hacía clic, y la
+  // app abría normal. Quedaba adentro —supabase-js crea la sesión con el token
+  // del hash— pero nunca llegaba a poner una contraseña nueva, que es lo que
+  // había ido a hacer.
+  //
+  // Se lee del query y no del evento PASSWORD_RECOVERY porque ese evento lo
+  // dispara supabase-js durante su propia inicialización, antes de que este
+  // archivo pueda suscribirse. El parámetro sigue ahí cuando lo miramos.
+  (function capturarRecuperacion() {
+    const p = new URLSearchParams(location.search);
+    if (p.get('reset') !== '1') return;
+    history.replaceState(null, '', location.pathname);
+    // Se marca y lo abre restaurarSesion(), cuando ya hay usuario y pantalla.
+    window._pendingReset = true;
   })();
 
   (function capturarRetornoMP() {
