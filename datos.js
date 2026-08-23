@@ -2655,6 +2655,37 @@ const PronetDB = (() => {
      * Cuenta propuestas activas para un pedido usando RPC SECURITY DEFINER.
      * Bypasa RLS para que el prestador vea la competencia real sin exponer datos.
      */
+    /** Ranking de las propuestas de un pedido: [{propuesta_id, pos, total,
+     *  puntaje}]. La fórmula vive en el servidor (supabase-ranking-
+     *  propuestas.sql) y NO se replica acá: que el vecino ordenara con una
+     *  copia local y el prestador viera otra cosa es exactamente el bug que
+     *  tenía posicion_prestador contra buscar_prestadores.
+     *
+     *  Devuelve [] si falla, y quien llama ordena como pueda — un ranking
+     *  caído no puede dejar al vecino sin ver sus propuestas. */
+    async rankingPropuestas(pedidoId) {
+      if (!remoto) return [];
+      // try/catch y no .catch(): sb.rpc() devuelve un builder de PostgREST,
+      // que tiene `then` pero no `catch`.
+      try {
+        const { data, error } = await sb.rpc('ranking_propuestas', { p_pedido_id: pedidoId });
+        if (error) { console.warn('[PronetDB] rankingPropuestas', error.message); return []; }
+        return data || [];
+      } catch (e) { console.warn('[PronetDB] rankingPropuestas', e.message); return []; }
+    },
+
+    /** El puesto de UNA propuesta, para mostrárselo a su dueño. Pasa por la
+     *  misma función que el ranking completo. `null` si no se pudo. */
+    async posicionPropuesta(propuestaId) {
+      if (!remoto) return null;
+      try {
+        const { data, error } = await sb.rpc('posicion_propuesta', { p_propuesta_id: propuestaId });
+        if (error) { console.warn('[PronetDB] posicionPropuesta', error.message); return null; }
+        const fila = Array.isArray(data) ? data[0] : data;
+        return (fila && fila.pos) ? fila : null;
+      } catch (e) { console.warn('[PronetDB] posicionPropuesta', e.message); return null; }
+    },
+
     async contarPropuestasPedido(pedidoId) {
       if (remoto) {
         try {

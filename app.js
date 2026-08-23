@@ -977,7 +977,7 @@ document.addEventListener('focusin', (e) => {
             mock: guiaMock('<div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:11px;padding:9px 11px"><div style="font-size:20px">📬</div><div style="flex:1;font-size:11px;font-weight:700;color:var(--ink)">2 propuestas recibidas<div style="font-size:9.5px;font-weight:400;color:var(--ink3)">Ref: $6.000 – $9.000</div></div></div>') },
           { titulo: 'Armá tu propuesta', desc: 'Precio fijo, por rango, o "a convenir" si necesitás ver el trabajo antes. Sumá un plazo — eso también lo compara el vecino.',
             mock: guiaMock(guiaChip('💰 Precio fijo', true, true) + guiaChip('📊 Rango', false, false) + guiaChip('🤝 A convenir', false, false) + guiaCampo('$ 8.000', true)) },
-          { titulo: 'Cuanto antes respondas, mejor tu posición', desc: 'El orden en que el vecino ve las propuestas no es al azar: responder rápido y con buen precio te posiciona más arriba.',
+          { titulo: 'Cuanto antes respondas, mejor tu posición', desc: 'El orden en que el vecino ve las propuestas no es al azar: pesa el precio, tu reputación y qué tan rápido respondiste.',
             mock: guiaMock('<div style="text-align:center"><div style="font-size:22px">⚡</div><div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-top:4px">Propuesta enviada</div></div>') },
         ],
       },
@@ -16050,6 +16050,27 @@ document.addEventListener('focusin', (e) => {
       nProps = todas.filter(p => p.pedido_id === pedido.id && p.estado !== 'retirada').length;
     } catch (e) {}
 
+    // — Posición real —
+    // Era "🥇 Top 1 por algoritmo" escrito a mano en el HTML: nadie escribía
+    // `ep-posicion`, así que todos los prestadores veían Top 1 siempre. Y el
+    // algoritmo tampoco existía — el vecino las veía ordenadas por precio.
+    // Ahora sale de posicion_propuesta(), que es la misma función que ordena
+    // la lista del vecino, así que el número es el puesto de verdad.
+    const posEl = document.getElementById('ep-posicion');
+    if (posEl) {
+      posEl.textContent = '…';
+      posEl.style.color = 'var(--ink3)';
+      const r = await PronetDB.posicionPropuesta(propuesta.id);
+      if (!r) {
+        // Sin dato no se inventa: mostrar un puesto falso es lo que había.
+        posEl.textContent = '—';
+      } else {
+        const medalla = r.pos === 1 ? '🥇' : r.pos === 2 ? '🥈' : r.pos === 3 ? '🥉' : '';
+        posEl.textContent = (medalla ? medalla + ' ' : '') + r.pos + '° de ' + r.total;
+        posEl.style.color = r.pos <= 3 ? 'var(--gold)' : 'var(--ink2)';
+      }
+    }
+
     // — Expira en —
     let expiraTxt = '';
     const venceEn = vencimientoDePedido(pedido);
@@ -16199,8 +16220,24 @@ document.addEventListener('focusin', (e) => {
     if(t) t.textContent=hayElegida?'✅ Prestador elegido':'📬 Propuestas recibidas ('+props.length+')';
     if(s) s.textContent=hayElegida?'Este pedido ya está cerrado':'Compará precio, plazo y reputación antes de elegir';
     if(f) f.style.display='none';
+    // El orden lo decide el servidor (ranking_propuestas): 45% precio, 35%
+    // reputación, 20% velocidad de respuesta. Acá NO se replica la fórmula
+    // —sería la segunda copia y terminarían diciendo cosas distintas—, sólo
+    // se aplica el puesto que ya vino calculado.
     const peso={elegida:0,pendiente:1,rechazada:2};
-    props.sort((a,b)=>(peso[a.estado]-peso[b.estado])||(a.precio-b.precio));
+    let rank={};
+    try{(await PronetDB.rankingPropuestas(pedido.id)).forEach(r=>{rank[r.propuesta_id]=r.pos;});}catch(e){}
+    if(Object.keys(rank).length){
+      props.sort((a,b)=>(rank[a.id]??9999)-(rank[b.id]??9999));
+    }else{
+      // Sin ranking (RPC caída) se cae al orden viejo en vez de dejar la
+      // lista sin ordenar. `a.precio - b.precio` a secas ponía PRIMERAS a
+      // las propuestas "a convenir": tienen precio null y en JS
+      // `null - 8000` da -8000, así que la que no se compromete con un
+      // número le ganaba a la que cotizó.
+      const precioComparable=(x)=>(x.precio==null?Infinity:Number(x.precio));
+      props.sort((a,b)=>(peso[a.estado]-peso[b.estado])||(precioComparable(a)-precioComparable(b)));
+    }
     wrap.innerHTML='';
 
     // — Propuesta candidata: solo si el vecino todavía tiene que elegir y
