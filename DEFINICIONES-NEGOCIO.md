@@ -165,10 +165,37 @@ Como regla, la decisión se vuelve automática: el impulso se ofrece donde vale 
 desaparece donde no, sin que nadie tenga que acordarse de activarlo. **Hoy va a
 estar oculto en casi todos lados, y eso es correcto.**
 
-**3. Qué se conserva al borrar una cuenta.** Los pagos y el teléfono con
-antecedentes ya se conservan. Sigue abierto qué pasa con las **reseñas que el
-usuario escribió** —hoy se borran, y el rating de un prestador cambia por
-decisión de un tercero— y con las **denuncias que hizo**.
+**3. CERRADO 2026-08-22 — se conservan las reseñas y las denuncias.**
+
+Se guarda el **hecho** y se borra el **dato personal**: el autor queda en null.
+
+Una reseña dice algo sobre el **prestador**, no sobre quien la escribió. Que un
+plomero pierda una reseña de 5 estrellas porque el vecino que se la dejó se dio
+de baja es reputación de la comunidad evaporándose por decisión de un tercero.
+Las denuncias, igual: son registro de moderación.
+
+Cortar la cadena no fue trivial. Borrar al vecino cascadeaba
+`pedidos → propuestas → chats_trabajo → resenas`, así que la reseña se iba por
+**dos** caminos: su `vecino_id` y su `chat_id`. Los dos pasaron a `SET NULL`.
+
+`prestador_id` sigue en cascada a propósito: sin prestador, la reseña no
+significa nada.
+
+**4. CERRADO 2026-08-22 — el sello verificado pasa a Nivel 1 y se enciende.**
+
+No era una feature de crecimiento: es confianza básica en un marketplace donde
+alguien entra a tu casa.
+
+Y no enciende nada más — no gatea ninguna pantalla ni ningún elemento. Lo único
+que controla es una regla CSS que oculta las tres clases de badge. El circuito
+ya funcionaba con el flag apagado; lo único que faltaba era que se **viera**.
+
+**5. El circuito de puntos queda APAGADO, y anotado.**
+
+Nunca se definió: qué eventos otorgan puntos, cuántos, y qué se canjea. Un
+programa de puntos con pocos usuarios reparte premios que nadie ve y agrega
+complejidad a cambio de nada. Es lo último que se enciende, y antes hay que
+definirlo — encenderlo sin esa definición es encenderlo a ciegas.
 
 ---
 

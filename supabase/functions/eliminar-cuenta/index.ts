@@ -97,9 +97,16 @@ Deno.serve(async (req) => {
     await sbAdmin.from('trabajo_fotos').update({ subido_por: null }).eq('subido_por', uid);
     await sbAdmin.from('notificaciones').update({ emisor_id: null }).eq('emisor_id', uid);
     await sbAdmin.from('chats_trabajo').update({ cancelado_por: null }).eq('cancelado_por', uid);
-    // denuncias: se borran las que este usuario hizo o recibió (denunciante/denunciado).
-    await sbAdmin.from('denuncias').delete()
-      .or(`denunciante_id.eq.${uid},denunciado_id.eq.${uid}`);
+    // Denuncias: se ANONIMIZAN, no se borran. Son registro de moderación —
+    // el hecho de que hubo una denuncia y cómo se resolvió es de la comunidad,
+    // no dato personal de quien la hizo.
+    //
+    // Van en dos updates y no en uno con `.or()`: si la misma persona fuera
+    // denunciante en una y denunciada en otra, un solo update con or dejaría
+    // ambos ids en null en las dos filas, borrando la otra punta que no
+    // corresponde tocar.
+    await sbAdmin.from('denuncias').update({ denunciante_id: null }).eq('denunciante_id', uid);
+    await sbAdmin.from('denuncias').update({ denunciado_id: null }).eq('denunciado_id', uid);
 
     // 2. Borrar la cuenta de auth. Cascadea perfiles y todo lo que cuelga
     //    de ahí con ON DELETE CASCADE (chats, mensajes, pedidos, reseñas,

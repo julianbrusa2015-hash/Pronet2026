@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v324'; // v324: el modal de contrasena estaba dentro del login-screen oculto
+const CACHE_VERSION = 'pronet-v325'; // v325: el sello verificado pasa a Nivel 1
 
 const SHELL = [
   './',

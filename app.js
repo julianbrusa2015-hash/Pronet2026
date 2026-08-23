@@ -188,9 +188,19 @@ document.addEventListener('focusin', (e) => {
     bolsaTrabajo:    true,   // Pedidos, propuestas, estado de propuesta — ciclo transaccional completo
     tutorialOnboarding: true, // "Cómo usar PRONET" (Guías rápidas) en Mi Perfil
 
+    // El sello es NIVEL 1 desde 2026-08-22. Estaba en Nivel 2 junto a la
+    // monetización, pero no es una feature de crecimiento: es confianza básica
+    // en un marketplace donde alguien entra a tu casa.
+    //
+    // Y no enciende nada más: no gatea ninguna pantalla ni ningún elemento con
+    // data-feature. Lo único que hace es una regla CSS que oculta las tres
+    // clases de badge. El circuito completo —el prestador declara, el admin
+    // aprueba, la bandera se guarda— ya funciona con el flag apagado; lo único
+    // que falta es que se VEA.
+    badgeVerificado: true,   // Escudo verde en los prestadores verificados
+
     // ── NIVEL 2 · Crecimiento (mes 2-3) ──
-    // Profesionalización, monetización y confianza
-    badgeVerificado: true,   // Escudo verde lima automático
+    // Profesionalización y monetización
     suscripcionPro:  true,   // Planes y pagos
     catalogoPrecios: true,   // Catálogo referencial (admin + fichas)
     editarPerfilPro: true,   // Editar perfil completo, historial de trabajos
@@ -10213,7 +10223,7 @@ document.addEventListener('focusin', (e) => {
   // deja la app inutilizable, y como el panel vive dentro de la app, el
   // admin podría quedarse sin forma de volver a prenderlos.
   const FEATURES_EDITABLES = [
-    { k: 'badgeVerificado',   n: 'Badge de verificado',    d: 'Escudo verde en los prestadores verificados', nivel: 2 },
+    { k: 'badgeVerificado',   n: 'Badge de verificado',    d: 'Escudo verde en los prestadores verificados', nivel: 1 },
     { k: 'suscripcionPro',    n: 'Planes y suscripciones', d: 'Pantalla de planes y todo el circuito de pago', nivel: 2 },
     { k: 'catalogoPrecios',   n: 'Catálogo de precios',    d: 'Precios referenciales en las fichas', nivel: 2 },
     { k: 'editarPerfilPro',   n: 'Perfil profesional',     d: 'Edición completa e historial de trabajos', nivel: 2 },
