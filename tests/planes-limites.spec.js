@@ -262,7 +262,8 @@ test.describe('D-01b · Sync precio_mes/precio_anual desde planes_limites', () =
   //   · promarket_credito — crédito de publicación de Entre Vecinos
   //   · banner            — espacio publicitario del carrusel (v207)
   //   · impulso           — subir un aviso de Servicios en el feed (v220)
-  const NO_SON_PLANES_DE_PRESTADOR = ['promarket_credito', 'banner', 'impulso', 'renovacion'];
+  //   · impulso_mercado   — destacar una publicación de Entre Vecinos (v327)
+  const NO_SON_PLANES_DE_PRESTADOR = ['promarket_credito', 'banner', 'impulso', 'renovacion', 'impulso_mercado'];
 
   test('PRONET_CONFIG.PLANES coincide con planes_limites para los planes de prestador', async ({ page }) => {
     const { planes, filas } = await page.evaluate(async () => ({
