@@ -2613,7 +2613,10 @@ const PronetDB = (() => {
     async obtenerChat(chatId) {
       if (!remoto) return null;
       const { data, error } = await sb.from('chats_trabajo')
-        .select('*, pedidos(titulo, rubro, icono), prestadores(nombre)')
+        // `modalidad` en el embed: actualizarBannersChat() la necesita para
+        // saber si es un servicio fijo — ahí el "Marcar como terminado" no
+        // aplica, la relación la cierra el vecino desde Mis servicios fijos.
+        .select('*, pedidos(titulo, rubro, icono, modalidad), prestadores(nombre)')
         .eq('id', chatId)
         .maybeSingle();
       if (error) { console.warn('[PronetDB] obtenerChat', error.message); return null; }

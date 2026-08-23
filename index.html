@@ -1707,6 +1707,14 @@
         <button onclick="marcarTrabajoTerminado()" style="background:var(--blue);color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">✓ Marcar terminado</button>
       </div>
 
+      <!-- Reemplaza al de arriba cuando el trabajo es un servicio fijo: acá
+           no hay "terminar" — la relación queda abierta hasta que el vecino
+           la cierra desde Mis servicios fijos, que ahí sí lleva a la
+           reseña. Mismo lugar en el layout, mutuamente excluyentes. -->
+      <div id="chat-servicio-fijo-nota" style="display:none;background:var(--surface2);border-top:1px solid var(--border);padding:8px 16px;flex-shrink:0">
+        <div style="font-size:11px;color:var(--ink3);line-height:1.4">🔁 Servicio fijo — sigan coordinando por acá. El vecino cierra la relación desde Mis servicios fijos cuando ya no lo necesite.</div>
+      </div>
+
       <!-- Banner: vecino puede tomar control tras 7 días sin cierre del prestador -->
       <div id="chat-vecino-cierre-banner" style="display:none;flex-direction:column;background:#FFF7ED;border-top:2px solid #FB923C;padding:10px 16px;flex-shrink:0">
         <div style="font-size:12px;font-weight:700;color:#9A3412;margin-bottom:8px">⏰ El prestador no marcó el trabajo como terminado</div>

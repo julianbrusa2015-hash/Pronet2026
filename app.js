@@ -9590,10 +9590,18 @@ document.addEventListener('focusin', (e) => {
             <div style="font-size:12.5px;font-weight:700;color:var(--ink);margin-top:2px">${escHTML(precio)}</div>
           </div>
         </div>
-        <button onclick="terminarServicioFijoUI('${escHTML(s.id)}', '${escHTML(otro).replace(/'/g, '&#39;')}')"
+        ${soyPrestador
+          ? `<button onclick="terminarServicioFijoUI('${escHTML(s.id)}', '${escHTML(otro).replace(/'/g, '&#39;')}')"
                 style="width:100%;margin-top:10px;background:var(--surface);color:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">
-          Dar de baja
-        </button>
+             Dar de baja
+           </button>`
+          // El vecino cierra calificando, no en silencio — es quien decide
+          // si el "contrato" sigue en pie, y cerrar sin dejar una reseña
+          // sería perder justo el dato que más vale de una relación larga.
+          : `<button onclick="cerrarServicioFijoUI('${escHTML(s.id)}', '${escHTML(s.propuesta_id)}', '${escHTML(otro).replace(/'/g, '&#39;')}')"
+                style="width:100%;margin-top:10px;background:var(--surface);color:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">
+             Cerrar y calificar
+           </button>`}
       </div>`;
     }).join('') + `
       <div style="font-size:11.5px;color:var(--ink3);line-height:1.5;padding:4px 2px">
@@ -9608,6 +9616,29 @@ document.addEventListener('focusin', (e) => {
     renderServiciosFijos();
   }
   window.terminarServicioFijoUI = terminarServicioFijoUI;
+
+  /** Sólo para el vecino: cerrar la relación pasa por calificar, no por un
+   *  botón mudo. Busca el chat de la propuesta que originó el servicio
+   *  fijo, prepara la pantalla de reseña con ese chat y ese prestador, y
+   *  deja marcado que al enviarla también hay que dar de baja el servicio
+   *  fijo — dejar_resena() no sabe nada de servicios_fijos, son tablas
+   *  independientes a propósito.
+   *
+   *  El prestador NO tiene este botón — sigue usando terminarServicioFijoUI
+   *  (dar de baja mudo): no es su lugar calificarse a sí mismo. */
+  async function cerrarServicioFijoUI(id, propuestaId, nombre) {
+    if (!confirm('¿Ya no necesitás más el servicio fijo con ' + nombre + '?\n\nVas a poder dejarle una reseña sobre cómo te fue, y la relación deja de figurar en la lista.')) return;
+    const { data: chatRow, error: errChat } = await window._sb.from('chats_trabajo')
+      .select('id, prestador_id').eq('propuesta_id', propuestaId).maybeSingle();
+    if (errChat || !chatRow) { showToast && showToast('⚠️ No se encontró la conversación de este servicio.'); return; }
+    const prestador = await PronetDB.obtener('prestadores', chatRow.prestador_id).catch(() => null);
+    if (!prestador) { showToast && showToast('⚠️ No se pudo cargar el prestador.'); return; }
+    chatActualId = chatRow.id;
+    prestadorActual = prestador;
+    _servicioFijoACerrar = id;
+    abrirResena();
+  }
+  window.cerrarServicioFijoUI = cerrarServicioFijoUI;
 
   // ══ PARAMETRÍAS · AJUSTES NUMÉRICOS ════════════════════════════════
   //
@@ -14571,6 +14602,7 @@ document.addEventListener('focusin', (e) => {
     const fotosGaleria = document.getElementById('chat-fotos-galeria');
     // Ocultar todos los banners primero
     ['chat-resena-banner','chat-confirmar-banner','chat-terminar-banner',
+     'chat-servicio-fijo-nota',
      'chat-vecino-cierre-banner','chat-cancelar-banner','chat-cerrado-banner',
      'chat-rechazada-banner','chat-enviar-propuesta-banner','chat-denuncia-link'].forEach(id => {
       const el = document.getElementById(id);
@@ -14603,7 +14635,16 @@ document.addEventListener('focusin', (e) => {
       case 'activo': {
         if (footer) footer.style.display = '';
         if (fotosGaleria) fotosGaleria.style.display = '';
-        if (soyPrestador) {
+        // Servicio fijo: "terminar" no aplica — el trabajo no tiene un fin,
+        // se repite. La relación la cierra el vecino desde Mis servicios
+        // fijos (cerrarServicioFijoUI), que ahí sí abre la reseña. Antes
+        // esto no distinguía nada: el prestador veía "Marcar como
+        // terminado" igual que en un trabajo puntual, y tocarlo cerraba
+        // TODA la relación en la primera visita.
+        const esServicioFijo = chat.pedidos?.modalidad === 'recurrente';
+        if (esServicioFijo) {
+          showBlock('chat-servicio-fijo-nota');
+        } else if (soyPrestador) {
           // Resetear el botón por si venía de terminado_prestador (disputa)
           const btnTerminar = document.querySelector('#chat-terminar-banner button');
           if (btnTerminar) { btnTerminar.textContent = 'Marcar como terminado'; btnTerminar.disabled = false; }
@@ -15220,6 +15261,9 @@ document.addEventListener('focusin', (e) => {
     if (el) el.classList.add('hidden');
     const suc = document.getElementById('rev-success');
     if (suc) suc.classList.remove('show');
+    // Si venía de cerrarServicioFijoUI() y salió sin enviar, no se da de
+    // baja nada — el flag no puede sobrevivir a esta pantalla.
+    _servicioFijoACerrar = null;
   }
 
   async function enviarResena() {
@@ -15252,6 +15296,16 @@ document.addEventListener('focusin', (e) => {
     if (!res.ok) {
       showToast && showToast('⚠️ ' + (res.error || 'No se pudo enviar la reseña'));
       return;
+    }
+
+    // Viene de cerrarServicioFijoUI(): la reseña ya se guardó, ahora se da
+    // de baja el servicio fijo. Son tablas independientes — dejar_resena()
+    // no sabe nada de servicios_fijos — así que es un segundo paso acá y
+    // no algo que el RPC resuelva solo. Si falla, no se aborta nada: la
+    // reseña ya quedó guardada, que es lo importante.
+    if (_servicioFijoACerrar) {
+      await PronetDB.terminarServicioFijo(_servicioFijoACerrar).catch(() => {});
+      _servicioFijoACerrar = null;
     }
 
     // Actualizar el rating en el objeto local
@@ -15403,6 +15457,11 @@ document.addEventListener('focusin', (e) => {
     const sc = document.getElementById('sc-' + id);
     if (sc) { sc.classList.add('selected'); sc.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
   }
+
+  // Si no es null, enviarResena() —además de guardar la reseña normal—
+  // también da de baja este servicio fijo al terminar. Lo setea
+  // cerrarServicioFijoUI() antes de abrir la pantalla de reseña.
+  let _servicioFijoACerrar = null;
 
   // ══ Chat real ═══════════════════════════════════════════════════════
   let chatActualId = null;
