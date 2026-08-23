@@ -10975,12 +10975,17 @@ document.addEventListener('focusin', (e) => {
     document.querySelectorAll('[data-admin-only="true"]').forEach(el => {
       el.style.display = admin ? '' : 'none';
     });
-    // Ocultar secciones exclusivas de prestador si no tiene prestador_id
-    const tienePrestadorId = !!(usuarioActual && usuarioActual.prestador_id);
+    // Ocultar secciones exclusivas de prestador. esPrestador() y no un chequeo
+    // suelto de prestador_id: una cuenta con doble perfil que puso
+    // modoRol='vecino' (el switch "Cambiar a Vecino" de acá abajo) SEGUÍA
+    // viendo el ranking, "Estoy disponible ahora" y el resto — tiene
+    // prestador_id igual, así que el chequeo viejo nunca miraba el modo
+    // elegido. esPrestador() sí lo respeta.
+    const esPresta = esPrestador();
     document.querySelectorAll('[data-solo-prestador="true"]').forEach(el => {
       const feat = el.dataset.feature;
       if (feat && !FEATURES[feat]) return; // deja que aplicarFeatureFlags controle este elemento
-      el.style.display = tienePrestadorId ? '' : 'none';
+      el.style.display = esPresta ? '' : 'none';
     });
     // Con CSS grid 2x2, el Catálogo Admin ocupa su celda cuando está visible
     // y la grilla se reordena automáticamente cuando está oculto (display:none)
