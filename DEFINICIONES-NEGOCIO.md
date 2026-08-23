@@ -199,6 +199,49 @@ definirlo — encenderlo sin esa definición es encenderlo a ciegas.
 
 ---
 
+## Pendiente grande · Rediseño del Catálogo de Servicios por Rubro
+
+**Anotado 2026-08-23.** No es un ajuste, es un cambio de modelo.
+
+**El problema:** hoy el precio de referencia está atado al **rubro**, no al
+servicio. `catalogo_servicios` tiene una fila por rubro —sus columnas son
+`rubro, descripcion, icono, incluye, no_incluye, precio_ref_min,
+precio_ref_max, precio_unidad, activo, orden`, **ninguna de servicio**— y
+`obtenerFichaPorRubro()` consulta `.eq('rubro', rubro).maybeSingle()`.
+
+Los datos de hoy muestran por qué no sirve: *Electricistas $30.000–$300.000*,
+*Plomería $30.000–$350.000*. Cambiar un enchufe y cablear una casa entran en el
+mismo rango, así que el número no informa: sólo ancla mal la expectativa del
+vecino, y después toda propuesta le parece cara.
+
+**La definición correcta:** sólo hay precio si está asociado al alta de un
+**servicio** concreto dentro del rubro. Un rubro es demasiado grande para tener
+un precio.
+
+**Trampa técnica que ya existe:** `maybeSingle()` devuelve error con más de una
+fila. Si alguien diera de alta dos fichas activas del mismo rubro, no se
+mostraría ningún precio — y sin ningún aviso.
+
+**Qué implica:**
+
+- Columna de servicio en `catalogo_servicios`; la clave pasa a ser
+  `(rubro, servicio)`
+- El vecino elige el **servicio** además del rubro al publicar — hoy sólo elige
+  rubro
+- `pedidos` guarda ese servicio
+- El precio y `SLIDER_RANGOS` se resuelven por servicio
+- El ABM del catálogo pasa a ser una lista por rubro, no una ficha única
+
+**La pregunta que lo destraba:** ¿el vecino elige el servicio de una lista
+cerrada al publicar? Si describe libremente, no hay dónde enganchar el precio
+referencial.
+
+> Esto ya figuraba como *"Fase 2: selector de tipo de servicio"*, postergada a
+> propósito cuando se decidió el catálogo. Sigue postergada, ahora con el
+> diagnóstico escrito.
+
+---
+
 ## Notas de implementación que conviene recordar
 
 **Los límites están escritos dos veces**, en el trigger de la base y en el
