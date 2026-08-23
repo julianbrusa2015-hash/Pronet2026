@@ -3545,37 +3545,6 @@
     </div>
 
     <!-- Modal de aceptación previa al login -->
-    <!-- Cambiar contraseña -->
-    <div id="modal-password" style="display:none;position:absolute;inset:0;z-index:200;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:0 20px">
-      <div style="background:var(--white);border-radius:20px;padding:24px 22px;width:100%;max-width:400px">
-        <div id="pw-titulo" style="font-family:'Sora',sans-serif;font-size:19px;font-weight:800;color:var(--ink);margin-bottom:6px">Cambiar contraseña</div>
-        <div id="pw-bajada" style="font-size:12px;color:var(--ink3);margin-bottom:16px">Pedimos la actual para que nadie pueda cambiarla desde tu teléfono desbloqueado.</div>
-
-        <div class="ob-field">
-          <label for="pw-actual" class="ob-label">Contraseña actual</label>
-          <input class="ob-input" id="pw-actual" type="password" autocomplete="current-password">
-        </div>
-        <div class="ob-field" style="margin-top:10px">
-          <label for="pw-nueva" class="ob-label">Contraseña nueva</label>
-          <input class="ob-input" id="pw-nueva" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
-        </div>
-        <div class="ob-field" style="margin-top:10px">
-          <label for="pw-repetir" class="ob-label">Repetir la nueva</label>
-          <input class="ob-input" id="pw-repetir" type="password" autocomplete="new-password">
-        </div>
-
-        <div id="pw-error" style="display:none;font-size:11.5px;color:#BE123C;margin-top:10px;font-weight:600"></div>
-        <div id="pw-ok" style="display:none;font-size:12px;color:var(--green);margin-top:10px;font-weight:700">✓ Contraseña actualizada</div>
-
-        <button id="pw-btn" onclick="guardarPasswordNueva()" style="margin-top:16px;width:100%;padding:12px;background:var(--blue);color:white;border:none;border-radius:12px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">
-          Cambiar contraseña
-        </button>
-        <button onclick="cerrarCambiarPassword()" style="margin-top:8px;width:100%;padding:11px;background:none;color:var(--ink3);border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
-          Cancelar
-        </button>
-      </div>
-    </div>
-
     <div id="modal-tyc-login" style="display:none;position:absolute;inset:0;z-index:200;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:0 20px">
       <div style="background:var(--white);border-radius:20px;padding:26px 22px;width:100%;max-width:400px">
         <div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--ink);margin-bottom:18px">Antes de continuar</div>
@@ -4502,6 +4471,44 @@
       </div>
     </div>
   </div><!-- /pubs-prestador -->
+
+    <!-- Cambiar contraseña.
+         VA FUERA DE #login-screen. La primera versión quedó al lado del modal
+         de T&C, que sí vive ahí porque se muestra DURANTE el login. Éste se
+         muestra DESPUÉS, con la sesión abierta y #login-screen ya oculto: el
+         modal se abría (display pasaba a flex) pero medía 0px de alto porque
+         su contenedor estaba oculto. Desde afuera se veía como que el botón
+         no hacía nada. -->
+    <div id="modal-password" style="display:none;position:absolute;inset:0;z-index:200;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:0 20px">
+      <div style="background:var(--white);border-radius:20px;padding:24px 22px;width:100%;max-width:400px">
+        <div id="pw-titulo" style="font-family:'Sora',sans-serif;font-size:19px;font-weight:800;color:var(--ink);margin-bottom:6px">Cambiar contraseña</div>
+        <div id="pw-bajada" style="font-size:12px;color:var(--ink3);margin-bottom:16px">Pedimos la actual para que nadie pueda cambiarla desde tu teléfono desbloqueado.</div>
+
+        <div class="ob-field">
+          <label for="pw-actual" class="ob-label">Contraseña actual</label>
+          <input class="ob-input" id="pw-actual" type="password" autocomplete="current-password">
+        </div>
+        <div class="ob-field" style="margin-top:10px">
+          <label for="pw-nueva" class="ob-label">Contraseña nueva</label>
+          <input class="ob-input" id="pw-nueva" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="ob-field" style="margin-top:10px">
+          <label for="pw-repetir" class="ob-label">Repetir la nueva</label>
+          <input class="ob-input" id="pw-repetir" type="password" autocomplete="new-password">
+        </div>
+
+        <div id="pw-error" style="display:none;font-size:11.5px;color:#BE123C;margin-top:10px;font-weight:600"></div>
+        <div id="pw-ok" style="display:none;font-size:12px;color:var(--green);margin-top:10px;font-weight:700">✓ Contraseña actualizada</div>
+
+        <button id="pw-btn" onclick="guardarPasswordNueva()" style="margin-top:16px;width:100%;padding:12px;background:var(--blue);color:white;border:none;border-radius:12px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">
+          Cambiar contraseña
+        </button>
+        <button onclick="cerrarCambiarPassword()" style="margin-top:8px;width:100%;padding:11px;background:none;color:var(--ink3);border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+          Cancelar
+        </button>
+      </div>
+    </div>
+
 
   <!-- Vista previa: la tarjeta como la va a ver un vecino en Servicios.
        De sólo lectura y NO registra vista (definición 2/3 del plan). -->
