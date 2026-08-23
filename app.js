@@ -1280,6 +1280,15 @@ document.addEventListener('focusin', (e) => {
     if (/RATE_LIMIT/i.test(txt)) {
       return '⏳ Llegaste al límite por ahora. Probá de nuevo en un rato.';
     }
+    if (/TELEFONO_VETADO/i.test(txt)) {
+      // Va ANTES de TELEFONO_REQUERIDO: los dos matchean "TELEFONO" y el
+      // primero que coincida gana.
+      //
+      // No se dice "estás bloqueado por denuncias": si el bloqueo fuera un
+      // error nuestro, esa frase es una acusación. Y si no lo es, tampoco
+      // conviene explicarle a alguien que evade cómo evadir mejor.
+      return '📱 No podemos registrar ese teléfono. Escribinos si creés que es un error.';
+    }
     if (/TELEFONO_REQUERIDO/i.test(txt)) {
       return '📱 Necesitás cargar tu teléfono antes de hacer esto.';
     }

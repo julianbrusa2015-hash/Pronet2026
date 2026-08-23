@@ -48,6 +48,27 @@ Deno.serve(async (req) => {
     //    contable o de moderación se ANONIMIZAN en vez de borrarse: liberan la
     //    FK igual, sin perder el hecho que registran.
 
+    // ── Antes que nada: vetar el teléfono si la cuenta tiene antecedentes ──
+    //
+    // El ORDEN importa. Esto tiene que correr ANTES del delete de `denuncias`
+    // de más abajo: la función decide si veta mirando las denuncias
+    // confirmadas y la suspensión. Si se llamara después, no encontraría
+    // ningún antecedente y no vetaría nunca.
+    //
+    // Sin esto, borrar la cuenta limpia los antecedentes Y libera el número
+    // (la unicidad vive en perfiles, que cascadea), así que un prestador
+    // suspendido se reinscribe con el mismo teléfono, limpio.
+    //
+    // No se hace fallar el borrado si esto falla: el derecho del usuario a
+    // que borren su cuenta no puede quedar preso de un problema nuestro.
+    const { data: veto, error: errVeto } = await sbAdmin
+      .rpc('vetar_telefono_si_corresponde', { p_usuario_id: uid });
+    if (errVeto) {
+      console.error('[eliminar-cuenta] no se pudo evaluar el veto', errVeto.message);
+    } else if (veto === true) {
+      console.log('[eliminar-cuenta] teléfono vetado por antecedentes');
+    }
+
     // Los pagos NO se borran: se anonimizan.
     //
     // `pagos_procesados` es el rastro contable de cobros reales de

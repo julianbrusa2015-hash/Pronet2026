@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v316'; // v316: chip de alerta sin innerHTML (self-XSS), CSP sin unsafe-eval
+const CACHE_VERSION = 'pronet-v317'; // v317: mensaje propio para el telefono vetado
 
 const SHELL = [
   './',
