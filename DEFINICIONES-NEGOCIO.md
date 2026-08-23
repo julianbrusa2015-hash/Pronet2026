@@ -9,6 +9,26 @@ los dos difieren, manda la base — es la que lee `crear-preferencia` para cobra
 
 ---
 
+## Productos pagos, de un vistazo
+
+| Producto | Precio | ¿De quién? |
+|---|---|---|
+| Plan **Base** | $0 | Prestador |
+| Plan **Plus** | $5.990 / $49.900 | Prestador |
+| Plan **Pro** | $9.990 / $99.900 | Prestador |
+| **Impulso** de aviso | $1.500 | Prestador |
+| **Renovación** de aviso | $1.500 | Prestador |
+| **Banner** del carrusel | $12.000 | Prestador o Vecino |
+| **Crédito** de publicación | $5.000 | Vecino |
+| **Destacar publicación** | $1.500 | Vecino |
+
+> Plus sale **$5.990**, no $4.990. El $4.990 que figura en `config.js` es un
+> fallback viejo que nunca se aplica: `planes_limites` dice $5.990 y es la que
+> cobra. La pantalla muestra el precio correcto porque los valores de la base
+> pisan a los del archivo al arrancar.
+
+---
+
 ## Los tres roles
 
 | Rol | Qué hace |
@@ -73,7 +93,8 @@ cada tanto es pedirle que se case para una cita. El vecino paga por uso.
 | Publicar en Mercado | **N gratis por mes**, después compra créditos. Parametría: `mkt_pub_vecino_mes` (hoy 5; `-1` = ilimitado, `0` = paga desde la primera) |
 | Crédito de publicación | $5.000 cada uno, sirve para una publicación extra |
 | Banner del carrusel | $12.000 — igual que el prestador, cualquiera puede contratarlo |
-| Impulsar su publicación | **No existe.** Ver "Pendientes" |
+| **Destacar** su publicación | $1.500 → 7 días primero **en su categoría**. Mismo precio y duración que el impulso del prestador |
+| Publicar **servicios** en Mercado | **No.** Eso es del prestador |
 
 Publicar pedidos, recibir propuestas, contratar y reseñar: **siempre gratis**.
 Es el núcleo del marketplace y no se cobra.
@@ -110,20 +131,39 @@ dos mercados distintos y él entra por su oficio.
 
 ## Pendientes de definición
 
-**1. CERRADO 2026-08-22 — el plan sí rige el acceso a Mercado.**
+**1. CERRADO 2026-08-22 — el plan rige el acceso a Mercado.**
 Publicar en la sección Servicios es beneficio de Plus y Pro. El prestador Base
 no publica en Mercado, y el camino es upgradear.
 
-Queda una sola pregunta suelta: **si un prestador Base puede comprar un crédito
-igual.** La lectura por defecto es que **no** — un crédito a $5.000 competiría
-con Plus a $5.990 y canibalizaría el upgrade.
+**El prestador Base tampoco puede comprar un crédito suelto** — decidido, "no
+por el momento". Un crédito a $5.000 competiría con Plus a $5.990 y
+canibalizaría el upgrade. El "por el momento" importa: si algún día la barrera
+resulta demasiado dura para prestadores que publican poco, habilitar el crédito
+es revertir un `if` en `puedePublicarMercado()` y otro en el trigger.
 
-**2. Impulso para el vecino.** No existe. El hueco de monetización más claro de
-ese lado: el vecino que vende algo caro pagaría por aparecer primero en su
-categoría, y hoy no se lo podés vender. **El umbral es medible**: cuando una
-categoría de Mercado supere consistentemente ~15 publicaciones activas, la
-posición pasa a ser escasa y el impulso vale. Antes, cobrarías por un beneficio
-que no existe.
+Implementado en los tres lugares: validación, cartel de cupo y
+`chequear_cupo_publicacion()`.
+
+**2. CERRADO 2026-08-22 — el vecino tiene impulso, y el umbral es una regla.**
+
+El vecino puede destacar su publicación: **$1.500, 7 días, primero en su
+categoría**. Mismo precio y duración que el impulso del prestador.
+
+Y el umbral dejó de ser "cuándo lo construimos" para volverse **regla del
+producto**, que aplica a los dos:
+
+> El botón de destacar sólo aparece si la lista donde vas a aparecer primero
+> tiene competencia real. **Prestador** → avisos activos de su *rubro*.
+> **Vecino** → publicaciones activas de su *categoría*.
+> Parametría: `impulso_min_publicaciones`, hoy 15.
+
+Aparecer primero entre tres no vale nada: el que paga se siente estafado y no
+vuelve a comprar. Es peor que no haberlo ofrecido — se quema la credibilidad del
+producto antes de que pueda funcionar.
+
+Como regla, la decisión se vuelve automática: el impulso se ofrece donde vale y
+desaparece donde no, sin que nadie tenga que acordarse de activarlo. **Hoy va a
+estar oculto en casi todos lados, y eso es correcto.**
 
 **3. Qué se conserva al borrar una cuenta.** Los pagos y el teléfono con
 antecedentes ya se conservan. Sigue abierto qué pasa con las **reseñas que el
