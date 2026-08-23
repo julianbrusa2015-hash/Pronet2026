@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v336'; // v336: modo vecino ocultaba mal el ranking y otras secciones de prestador
+const CACHE_VERSION = 'pronet-v337'; // v337: referencia colgante a tienePrestadorId rota en produccion
 
 const SHELL = [
   './',

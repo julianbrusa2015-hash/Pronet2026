@@ -11107,7 +11107,7 @@ document.addEventListener('focusin', (e) => {
     // ── DINÁMICO: denuncias pendientes (solo admin) ──
     if (admin) cargarBadgeDenuncias();
     // ── DINÁMICO: rankings del prestador ──
-    if (tienePrestadorId) cargarRankingsPerfil();
+    if (esPresta) cargarRankingsPerfil();
     // ── ProMarket: sección completa visible si el feature está activo y el usuario está logueado ──
     const secPM = document.getElementById('seccion-promarket-perfil');
     if (secPM) secPM.style.display = (FEATURES.mercadoPlaza && usuarioActual) ? '' : 'none';
