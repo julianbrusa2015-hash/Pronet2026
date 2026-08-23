@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v320'; // v320: el prestador necesita plan Plus o Pro para publicar en Mercado
+const CACHE_VERSION = 'pronet-v321'; // v321: el bloque de fotos de trabajo no se le muestra al vecino
 
 const SHELL = [
   './',

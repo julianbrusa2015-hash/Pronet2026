@@ -8227,7 +8227,12 @@ document.addEventListener('focusin', (e) => {
     // cualquier cuenta, pero sus chips sólo se pintan más abajo si
     // esPrestador — una cuenta solo-vecino veía la pregunta sin nada para
     // marcar debajo.
-    ['edit-desc-field','edit-cobertura-field','edit-rubros-field','edit-esp-field','edit-pagos-field','edit-verif-field'].forEach(fid => {
+    // `edit-portfolio-field` se sumó 2026-08-22: era el último bloque de
+    // prestador que quedaba visible para un vecino. Peor que visible —
+    // mostraba "Fotos de trabajos" con un "⏳ Cargando…" que no terminaba
+    // nunca, porque esta misma función sale más abajo (`if (!esPrestador)
+    // return`) antes de poblar el grid.
+    ['edit-desc-field','edit-cobertura-field','edit-rubros-field','edit-esp-field','edit-pagos-field','edit-verif-field','edit-portfolio-field'].forEach(fid => {
       const f = document.getElementById(fid); if (f) f.style.display = esPrestador ? '' : 'none';
     });
     if (esPrestador) pintarVerificacion();

@@ -5722,8 +5722,12 @@
           <div style="font-size:14px;font-weight:700;color:var(--green)">✓ Perfil actualizado correctamente</div>
         </div>
 
-        <!-- Portfolio de fotos -->
-        <div style="margin-top:20px">
+        <!-- Portfolio de fotos — SÓLO PRESTADOR.
+             Necesita id para que cargarEdicionPrestador() pueda ocultarlo: sin
+             él, un vecino veía "Fotos de trabajos" con un "Cargando…" eterno,
+             porque esa función sale antes de poblar el grid cuando la cuenta
+             no es prestador. -->
+        <div id="edit-portfolio-field" style="margin-top:20px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <div style="font-size:14px;font-weight:700;color:var(--ink)">📸 Fotos de trabajos</div>
             <div style="font-size:11px;color:var(--ink3)" id="portfolio-count">0/10</div>
