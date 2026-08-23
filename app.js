@@ -15328,11 +15328,6 @@ document.addEventListener('focusin', (e) => {
       }
     }
 
-    // Actualizar el banner del chat
-    if (bannerResena) bannerResena.style.display = 'none';
-    if (bannerCerrado) bannerCerrado.style.display = 'flex';
-    if (footer) footer.style.display = 'none';
-
     // La CAMPANITA ya la escribe dejar_resena() en la base, junto con la
     // reseña. Antes se mandaba desde acá y estaba condicionada a que
     // `prestadorActual` existiera: si no —se llegaba a calificar después de

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v342'; // v342: el servicio fijo lo cierra el vecino, no el boton de terminar del chat
+const CACHE_VERSION = 'pronet-v343'; // v343: enviarResena tiraba ReferenceError con variables sin declarar
 
 const SHELL = [
   './',
