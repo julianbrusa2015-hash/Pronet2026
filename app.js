@@ -9353,6 +9353,13 @@ document.addEventListener('focusin', (e) => {
                  style="width:100%;font-size:12.5px;padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:var(--ink);box-sizing:border-box">
           <div style="font-size:10.5px;color:var(--ink3);margin-top:3px">Las opciones que el prestador marca en su perfil</div>
         </div>
+        <div style="margin-top:9px">
+          <div style="font-size:12.5px;color:var(--ink);margin-bottom:4px">Ícono</div>
+          <input id="rb-${escHTML(r.slug)}-emoji" value="${escHTML(r.emoji || '')}"
+                 maxlength="4" placeholder="📋"
+                 style="width:70px;font-size:20px;text-align:center;padding:5px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;box-sizing:border-box">
+          <div style="font-size:10.5px;color:var(--ink3);margin-top:3px">Un emoji. Se ve en el buscador, en las tarjetas y en los pedidos</div>
+        </div>
         <div id="rb-${escHTML(r.slug)}-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>
         <div style="display:flex;gap:8px">
           <button onclick="guardarParamRubro('${escHTML(r.slug)}')"
@@ -9384,8 +9391,18 @@ document.addEventListener('focusin', (e) => {
     const espTxt = (document.getElementById('rb-' + slug + '-esp')?.value || '');
     const especialidades = [...new Set(espTxt.split(',').map(s => s.trim()).filter(Boolean))];
 
+    // Ícono: hasta ahora sólo se podía cambiar por SQL, y era lo único visible
+    // de la fila que no se podía tocar desde acá. Un rubro nuevo nacía con el
+    // 📋 genérico y quedaba así — le pasó a Vidriería.
+    //
+    // Vacío se guarda como null y no como '': la app cae al 📋 por defecto con
+    // `p.icono || '📋'`, y un string vacío es un ícono ausente disfrazado.
+    const emoji = (document.getElementById('rb-' + slug + '-emoji')?.value || '').trim();
+
     decir('Guardando…', 'var(--ink3)');
-    const r = await PronetDB.guardarRubro(slug, { precio_min: min, precio_max: max, especialidades });
+    const r = await PronetDB.guardarRubro(slug, {
+      precio_min: min, precio_max: max, especialidades, emoji: emoji || null,
+    });
     if (!r?.ok) { decir('⚠️ No se pudo guardar: ' + (r?.error || 'error'), '#BE123C'); return; }
     await cargarRubrosDeLaBase();
     decir('✅ Guardado', 'var(--green)');
