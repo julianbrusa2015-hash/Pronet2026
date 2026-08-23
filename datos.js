@@ -1040,10 +1040,28 @@ const PronetDB = (() => {
       const { data, error } = await sb.from('banners')
         .select('id, imagen_url, enlace')
         .eq('activo', true)
+        .eq('es_house', false)
         .or('desde.is.null,desde.lte.' + ahora)
         .or('hasta.is.null,hasta.gte.' + ahora)
         .order('orden', { ascending: true });
       if (error) { console.warn('[PronetDB] listarBannersVigentes', error.message); return []; }
+      return data || [];
+    },
+
+    /** Los "de la casa": rellenan el carrusel cuando no hay ningún banner
+     *  pago vigente. No cuentan para el cupo — ver banners_espacios_libres()
+     *  y supabase-banners-house.sql. */
+    async listarBannersHouse() {
+      if (!remoto) return [];
+      const ahora = new Date().toISOString();
+      const { data, error } = await sb.from('banners')
+        .select('id, imagen_url, enlace')
+        .eq('activo', true)
+        .eq('es_house', true)
+        .or('desde.is.null,desde.lte.' + ahora)
+        .or('hasta.is.null,hasta.gte.' + ahora)
+        .order('orden', { ascending: true });
+      if (error) { console.warn('[PronetDB] listarBannersHouse', error.message); return []; }
       return data || [];
     },
 

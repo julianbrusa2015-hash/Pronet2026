@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v333'; // v333: lote y coordenada de entrega son de Mercado, no del prestador
+const CACHE_VERSION = 'pronet-v334'; // v334: banners de la casa y vencimiento automatico
 
 const SHELL = [
   './',

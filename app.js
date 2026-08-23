@@ -3801,17 +3801,27 @@ document.addEventListener('focusin', (e) => {
     const dots  = document.getElementById('home-ads-dots');
     if (!caja || !track) return;
 
-    const banners = await PronetDB.listarBannersVigentes().catch(() => []);
+    let banners = await PronetDB.listarBannersVigentes().catch(() => []);
+    // Sin ningún banner pago vigente: primero se prueba con los "de la
+    // casa" que haya cargado el admin en Parametrías (imagen real, se
+    // renderizan igual que uno pago). Si tampoco hay ninguno cargado
+    // todavía, el último recurso son las 2 tarjetas de texto hardcodeadas
+    // más abajo — para que el carrusel nunca quede completamente vacío
+    // aunque el admin no haya subido nada.
+    if (!banners.length) {
+      banners = await PronetDB.listarBannersHouse().catch(() => []);
+    }
     // Las tarjetas propias —el CTA que cambia según el usuario y Urgencias—
     // van como slides del carrusel y no como bloques apilados arriba. Antes
     // sumaban 148px de alto propio y empujaban el feed fuera de la pantalla;
     // acá ocupan cero espacio extra y además rotan, que es lo que hace que
     // se vean.
     const propias = slidesPropias();
-    const total = propias.length + banners.length;
+    const house = banners.length ? [] : slidesHouse();
+    const total = propias.length + house.length + banners.length;
     if (!total) { caja.style.display = 'none'; detenerAds(); return; }
 
-    track.innerHTML = propias.join('') + banners.map((b, i) => {
+    track.innerHTML = propias.join('') + house.join('') + banners.map((b, i) => {
       // <button> y no <div>: es un elemento clickeable, y así se llega con
       // el teclado y lo anuncia el lector de pantalla sin agregar nada.
       const alt = 'Publicidad ' + (i + 1) + ' de ' + banners.length;
@@ -3837,8 +3847,9 @@ document.addEventListener('focusin', (e) => {
     track.querySelectorAll('.ads-slide').forEach(el => {
       // Las propias llevan `data-accion`; las de publicidad, `data-id`.
       const accion = el.dataset.accion;
-      el.addEventListener('click', accion === 'cta'      ? () => bannerAction()
-                                 : accion === 'urgencia' ? () => verUrgencias()
+      el.addEventListener('click', accion === 'cta'            ? () => bannerAction()
+                                 : accion === 'urgencia'       ? () => verUrgencias()
+                                 : accion === 'promocionarme'  ? () => abrirPromocionar()
                                  : () => abrirBanner(el.dataset.id, el.dataset.enlace));
     });
     dots.querySelectorAll('.ads-dot').forEach(d => {
@@ -3988,15 +3999,12 @@ document.addEventListener('focusin', (e) => {
    *
    *  Para el prestador no se arma ninguna: su Inicio es el tablero, y estos
    *  dos bloques ya estaban ocultos para él. */
-  function slidesPropias() {
-    if (esPrestador()) return [];
-    const tipo = usuarioActual ? usuarioActual.tipo : 'invitado';
-    const cta = tipo === 'cliente'
-      ? { icono: '📋', titulo: 'Publicá tu pedido gratis', sub: 'Recibí propuestas de prestadores de tu zona' }
-      : { icono: '🚀', titulo: 'Sumate a PRONET gratis',   sub: 'Publicá pedidos y contactá prestadores' };
-
-    const tarjeta = (accion, fondo, color, icono, titulo, sub) =>
-      '<button class="ads-slide ads-propia" data-accion="' + accion + '"' +
+  // Compartida por slidesPropias() y slidesHouse(): la misma tarjeta con
+  // gradiente que ya usan "Publicá tu pedido" y "Urgencias". Sacarla acá
+  // afuera es lo que le permite a un slide "de la casa" (sin fila en
+  // `banners`, sin imagen) verse exactamente igual que uno pago.
+  function tarjetaAd(accion, fondo, color, icono, titulo, sub) {
+    return '<button class="ads-slide ads-propia" data-accion="' + accion + '"' +
       ' style="background:' + fondo + '" aria-label="' + escHTML(titulo) + '">' +
         '<div class="ads-propia-in">' +
           '<div class="ads-propia-ico">' + icono + '</div>' +
@@ -4006,17 +4014,49 @@ document.addEventListener('focusin', (e) => {
           '</div>' +
           '<span class="ads-propia-fle" style="color:' + color + '">›</span>' +
         '</div></button>';
+  }
+
+  function slidesPropias() {
+    if (esPrestador()) return [];
+    const tipo = usuarioActual ? usuarioActual.tipo : 'invitado';
+    const cta = tipo === 'cliente'
+      ? { icono: '📋', titulo: 'Publicá tu pedido gratis', sub: 'Recibí propuestas de prestadores de tu zona' }
+      : { icono: '🚀', titulo: 'Sumate a PRONET gratis',   sub: 'Publicá pedidos y contactá prestadores' };
 
     const slides = [
-      tarjeta('cta', 'linear-gradient(135deg,#0D0F1A,#1A3ACC)', '#fff',
+      tarjetaAd('cta', 'linear-gradient(135deg,#0D0F1A,#1A3ACC)', '#fff',
               cta.icono, cta.titulo, cta.sub),
     ];
     // Urgencias sólo si la feature está prendida, igual que el bloque viejo.
     if (!document.getElementById('home-urgencias')?.hasAttribute('data-feature-off')) {
-      slides.push(tarjeta('urgencia', 'linear-gradient(135deg,#BE123C,#F43F5E)', '#fff',
+      slides.push(tarjetaAd('urgencia', 'linear-gradient(135deg,#BE123C,#F43F5E)', '#fff',
               '⚡', 'Urgencias', 'Prestadores con atención inmediata en tu zona'));
     }
     return slides;
+  }
+
+  // ── Banners "de la casa" ─────────────────────────────────────────────
+  //
+  // Rellenan el carrusel cuando NO hay ningún banner pago vigente. No son
+  // filas de `banners` — son slides armadas acá, con el mismo componente
+  // que "Publicá tu pedido" — así que nunca ocupan uno de los 6 espacios
+  // ni compiten por el cupo. `pintarBanners()` sólo las agrega cuando
+  // `banners.length === 0`, y desaparecen solas apenas se vende un espacio
+  // real: no hace falta apagarlas a mano.
+  //
+  // Es al PRESTADOR a quien más le hacía falta esto: slidesPropias()
+  // devuelve [] para él (sin CTA ni Urgencias), así que sin banners pagos
+  // el carrusel entero quedaba oculto — el hueco que reportó el usuario.
+  //
+  // La pauta apunta a vender el espacio vacío en vez de a un genérico "conocé
+  // PRONET": el hueco es justamente inventario de banners sin comprar.
+  function slidesHouse() {
+    return [
+      tarjetaAd('promocionarme', 'linear-gradient(135deg,#0D0F1A,#2B5BFF)', '#fff',
+              '📣', 'Promocioná tu negocio acá', 'Este espacio está libre · Tu aviso a todo el barrio'),
+      tarjetaAd('promocionarme', 'linear-gradient(135deg,#7C2D12,#EA580C)', '#fff',
+              '🎯', 'Tu banner en la portada', 'Lo ven todos los vecinos de tu zona'),
+    ];
   }
 
   /** Qué slide se está viendo: el que tiene el centro más cerca del centro
@@ -9744,7 +9784,9 @@ document.addEventListener('focusin', (e) => {
         '<img src="' + escHTML(b.imagen_url) + '" alt="" style="display:block;width:100%;aspect-ratio:16/7;object-fit:cover;background:var(--surface)">' +
         '<div style="padding:12px 13px">' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
-            '<div style="flex:1;font-size:13.5px;font-weight:800;color:var(--ink)">' + escHTML(b.nombre) + '</div>' +
+            '<div style="flex:1;font-size:13.5px;font-weight:800;color:var(--ink)">' + escHTML(b.nombre) +
+              (b.es_house ? ' <span style="font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-s);border-radius:8px;padding:2px 6px;vertical-align:middle">🏠 De la casa</span>' : '') +
+            '</div>' +
             '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:' + est.bg + ';color:' + est.color + '">' + est.txt + '</span>' +
           '</div>' +
           '<div style="font-size:11px;color:var(--ink3);margin-bottom:8px">' +
@@ -9826,6 +9868,13 @@ document.addEventListener('focusin', (e) => {
           '<input id="nb-img" type="file" accept="image/*" style="font-size:12px;width:100%">' +
           '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.5">Se recorta a 16:7, así que lo importante tiene que estar centrado. Ideal 1200×525.</div>' +
         '</div>' +
+        '<label style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;cursor:pointer">' +
+          '<input id="nb-house" type="checkbox" style="margin-top:2px">' +
+          '<span style="font-size:12px;color:var(--ink2);line-height:1.5">' +
+            '<b>Es de la casa</b> — rellena el carrusel cuando no hay ningún banner pago vigente. ' +
+            'No ocupa cupo: quien va a comprar un espacio sigue viendo los 6 disponibles.' +
+          '</span>' +
+        '</label>' +
         '<div id="nb-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin:6px 0"></div>' +
         '<div style="display:flex;gap:8px">' +
           '<button id="nb-crear" onclick="crearBannerUI()" style="flex:1;background:var(--blue);color:white;border:none;border-radius:10px;padding:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">Crear</button>' +
@@ -9845,6 +9894,7 @@ document.addEventListener('focusin', (e) => {
     const enlace = (document.getElementById('nb-enlace')?.value || '').trim();
     const desde  = document.getElementById('nb-desde')?.value || '';
     const hasta  = document.getElementById('nb-hasta')?.value || '';
+    const esHouse = !!document.getElementById('nb-house')?.checked;
     const file   = document.getElementById('nb-img')?.files?.[0];
 
     if (!nombre) return decir('⚠️ Poné un nombre para reconocerla acá', '#BE123C');
@@ -9861,7 +9911,7 @@ document.addEventListener('focusin', (e) => {
     const r = await PronetDB.crearBanner({
       nombre, imagen_url: sub.url, enlace: enlace || null,
       desde: fechaDesde(desde), hasta: fechaHasta(hasta),
-      orden: 100, activo: true,
+      orden: 100, activo: true, es_house: esHouse,
     });
     if (btn) { btn.disabled = false; btn.textContent = 'Crear'; }
     if (!r.ok) return decir('⚠️ ' + r.error, '#BE123C');
@@ -12295,6 +12345,7 @@ document.addEventListener('focusin', (e) => {
       aprobado:  { t: 'Aprobado',    c: '#166534', b: '#DCFCE7' },
       rechazado: { t: 'Rechazado',   c: '#BE123C', b: '#FFE4E6' },
       activo:    { t: 'Publicado',   c: '#166534', b: '#DCFCE7' },
+      vencido:   { t: 'Vencido',     c: 'var(--ink3)', b: 'var(--surface)' },
       borrador:  { t: 'Borrador',    c: 'var(--ink3)', b: 'var(--surface)' },
     };
     cont.innerHTML = lista.map(b => {
@@ -12308,6 +12359,8 @@ document.addEventListener('focusin', (e) => {
             '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' +
               (b.estado === 'activo'
                 ? ('👆 ' + (b.clicks || 0) + ' click' + (b.clicks === 1 ? '' : 's') + (vence ? ' · hasta el ' + vence : ''))
+                : b.estado === 'vencido'
+                ? ('👆 ' + (b.clicks || 0) + ' click' + (b.clicks === 1 ? '' : 's') + (vence ? ' · venció el ' + vence : ''))
                 : (b.dias || 30) + ' días') +
             '</div>' +
           '</div>' +
