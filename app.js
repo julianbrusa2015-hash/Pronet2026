@@ -8191,6 +8191,84 @@ document.addEventListener('focusin', (e) => {
     }
   }
 
+  // ══ CAMBIAR CONTRASEÑA ═════════════════════════════════════════════
+  //
+  // El bloque de "Cambiar contraseña" existía en la UI desde siempre, con
+  // cursor:pointer y sin ningún onclick. Era decoración.
+  //
+  // Se pide la contraseña ACTUAL aunque Supabase no la exija: updateUser()
+  // acepta el cambio sólo con la sesión abierta. Sin ese paso, cualquiera que
+  // agarre un teléfono desbloqueado cambia la clave y deja al dueño afuera de
+  // su propia cuenta. Es el escenario realista en una app de barrio que se usa
+  // desde el celular.
+  function abrirCambiarPassword() {
+    ['pw-actual', 'pw-nueva', 'pw-repetir'].forEach(id => {
+      const e = document.getElementById(id); if (e) e.value = '';
+    });
+    // Se limpia el TEXTO además de ocultarlo: si sólo se esconde, el mensaje
+    // de un intento anterior queda en el DOM y puede reaparecer.
+    const err = document.getElementById('pw-error');
+    if (err) { err.textContent = ''; err.style.display = 'none'; }
+    const ok = document.getElementById('pw-ok');     if (ok)  ok.style.display = 'none';
+    const btn = document.getElementById('pw-btn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; btn.style.display = ''; }
+    const m = document.getElementById('modal-password');
+    if (m) m.style.display = 'flex';
+  }
+  window.abrirCambiarPassword = abrirCambiarPassword;
+
+  function cerrarCambiarPassword() {
+    const m = document.getElementById('modal-password');
+    if (m) m.style.display = 'none';
+  }
+  window.cerrarCambiarPassword = cerrarCambiarPassword;
+
+  async function guardarPasswordNueva() {
+    const err = document.getElementById('pw-error');
+    const fallar = (m) => { if (err) { err.textContent = m; err.style.display = 'block'; } };
+    if (err) err.style.display = 'none';
+
+    const actual  = document.getElementById('pw-actual')?.value || '';
+    const nueva   = document.getElementById('pw-nueva')?.value || '';
+    const repetir = document.getElementById('pw-repetir')?.value || '';
+
+    if (!actual) return fallar('Escribí tu contraseña actual.');
+    if (nueva.length < 6) return fallar('La nueva tiene que tener al menos 6 caracteres.');
+    if (nueva !== repetir) return fallar('Las dos nuevas no coinciden.');
+    if (nueva === actual) return fallar('La nueva tiene que ser distinta de la actual.');
+
+    const btn = document.getElementById('pw-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Cambiando...'; }
+
+    try {
+      const { data: { user } } = await window._sb.auth.getUser();
+      if (!user?.email) throw new Error('sin email');
+
+      // Verificar la actual reautenticando. Un signInWithPassword fallido NO
+      // tira la sesión abierta, así que equivocarse acá no desloguea a nadie.
+      const chequeo = await window._sb.auth.signInWithPassword({
+        email: user.email, password: actual,
+      });
+      if (chequeo.error) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
+        return fallar('La contraseña actual no es correcta.');
+      }
+
+      const { error } = await window._sb.auth.updateUser({ password: nueva });
+      if (error) throw error;
+
+      const ok = document.getElementById('pw-ok');
+      if (ok) ok.style.display = 'block';
+      if (btn) btn.style.display = 'none';
+      showToast && showToast('🔒 Contraseña actualizada');
+      setTimeout(cerrarCambiarPassword, 1600);
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
+      fallar(mensajeDeRechazo(e) || 'No pudimos cambiarla. Probá de nuevo.');
+    }
+  }
+  window.guardarPasswordNueva = guardarPasswordNueva;
+
   async function guardarVerificacionUI() {
     const err = document.getElementById('edit-verif-error');
     const fallar = (m) => { if (err) { err.textContent = m; err.style.display = 'block'; } };

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v321'; // v321: el bloque de fotos de trabajo no se le muestra al vecino
+const CACHE_VERSION = 'pronet-v322'; // v322: cambiar contrasena, que era un boton decorativo
 
 const SHELL = [
   './',
