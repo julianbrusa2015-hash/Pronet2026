@@ -1280,6 +1280,12 @@ document.addEventListener('focusin', (e) => {
     if (/RATE_LIMIT/i.test(txt)) {
       return '⏳ Llegaste al límite por ahora. Probá de nuevo en un rato.';
     }
+    if (/requiere_plan_publicacion/i.test(txt)) {
+      return '⭐ Publicar en Servicios es un beneficio de los planes Plus y Pro.';
+    }
+    if (/sin_creditos_publicacion/i.test(txt)) {
+      return '📦 Usaste tus publicaciones gratis del mes. Podés comprar una extra.';
+    }
     if (/TELEFONO_VETADO/i.test(txt)) {
       // Va ANTES de TELEFONO_REQUERIDO: los dos matchean "TELEFONO" y el
       // primero que coincida gana.
@@ -7503,6 +7509,21 @@ document.addEventListener('focusin', (e) => {
       return { ok: true }; // legacy: suscriptor de la vieja ProMarket, ilimitado hasta que venza
     }
     const plan = planParaLimites(planActual);
+
+    // ── El prestador entra a Mercado por su plan, no por el cupo del vecino ──
+    //
+    // Decidido 2026-08-22: publicar en la sección Servicios es beneficio de
+    // Plus y Pro. El prestador con plan Base no publica, y el camino es
+    // upgradear — no comprar un crédito suelto, que a $5.000 competiría con
+    // Plus a $5.990 y canibalizaría el upgrade.
+    //
+    // Y publica SERVICIOS y nada más: los productos son el mercado del vecino.
+    // Que un prestador Base no pueda publicar nada acá es la definición, no un
+    // efecto colateral: entra a Entre Vecinos por su oficio.
+    if (esPrestador() && plan !== 'plus' && plan !== 'pro') {
+      return { ok: false, motivo: 'requiere_plan' };
+    }
+
     if (plan === 'pro') return { ok: true };
     const planes = window.PRONET_CONFIG?.PLANES || [];
     if (plan === 'plus') {
@@ -7667,6 +7688,12 @@ document.addEventListener('focusin', (e) => {
     if (!cupo.ok) {
       if (cupo.motivo === 'limite_mes') {
         showToast && showToast(`⚠️ Ya usaste tus ${cupo.limite} publicaciones de este mes con tu plan Plus. Se renueva el mes que viene.`);
+      } else if (cupo.motivo === 'requiere_plan') {
+        // NO se le ofrece comprar un crédito: para el prestador el camino es
+        // el plan. Ofrecerle el crédito seria contradecir la decisión y
+        // venderle lo más caro por publicación.
+        showToast && showToast('⭐ Publicar en Servicios es un beneficio de los planes Plus y Pro.', 5000);
+        setTimeout(() => goTo('s-subs'), 600);
       } else {
         abrirModalComprarPublicacion();
       }
@@ -10769,6 +10796,15 @@ document.addEventListener('focusin', (e) => {
       pmEstadoLbl.style.color = usadas >= 10 ? '#EF4444' : 'var(--ink3)';
       return;
     }
+    // El prestador sin plan no tiene cupo que mostrar: tiene un upgrade que
+    // hacer. Mostrarle "0/5 gratis este mes" le prometería un cupo que no le
+    // corresponde.
+    if (esPrestador()) {
+      pmEstadoLbl.textContent = 'Publicar acá es un beneficio de Plus y Pro';
+      pmEstadoLbl.style.color = 'var(--blue)';
+      return;
+    }
+
     // Mismo criterio que puedePublicarMercado(): cupo MENSUAL parametrizable.
     // Este cartel y esa función tienen que decir lo mismo — si el cartel dice
     // "2/3 este año" y la validación cuenta por mes, el usuario recibe un
