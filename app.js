@@ -16507,33 +16507,56 @@ document.addEventListener('focusin', (e) => {
               showToast('⚠️ El pago está siendo procesado. En unos minutos se acredita — si no, contactanos.', 9000);
             })();
           } else if (_mpRes === 'success') {
-            (async function activarProMarket() {
-              const exito = async () => {
-                usuarioActual = await PronetDB.usuarioActual().catch(() => usuarioActual);
-                reflejarUsuario();
-                showToast('¡Ya sos Pro Market! Tocá + para publicar en el feed.', 6000);
-                setTimeout(() => goTo('s-mercado'), 400);
-              };
+            (async function activarCompra() {
+              // Antes esta rama era `activarProMarket()`: asumía que TODO pago
+              // que no fuera un crédito era ProMarket. Comprar el plan Pro te
+              // decía "¡Ya sos Pro Market!" y te mandaba a Mercado — que es
+              // otro producto, de otro actor.
+              //
+              // Encima esperaba a que se encendiera `es_pro_marketplace`, un
+              // flag LEGACY de un modelo de suscripción que ya no existe y que
+              // hoy nada enciende. La espera nunca podía terminar bien.
+              //
+              // Ahora se le pregunta al servidor QUÉ se compró y se responde en
+              // consecuencia.
+              showToast('✅ Pago recibido — activando...', 4000);
 
-              if (usuarioActual?.es_pro_marketplace) return exito();
-
-              showToast('✅ Pago recibido — activando tu acceso...', 4000);
-
-              // Verificación directa contra MP: no depende de que el webhook
-              // haya llegado. Activa el plan en el momento si el pago está
-              // aprobado, y es idempotente respecto del webhook.
+              let plan = null;
               if (_mpPago) {
                 const r = await PronetDB.verificarPagoMP(_mpPago);
-                if (r?.ok) return exito();
+                // `plan` viene tanto si activó (ok) como si el producto lo
+                // activa el webhook (ok:false, motivo lo_activa_el_webhook).
+                plan = r?.plan || null;
               }
 
-              // Fallback: el webhook puede estar demorado
-              for (const ms of [2500, 5000, 10000]) {
-                await new Promise(r => setTimeout(r, ms));
-                const u2 = await PronetDB.usuarioActual().catch(() => null);
-                if (u2?.es_pro_marketplace) { usuarioActual = u2; return exito(); }
+              usuarioActual = await PronetDB.usuarioActual().catch(() => usuarioActual);
+              reflejarUsuario();
+
+              const nombrePlan = (window.PRONET_CONFIG?.PLANES || [])
+                .find(p => p.id === plan)?.nombre || plan;
+
+              // Cada producto dice lo suyo y lleva a donde el usuario va a ver
+              // el resultado. Un mensaje correcto que te deja en la pantalla
+              // equivocada sigue siendo una promesa a medias.
+              const DESTINOS = {
+                pro:        { msg: '✅ ¡Listo! Tu plan ' + nombrePlan + ' ya está activo.', ir: 's-miperfil' },
+                plus:       { msg: '✅ ¡Listo! Tu plan ' + nombrePlan + ' ya está activo.', ir: 's-miperfil' },
+                impulso:    { msg: '🚀 Tu aviso ya aparece primero en Servicios.',          ir: 's-pubs-prestador' },
+                renovacion: { msg: '🔄 Tu aviso volvió a estar publicado.',                 ir: 's-pubs-prestador' },
+                banner:     { msg: '📣 Tu banner se está publicando en el carrusel.',       ir: 's-promocionar' },
+                promarket_credito: { msg: '✅ ¡Publicación extra acreditada!',              ir: 's-mercado' },
+              };
+
+              const d = DESTINOS[plan];
+              if (d) {
+                showToast(d.msg, 6000);
+                setTimeout(() => goTo(d.ir), 400);
+                return;
               }
-              showToast('⚠️ El pago está siendo procesado. En unos minutos se activa — si no, contactanos.', 9000);
+
+              // No se pudo saber qué se compró: no inventar. El pago entró, y
+              // el webhook lo va a resolver.
+              showToast('✅ Pago recibido. Si no ves el cambio en unos minutos, contactanos.', 9000);
             })();
           } else if (_mpRes === 'failure') {
             showToast('⚠️ El pago no se completó. Podés intentarlo de nuevo.', 5000);

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v318'; // v318: cupo del vecino en Mercado, mensual y parametrizable
+const CACHE_VERSION = 'pronet-v319'; // v319: el retorno de MercadoPago dice que se compro, en vez de asumir ProMarket
 
 const SHELL = [
   './',
