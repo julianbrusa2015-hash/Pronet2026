@@ -133,6 +133,22 @@ directo porque comprar un objeto no es un trabajo con propuesta ni cierre.
 Acá sí es un trabajo, así que entra al mismo lugar que mide reputación,
 alimenta el ranking y decide quién aparece primero.
 
+**Las cuatro métricas de la tarjeta.** Es un embudo, en este orden:
+
+| ícono | qué mide |
+|---|---|
+| 👁 Vistas | cuántos vieron el aviso en el feed de Servicios |
+| 👍 Me gusta | a cuántos les gustó |
+| 👆 Clics en "Contactar" | cuántos tocaron el botón — intención, no un "no me gusta" |
+| 📩 Pedidos enviados | cuántos llegaron a mandar un pedido de verdad — la única en verde |
+
+Cada paso filtra al anterior: ver → gustar → tocar contactar → mandar el
+pedido. El de **pedidos** es el que importa de verdad —es plata en
+potencial, no sólo interés— por eso es el único destacado en color. Muchas
+vistas y cero pedidos dice que el aviso llama la atención pero no convierte;
+pocas vistas con buena conversión dice que el problema es que no lo
+encuentran, no el aviso en sí.
+
 ---
 
 ## Vecino
