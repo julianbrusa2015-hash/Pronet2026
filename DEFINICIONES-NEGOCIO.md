@@ -181,6 +181,25 @@ Cortar la cadena no fue trivial. Borrar al vecino cascadeaba
 `prestador_id` sigue en cascada a propósito: sin prestador, la reseña no
 significa nada.
 
+**El rating es de la persona, no del rubro.** Anotado 2026-08-23. Un prestador
+multirubro tiene **un solo promedio**, que junta las reseñas de todos sus
+rubros — no existe "rating en Electricistas" separado de "rating en
+Vidriería". Verificado con un caso real: `servicios_001 prueba` (Electricistas
+· Plomería · Vidrieria) tenía un 5 de un trabajo de Electricistas y recibió un
+3 de un trabajo de Vidriería — el promedio pasó a **4.0** con las dos reseñas
+juntas, y ese 4.0 es el que usan los cuatro lugares que hoy comparten la
+fórmula bayesiana (`buscar_prestadores`, Ranking Zonal, feed de Inicio,
+`ranking_propuestas`).
+
+Consecuencia a tener presente: **`posicion_prestador()` sólo calcula la
+posición contra el rubro PRINCIPAL** (el primero de `rubros[]`), no contra
+cada rubro que tenga. Si un prestador multirubro mejora su reputación
+trabajando en un rubro secundario, esa mejora empuja su posición en TODOS sus
+rubros — incluido el principal — porque el rating que se usa es el mismo en
+los cuatro lugares. No hay ranking por rubro separado; hay una sola
+reputación que se lee distinto según el filtro, pero nunca se recalcula
+distinto.
+
 **4. CERRADO 2026-08-22 — el sello verificado pasa a Nivel 1 y se enciende.**
 
 No era una feature de crecimiento: es confianza básica en un marketplace donde
