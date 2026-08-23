@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v325'; // v325: el sello verificado pasa a Nivel 1
+const CACHE_VERSION = 'pronet-v326'; // v326: destacar publicacion de Mercado, y el umbral gatea los dos impulsos
 
 const SHELL = [
   './',

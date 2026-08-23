@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
       }
       const { data: pub } = await supabase
         .from('publicaciones_prestador')
-        .select('id, estado, vigencia_hasta, prestador_id, perfiles:prestador_id (id)')
+        .select('id, estado, vigencia_hasta, prestador_id, rubro, perfiles:prestador_id (id)')
         .eq('id', ref)
         .maybeSingle();
       if (!pub) {
@@ -99,6 +99,39 @@ Deno.serve(async (req) => {
       }
       if (pub.estado !== 'activa' || new Date(pub.vigencia_hasta) <= new Date()) {
         return json({ error: 'El aviso tiene que estar publicado para impulsarlo' }, 409);
+      }
+      // El umbral también se chequea acá, no sólo en el cliente. Esconder el
+      // botón no es una barrera: la preferencia se puede pedir a mano.
+      const { data: vale } = await supabase.rpc('impulso_vale_en_rubro', { p_rubro: pub.rubro });
+      if (vale === false) {
+        return json({ error: 'Todavía no hay suficientes avisos en tu rubro como para que impulsar valga la pena' }, 409);
+      }
+    }
+
+    // Destacar una publicación de Mercado. Mismo criterio que el impulso del
+    // prestador —tiene que ser TUYA y estar activa— sobre la otra tabla.
+    if (plan === 'impulso_mercado') {
+      if (typeof ref !== 'string' || !/^[0-9a-f-]{36}$/i.test(ref)) {
+        return json({ error: 'Falta la publicación a destacar' }, 400);
+      }
+      const { data: pub } = await supabase
+        .from('publicaciones')
+        .select('id, activa, categoria, autor_id')
+        .eq('id', ref)
+        .maybeSingle();
+      if (!pub) {
+        return json({ error: 'Esa publicación no existe' }, 404);
+      }
+      // Acá el dueño es directo: publicaciones.autor_id es el user id.
+      if (pub.autor_id !== user.id) {
+        return json({ error: 'Esa publicación no es tuya' }, 403);
+      }
+      if (!pub.activa) {
+        return json({ error: 'La publicación tiene que estar activa para destacarla' }, 409);
+      }
+      const { data: vale } = await supabase.rpc('impulso_vale_en_categoria', { p_categoria: pub.categoria });
+      if (vale === false) {
+        return json({ error: 'Todavía no hay suficientes publicaciones en esa categoría como para que destacar valga la pena' }, 409);
       }
     }
 

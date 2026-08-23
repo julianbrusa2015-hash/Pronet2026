@@ -1267,8 +1267,15 @@ const PronetDB = (() => {
         // `lote` NO se trae en el feed: es la dirección del vendedor y no se
         // muestra en la tarjeta. Viaja sólo cuando hay pedido, en el chat.
         .select(`id, autor_id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, creado,
-                 disponible, likes_count, comentarios_count, perfiles:autor_id (nombre, zona)`)
+                 disponible, likes_count, comentarios_count, impulso_hasta, perfiles:autor_id (nombre, zona)`)
         .eq('activa', true)
+        // Las destacadas primero; dentro de cada grupo, las más nuevas.
+        //
+        // Ordenar por la fecha cruda funciona porque el cron
+        // `limpiar-impulsos-vencidos` pone impulso_hasta en null al vencer. Sin
+        // esa limpieza, un impulso viejo seguiría ordenando para siempre — es
+        // exactamente el bug que tenía el feed de Servicios.
+        .order('impulso_hasta', { ascending: false, nullsFirst: false })
         .order('creado', { ascending: false })
         .range(offset, offset + limit - 1);
       if (zona) q = q.eq('zona', zona);

@@ -7263,7 +7263,30 @@ document.addEventListener('focusin', (e) => {
       lista.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--ink3)">Todavía no publicaste nada.<br><span style="color:var(--blue);font-weight:600;cursor:pointer" onclick="abrirPublicarMercado()">¡Publicá ahora!</span></div>';
       return;
     }
-    lista.innerHTML = pubs.map(misPubsCardHTML).join('');
+    // ── ¿En qué categorías vale destacar? ───────────────────────────────
+    //
+    // Se pregunta UNA VEZ POR CATEGORÍA DISTINTA, no por publicación: alguien
+    // con 8 publicaciones en "productos" haría 8 consultas idénticas.
+    //
+    // La regla vive en el servidor (impulso_vale_en_categoria): el cliente no
+    // conoce el umbral ni hace la cuenta, sólo pregunta. Así el número se
+    // cambia desde el panel sin tocar código, y no hay dos versiones de la
+    // misma regla que puedan desincronizarse.
+    const catsConCompetencia = new Set();
+    if (impulsosActivos()) {
+      const cats = [...new Set(pubs.filter(p => p.activa).map(p => p.categoria))];
+      await Promise.all(cats.map(async (c) => {
+        // try/catch y NO .catch() encadenado: lo que devuelve sb.rpc() es un
+        // builder de PostgREST, no una Promise — tiene `then` pero NO `catch`,
+        // así que encadenarlo tira "catch is not a function" y se lleva puesto
+        // el Promise.all entero.
+        try {
+          const { data } = await window._sb.rpc('impulso_vale_en_categoria', { p_categoria: c });
+          if (data === true) catsConCompetencia.add(c);
+        } catch (e) { /* sin umbral confirmado no se ofrece: mejor de menos */ }
+      }));
+    }
+    lista.innerHTML = pubs.map(p => misPubsCardHTML(p, catsConCompetencia)).join('');
     // Actualizar subtítulo del menu item
     const activas = pubs.filter(p => p.activa).length;
     const subEl = document.getElementById('mp-mis-pubs-sub');
@@ -7285,7 +7308,7 @@ document.addEventListener('focusin', (e) => {
     card.style.display = '';
   }
 
-  function misPubsCardHTML(p) {
+  function misPubsCardHTML(p, catsConCompetencia) {
     // mktCatLabel y no MKT_CAT_LABELS: ese objeto se borró al dividir Entre
     // Vecinos y quedó esta referencia suelta, que reventaba la pantalla
     // entera con un ReferenceError. `node --check` no lo ve — es un error
@@ -7310,6 +7333,17 @@ document.addEventListener('focusin', (e) => {
     const stockBtn = (!esProducto || !p.activa) ? '' : (p.disponible === false
       ? `<button onclick="toggleStockPublicacion('${p.id}',true)" style="background:#FEF3C7;border:1.5px solid #FDE68A;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#92400E;cursor:pointer;font-family:'Inter',sans-serif">Sin stock · Reponer</button>`
       : `<button onclick="toggleStockPublicacion('${p.id}',false)" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:'Inter',sans-serif">Marcar sin stock</button>`);
+    // ── Destacar ────────────────────────────────────────────────────────
+    // El botón sólo aparece si la categoría tiene competencia real. Aparecer
+    // primero entre tres no vale nada, y el que paga por eso no vuelve a
+    // comprar: es peor que no habérselo ofrecido.
+    const destacada = p.impulso_hasta && new Date(p.impulso_hasta) > new Date();
+    const destacarBtn = destacada
+      ? `<span style="background:#FEF3C7;color:#92400E;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:700">⭐ Destacada hasta ${new Date(p.impulso_hasta).toLocaleDateString('es-AR')}</span>`
+      : (p.activa && catsConCompetencia && catsConCompetencia.has(p.categoria)
+        ? `<button onclick="destacarMiPublicacion('${p.id}')" style="background:#FEF3C7;border:1.5px solid #FDE68A;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#92400E;cursor:pointer;font-family:'Inter',sans-serif">⭐ Destacar</button>`
+        : '');
+
     return `
       <div id="mispub-${escHTML(p.id)}" style="display:flex;gap:12px;padding:12px;background:white;border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
         ${foto}
@@ -7320,11 +7354,31 @@ document.addEventListener('focusin', (e) => {
             ${estadoBadge}
             ${accionBtn}
             ${stockBtn}
+            ${destacarBtn}
             <button onclick="editarMiPublicacion('${p.id}')" style="background:none;border:1.5px solid var(--blue);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Inter',sans-serif">Editar</button>
           </div>
         </div>
       </div>`;
   }
+
+  /** Destacar: mismo circuito que el impulso del prestador, otra tabla.
+   *
+   *  Va al checkout de MercadoPago con la publicación como `ref`. Quien activa
+   *  es el webhook —no esta pantalla— porque es el único camino que ve el pago
+   *  confirmado por MP. */
+  async function destacarMiPublicacion(id) {
+    // El interruptor de MercadoPago manda por encima del de la venta: sin
+    // esto, "el checkout está apagado" sería mentira para los destacados.
+    if (!mpCheckoutActivo()) {
+      showToast && showToast('🧪 El cobro está en modo test: pedile al admin que lo active.');
+      return;
+    }
+    showToast && showToast('Abriendo el pago…');
+    const res = await PronetDB.crearPreferenciaMP('impulso_mercado', 'mes', id);
+    if (res?.init_point) { window.location.href = res.init_point; return; }
+    showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
+  }
+  window.destacarMiPublicacion = destacarMiPublicacion;
 
   async function toggleMiPublicacion(id, activar) {
     const card = document.getElementById('mispub-' + id);
@@ -12243,6 +12297,20 @@ document.addEventListener('focusin', (e) => {
 
     const metricas = await PronetDB.metricasPubsPrestador(_ppLista.map(p => p.id));
 
+    // ¿En qué rubros vale impulsar? Misma regla que en Mercado: el botón sólo
+    // aparece donde hay competencia real. Una consulta por rubro distinto.
+    const rubrosConCompetencia = new Set();
+    if (impulsosActivos()) {
+      const rubros = [...new Set(_ppLista.filter(p => p.estado === 'activa').map(p => p.rubro).filter(Boolean))];
+      await Promise.all(rubros.map(async (r) => {
+        // try/catch, no .catch(): ver la nota en renderMisPublicaciones.
+        try {
+          const { data } = await window._sb.rpc('impulso_vale_en_rubro', { p_rubro: r });
+          if (data === true) rubrosConCompetencia.add(r);
+        } catch (e) { /* sin umbral confirmado no se ofrece */ }
+      }));
+    }
+
     const tarjetas = _ppLista.map(p => {
       const e = ppEstadoInfo(p);
       const m = metricas[p.id] || { vistas: 0, clics: 0, likes: 0, solicitudes: 0 };
@@ -12254,7 +12322,10 @@ document.addEventListener('focusin', (e) => {
       // Impulsar sólo lo que está al aire de verdad: pagar por subir algo
       // que nadie puede ver sería cobrar por nada.
       const impulsado = p.impulso_hasta && new Date(p.impulso_hasta) > new Date();
-      const impulsable = p.estado === 'activa' && !vencida && impulsosActivos();
+      // El umbral: sin competencia en el rubro, aparecer primero no vale nada
+      // y el que paga no vuelve a comprar. Mejor no ofrecerlo.
+      const impulsable = p.estado === 'activa' && !vencida && impulsosActivos()
+        && rubrosConCompetencia.has(p.rubro);
       // La vencida queda a la vista pero apagada: sigue siendo tuya, con sus
       // métricas y su historial, sólo que ya no se ve en Servicios. Antes
       // había que borrarla para publicar otra — ahora no ocupa lugar.
@@ -16697,6 +16768,7 @@ document.addEventListener('focusin', (e) => {
                 pro:        { msg: '✅ ¡Listo! Tu plan ' + nombrePlan + ' ya está activo.', ir: 's-miperfil' },
                 plus:       { msg: '✅ ¡Listo! Tu plan ' + nombrePlan + ' ya está activo.', ir: 's-miperfil' },
                 impulso:    { msg: '🚀 Tu aviso ya aparece primero en Servicios.',          ir: 's-pubs-prestador' },
+                impulso_mercado: { msg: '⭐ Tu publicación ya aparece primero en su categoría.', ir: 's-mis-publicaciones' },
                 renovacion: { msg: '🔄 Tu aviso volvió a estar publicado.',                 ir: 's-pubs-prestador' },
                 banner:     { msg: '📣 Tu banner se está publicando en el carrusel.',       ir: 's-promocionar' },
                 promarket_credito: { msg: '✅ ¡Publicación extra acreditada!',              ir: 's-mercado' },

@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     //
     // El cliente ya reintenta leyendo el estado (ver el fallback en app.js),
     // así que devolver ok:false acá no empeora la experiencia.
-    const ACTIVA_EL_WEBHOOK = ['banner', 'impulso', 'renovacion'];
+    const ACTIVA_EL_WEBHOOK = ['banner', 'impulso', 'renovacion', 'impulso_mercado'];
     if (ACTIVA_EL_WEBHOOK.includes(plan)) {
       return json({ ok: false, motivo: 'lo_activa_el_webhook', plan }, 200);
     }

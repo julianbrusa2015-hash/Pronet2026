@@ -211,6 +211,26 @@ Deno.serve(async (req) => {
       return new Response('ok', { status: 200 });
     }
 
+    // Destacar una publicación de Mercado. Igual que el impulso del prestador
+    // pero sobre `publicaciones`: otra tabla, otro RPC, mismo circuito.
+    if (plan === 'impulso_mercado') {
+      if (!ref) {
+        await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[webhook-mp] pago de destacar sin ref', pago.id);
+        return new Response('ok', { status: 200 });
+      }
+      const { data: resDes, error: errDes } = await supabase.rpc('activar_impulso_mercado_pagado', {
+        p_pub_id: ref,
+        p_usuario_id: usuarioId,
+      });
+      if (errDes || !resDes?.ok) {
+        await supabase.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[webhook-mp] error destacando publicación', errDes?.message || resDes?.error);
+        return new Response('error', { status: 500 });
+      }
+      return new Response('ok', { status: 200 });
+    }
+
     // Renovación de un aviso vencido: vuelve al aire por otro período del
     // plan. Como el impulso, corta acá — no es suscripción ni crédito.
     if (plan === 'renovacion') {
