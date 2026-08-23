@@ -2252,7 +2252,11 @@ document.addEventListener('focusin', (e) => {
   // distancias y conteos escritos a mano, y cuatro chips que sólo hacían
   // this.classList.toggle('on') — se prendían y no filtraban nada.
   // Ahora consultan datos reales.
-  const filtrosPresto = { zona: true, rubro: false, urgentes: false, presupuesto: false, porVencer: false, nuevos: false };
+  const filtrosPresto = { zona: true, rubro: true, urgentes: false, presupuesto: false, porVencer: false, nuevos: false };
+  // "Mi rubro" arranca prendido: un plomero que entra a Pedidos no tiene
+  // por qué ver una vidriería antes que ver que no hay nada de lo suyo. El
+  // que sí tiene rubro sin coincidencias recibe abajo un cartel con
+  // "Ver todos los rubros" en vez de una lista mezclada de entrada.
 
   function togglePrestoFiltro(el, clave) {
     filtrosPresto[clave] = !filtrosPresto[clave];
@@ -2383,6 +2387,19 @@ document.addEventListener('focusin', (e) => {
     }
 
     if (!pedidos.length) {
+      // El caso más común al entrar: "Mi rubro" solo (o con "Tu zona", que
+      // no cuenta para esto — está siempre puesta) sin resultados. Ahí el
+      // cartel nombra el rubro y ofrece sacarlo, en vez de un genérico que
+      // no dice qué botón tocar.
+      const soloRubro = filtrosPresto.rubro && rubro &&
+        !filtrosPresto.urgentes && !filtrosPresto.presupuesto && !filtrosPresto.porVencer && !filtrosPresto.nuevos;
+      if (soloRubro) {
+        wrap.innerHTML = '<div style="padding:28px 18px;text-align:center">' +
+          '<div style="font-size:13px;color:var(--ink3);margin-bottom:12px">No tenés pedidos nuevos de <b>' + escHTML(rubro) + '</b> en tu zona por ahora.</div>' +
+          '<button onclick="togglePrestoFiltro(document.querySelector(\'#presto-chips [data-f=rubro]\'),\'rubro\')" style="background:var(--blue-s);color:var(--blue);border:1.5px solid #C7D5FF;border-radius:12px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">¿Ver todos los rubros?</button>' +
+          '</div>';
+        return;
+      }
       wrap.innerHTML = '<div style="padding:28px 18px;text-align:center;font-size:13px;color:var(--ink3)">' +
         (activos > 1
           ? 'Ningún pedido coincide con los filtros.<br>Probá desactivar alguno.'
