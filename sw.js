@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v317'; // v317: mensaje propio para el telefono vetado
+const CACHE_VERSION = 'pronet-v318'; // v318: cupo del vecino en Mercado, mensual y parametrizable
 
 const SHELL = [
   './',

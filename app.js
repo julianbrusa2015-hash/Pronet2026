@@ -7489,8 +7489,13 @@ document.addEventListener('focusin', (e) => {
   }
   window.pmCerrar = pmCerrar;
 
-  /** ¿Le queda cupo para publicar en ProMarket? Base/vecino: 3 gratis por
-   *  año + créditos comprados. Plus: 10/mes. Pro: ilimitado. */
+  /** Le queda cupo para publicar en Mercado?
+   *
+   *  Vecino: N gratis por mes (config_app.mkt_pub_vecino_mes, hoy 5) + los
+   *  creditos comprados. Plus: 10/mes. Pro: ilimitado.
+   *
+   *  Espeja el trigger chequear_cupo_publicacion() de la base, que es el que
+   *  manda. Esto solo decide que le mostramos al usuario antes de que intente. */
   async function puedePublicarMercado() {
     if (!usuarioActual) return { ok: false, motivo: 'sin_sesion' };
     const legacyHasta = usuarioActual.pro_marketplace_hasta ? new Date(usuarioActual.pro_marketplace_hasta) : null;
@@ -7505,8 +7510,27 @@ document.addEventListener('focusin', (e) => {
       const usadas = await PronetDB.contarPublicacionesMercadoMes(usuarioActual.id).catch(() => 0);
       return { ok: usadas < limite, motivo: 'limite_mes', usadas, limite };
     }
-    const limite = planes.find(p => p.id === 'base')?.mkt_publicaciones_anio ?? 3;
-    const usadas = await PronetDB.contarPublicacionesMercadoAnio(usuarioActual.id).catch(() => 0);
+    // ── Vecino: cupo MENSUAL parametrizable + créditos ──────────────────
+    //
+    // Antes eran 3 por AÑO calendario, con el 3 hardcodeado acá y otra vez en
+    // el trigger de la base. Dos problemas:
+    //
+    //   El año es una unidad pésima para esto. Nadie recuerda qué publicó en
+    //   marzo. Alguien vende tres cosas en una mudanza, agota el año en una
+    //   semana, y en octubre se choca con una pared que no entiende. Se siente
+    //   trampa aunque no lo sea. Un cupo mensual se explica solo y se recupera.
+    //
+    //   Y el número exigía deploy. Ahora sale de config_app y se edita desde
+    //   el panel de Ajustes.
+    //
+    // El límite REAL lo aplica el trigger chequear_cupo_publicacion() en la
+    // base; esto es la versión para la UI, y tiene que decir lo mismo. Si se
+    // cambia uno, hay que cambiar el otro — ver supabase-cupo-vecino-
+    // parametrizable.sql.
+    const limite = parseInt(configApp.mkt_pub_vecino_mes ?? '5', 10);
+    if (isNaN(limite)) return { ok: true };   // config rota: no bloquear al usuario
+    if (limite < 0) return { ok: true };      // -1 = ilimitado
+    const usadas = await PronetDB.contarPublicacionesMercadoMes(usuarioActual.id).catch(() => 0);
     if (usadas < limite) return { ok: true };
     if ((usuarioActual.promarket_creditos || 0) > 0) return { ok: true };
     return { ok: false, motivo: 'sin_creditos', usadas, limite };
@@ -9291,6 +9315,10 @@ document.addEventListener('focusin', (e) => {
     { k: 'impulso_dias',            n: 'Duración del impulso',     u: 'días',        min: 1,  max: 90,   d: 'Cuántos días aparece primero un aviso impulsado. Es lo que se compra' },
     { k: 'banner_dias',             n: 'Duración del banner',      u: 'días',        min: 1,  max: 365,  d: 'Cuántos días dura un banner del carrusel. Es lo que se compra' },
     { k: 'notif_retencion_dias',    n: 'Retención de avisos leídos', u: 'días',      min: 7,  max: 365,  d: 'Después de esto se borran las notificaciones ya leídas. Las no leídas nunca se borran' },
+    // -1 como mínimo, no 0: el 0 significa "sin publicaciones gratis, paga
+    // desde la primera", que es una configuración legítima y distinta de
+    // "ilimitado". Por eso el ilimitado necesita su propio valor.
+    { k: 'mkt_pub_vecino_mes',      n: 'Publicaciones gratis del vecino', u: 'por mes', min: -1, max: 100, d: 'Cuántas puede publicar un vecino en Mercado sin pagar. Después compra créditos. -1 = ilimitado, 0 = paga desde la primera' },
   ];
 
   async function renderParamAjustes() {
@@ -10741,10 +10769,21 @@ document.addEventListener('focusin', (e) => {
       pmEstadoLbl.style.color = usadas >= 10 ? '#EF4444' : 'var(--ink3)';
       return;
     }
-    const usadas = await PronetDB.contarPublicacionesMercadoAnio(usuarioActual.id).catch(() => 0);
+    // Mismo criterio que puedePublicarMercado(): cupo MENSUAL parametrizable.
+    // Este cartel y esa función tienen que decir lo mismo — si el cartel dice
+    // "2/3 este año" y la validación cuenta por mes, el usuario recibe un
+    // bloqueo que la pantalla le acababa de decir que no iba a pasar.
+    const limiteMkt = parseInt(configApp.mkt_pub_vecino_mes ?? '5', 10);
     const creditos = usuarioActual.promarket_creditos || 0;
-    if (usadas < 3) {
-      pmEstadoLbl.textContent = usadas + '/3 gratis este año';
+    if (!isNaN(limiteMkt) && limiteMkt < 0) {
+      pmEstadoLbl.textContent = 'Publicaciones ilimitadas';
+      pmEstadoLbl.style.color = '#10B981';
+      return;
+    }
+    const tope = isNaN(limiteMkt) ? 5 : limiteMkt;
+    const usadas = await PronetDB.contarPublicacionesMercadoMes(usuarioActual.id).catch(() => 0);
+    if (usadas < tope) {
+      pmEstadoLbl.textContent = usadas + '/' + tope + ' gratis este mes';
       pmEstadoLbl.style.color = 'var(--ink3)';
     } else if (creditos > 0) {
       pmEstadoLbl.textContent = creditos + ' ' + (creditos === 1 ? 'publicación' : 'publicaciones') + ' extra disponible' + (creditos !== 1 ? 's' : '');
