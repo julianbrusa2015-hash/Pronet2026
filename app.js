@@ -9539,7 +9539,17 @@ document.addEventListener('focusin', (e) => {
     if (tit) tit.textContent = soyPrestador ? 'Mis clientes fijos' : 'Mis servicios fijos';
     wrap.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando…</div>';
 
-    const filas = await PronetDB.listarServiciosFijos(true).catch(() => []);
+    // listarServiciosFijos() trae las DOS direcciones sin distinguir — la
+    // RLS deja ver "donde soy vecino" O "donde soy prestador", y una cuenta
+    // con doble perfil puede tener filas de las dos a la vez. Filtrar acá
+    // por la fila, no por un flag global: mirando "Mis clientes fijos" con
+    // soyPrestador=true, un servicio fijo donde YO soy el vecino (contraté
+    // a otro) también pasaba la RLS y se colaba con `otro` resuelto a mi
+    // propio nombre — parecía que era mi propio cliente.
+    const todasLasFilas = await PronetDB.listarServiciosFijos(true).catch(() => []);
+    const filas = todasLasFilas.filter(f => soyPrestador
+      ? f.prestador_id === usuarioActual.prestador_id
+      : f.vecino_id === usuarioActual?.id);
     if (!filas.length) {
       wrap.innerHTML = `
         <div style="padding:40px 24px;text-align:center">
@@ -16521,7 +16531,19 @@ document.addEventListener('focusin', (e) => {
   }
 
   // ══ MENÚ PRESTADOR ═══════════════════════════════════════════════════
-  function abrirCobertura(){goTo('s-publicar');pubNext(3);}
+  /** El ítem "Zona de cobertura" del menú de Mi perfil mandaba al wizard de
+   *  "Publicar servicio" (paso 3 de 5, con su barra de progreso y su
+   *  "Continuar →" hacia precio/rubro) — una pantalla pensada para dar de
+   *  alta un servicio nuevo, no para editar la cobertura de uno que ya
+   *  existe. La cobertura real ya vive en Editar perfil
+   *  (edit-cobertura-field, pintado por cargarEdicionPrestador()); acá sólo
+   *  hace falta ir ahí y centrar esa sección. */
+  function abrirCobertura(){
+    goTo('s-edit-perfil');
+    setTimeout(() => {
+      document.getElementById('edit-cobertura-field')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+  }
   /** Abre las reseñas propias y corre la marca: al verlas dejan de ser
    *  nuevas y el indicador del tablero se apaga en el próximo render. */
   async function verResenasNuevas(){
