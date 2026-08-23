@@ -5613,6 +5613,23 @@
           </select>
         </div>
 
+        <!-- "Tu lote", "Coordenada de entrega" y "¿Dónde trabajás?" se leían
+             como una sola sección. El usuario preguntó justamente eso: "para
+             qué quiero coordenadas, ¿para urgencia?" — no, son de Mercado, y
+             el prestador directamente no las necesita: se oculta entero para
+             quien tiene perfil de prestador, mismo criterio que
+             edit-cobertura-field más abajo (que ya se ocultaba para el
+             vecino puro, en la dirección contraria).
+             Concesión conocida: un prestador que TAMBIÉN vende en Mercado se
+             queda sin poder cargar su lote desde acá. Hoy nadie hace las dos
+             cosas, así que no es un caso real todavía. -->
+        <div id="edit-mercado-vendedor-field">
+        <div style="display:flex;align-items:center;gap:8px;margin:20px 0 4px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:10.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em">🏪 Para vender en Entre Vecinos</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+
         <!-- Sólo el dato — para autocompletar al publicar en Mercado. La
              decisión de MOSTRARLO sigue siendo por publicación
              (pm-mostrar-lote), a propósito: guardarlo acá no lo expone en
@@ -5651,6 +5668,7 @@
                    style="flex:1;padding:9px 11px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;color:var(--ink)">
             <button type="button" onclick="geocodificarCoordenadaPerfil()" style="padding:9px 14px;border-radius:10px;border:1.5px solid var(--border);background:white;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Ubicar</button>
           </div>
+        </div>
         </div>
 
         <!-- Dónde trabajo. Es del PRESTADOR (prestadores.zonas) y decide qué

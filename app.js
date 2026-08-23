@@ -8419,6 +8419,14 @@ document.addEventListener('focusin', (e) => {
     ['edit-desc-field','edit-cobertura-field','edit-rubros-field','edit-esp-field','edit-pagos-field','edit-verif-field','edit-portfolio-field'].forEach(fid => {
       const f = document.getElementById(fid); if (f) f.style.display = esPrestador ? '' : 'none';
     });
+    // Al revés que arriba: "lote" y "coordenada de entrega" son de Entre
+    // Vecinos · Mercado, no del trabajo. Un prestador los leía pegados a
+    // "¿Dónde trabajás?" sin ninguna separación, y preguntó para qué
+    // servían. Concesión conocida: el prestador que TAMBIÉN vende en
+    // Mercado se queda sin cargar el lote desde acá — hoy no hay ningún
+    // caso así.
+    const mercadoField = document.getElementById('edit-mercado-vendedor-field');
+    if (mercadoField) mercadoField.style.display = esPrestador ? 'none' : '';
     if (esPrestador) pintarVerificacion();
     fotoPerfilNueva = null;
     const av = document.getElementById('edit-avatar');
