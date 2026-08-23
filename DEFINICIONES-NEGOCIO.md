@@ -80,6 +80,59 @@ No son suscripciones: se pagan una vez y valen para un aviso concreto.
 pasa por moderación, y queda publicado con una vigencia. Sobre un aviso *activo*
 se compra el impulso; sobre uno *vencido*, la renovación.
 
+### "Mis avisos en Servicios" — el circuito completo
+
+**Repasado 2026-08-23**, después de un ida y vuelta que primero construyó esto
+mismo en el lugar equivocado (Entre Vecinos) antes de encontrar que ya existía
+acá. Queda anotado para no repetir la confusión.
+
+**Qué es.** La ficha con foto que el prestador arma desde su propio perfil
+(*Mi Perfil → Mis avisos en Servicios*) — sube una foto, título, descripción,
+la previsualiza y la manda a revisión. **No es Entre Vecinos.** Es un sistema
+aparte, con su propia tabla (`publicaciones_prestador`), que vive en la solapa
+**Servicios** (la búsqueda normal de prestadores), no en el mercado de los
+vecinos.
+
+**El prestador no navega Entre Vecinos para nada de esto.** Ni para publicar
+—lo hace desde su perfil, sin salir de ahí— ni para ver quién lo contactó. El
+menú de Mi Perfil reflaja esta separación: "Ir a Entre Vecinos", "Consultas
+enviadas" y "Mis alertas" se ocultan para el prestador porque las tres
+suponen estar navegando o comprando en el mercado de los vecinos. Quedan
+visibles "Mis publicaciones" y "Consultas recibidas" — son sobre lo que él
+mismo publicó ahí como vecino, si alguna vez vendió algo (los roles no son
+excluyentes), no navegación.
+
+**Cupo por plan** — no está atado exclusivamente a un plan pago, el Base ya
+tiene uno:
+
+| plan | avisos al aire | duración por aviso | destacados incluidos/mes |
+|---|---|---|---|
+| Base | 1 | 7 días | 0 |
+| Plus | 3 | 15 días | 1 |
+| Pro | 6 | 30 días | 2 |
+
+Subir de plan no *destraba* la función — la **amplía**: más cupos simultáneos,
+más días al aire, destacados de regalo. Distinto de publicar en Entre
+Vecinos, donde el Base directamente no puede publicar nada (0).
+
+**Moderación.** `borrador → pendiente → activa` (o `rechazada`). Sólo el
+admin resuelve (`resolver_pub_prestador`), y a diferencia de los banners —que
+no avisan nada, el anunciante entra a mirar si quiere saber— **acá sí se
+notifica al prestador** el resultado: una revisión sin respuesta se siente
+como un rechazo silencioso.
+
+**Cómo lo contacta el vecino — la pieza central.** Toca **"Consultar"** en el
+aviso, y eso arma un **pedido dirigido** a ese prestador puntual (mismo
+mecanismo que "recontratar" a alguien con quien ya trabajaste antes:
+`dirigirPedidoA`). El prestador responde con una **propuesta normal**, que se
+elige, se cierra y se reseña — el circuito completo de PRONET.
+
+**No** es un chat suelto por fuera de ese circuito. Es la diferencia central
+con el mercado de los vecinos: ahí "Consultar" abre un chat de contacto
+directo porque comprar un objeto no es un trabajo con propuesta ni cierre.
+Acá sí es un trabajo, así que entra al mismo lugar que mide reputación,
+alimenta el ranking y decide quién aparece primero.
+
 ---
 
 ## Vecino
