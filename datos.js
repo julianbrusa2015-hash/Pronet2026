@@ -1284,8 +1284,12 @@ const PronetDB = (() => {
       let q = sb.from('publicaciones')
         // `lote` NO se trae en el feed: es la dirección del vendedor y no se
         // muestra en la tarjeta. Viaja sólo cuando hay pedido, en el chat.
+        // `prestador_id` en el embed: lo necesita mktConsultar() para saber
+        // si "Consultar" tiene que armar un pedido dirigido (autor prestador,
+        // publicación de servicio) o abrir el chat directo de siempre
+        // (autor vecino, publicación de producto).
         .select(`id, autor_id, categoria, titulo, descripcion, precio, precio_convenir, detalles, foto_url, zona, barrio, creado,
-                 disponible, likes_count, comentarios_count, impulso_hasta, perfiles:autor_id (nombre, zona)`)
+                 disponible, likes_count, comentarios_count, impulso_hasta, perfiles:autor_id (nombre, zona, prestador_id)`)
         .eq('activa', true)
         // Las destacadas primero; dentro de cada grupo, las más nuevas.
         //
