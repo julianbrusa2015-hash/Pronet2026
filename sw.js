@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v327'; // v327: el icono del rubro se edita desde el panel
+const CACHE_VERSION = 'pronet-v328'; // v328: "Todo Escobar" se distingue de las comunidades
 
 const SHELL = [
   './',

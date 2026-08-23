@@ -6441,12 +6441,12 @@ document.addEventListener('focusin', (e) => {
     // sin esta opción abrirían el selector sin nada marcado y al guardar se
     // achicarían la cobertura sin querer.
     const chip = (valor, texto, extra) =>
-      '<div class="sub-opt' + (cubiertas.includes(valor) ? ' on' : '') +
+      '<div class="sub-opt' + (extra ? ' sub-opt-raiz' : '') + (cubiertas.includes(valor) ? ' on' : '') +
       '" data-zona="' + escHTML(valor) + '"' + (extra || '') +
       ' onclick="toggleZonaCobertura(this,\'' + pref + '\')">' + escHTML(texto) + '</div>';
 
     wrapZ.innerHTML =
-      chip(ZONA_RAIZ, 'Todo ' + ZONA_RAIZ, ' data-raiz="1"') +
+      chip(ZONA_RAIZ, '🌎 Todo ' + ZONA_RAIZ + ' · todas las zonas', ' data-raiz="1"') +
       comunidades.map(c => chip(c.nombre, c.nombre)).join('');
     if (typeof habilitarAccesibilidadTeclado === 'function') habilitarAccesibilidadTeclado(wrapZ);
 

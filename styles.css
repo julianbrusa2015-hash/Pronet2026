@@ -3053,3 +3053,13 @@
      (la portada de Entre Vecinos, por ejemplo) aunque no tuviera .active. */
   #s-mercado.active { display: flex; flex-direction: column; }
   #mkt-ver-mas { margin-top: auto; }
+
+  /* "Todo Escobar" no es una comunidad más: es la que las reemplaza a todas.
+     Como chip idéntico a los otros veinte quedaba invisible —el usuario
+     preguntó si existía una opción "todas las zonas" teniéndola delante—,
+     así que va en su propio renglón, más ancha y con el ícono adelante. */
+  .sub-opt-raiz {
+    flex-basis:100%; text-align:center; padding:9px 14px; font-weight:700;
+    border-style:dashed; margin-bottom:2px;
+  }
+  .sub-opt-raiz.on { border-style:solid; }
