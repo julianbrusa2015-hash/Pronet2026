@@ -35,9 +35,16 @@ Los planes son **del prestador**. Un vecino no tiene plan ni lo necesita.
 | Badge en búsqueda | — | — | ✔ |
 | Desempate en ranking | — | — | ✔ |
 | Estadísticas | — | básicas | completas + export |
-| Publicaciones en Mercado | *(cupo de vecino)* | 10/mes | ilimitadas |
+| Publicar en Mercado · Servicios | **no** | 10/mes | ilimitadas |
 
-> ⚠️ **La última fila es una decisión abierta.** Ver "Pendientes de definición".
+> **Decidido 2026-08-22:** publicar en la sección Servicios de Entre Vecinos es
+> un beneficio de los planes superiores. Un prestador con plan **Base no puede
+> publicar** ahí; el camino es upgradear, no comprar créditos sueltos.
+>
+> **El prestador publica servicios y nada más.** No publica productos: para eso
+> está el mercado del vecino. Que un prestador con plan Base no pueda publicar
+> nada en Mercado es la definición, no un efecto colateral — entra a Entre
+> Vecinos por su oficio, no a vender una bicicleta.
 
 ### Compras sueltas
 
@@ -80,14 +87,20 @@ Dos cosas distintas se llaman "publicación". Conviene no confundirlas:
 | | Anuncio de prestador | Publicación de Mercado |
 |---|---|---|
 | Tabla | `publicaciones_prestador` | `publicaciones` |
-| Quién | Prestador | Vecino y prestador |
-| Qué | Servicios | Productos (vecino) / Servicios (prestador) |
+| Quién | Prestador | Vecino (productos) · Prestador (servicios) |
+| Qué | Servicios | Productos o Servicios, según quién publique |
 | Dónde se ve | Feed de Servicios | Entre Vecinos |
 | Mecánica | Contacto directo | Contacto directo |
 | Se paga con | Cupo del plan | Cupo mensual + créditos |
 
-El prestador **sólo puede publicar servicios** en Mercado, nunca productos: si
-publicara un producto tendría una sección que después no ve.
+El prestador **sólo puede publicar servicios** en Mercado, nunca productos: son
+dos mercados distintos y él entra por su oficio.
+
+> El código justifica esta restricción diciendo que el prestador "tendría una
+> sección que después no ve". **Eso ya no es cierto** —verificado 2026-08-22: el
+> prestador ve las dos secciones en el feed, las pestañas no se le esconden—.
+> La restricción se sostiene igual, pero por la separación de mercados, no por
+> esa razón. El comentario del código conviene corregirlo cuando se toque.
 
 > La diferencia con el núcleo de PRONET no es la categoría sino la **mecánica**:
 > el núcleo es *pedido → propuestas → elección*; Mercado y Servicios son
@@ -97,12 +110,13 @@ publicara un producto tendría una sección que después no ve.
 
 ## Pendientes de definición
 
-**1. ¿El plan del prestador debe dar cupo en Mercado?**
-Hoy sí: Pro ilimitado, Plus 10/mes. La regla que se propuso —y que resuelve la
-tensión— es *"el plan cubre la actividad profesional, los créditos cubren la
-venta entre vecinos"*: el plan no incluiría "Mercado" como sección, sino las
-publicaciones **profesionales** del prestador, aparezcan donde aparezcan.
-Cambiarlo es un downgrade para quien hoy publica por su plan.
+**1. CERRADO 2026-08-22 — el plan sí rige el acceso a Mercado.**
+Publicar en la sección Servicios es beneficio de Plus y Pro. El prestador Base
+no publica en Mercado, y el camino es upgradear.
+
+Queda una sola pregunta suelta: **si un prestador Base puede comprar un crédito
+igual.** La lectura por defecto es que **no** — un crédito a $5.000 competiría
+con Plus a $5.990 y canibalizaría el upgrade.
 
 **2. Impulso para el vecino.** No existe. El hueco de monetización más claro de
 ese lado: el vecino que vende algo caro pagaría por aparecer primero en su
