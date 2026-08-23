@@ -50,6 +50,38 @@ async function supabaseDelete(token, table, filter) {
   return res.status;
 }
 
+/** Borra los pedidos de prueba por la Management API.
+ *
+ *  Las cascadas se llevan propuestas, chats y mensajes solas. Lo único que
+ *  hay que sacar antes es `trabajo_fotos`, cuya FK contra chats_trabajo es
+ *  NO ACTION y aborta el borrado del pedido entero.
+ *
+ *  El filtro es siempre `titulo like 'Test E2E%'`: esto corre como dueño de
+ *  la base, así que el alcance lo pone la consulta y nada más. */
+async function limpiarPedidosDePrueba(token) {
+  const pat = process.env.SUPABASE_PAT;
+  const ref = process.env.SUPABASE_PROJECT_REF;
+  if (!pat || !ref) {
+    const st = await supabaseDelete(token, 'pedidos', 'titulo=like.Test%20E2E%25');
+    return `sin SUPABASE_PAT, DELETE parcial como vecino (status ${st})`;
+  }
+  const sql = `
+    delete from public.trabajo_fotos where chat_id in (
+      select ct.id from public.chats_trabajo ct
+        join public.pedidos pe on pe.id = ct.pedido_id
+       where pe.titulo like 'Test E2E%');
+    delete from public.denuncias where pedido_id in (
+      select id from public.pedidos where titulo like 'Test E2E%');
+    delete from public.pedidos where titulo like 'Test E2E%';`;
+  const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${pat}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: sql }),
+  });
+  if (!res.ok) return `Management API HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`;
+  return 'ok (Management API)';
+}
+
 module.exports = async function globalSetup() {
   // ── Autenticar como vecino_test ──────────────────────────────────────────
   const { token } = await supabaseAuth(VECINO_EMAIL, VECINO_PW);
@@ -61,9 +93,19 @@ module.exports = async function globalSetup() {
   console.log('[setup] vecino_test userId:', userId);
 
   // 1. Borrar pedidos Test E2E del vecino
-  const s1 = await supabaseDelete(token, 'pedidos', 'titulo=like.Test%20E2E%25');
+  //
+  // Ya no alcanza con el DELETE del cliente: desde
+  // supabase-borrar-pedido-sin-propuestas.sql, un pedido que tiene
+  // propuestas vivas no se puede borrar, y varios tests justamente le
+  // mandan propuestas. La limpieza pasa a la Management API, que corre como
+  // dueño de la base y no pasa por RLS.
+  //
+  // Con fallback al camino viejo: sin SUPABASE_PAT (una CI sin el secreto)
+  // igual limpia los pedidos sin propuestas, que es mejor que no limpiar
+  // nada y mucho mejor que abortar la corrida entera.
+  const s1 = await limpiarPedidosDePrueba(token);
   const pedidosRestantes = await supabaseGet(token, 'pedidos', `usuario_id=eq.${userId}`);
-  console.log(`[setup] DELETE pedidos Test E2E: status ${s1} → quedan ${pedidosRestantes.length} pedidos`);
+  console.log(`[setup] limpieza pedidos Test E2E: ${s1} → quedan ${pedidosRestantes.length} pedidos`);
 
   // 2. Limpiar entradas de rate_limits para crear_pedido del vecino
   const s2 = await supabaseDelete(token, 'rate_limits', `user_id=eq.${userId}&accion=eq.crear_pedido`);

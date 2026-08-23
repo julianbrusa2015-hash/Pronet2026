@@ -13365,6 +13365,64 @@ document.addEventListener('focusin', (e) => {
   }
 
   // Renderiza los pedidos de Supabase/local en la pantalla de Pedidos
+  // ══ ARCHIVAR ═══════════════════════════════════════════════════════
+  //
+  // Archivar esconde de la lista de QUIEN archiva, nunca de la del otro.
+  // Por eso vive en una tabla con usuario_id y no en una bandera del pedido
+  // (supabase-archivados.sql lo explica en detalle): si fuera del pedido,
+  // el vecino y el prestador se pisarían el mismo booleano.
+  //
+  // Las reglas de qué se puede archivar están en el servidor porque miran
+  // filas que el usuario no siempre puede leer — los chats de su pedido.
+  // Acá sólo se muestra el motivo que devuelve.
+  const verArchivados = { pedido: false, propuesta: false };
+
+  /** Banner con el contador y el botón de mostrar/ocultar. Se dibuja sólo
+   *  si hay algo archivado: un control para cero elementos es ruido. */
+  function bannerArchivados(tipo, cuantos) {
+    if (!cuantos) return '';
+    const viendo = verArchivados[tipo];
+    const que = tipo === 'pedido' ? 'pedido' : 'propuesta';
+    return '<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:12px;padding:9px 12px;margin:0 14px 10px">' +
+      '<span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2)">📦 ' + cuantos + ' ' +
+      escHTML(que) + (cuantos !== 1 ? 's' : '') +
+      (tipo === 'pedido' ? (cuantos !== 1 ? ' archivados' : ' archivado')
+                         : (cuantos !== 1 ? ' archivadas' : ' archivada')) + '</span>' +
+      '<button onclick="alternarVerArchivados(\'' + tipo + '\')" style="background:white;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:inherit">' +
+      (viendo ? 'Ocultar' : 'Ver') + '</button></div>';
+  }
+
+  function alternarVerArchivados(tipo) {
+    verArchivados[tipo] = !verArchivados[tipo];
+    if (tipo === 'pedido') renderPedidosGuardados();
+    else abrirMisPropuestas(window._misPropuestasFiltro);
+  }
+  window.alternarVerArchivados = alternarVerArchivados;
+
+  /** Botón chico de archivar/desarchivar para una tarjeta. */
+  function botonArchivar(tipo, id, estaArchivado) {
+    const b = document.createElement('button');
+    b.textContent = estaArchivado ? '↩️ Desarchivar' : '📦 Archivar';
+    b.style.cssText = 'width:100%;margin-top:8px;background:transparent;border:1px solid var(--border);border-radius:10px;padding:7px;font-size:11.5px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:inherit';
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      b.disabled = true; b.textContent = '…';
+      const r = await PronetDB.archivar(tipo, id, !estaArchivado);
+      if (!r?.ok) {
+        b.disabled = false;
+        b.textContent = estaArchivado ? '↩️ Desarchivar' : '📦 Archivar';
+        // El mensaje viene redactado del servidor ("Ese pedido tiene un
+        // trabajo en curso…"), así que se muestra tal cual.
+        showToast && showToast('⚠️ ' + (r?.error || 'No se pudo archivar'));
+        return;
+      }
+      showToast && showToast(estaArchivado ? '↩️ Vuelve a tu lista' : '📦 Archivado');
+      if (tipo === 'pedido') renderPedidosGuardados();
+      else abrirMisPropuestas(window._misPropuestasFiltro);
+    });
+    return b;
+  }
+
   async function renderPedidosGuardados() {
     const wrap = document.getElementById('mis-pedidos-guardados');
     if (!wrap) return;
@@ -13387,12 +13445,19 @@ document.addEventListener('focusin', (e) => {
     if (filtroMisPedidos && filtroMisPedidos !== 'todos') {
       pedidos = pedidos.filter(p => matchRubro(p.rubro, filtroMisPedidos));
     }
+
+    // Archivados: se sacan de la lista, o se muestran solos si el vecino
+    // pidió verlos. No es un tercer estado mezclado — mezclarlos haría que
+    // archivar no sirva para nada.
+    const archPed = await PronetDB.listarArchivados('pedido').catch(() => new Set());
+    const nArchPed = pedidos.filter(p => archPed.has(p.id)).length;
+    pedidos = pedidos.filter(p => verArchivados.pedido ? archPed.has(p.id) : !archPed.has(p.id));
     // Sincronizar el estado visual de los chips con el filtro activo
     document.querySelectorAll('#ped-filter-chips .chip').forEach(c => {
       c.classList.toggle('on', (c.dataset.filtro || 'todos') === filtroMisPedidos);
     });
 
-    wrap.innerHTML = '';
+    wrap.innerHTML = bannerArchivados('pedido', nArchPed);
 
     if (pedidos.length === 0) {
       const msg = filtroMisPedidos !== 'todos'
@@ -13496,6 +13561,14 @@ document.addEventListener('focusin', (e) => {
         });
         av.appendChild(btnR);
         card.appendChild(av);
+      }
+
+      // Archivar: sólo lo que ya no está recibiendo propuestas. El servidor
+      // vuelve a validarlo —y además chequea que no haya trabajo en curso,
+      // que desde acá no se ve—, así que esto es sólo para no ofrecer un
+      // botón que va a fallar.
+      if ((p.estado || '') !== 'Publicado') {
+        card.appendChild(botonArchivar('pedido', p.id, archPed.has(p.id)));
       }
 
       // Botones: Editar + Eliminar
@@ -16358,6 +16431,9 @@ document.addEventListener('focusin', (e) => {
     if(!usuarioActual||!usuarioActual.prestador_id){alert('Tu perfil de prestador no está completo todavía.');return;}
     // Guardar la pantalla de origen para el back
     window._misPropuestasOrigen = document.querySelector('.screen.active')?.id || 's-miperfil';
+    // Se guarda para poder volver a dibujar la misma vista después de
+    // archivar, sin mandar al prestador de vuelta a "todas".
+    window._misPropuestasFiltro = filtro;
     goTo('s-mis-propuestas');
     const wrap=document.getElementById('mp-lista');if(!wrap)return;
     wrap.innerHTML='<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>';
@@ -16369,6 +16445,14 @@ document.addEventListener('focusin', (e) => {
       pedidos = await PronetDB.obtenerVarios('pedidos', mias.map(pr => pr.pedido_id));
     }catch(e){wrap.innerHTML='<div style="padding:24px;text-align:center;color:#BE123C">⚠️ No se pudieron cargar tus propuestas.</div>';return;}
     if(mias.length===0){wrap.innerHTML='<div style="padding:32px 14px;text-align:center;font-size:13px;color:var(--ink3)">Todavía no enviaste propuestas.</div>';return;}
+
+    // Archivadas fuera de la lista, o solas si el prestador pidió verlas.
+    // Va ANTES del filtro por estado para que el contador de "tenés N en
+    // otros estados" no cuente las que él mismo escondió.
+    const archProp = await PronetDB.listarArchivados('propuesta').catch(() => new Set());
+    const nArchProp = mias.filter(pr => archProp.has(pr.id)).length;
+    mias = mias.filter(pr => verArchivados.propuesta ? archProp.has(pr.id) : !archProp.has(pr.id));
+
     const totalMias=mias.length;
     let bannerFiltro='';
     if(filtro){
@@ -16388,7 +16472,7 @@ document.addEventListener('focusin', (e) => {
     const peso={elegida:0,pendiente:1,retirada:2,rechazada:3};
     mias.sort((a,b)=>(peso[a.estado]-peso[b.estado])||(new Date(b.creado)-new Date(a.creado)));
     const CHIP={elegida:'<span style="background:#DCFCE7;color:#16A34A;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">✅ ¡Te eligieron!</span>',pendiente:'<span style="background:var(--gold-s);color:#92400E;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">⏳ Pendiente</span>',rechazada:'<span style="background:var(--surface,#F1F5F9);color:var(--ink3);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">No elegida</span>',retirada:'<span style="background:var(--surface,#F1F5F9);color:var(--ink3);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700">Retirada</span>'};
-    wrap.innerHTML=bannerFiltro;
+    wrap.innerHTML=bannerArchivados('propuesta', nArchProp)+bannerFiltro;
     mias.forEach(pr=>{
       const ped=pedidos.find(p=>p.id===pr.pedido_id)||{},esElegida=pr.estado==='elegida';
       const card=document.createElement('div');
@@ -16397,6 +16481,12 @@ document.addEventListener('focusin', (e) => {
       // Toda card navega a s-estado-propuesta — desde ahí el prestador accede al chat
       card.style.cursor='pointer';
       card.addEventListener('click',()=>{pedidoActual=ped;propuestaMia=pr;goTo('s-estado-propuesta');const ep=document.getElementById('s-estado-propuesta');if(ep)ep.scrollTop=0;cargarEstadoPropuesta(ped,pr);});
+      // Sólo las que ya no están en juego. Una 'pendiente' sigue viva y una
+      // 'elegida' es un trabajo hecho: esconderlo de su propio historial no
+      // le sirve al prestador. El servidor valida lo mismo.
+      if(['rechazada','retirada'].includes(pr.estado)){
+        card.appendChild(botonArchivar('propuesta', pr.id, archProp.has(pr.id)));
+      }
       wrap.appendChild(card);
     });
   }

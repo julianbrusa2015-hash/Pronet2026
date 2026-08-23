@@ -2655,6 +2655,33 @@ const PronetDB = (() => {
      * Cuenta propuestas activas para un pedido usando RPC SECURITY DEFINER.
      * Bypasa RLS para que el prestador vea la competencia real sin exponer datos.
      */
+    /** Los ids que el usuario archivó de un tipo ('pedido' | 'propuesta').
+     *  Devuelve un Set para que filtrar una lista sea O(1). */
+    async listarArchivados(tipo) {
+      if (!remoto) return new Set();
+      try {
+        const { data, error } = await sb.from('archivados').select('ref_id').eq('tipo', tipo);
+        if (error) { console.warn('[PronetDB] listarArchivados', error.message); return new Set(); }
+        return new Set((data || []).map(r => r.ref_id));
+      } catch (e) { console.warn('[PronetDB] listarArchivados', e.message); return new Set(); }
+    },
+
+    /** Archiva o desarchiva. Las reglas de qué se puede archivar están en el
+     *  servidor (supabase-archivados.sql) porque miran filas que el usuario
+     *  no siempre puede leer — los chats de su pedido, por ejemplo. El
+     *  mensaje de error viene redactado de allá para poder mostrarlo tal
+     *  cual. */
+    async archivar(tipo, refId, archivar = true) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      try {
+        const { error } = await sb.rpc('archivar', {
+          p_tipo: tipo, p_ref_id: refId, p_archivar: archivar,
+        });
+        if (error) return { ok: false, error: error.message };
+        return { ok: true };
+      } catch (e) { return { ok: false, error: e.message }; }
+    },
+
     /** Ranking de las propuestas de un pedido: [{propuesta_id, pos, total,
      *  puntaje}]. La fórmula vive en el servidor (supabase-ranking-
      *  propuestas.sql) y NO se replica acá: que el vecino ordenara con una
