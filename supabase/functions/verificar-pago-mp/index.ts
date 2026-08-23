@@ -58,33 +58,9 @@ Deno.serve(async (req) => {
     if (!plan || !periodo) {
       return json({ ok: false, motivo: 'metadata_incompleta' }, 200);
     }
-
-    // ── Productos que esta función NO sabe activar ─────────────────────
-    //
-    // banner, impulso y renovación se activan con RPCs que validan propiedad,
-    // estado y cupo (activar_banner_pagado, activar_impulso_pagado,
-    // activar_renovacion_pagada). Sólo el webhook las llama.
-    //
-    // El corte tiene que estar ACÁ, antes del insert en `pagos_procesados`.
-    // Ese insert es el candado de idempotencia: si esta función lo toma y
-    // después no activa nada, el webhook llega, choca con el 23505, responde
-    // "ya procesado" y el producto NUNCA se entrega. Se cobra y no se da.
-    //
-    // Peor todavía: sin este corte caían al upsert de `suscripciones` de más
-    // abajo, que va con onConflict:'usuario_id' y REEMPLAZA la fila. Un
-    // prestador con plan Pro que compraba un impulso de $1500 quedaba con
-    // plan:'impulso' y perdía su plan pago.
-    //
-    // Es una carrera: si el webhook llega primero, todo funciona y esta
-    // función recibe el 23505 sin hacer daño. El problema aparece cuando gana
-    // el cliente, y los dos ocurren segundos después del pago.
-    //
-    // El cliente ya reintenta leyendo el estado (ver el fallback en app.js),
-    // así que devolver ok:false acá no empeora la experiencia.
-    const ACTIVA_EL_WEBHOOK = ['banner', 'impulso', 'renovacion', 'impulso_mercado'];
-    if (ACTIVA_EL_WEBHOOK.includes(plan)) {
-      return json({ ok: false, motivo: 'lo_activa_el_webhook', plan }, 200);
-    }
+    // Qué se compró, cuando el producto no es el plan en sí — hoy, el id del
+    // banner/publicación. Mismo campo que lee webhook-mp.
+    const ref = pago.metadata?.ref;
 
     // Cliente con service_role para poder escribir sin restricciones de RLS
     const sbAdmin = createClient(
@@ -123,6 +99,48 @@ Deno.serve(async (req) => {
         return json({ error: 'Error acreditando publicación' }, 500);
       }
       return json({ ok: true, plan: 'promarket_credito' }, 200);
+    }
+
+    // ── banner, impulso, impulso_mercado, renovación ────────────────────
+    //
+    // Hasta acá estos cuatro quedaban SIN respaldo: si webhook-mp no
+    // procesaba el pago —MP nunca lo notificó, o notificó y algo falló—
+    // esta función se negaba a tocarlos ("lo_activa_el_webhook") y no había
+    // ningún otro camino. El dinero entraba y el producto se quedaba
+    // colgado en 'aprobado' para siempre, hasta que alguien lo notara y lo
+    // reprocesara a mano. Es lo que le pasó a un banner real: pago
+    // approved/accredited en MercadoPago, cero rastro en pagos_procesados.
+    //
+    // El motivo original para excluirlos era la carrera con el upsert de
+    // `suscripciones` (onConflict:'usuario_id', que REEMPLAZA la fila) — pero
+    // estos cuatro nunca llegan a esa rama, tienen la suya propia acá arriba,
+    // igual que promarket_credito. Mismo patrón: activar con el RPC
+    // idempotente (revalida estado antes de tocar nada) y soltar el candado
+    // si falla, para que el webhook —si igual llega, tarde— pueda
+    // reintentarlo sin chocar con un 23505 fantasma.
+    if (plan === 'banner' || plan === 'impulso' || plan === 'impulso_mercado' || plan === 'renovacion') {
+      if (!ref) {
+        await sbAdmin.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[verificar-pago-mp] pago de', plan, 'sin ref', pago.id);
+        return json({ ok: false, motivo: 'sin_referencia', plan }, 200);
+      }
+      const RPC_POR_PLAN: Record<string, { fn: string; param: string }> = {
+        banner:           { fn: 'activar_banner_pagado',          param: 'p_banner_id' },
+        impulso:          { fn: 'activar_impulso_pagado',         param: 'p_pub_id' },
+        impulso_mercado:  { fn: 'activar_impulso_mercado_pagado', param: 'p_pub_id' },
+        renovacion:       { fn: 'activar_renovacion_pagada',      param: 'p_pub_id' },
+      };
+      const { fn, param } = RPC_POR_PLAN[plan];
+      const { data: resAct, error: errAct } = await sbAdmin.rpc(fn, {
+        [param]: ref,
+        p_usuario_id: user.id,
+      });
+      if (errAct || !resAct?.ok) {
+        await sbAdmin.from('pagos_procesados').delete().eq('payment_id', String(pago.id));
+        console.error('[verificar-pago-mp] error activando', plan, errAct?.message || resAct?.error);
+        return json({ error: 'Error activando ' + plan }, 500);
+      }
+      return json({ ok: true, plan }, 200);
     }
 
     // Planes de suscripción: lista EXPLÍCITA, no un "todo lo demás".
