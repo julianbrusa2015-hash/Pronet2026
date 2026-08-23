@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v340'; // v340: consultar un servicio de prestador en Mercado arma pedido dirigido
+const CACHE_VERSION = 'pronet-v341'; // v341: revert Entre Vecinos y prestador ya no navega ese menu
 
 const SHELL = [
   './',

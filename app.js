@@ -7001,40 +7001,6 @@ document.addEventListener('focusin', (e) => {
     if (!usuarioActual) { mostrarGate && mostrarGate({ titulo: 'Consultar', sub: 'Necesitás una cuenta para enviar mensajes.' }); return; }
     if (usuarioActual.id === autorId) { showToast && showToast('No podés consultar tu propia publicación'); return; }
 
-    // Ruteo a propuesta SÓLO cuando las dos cosas son ciertas: el autor es
-    // un prestador registrado de verdad, Y la categoría es de tipo
-    // 'servicio'. Ninguna de las dos solas alcanza:
-    //
-    //  - Sólo "es prestador" no alcanza: hay cuentas con doble perfil
-    //    vendiendo PRODUCTOS (pizza, ollas, adornos) — eso sigue siendo
-    //    contacto directo, comprar algo no es un "trabajo" con propuesta.
-    //  - Sólo "categoría servicio" no alcanza: el comentario de arriba de
-    //    este módulo ya documenta el caso testigo — un VECINO sin
-    //    prestador_id ofreciendo masajes a sus vecinos, informal, sigue
-    //    siendo contacto directo. Ese caso no cambia acá.
-    //
-    // Sólo cuando un prestador registrado publica bajo una categoría de
-    // servicio (lo único que el plan Plus/Pro lo deja publicar) tiene
-    // sentido tratarlo como su oficio real: arma un pedido dirigido a él,
-    // que responde con una propuesta normal — el mismo circuito de
-    // recontratar (dirigirPedidoA), que ya lleva a cierre y reseña. Un chat
-    // de Mercado aparte no alimentaba nada de eso: quedaba desconectado
-    // del ranking, de la reputación, de todo lo que sí mide un trabajo real.
-    const prestadorIdAutor = pubCache.perfiles?.prestador_id;
-    const esCategoriaServicio = catPorSlug(pubCache.categoria)?.tipo === 'servicio';
-    if (prestadorIdAutor && esCategoriaServicio) {
-      if (!tieneTelefono()) return abrirTelefonoGate(() => mktConsultar(pubId, { silencioso }));
-      // Sin el pubId como tercer argumento, a propósito: pedidos.origen_pub_id
-      // tiene una FK que apunta a publicaciones_prestador (la del Feed de
-      // Servicios), no a publicaciones (Mercado) — mandar un pubId de acá
-      // rompería el insert entero por violación de FK. Se pierde el dato de
-      // "vino de esta publicación puntual", pero el pedido se sigue creando
-      // bien. Si más adelante hace falta ese rastro, hay que ensanchar el
-      // esquema (una columna aparte o sacar la FK), no forzarlo por acá.
-      dirigirPedidoA(prestadorIdAutor, autorNombre);
-      return;
-    }
-
     chatMercadoOrigen = 's-mercado';
     chatMercadoContraparteId = autorId;
     chatMercadoContraparteNombre = autorNombre || 'Vendedor';
@@ -11079,6 +11045,18 @@ document.addEventListener('focusin', (e) => {
     const menuPubs = document.getElementById('menu-pubs-prestador');
     if (menuPubs) menuPubs.style.display =
       (esPrestador() && pubsPrestadorActivo()) ? '' : 'none';
+
+    // El prestador no navega Entre Vecinos: su oficio pasa por "Mis avisos
+    // en Servicios" de arriba, que ya arma pedido dirigido al consultarlo
+    // (pubPrestContactar → dirigirPedidoA). "Ir a Entre Vecinos", "Consultas
+    // enviadas" y "Mis alertas" son las tres que suponen estar navegando o
+    // comprando ahí — se ocultan sólo para él. "Mis publicaciones" y
+    // "Consultas recibidas" quedan: son sobre lo que ÉL publicó como
+    // vecino (puede vender un objeto igual que cualquiera), no navegación.
+    ['menu-ir-a-vecinos', 'menu-mis-consultas-env', 'menu-mis-alertas-mkt'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = esPrestador() ? 'none' : '';
+    });
 
     const loyaltyMenu = document.querySelector('.menu-item[data-feature="loyalty"]');
     if (loyaltyMenu) loyaltyMenu.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
