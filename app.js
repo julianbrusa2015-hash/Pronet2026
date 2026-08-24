@@ -11087,8 +11087,15 @@ document.addEventListener('focusin', (e) => {
     if (loyaltyTile) loyaltyTile.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
     // La venta de espacios del carrusel se ofrece sólo si el admin la
     // habilitó. Con el interruptor apagado la fila no existe.
+    // "Promocionar" en el menú general: sólo prestador — para él "mi
+    // negocio" es literal, siempre relevante. El vecino la ve más abajo,
+    // dentro de Entre Vecinos (menu-promocionar-vecino), donde tiene
+    // contexto en vez de aparecer suelta arriba de todo.
+    const promoActivo = bannersPagosActivos();
     const menuPromo = document.getElementById('menu-promocionar');
-    if (menuPromo) menuPromo.style.display = bannersPagosActivos() ? '' : 'none';
+    if (menuPromo) menuPromo.style.display = (promoActivo && esPrestador()) ? '' : 'none';
+    const menuPromoVecino = document.getElementById('menu-promocionar-vecino');
+    if (menuPromoVecino) menuPromoVecino.style.display = (promoActivo && !esPrestador()) ? '' : 'none';
     // Mis avisos en Servicios: sólo prestadores, y con el flag prendido.
     const menuPubs = document.getElementById('menu-pubs-prestador');
     if (menuPubs) menuPubs.style.display =
