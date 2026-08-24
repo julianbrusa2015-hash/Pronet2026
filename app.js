@@ -401,6 +401,9 @@ document.addEventListener('focusin', (e) => {
       .forEach(f => activarScrollChips(f));
     // Si va a Mercado, renderizar el feed (sin resetear búsqueda si vuelve desde chat)
     if (id === 's-mercado') {
+      // Entrar de nuevo vuelve a traer los banners: es el momento en que
+      // puede haber aparecido uno recién aprobado, o vencido otro.
+      _mktAdsPintado = false;
       const inp = document.getElementById('mkt-buscador');
       if (inp && !mktBusqueda) inp.value = '';
       poblarSelectZonaMercado();
@@ -3806,17 +3809,32 @@ document.addEventListener('focusin', (e) => {
   // misma fuente de verdad —la posición del scroll— y no pueden quedar
   // desfasados, que es el bug clásico de los carruseles hechos a mano.
 
-  let _adsTimer = null;
-  let _adsPausado = false;
-  let _adsObserver = null;
+  // Hay DOS carruseles —la portada y el de arriba del feed de Entre
+  // Vecinos— y cada uno rota a su ritmo, con su propio timer y su propio
+  // observer. Antes esto eran tres variables sueltas que alcanzaban para
+  // uno solo: al abrir el segundo, el timer del último en pintarse pisaba
+  // al del otro y uno de los dos se quedaba quieto.
+  const _ads = new Map();
+  function adsEstado(pref) {
+    if (!_ads.has(pref)) _ads.set(pref, { timer: null, pausado: false, observer: null });
+    return _ads.get(pref);
+  }
 
-  async function pintarBanners() {
-    const caja  = document.getElementById('home-ads');
-    const track = document.getElementById('home-ads-track');
-    const dots  = document.getElementById('home-ads-dots');
+  /** Pinta un carrusel de banners.
+   *
+   *  `pref` es el prefijo de los ids del DOM ('home-ads' → #home-ads,
+   *  #home-ads-track, #home-ads-dots) y también la clave del estado.
+   *  `ubicacion` es de qué inventario saca los banners pagos: portada y
+   *  Entre Vecinos son bolsas separadas de 6 (ver
+   *  supabase-banners-ubicacion.sql).
+   *  `propias` y `house` son las tarjetas sin imagen que arma la app. */
+  async function pintarCarruselAds({ pref, ubicacion, propias = [], house: houseFn }) {
+    const caja  = document.getElementById(pref);
+    const track = document.getElementById(pref + '-track');
+    const dots  = document.getElementById(pref + '-dots');
     if (!caja || !track) return;
 
-    let banners = await PronetDB.listarBannersVigentes().catch(() => []);
+    let banners = await PronetDB.listarBannersVigentes(ubicacion).catch(() => []);
     // Sin ningún banner pago vigente: primero se prueba con los "de la
     // casa" que haya cargado el admin en Parametrías (imagen real, se
     // renderizan igual que uno pago). Si tampoco hay ninguno cargado
@@ -3824,17 +3842,16 @@ document.addEventListener('focusin', (e) => {
     // más abajo — para que el carrusel nunca quede completamente vacío
     // aunque el admin no haya subido nada.
     if (!banners.length) {
-      banners = await PronetDB.listarBannersHouse().catch(() => []);
+      banners = await PronetDB.listarBannersHouse(ubicacion).catch(() => []);
     }
     // Las tarjetas propias —el CTA que cambia según el usuario y Urgencias—
     // van como slides del carrusel y no como bloques apilados arriba. Antes
     // sumaban 148px de alto propio y empujaban el feed fuera de la pantalla;
     // acá ocupan cero espacio extra y además rotan, que es lo que hace que
     // se vean.
-    const propias = slidesPropias();
-    const house = banners.length ? [] : slidesHouse();
+    const house = (banners.length || !houseFn) ? [] : houseFn();
     const total = propias.length + house.length + banners.length;
-    if (!total) { caja.style.display = 'none'; detenerAds(); return; }
+    if (!total) { caja.style.display = 'none'; detenerAds(pref); return; }
 
     track.innerHTML = propias.join('') + house.join('') + banners.map((b, i) => {
       // <button> y no <div>: es un elemento clickeable, y así se llega con
@@ -3862,13 +3879,14 @@ document.addEventListener('focusin', (e) => {
     track.querySelectorAll('.ads-slide').forEach(el => {
       // Las propias llevan `data-accion`; las de publicidad, `data-id`.
       const accion = el.dataset.accion;
-      el.addEventListener('click', accion === 'cta'            ? () => bannerAction()
-                                 : accion === 'urgencia'       ? () => verUrgencias()
-                                 : accion === 'promocionarme'  ? () => abrirPromocionar()
+      el.addEventListener('click', accion === 'cta'              ? () => bannerAction()
+                                 : accion === 'urgencia'         ? () => verUrgencias()
+                                 : accion === 'promocionarme'    ? () => abrirPromocionar()
+                                 : accion === 'publicar-mercado' ? () => abrirPublicarMercado()
                                  : () => abrirBanner(el.dataset.id, el.dataset.enlace));
     });
     dots.querySelectorAll('.ads-dot').forEach(d => {
-      d.addEventListener('click', () => irASlide(Number(d.dataset.i)));
+      d.addEventListener('click', () => irASlide(pref, Number(d.dataset.i)));
     });
 
     // El punto activo se sincroniza con un IntersectionObserver y NO con el
@@ -3877,21 +3895,31 @@ document.addEventListener('focusin', (e) => {
     // de 0 a 715 sin un solo disparo— y los puntos quedaban clavados en el
     // primero. El observer mira qué slide está a la vista, que es la
     // pregunta real, y sirve igual para el dedo que para la rotación.
-    if (_adsObserver) _adsObserver.disconnect();
-    _adsObserver = new IntersectionObserver((entradas) => {
+    const est = adsEstado(pref);
+    if (est.observer) est.observer.disconnect();
+    est.observer = new IntersectionObserver((entradas) => {
       entradas.forEach(e => {
         if (!e.isIntersecting || e.intersectionRatio < 0.6) return;
-        marcarPunto([...track.children].indexOf(e.target));
+        marcarPunto(pref, [...track.children].indexOf(e.target));
       });
     }, { root: track, threshold: [0.6] });
-    [...track.children].forEach(el => _adsObserver.observe(el));
+    [...track.children].forEach(el => est.observer.observe(el));
     // Mientras lo está tocando no se le mueve solo de abajo del dedo.
-    track.onpointerdown  = () => { _adsPausado = true; };
-    track.onpointerup    = () => { _adsPausado = false; };
-    track.onpointercancel = () => { _adsPausado = false; };
+    track.onpointerdown  = () => { est.pausado = true; };
+    track.onpointerup    = () => { est.pausado = false; };
+    track.onpointercancel = () => { est.pausado = false; };
 
     caja.style.display = 'block';
-    arrancarAds(total);
+    arrancarAds(pref, total);
+  }
+
+  /** El carrusel de la portada: las tarjetas propias del vecino (publicar
+   *  un pedido, Urgencias) más los banners pagos de `ubicacion='portada'`. */
+  function pintarBanners() {
+    return pintarCarruselAds({
+      pref: 'home-ads', ubicacion: 'portada',
+      propias: slidesPropias(), house: slidesHouse,
+    });
   }
 
   // ── Aviso del sistema: banner gratis que escribe el admin ──────────────
@@ -4095,13 +4123,13 @@ document.addEventListener('focusin', (e) => {
     return mejor;
   }
 
-  function marcarPunto(i) {
-    document.querySelectorAll('#home-ads-dots .ads-dot')
+  function marcarPunto(pref, i) {
+    document.querySelectorAll('#' + pref + '-dots .ads-dot')
       .forEach((d, j) => d.classList.toggle('on', j === i));
   }
 
-  function irASlide(i) {
-    const track = document.getElementById('home-ads-track');
+  function irASlide(pref, i) {
+    const track = document.getElementById(pref + '-track');
     const el = track?.children[i];
     if (!track || !el) return;
     // Posición REAL del slide, no una multiplicación: ver slideVisible().
@@ -4112,25 +4140,29 @@ document.addEventListener('focusin', (e) => {
     // pedimos nosotros ya sabemos a qué slide vamos, y así el punto queda
     // bien aunque el navegador no emita eventos de scroll ni de
     // intersección — que es exactamente lo que pasa en algunos contextos.
-    marcarPunto(i);
+    marcarPunto(pref, i);
   }
 
-  function arrancarAds(total) {
-    detenerAds();
+  function arrancarAds(pref, total) {
+    detenerAds(pref);
+    // Con un solo slide no hay a dónde rotar: queda fijo. Es el caso del
+    // carrusel de Entre Vecinos sin banners vendidos — el CTA azul solo.
     if (total < 2) return;
     // Quien pidió menos animación no debería tener algo moviéndose solo.
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    _adsTimer = setInterval(() => {
-      const track = document.getElementById('home-ads-track');
+    const est = adsEstado(pref);
+    est.timer = setInterval(() => {
+      const track = document.getElementById(pref + '-track');
       // Si la pantalla no está visible el ancho es 0 y el cálculo se rompe;
       // además rotar en una pantalla que nadie mira sólo gasta batería.
-      if (!track || !track.clientWidth || _adsPausado) return;
-      irASlide((slideVisible(track) + 1) % total);
+      if (!track || !track.clientWidth || est.pausado) return;
+      irASlide(pref, (slideVisible(track) + 1) % total);
     }, 5000);
   }
 
-  function detenerAds() {
-    if (_adsTimer) { clearInterval(_adsTimer); _adsTimer = null; }
+  function detenerAds(pref) {
+    const est = adsEstado(pref);
+    if (est.timer) { clearInterval(est.timer); est.timer = null; }
   }
 
   function abrirBanner(id, enlace) {
@@ -6123,6 +6155,7 @@ document.addEventListener('focusin', (e) => {
       sessionStorage.setItem(CTA_MKT_KEY, '1');
       localStorage.setItem(CTA_MKT_KEY, String(Date.now()));
     } catch (e) {}
+    _mktAdsPintado = false;   // cambió qué slides van: hay que rearmarlo
     mktPintarCta();
   }
   window.mktCerrarCta = mktCerrarCta;
@@ -6132,18 +6165,61 @@ document.addEventListener('focusin', (e) => {
    *  pie, partiendo la pantalla al medio y dejando un hueco. Es una
    *  invitación a publicar que acompaña al FEED; sobre el mapa sólo estorba. */
   function mktPintarCta() {
-    const cta = document.getElementById('mkt-cta-publicar');
-    if (!cta) return;
-    // El banner invita a publicar en Mercado (un vecino ofreciendo algo).
-    // En el origen Prestadores no hay nada que publicar ahí: la única forma
-    // de aparecer en esa lista es ser prestador de verdad y cargar el aviso
-    // desde Mi Perfil — mostrarlo acá invita a una acción que no existe en
-    // esta pantalla.
-    cta.style.display = (mktModo === 'mapa' || mktCtaOculto() || mktOrigen === 'prestador') ? 'none' : '';
-    // Mismo motivo, mismo botón: el "+" flotante es la otra entrada a
-    // abrirPublicarMercado().
+    const caja = document.getElementById('mkt-ads');
+    // El carrusel es del mercado de los vecinos. En el origen Prestadores no
+    // hay nada que publicar ni que promocionar ahí: la única forma de
+    // aparecer en esa lista es ser prestador de verdad y cargar el aviso
+    // desde Mi Perfil. Y sobre el mapa sólo estorba — parte la pantalla al
+    // medio entre el mapa y el pie.
+    const fuera = (mktModo === 'mapa' || mktOrigen === 'prestador');
+    if (caja && fuera) { caja.style.display = 'none'; detenerAds('mkt-ads'); }
+    else pintarBannersMercado();
+    // Mismo motivo, mismos botones: el "+" flotante y el "Publicar" fijo de
+    // la barra son las otras dos entradas a abrirPublicarMercado().
     const fab = document.querySelector('.mkt-fab');
     if (fab) fab.style.display = mktOrigen === 'prestador' ? 'none' : '';
+    const btnPub = document.getElementById('mkt-btn-publicar-fijo');
+    if (btnPub) btnPub.style.display = mktOrigen === 'prestador' ? 'none' : '';
+  }
+
+  /** El carrusel de arriba del feed de Entre Vecinos: la invitación azul a
+   *  publicar más los banners que compraron los vecinos.
+   *
+   *  El CTA azul es un slide más y no un bloque aparte, por la misma razón
+   *  que en la portada: como bloque suma alto propio y empuja el feed fuera
+   *  de la pantalla; como slide no ocupa nada extra y encima rota.
+   *
+   *  Cerrarlo saca SÓLO el slide azul: los banners pagos siguen. Un aviso
+   *  que alguien compró no se descarta de un toque. */
+  // mktPintarCta() corre en CADA render del feed (buscar, cambiar de
+  // sección, ampliar el ámbito...). Antes era sólo un toggle de estilo y
+  // repetirlo salía gratis; ahora hay una consulta detrás, así que se pinta
+  // una vez y se repinta sólo cuando cambió algo que lo afecta: entrar a la
+  // pantalla o cerrar el CTA.
+  let _mktAdsPintado = false;
+
+  async function pintarBannersMercado() {
+    if (_mktAdsPintado) {
+      const caja = document.getElementById('mkt-ads');
+      if (caja && caja.dataset.vacio !== '1') caja.style.display = 'block';
+      return;
+    }
+    _mktAdsPintado = true;
+    const propias = mktCtaOculto() ? [] : [
+      tarjetaAd('publicar-mercado', 'linear-gradient(135deg,#1A3ACC,#2B5BFF)', '#fff',
+                '🏘️', 'Publicá lo que tenés o lo que sabés hacer',
+                'Tu vecino lo está buscando'),
+    ];
+    await pintarCarruselAds({ pref: 'mkt-ads', ubicacion: 'vecinos', propias });
+    // Queda anotado si el carrusel terminó vacío (sin CTA y sin banners),
+    // para que el repintado rápido de arriba no lo vuelva a mostrar en 0px.
+    const caja = document.getElementById('mkt-ads');
+    if (caja) caja.dataset.vacio = caja.style.display === 'none' ? '1' : '0';
+    // La × sólo cuando el carrusel es puro CTA. Con un banner pago a la
+    // vista, una cruz flotando encima parece ofrecer descartarlo.
+    const pagos = document.querySelectorAll('#mkt-ads-track .ads-slide:not(.ads-propia)').length;
+    const cerrar = document.getElementById('mkt-ads-cerrar');
+    if (cerrar) cerrar.style.display = (!pagos && propias.length) ? '' : 'none';
   }
 
   function mktToggleAmbito() {
@@ -12217,6 +12293,18 @@ document.addEventListener('focusin', (e) => {
   let promoImagenUrl = null;   // la del carrusel
   let promoFlyerUrl  = null;   // la que se abre ampliada, si el destino es 'imagen'
 
+  /** En qué carrusel cae el aviso. Lo decide el ROL y no una opción del
+   *  formulario: el prestador va a la portada —su oficio, lo ve todo el
+   *  barrio al entrar— y el vecino a Entre Vecinos, arriba del feed donde
+   *  ya publica lo que vende. Es la misma separación que hace que el
+   *  prestador no navegue Entre Vecinos.
+   *
+   *  El servidor lo vuelve a validar (crear_banner): esto es la sugerencia,
+   *  no la autoridad. */
+  function promoUbicacion() {
+    return esPrestador() ? 'portada' : 'vecinos';
+  }
+
   async function abrirPromocionar() {
     if (!usuarioActual) {
       mostrarGate && mostrarGate({ titulo: 'Promocionar', sub: 'Necesitás una cuenta.' });
@@ -12251,7 +12339,18 @@ document.addEventListener('focusin', (e) => {
       if (el) el.textContent = precio ? '$' + Number(precio).toLocaleString('es-AR') : 'Consultar';
     }).catch(() => {});
 
-    const libres = await PronetDB.bannersEspaciosLibres();
+    // Decir dónde va a salir, que no es lo mismo para los dos roles.
+    const enPortada = promoUbicacion() === 'portada';
+    const heroTit = document.getElementById('promo-hero-tit');
+    const heroSub = document.getElementById('promo-hero-sub');
+    if (heroTit) heroTit.textContent = enPortada
+      ? 'Tu aviso en la portada'
+      : 'Tu aviso en Entre Vecinos';
+    if (heroSub) heroSub.textContent = enPortada
+      ? 'Aparece en el carrusel que ven todos los vecinos al entrar. Lo revisamos antes de publicarlo, y recién ahí pagás.'
+      : 'Aparece arriba del feed de Entre Vecinos, sobre las publicaciones del barrio. Lo revisamos antes de publicarlo, y recién ahí pagás.';
+
+    const libres = await PronetDB.bannersEspaciosLibres(promoUbicacion());
     const esp = document.getElementById('promo-espacios');
     if (esp) esp.textContent = libres > 0
       ? '📍 Quedan ' + libres + ' espacio' + (libres === 1 ? '' : 's') + ' disponible' + (libres === 1 ? '' : 's')
@@ -12318,6 +12417,7 @@ document.addEventListener('focusin', (e) => {
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
     const res = await PronetDB.comprarBanner({
       nombre, imagen_url: promoImagenUrl, enlace, dias: 30, destino: promoDestino,
+      ubicacion: promoUbicacion(),
     });
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar a revisión'; }
     if (!res.ok) return decir(res.error || 'No se pudo enviar');

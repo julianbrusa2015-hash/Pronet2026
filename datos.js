@@ -1042,13 +1042,17 @@ const PronetDB = (() => {
      *  La fecha la filtra el SERVIDOR, no el cliente. Si dependiera del reloj
      *  del teléfono, alguien con la fecha mal vería pauta vencida — y una
      *  promoción vencida en pantalla es un problema con quien la pagó. */
-    async listarBannersVigentes() {
+    // `ubicacion`: a qué carrusel pertenece — 'portada' (Inicio) o 'vecinos'
+    // (arriba del feed de Entre Vecinos). Son inventarios separados: ver
+    // supabase-banners-ubicacion.sql.
+    async listarBannersVigentes(ubicacion = 'portada') {
       if (!remoto) return [];
       const ahora = new Date().toISOString();
       const { data, error } = await sb.from('banners')
         .select('id, imagen_url, enlace')
         .eq('activo', true)
         .eq('es_house', false)
+        .eq('ubicacion', ubicacion)
         .or('desde.is.null,desde.lte.' + ahora)
         .or('hasta.is.null,hasta.gte.' + ahora)
         .order('orden', { ascending: true });
@@ -1059,13 +1063,14 @@ const PronetDB = (() => {
     /** Los "de la casa": rellenan el carrusel cuando no hay ningún banner
      *  pago vigente. No cuentan para el cupo — ver banners_espacios_libres()
      *  y supabase-banners-house.sql. */
-    async listarBannersHouse() {
+    async listarBannersHouse(ubicacion = 'portada') {
       if (!remoto) return [];
       const ahora = new Date().toISOString();
       const { data, error } = await sb.from('banners')
         .select('id, imagen_url, enlace')
         .eq('activo', true)
         .eq('es_house', true)
+        .eq('ubicacion', ubicacion)
         .or('desde.is.null,desde.lte.' + ahora)
         .or('hasta.is.null,hasta.gte.' + ahora)
         .order('orden', { ascending: true });
@@ -1113,10 +1118,11 @@ const PronetDB = (() => {
     // Ver supabase-banners-pagos.sql. Todo el circuito está detrás del flag
     // `banners_pagos_activos`; apagado, estos métodos no se llaman.
 
-    /** Cuántos espacios quedan libres de los 6 (o los que diga la config). */
-    async bannersEspaciosLibres() {
+    /** Cuántos espacios quedan libres de los 6 (o los que diga la config),
+     *  EN ESE CARRUSEL: portada y Entre Vecinos tienen 6 cada uno. */
+    async bannersEspaciosLibres(ubicacion = 'portada') {
       if (!remoto) return 0;
-      const { data, error } = await sb.rpc('banners_espacios_libres');
+      const { data, error } = await sb.rpc('banners_espacios_libres', { p_ubicacion: ubicacion });
       if (error) { console.warn('[PronetDB] bannersEspaciosLibres', error.message); return 0; }
       return Number(data) || 0;
     },
@@ -1129,11 +1135,12 @@ const PronetDB = (() => {
      *  que el segundo pisara al primero (en un objeto gana la última clave) y
      *  el ABM del panel empezó a rechazar con "los espacios publicitarios no
      *  están disponibles". */
-    async comprarBanner({ nombre, imagen_url, enlace, dias, destino } = {}) {
+    async comprarBanner({ nombre, imagen_url, enlace, dias, destino, ubicacion } = {}) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const { data, error } = await sb.rpc('crear_banner', {
         p_nombre: nombre, p_imagen_url: imagen_url, p_enlace: enlace,
         p_dias: dias || 30, p_destino: destino || 'whatsapp',
+        p_ubicacion: ubicacion || 'portada',
       });
       if (error) { console.warn('[PronetDB] crearBanner', error.message); return { ok: false, error: error.message }; }
       return data || { ok: false, error: 'Sin respuesta' };

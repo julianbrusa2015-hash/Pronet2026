@@ -447,7 +447,17 @@
           <option value="">📍 Zona</option>
         </select>
       </div>
-      <div style="padding:0 14px 10px;display:flex;justify-content:flex-end;gap:8px">
+      <div style="padding:0 14px 10px;display:flex;align-items:center;gap:8px">
+        <!-- Publicar vive acá, fijo, y no adentro del carrusel de abajo: ahí
+             desaparecería cada vez que rota a un banner pago, justo cuando
+             el carrusel está lleno y más gente lo está mirando. Es la acción
+             principal de la pantalla, así que no puede depender de en qué
+             slide quedó parado. `margin-right:auto` lo deja a la izquierda y
+             empuja Fichas/Mapa —que son controles de la lista— a la derecha. -->
+        <button id="mkt-btn-publicar-fijo" onclick="abrirPublicarMercado()"
+          style="margin-right:auto;display:flex;align-items:center;gap:5px;background:var(--blue);border:none;border-radius:10px;padding:7px 13px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:'Inter',sans-serif">
+          <span style="font-size:14px;line-height:1">+</span> Publicar
+        </button>
         <button id="mkt-toggle-formato" class="mkt-vista-btn" onclick="mktToggleFormato()" title="Cambiar formato del feed" aria-label="Cambiar formato del feed">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           <span id="mkt-formato-lbl" class="sr-only">Fichas</span>
@@ -471,27 +481,27 @@
         <div id="mkt-mapa-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface);font-size:13px;color:var(--ink3)">⏳ Cargando mapa...</div>
       </div>
 
-      <!-- Invitación a publicar. Va acá, arriba del feed y no escondida en
-           un botón chico: la mitad del valor de Entre Vecinos es que la
-           gente publique, y el que entra a mirar no piensa que puede vender.
-           El texto cubre las dos secciones sin nombrarlas — "lo que tenés"
-           es Mercado, "lo que sabés hacer" es Servicios. -->
-      <div id="mkt-cta-publicar" style="margin:4px 14px 14px;background:linear-gradient(135deg,#1A3ACC,#2B5BFF);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden">
-        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1.5" style="position:absolute;right:-10px;bottom:-16px;width:110px;height:110px;pointer-events:none" aria-hidden="true">
-          <path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>
-          <path d="M12 12.6c1-1.1 2.8-.4 2.8 1 0 1.3-1.6 2.2-2.8 3.3-1.2-1.1-2.8-2-2.8-3.3 0-1.4 1.8-2.1 2.8-1z"/>
-        </svg>
+      <!-- Carrusel de Entre Vecinos: la invitación a publicar (azul) más los
+           banners que compran los VECINOS. Inventario propio de 6, separado
+           del de la portada, que es el de los prestadores — es lo que evita
+           que un aviso comprado para Inicio aparezca acá adentro (ver
+           supabase-banners-ubicacion.sql).
+
+           Con banners vendidos rota; sin ninguno queda el azul fijo. Lo
+           llena pintarBannersMercado(). El botón "Publicar" no vive acá
+           sino arriba, fijo al lado de Fichas/Mapa: si viviera adentro del
+           carrusel desaparecería cada vez que rota a un banner pago. -->
+      <div id="mkt-ads" style="display:none;margin:4px 14px 14px;position:relative">
         <!-- Se puede cerrar, pero vuelve: a las 24 hs o al reabrir la app.
              Un aviso que no se puede sacar no vale más — molesta más, y esa
-             molestia se le pega a quien lo publica. -->
-        <button onclick="mktCerrarCta()" aria-label="Cerrar"
-          style="position:absolute;top:8px;right:8px;z-index:2;background:rgba(255,255,255,.18);border:none;border-radius:50%;width:26px;height:26px;color:#fff;font-size:15px;line-height:1;cursor:pointer;font-family:inherit">×</button>
-        <div style="position:relative">
-          <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;color:rgba(255,255,255,.6)">DESTACADO</div>
-          <div style="font-size:17px;font-weight:800;color:#fff;line-height:1.3;margin-top:5px">Publicá lo que tenés<br>o lo que sabés hacer</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.72);margin-top:5px">Tu vecino lo está buscando</div>
-          <button onclick="abrirPublicarMercado()" style="margin-top:13px;background:none;border:1.5px solid rgba(255,255,255,.55);border-radius:11px;padding:9px 15px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit">Publicar ahora ↗</button>
-        </div>
+             molestia se le pega a quien lo publica.
+             Sólo aparece cuando el carrusel es puro CTA: lo que alguien
+             pagó no se descarta de un toque. Lo decide
+             pintarBannersMercado(). -->
+        <button id="mkt-ads-cerrar" onclick="mktCerrarCta()" aria-label="Cerrar"
+          style="display:none;position:absolute;top:8px;right:8px;z-index:2;background:rgba(255,255,255,.18);border:none;border-radius:50%;width:26px;height:26px;color:#fff;font-size:15px;line-height:1;cursor:pointer;font-family:inherit">×</button>
+        <div class="ads-track" id="mkt-ads-track" role="region" aria-roledescription="carrusel" aria-label="Avisos de Entre Vecinos"></div>
+        <div class="ads-dots" id="mkt-ads-dots"></div>
       </div>
 
       <!-- De qué mercado estás viendo. Sólo aparece si el vecino declaró su
@@ -4389,8 +4399,13 @@
 
     <div style="padding:16px 18px 90px">
       <div style="background:linear-gradient(135deg,#7C2D12,#EA580C);border-radius:16px;padding:18px;color:#fff;margin-bottom:16px">
-        <div style="font-size:16px;font-weight:800;line-height:1.35">Tu aviso en la portada</div>
-        <div style="font-size:12.5px;opacity:.85;margin-top:6px;line-height:1.5">
+        <!-- El texto cambia según dónde vaya a salir el aviso: el prestador
+             compra la portada y el vecino el carrusel de Entre Vecinos (ver
+             promoUbicacion en app.js). Fijo decía "portada" siempre, que
+             para el vecino era directamente falso. Lo pinta
+             abrirPromocionar(). -->
+        <div id="promo-hero-tit" style="font-size:16px;font-weight:800;line-height:1.35">Tu aviso en la portada</div>
+        <div id="promo-hero-sub" style="font-size:12.5px;opacity:.85;margin-top:6px;line-height:1.5">
           Aparece en el carrusel que ven todos los vecinos al entrar. Lo revisamos antes de publicarlo, y recién ahí pagás.
         </div>
         <div id="promo-espacios" style="font-size:12px;font-weight:700;margin-top:10px;opacity:.95"></div>
