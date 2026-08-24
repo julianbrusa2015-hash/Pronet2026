@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v344'; // v344: servicio fijo terminado quedaba invisible en ambos lados
+const CACHE_VERSION = 'pronet-v345'; // v345: prestador seguia viendo Mis publicaciones/Consultas recibidas de Entre Vecinos
 
 const SHELL = [
   './',

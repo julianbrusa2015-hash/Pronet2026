@@ -11081,17 +11081,12 @@ document.addEventListener('focusin', (e) => {
     if (menuPubs) menuPubs.style.display =
       (esPrestador() && pubsPrestadorActivo()) ? '' : 'none';
 
-    // El prestador no navega Entre Vecinos: su oficio pasa por "Mis avisos
-    // en Servicios" de arriba, que ya arma pedido dirigido al consultarlo
-    // (pubPrestContactar → dirigirPedidoA). "Ir a Entre Vecinos", "Consultas
-    // enviadas" y "Mis alertas" son las tres que suponen estar navegando o
-    // comprando ahí — se ocultan sólo para él. "Mis publicaciones" y
-    // "Consultas recibidas" quedan: son sobre lo que ÉL publicó como
-    // vecino (puede vender un objeto igual que cualquiera), no navegación.
-    ['menu-ir-a-vecinos', 'menu-mis-consultas-env', 'menu-mis-alertas-mkt'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = esPrestador() ? 'none' : '';
-    });
+    // El prestador no navega Entre Vecinos en absoluto: su oficio pasa por
+    // "Mis avisos en Servicios" de arriba, que ya arma pedido dirigido al
+    // consultarlo (pubPrestContactar → dirigirPedidoA), y las consultas le
+    // entran por el canal habitual (el vecino contacta, crea pedido). Toda
+    // la sección Entre Vecinos del perfil se oculta para él más abajo
+    // (secPM); acá no hace falta nada por ítem.
 
     const loyaltyMenu = document.querySelector('.menu-item[data-feature="loyalty"]');
     if (loyaltyMenu) loyaltyMenu.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
@@ -11171,15 +11166,18 @@ document.addEventListener('focusin', (e) => {
     if (admin) cargarBadgeDenuncias();
     // ── DINÁMICO: rankings del prestador ──
     if (esPresta) cargarRankingsPerfil();
-    // ── ProMarket: sección completa visible si el feature está activo y el usuario está logueado ──
+    // ── ProMarket: sección completa visible si el feature está activo, el
+    // usuario está logueado y NO es prestador — el prestador no navega
+    // Entre Vecinos, su oficio pasa por "Mis avisos en Servicios" de arriba. ──
     const secPM = document.getElementById('seccion-promarket-perfil');
-    if (secPM) secPM.style.display = (FEATURES.mercadoPlaza && usuarioActual) ? '' : 'none';
+    if (secPM) secPM.style.display = (FEATURES.mercadoPlaza && usuarioActual && !esPrestador()) ? '' : 'none';
     // Cualquier usuario logueado puede publicar (hasta su cupo) — ya no
-    // depende de una suscripción, así que estos menús quedan visibles siempre.
+    // depende de una suscripción, así que estos menús quedan visibles siempre
+    // que la sección en sí esté visible (ver secPM arriba).
     const menuMisPubs = document.getElementById('menu-mis-pubs-mkt');
-    if (menuMisPubs) menuMisPubs.style.display = usuarioActual ? '' : 'none';
+    if (menuMisPubs) menuMisPubs.style.display = (usuarioActual && !esPrestador()) ? '' : 'none';
     const menuMisConsultas = document.getElementById('menu-mis-consultas-mkt');
-    if (menuMisConsultas) menuMisConsultas.style.display = usuarioActual ? '' : 'none';
+    if (menuMisConsultas) menuMisConsultas.style.display = (usuarioActual && !esPrestador()) ? '' : 'none';
     actualizarEstadoProMarketPerfil();
   }
 

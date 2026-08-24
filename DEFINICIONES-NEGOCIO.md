@@ -57,14 +57,17 @@ Los planes son **del prestador**. Un vecino no tiene plan ni lo necesita.
 | Estadísticas | — | básicas | completas + export |
 | Publicar en Mercado · Servicios | **no** | 10/mes | ilimitadas |
 
-> **Decidido 2026-08-22:** publicar en la sección Servicios de Entre Vecinos es
-> un beneficio de los planes superiores. Un prestador con plan **Base no puede
-> publicar** ahí; el camino es upgradear, no comprar créditos sueltos.
->
-> **El prestador publica servicios y nada más.** No publica productos: para eso
-> está el mercado del vecino. Que un prestador con plan Base no pueda publicar
-> nada en Mercado es la definición, no un efecto colateral — entra a Entre
-> Vecinos por su oficio, no a vender una bicicleta.
+> **Decidido 2026-08-22, revertido 2026-08-23.** La idea era que publicar en
+> la sección Servicios de Entre Vecinos fuera un beneficio de los planes
+> superiores. Se llegó a construir el enganche (consultar ahí armaba una
+> propuesta) antes de que quedara claro que **el prestador no tiene que
+> llegar a Entre Vecinos para nada** — ni para publicar ni para nada más. Su
+> lugar es "Mis avisos en Servicios" (más abajo), que ya existía y hacía
+> exactamente esto sin pasar por el mercado de los vecinos. El código de esa
+> ruta quedó revertido; esta fila de la tabla es **aspiracional, no
+> alcanzable hoy** — no hay ningún botón en la app que lleve a publicar un
+> servicio ahí. Ver ["Mis avisos en Servicios"](#mis-avisos-en-servicios---el-circuito-completo)
+> para el circuito real.
 
 ### Compras sueltas
 
@@ -93,14 +96,26 @@ aparte, con su propia tabla (`publicaciones_prestador`), que vive en la solapa
 **Servicios** (la búsqueda normal de prestadores), no en el mercado de los
 vecinos.
 
-**El prestador no navega Entre Vecinos para nada de esto.** Ni para publicar
-—lo hace desde su perfil, sin salir de ahí— ni para ver quién lo contactó. El
-menú de Mi Perfil reflaja esta separación: "Ir a Entre Vecinos", "Consultas
-enviadas" y "Mis alertas" se ocultan para el prestador porque las tres
-suponen estar navegando o comprando en el mercado de los vecinos. Quedan
-visibles "Mis publicaciones" y "Consultas recibidas" — son sobre lo que él
-mismo publicó ahí como vecino, si alguna vez vendió algo (los roles no son
-excluyentes), no navegación.
+**El prestador no navega Entre Vecinos para nada de esto — ni un poco.** Ni
+para publicar (lo hace desde su perfil, sin salir de ahí) ni para ver quién
+lo contactó ni para nada del mercado de los vecinos. La sección entera
+"Entre Vecinos" del menú de Mi Perfil (Mis publicaciones, Consultas
+recibidas, Consultas enviadas, Mis alertas, Ir a Entre Vecinos) se oculta
+completa para él (`seccion-promarket-perfil`, controlado en
+`reflejarUsuario()`).
+
+> **Corregido 2026-08-23.** La primera versión de este ocultamiento sólo
+> escondía 3 de los 5 ítems ("Ir a Entre Vecinos", "Consultas enviadas",
+> "Mis alertas"), bajo la idea de que "Mis publicaciones" y "Consultas
+> recibidas" eran sobre lo que el prestador publicó *como vecino* — un rol
+> separado, no navegación. Error: esos dos ítems van a `s-mis-publicaciones`
+> y `s-mis-consultas-mkt`, las pantallas del **mercado de los vecinos**
+> (tabla `publicaciones`), no a "Mis avisos en Servicios". Un prestador
+> logueado los seguía viendo en su perfil aunque nunca hubiera vendido nada
+> ahí, porque una regla aparte (`usuarioActual ? '' : 'none'`, pensada para
+> "cualquier logueado puede publicar en Mercado") los mostraba sin mirar el
+> rol. La consulta al prestador entra siempre por el canal habitual —el
+> vecino contacta, se crea un pedido— nunca por un chat de Entre Vecinos.
 
 **Cupo por plan** — no está atado exclusivamente a un plan pago, el Base ya
 tiene uno:
@@ -177,14 +192,17 @@ Dos cosas distintas se llaman "publicación". Conviene no confundirlas:
 | | Anuncio de prestador | Publicación de Mercado |
 |---|---|---|
 | Tabla | `publicaciones_prestador` | `publicaciones` |
-| Quién | Prestador | Vecino (productos) · Prestador (servicios) |
-| Qué | Servicios | Productos o Servicios, según quién publique |
+| Quién | Prestador | Vecino (productos) |
+| Qué | Servicios | Productos |
 | Dónde se ve | Feed de Servicios | Entre Vecinos |
-| Mecánica | Contacto directo | Contacto directo |
+| Mecánica | Contacto directo → arma pedido dirigido | Contacto directo (chat) |
 | Se paga con | Cupo del plan | Cupo mensual + créditos |
 
-El prestador **sólo puede publicar servicios** en Mercado, nunca productos: son
-dos mercados distintos y él entra por su oficio.
+**El prestador no publica en Mercado.** La columna "Prestador (servicios)"
+que decía esto antes describía un plan que se revirtió el 2026-08-23 — ver
+la nota en [Planes de suscripción](#planes-de-suscripción) y en ["Mis avisos
+en Servicios"](#mis-avisos-en-servicios---el-circuito-completo). Sólo el
+vecino publica en Mercado, y sólo productos.
 
 > El código justifica esta restricción diciendo que el prestador "tendría una
 > sección que después no ve". **Eso ya no es cierto** —verificado 2026-08-22: el
