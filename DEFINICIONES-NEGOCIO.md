@@ -376,3 +376,71 @@ grandfathering de quienes lo tenían.
 **Etapa fundadora:** con `planes_pagos_activos` en `false`, los usuarios Base
 reciben los límites de Plus. Hoy está en `true`, así que esa red **no** está
 actuando.
+
+---
+
+## Cierre de un servicio fijo (trabajo periódico)
+
+**El problema:** `elegir_propuesta()` crea un `servicios_fijos` cuando
+`pedidos.modalidad='recurrente'` (ej. corte de pasto mensual), y por separado
+abre el `chats_trabajo` de siempre. Pero el chat no distinguía nada: al llegar
+a `estado='activo'` el prestador veía el mismo botón **"Marcar como
+terminado"** que en un trabajo puntual — y tocarlo cerraba toda la relación en
+la primera visita, cuando en realidad el trabajo se repite indefinidamente.
+
+**La definición:** un servicio fijo no "termina" con cada visita — queda
+**abierto hasta que el vecino decide cerrar el contrato**. El chat sigue
+disponible todo ese tiempo para coordinar (fechas, cambios), pero no ofrece
+"terminar". El cierre es una decisión del vecino, no del prestador, y vive en
+**Mis servicios fijos**, no en el chat.
+
+**Por qué cerrar = calificar, y no un botón mudo:** dar de baja en silencio
+perdería justo el dato que más vale de una relación larga — cómo le fue al
+vecino. Por eso "Cerrar y calificar" abre la pantalla de reseña; sólo al
+enviarla se da de baja el `servicio_fijo`. Si el vecino sale sin calificar, no
+se da de baja nada.
+
+**El prestador no tiene este botón.** Sigue usando "Dar de baja"
+(`terminarServicioFijoUI`, mudo, sin reseña) — no es su lugar calificarse a sí
+mismo.
+
+**Circuito:**
+
+1. Chat en `estado='activo'` con `pedidos.modalidad='recurrente'` → en vez del
+   banner de "Marcar como terminado", muestra una nota fija: *"Servicio
+   fijo — sigan coordinando por acá. El vecino cierra la relación desde Mis
+   servicios fijos cuando ya no lo necesite."* (`actualizarBannersChat`,
+   `app.js`)
+2. Desde **Mis servicios fijos**, el vecino toca **"Cerrar y calificar"**
+   (`cerrarServicioFijoUI`) → busca el `chats_trabajo` de la propuesta que
+   originó el servicio fijo, carga ese chat y ese prestador, y abre la
+   pantalla de reseña (`abrirResena`).
+3. Al enviar la reseña (`enviarResena`): se guarda en `resenas` vía
+   `dejar_resena()` — y **recién después**, como segundo paso independiente,
+   se llama `PronetDB.terminarServicioFijo()`. Son tablas separadas a
+   propósito: `dejar_resena()` no sabe nada de `servicios_fijos`. Si el
+   segundo paso fallara, la reseña ya quedó guardada — no se aborta nada.
+4. Si el vecino cierra la pantalla sin calificar (`cerrarResena`), no se da de
+   baja nada — el flag que marca "hay un servicio fijo pendiente de cerrar"
+   no sobrevive a la pantalla.
+
+**Verificado end-to-end** con cuentas de prueba (2026-08-23): el chat del
+prestador no ofrece terminar y muestra la nota; el vecino tiene "Cerrar y
+calificar"; al calificar, la reseña queda guardada y el servicio fijo pasa a
+`estado='terminado'`.
+
+**El cierre no lo borra, lo marca — para las dos partes.** Un servicio fijo
+`terminado` sigue apareciendo en **Mis servicios fijos** (vecino) y **Mis
+clientes fijos** (prestador), con un chip "Finalizado" y sin botón de acción.
+Es el registro de que la relación existió, no algo que deba desaparecer.
+`listarServiciosFijos(soloActivos)` acepta ese parámetro justamente para esto:
+la lista de la pantalla llama con `false` para traer activos y terminados
+juntos (ordenados con los activos primero), pero cualquier otra pantalla que
+sólo necesite los vigentes puede seguir pidiendo `true`.
+
+**Bug encontrado de paso (no relacionado):** `enviarResena()` tenía tres
+líneas de un refactor viejo que referenciaban variables no declaradas
+(`bannerResena`, `bannerCerrado`, `footer`), lo que tiraba un `ReferenceError`
+después de guardar la reseña — rompía en silencio el push al prestador y el
+festejo de "primer trabajo" en **toda** reseña del sitio, no sólo en
+servicios fijos. Corregido (v343).

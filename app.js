@@ -9547,10 +9547,13 @@ document.addEventListener('focusin', (e) => {
     // soyPrestador=true, un servicio fijo donde YO soy el vecino (contraté
     // a otro) también pasaba la RLS y se colaba con `otro` resuelto a mi
     // propio nombre — parecía que era mi propio cliente.
-    const todasLasFilas = await PronetDB.listarServiciosFijos(true).catch(() => []);
+    // false: trae activos Y terminados — un servicio fijo cerrado no
+    // desaparece, queda visible como "Finalizado" para las dos partes.
+    const todasLasFilas = await PronetDB.listarServiciosFijos(false).catch(() => []);
     const filas = todasLasFilas.filter(f => soyPrestador
       ? f.prestador_id === usuarioActual.prestador_id
-      : f.vecino_id === usuarioActual?.id);
+      : f.vecino_id === usuarioActual?.id)
+      .sort((a, b) => (a.estado === 'activo' ? 0 : 1) - (b.estado === 'activo' ? 0 : 1));
     if (!filas.length) {
       wrap.innerHTML = `
         <div style="padding:40px 24px;text-align:center">
@@ -9579,6 +9582,7 @@ document.addEventListener('focusin', (e) => {
             <div style="font-size:14px;font-weight:800;color:var(--ink)">${escHTML(otro)}</div>
             <div style="font-size:11.5px;color:var(--ink3);margin-top:2px">${escHTML(s.rubro || 'Servicio')}</div>
           </div>
+          ${s.estado !== 'activo' ? `<div style="flex-shrink:0;background:var(--surface);color:var(--ink3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:10.5px;font-weight:700">Finalizado</div>` : ''}
         </div>
         <div style="display:flex;gap:8px;margin-top:11px">
           <div style="flex:1;background:var(--surface);border-radius:10px;padding:9px 11px">
@@ -9590,7 +9594,7 @@ document.addEventListener('focusin', (e) => {
             <div style="font-size:12.5px;font-weight:700;color:var(--ink);margin-top:2px">${escHTML(precio)}</div>
           </div>
         </div>
-        ${soyPrestador
+        ${s.estado !== 'activo' ? '' : soyPrestador
           ? `<button onclick="terminarServicioFijoUI('${escHTML(s.id)}', '${escHTML(otro).replace(/'/g, '&#39;')}')"
                 style="width:100%;margin-top:10px;background:var(--surface);color:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">
              Dar de baja
