@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v345'; // v345: prestador seguia viendo Mis publicaciones/Consultas recibidas de Entre Vecinos
+const CACHE_VERSION = 'pronet-v346'; // v346: FAB de chat oculto para prestador + aviso al vecino si el prestador da de baja el servicio fijo
 
 const SHELL = [
   './',

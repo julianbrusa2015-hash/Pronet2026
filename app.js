@@ -9595,7 +9595,7 @@ document.addEventListener('focusin', (e) => {
           </div>
         </div>
         ${s.estado !== 'activo' ? '' : soyPrestador
-          ? `<button onclick="terminarServicioFijoUI('${escHTML(s.id)}', '${escHTML(otro).replace(/'/g, '&#39;')}')"
+          ? `<button onclick="terminarServicioFijoUI('${escHTML(s.id)}', '${escHTML(s.vecino_id)}', '${escHTML(s.rubro || 'Servicio')}', '${escHTML(otro).replace(/'/g, '&#39;')}')"
                 style="width:100%;margin-top:10px;background:var(--surface);color:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">
              Dar de baja
            </button>`
@@ -9613,10 +9613,23 @@ document.addEventListener('focusin', (e) => {
       </div>`;
   }
 
-  async function terminarServicioFijoUI(id, nombre) {
+  async function terminarServicioFijoUI(id, vecinoId, rubro, nombre) {
     if (!confirm('¿Dar de baja el servicio fijo con ' + nombre + '?\n\nDeja de figurar en la lista. No afecta los trabajos ya hechos.')) return;
     const r = await PronetDB.terminarServicioFijo(id);
     if (!r?.ok) { showToast && showToast('⚠️ ' + (r?.error || 'No se pudo dar de baja')); return; }
+    // El vecino no se entera solo: a diferencia de cuando cierra ÉL (que pasa
+    // por la pantalla de reseña), acá el prestador da de baja en silencio y
+    // sin este aviso la relación simplemente desaparecía de su lista sin
+    // explicación.
+    if (vecinoId) {
+      PronetDB.notificar({
+        destino: 'usuario', usuario_id: vecinoId,
+        tipo: 'servicio_fijo_baja',
+        titulo: '🔁 ' + (usuarioActual?.nombre || 'Tu prestador') + ' dio de baja el servicio fijo',
+        cuerpo: 'El servicio de ' + rubro + ' quedó dado de baja. Si necesitás renovarlo, podés contactarlo o buscar a otro prestador.',
+        url: '/#s-servicios-fijos',
+      }).catch(() => {});
+    }
     renderServiciosFijos();
   }
   window.terminarServicioFijoUI = terminarServicioFijoUI;
@@ -11080,6 +11093,12 @@ document.addEventListener('focusin', (e) => {
     const menuPubs = document.getElementById('menu-pubs-prestador');
     if (menuPubs) menuPubs.style.display =
       (esPrestador() && pubsPrestadorActivo()) ? '' : 'none';
+
+    // FAB "nuevo chat" de Mensajes: lleva a buscar un prestador para
+    // arrancar una conversación. Tiene sentido para el vecino; para el
+    // prestador no —a él lo contactan, no busca a otros prestadores—.
+    const chatsFab = document.getElementById('chats-fab');
+    if (chatsFab) chatsFab.style.display = esPrestador() ? 'none' : '';
 
     // El prestador no navega Entre Vecinos en absoluto: su oficio pasa por
     // "Mis avisos en Servicios" de arriba, que ya arma pedido dirigido al
