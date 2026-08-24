@@ -216,6 +216,60 @@ vecino publica en Mercado, y sólo productos.
 
 ---
 
+## Los dos carruseles de banners
+
+**Decidido 2026-08-24.** Había un solo carrusel —el de la portada— y una
+sola bolsa de 6 espacios. El problema no era el cupo sino la mezcla: un
+aviso que un prestador compró para la portada era el mismo objeto que
+podía aparecer dentro del mercado de los vecinos. Se abre un segundo
+carrusel, con inventario propio.
+
+| | Portada (Inicio) | Entre Vecinos |
+|---|---|---|
+| `banners.ubicacion` | `'portada'` | `'vecinos'` |
+| Quién compra ahí | **Prestador** | **Vecino** |
+| Dónde se ve | Carrusel de Inicio, lo ve todo el mundo al entrar | Arriba del feed de Entre Vecinos |
+| Espacios | 6 (`banners_activos_max`) | 6, contados aparte |
+
+**Quién compra dónde lo decide el rol, no una opción del formulario**
+(`promoUbicacion()` en `app.js`, revalidado en `crear_banner`). Ofrecerlo
+como elección sería pedirle al usuario que resuelva una pregunta de
+arquitectura que ya tiene una respuesta correcta: el prestador va a la
+portada porque su oficio le interesa a todo el barrio; el vecino va a
+Entre Vecinos porque es donde ya publica lo que vende.
+
+**Por qué inventario separado y no una bolsa compartida.** Con 6 en total,
+el que compra para la portada le come el lugar al que compra para Entre
+Vecinos y viceversa, sin que ninguno entienda por qué se quedó sin
+espacio. Son dos públicos distintos y pueden tener precios distintos.
+
+**El CTA azul es un slide, no un bloque.** "Publicá lo que tenés o lo que
+sabés hacer" pasó a ser una tarjeta del carrusel, por la misma razón que
+en la portada: como bloque aparte suma alto propio y empuja el feed fuera
+de la pantalla; como slide no ocupa nada extra y encima rota. Con banners
+vendidos el carrusel rota; sin ninguno, el azul queda **fijo** (un solo
+slide no tiene a dónde ir).
+
+**Cerrar el CTA no cierra los banners pagos.** La × sólo aparece cuando el
+carrusel es puro CTA. Lo que alguien compró no se descarta de un toque, y
+una cruz flotando sobre un aviso pago parecería ofrecer exactamente eso.
+
+**El botón "Publicar" no vive adentro del carrusel.** Está fijo en la barra,
+a la izquierda de Fichas/Mapa. Adentro desaparecería cada vez que el
+carrusel rota a un banner pago — justo cuando está lleno y más gente lo
+está mirando. Es la acción principal de la pantalla: no puede depender de
+en qué slide quedó parado.
+
+> **Nota de implementación.** La maquinaria del carrusel se generalizó
+> (`pintarCarruselAds({pref, ubicacion, propias, house})`) en vez de
+> duplicarla. Antes el estado eran tres variables sueltas —`_adsTimer`,
+> `_adsPausado`, `_adsObserver`— que alcanzaban para un solo carrusel: con
+> dos, el último en pintarse le pisaba el timer al otro y uno de los dos se
+> quedaba quieto. Ahora hay un estado por carrusel, indexado por el prefijo
+> de sus ids.
+
+---
+
 ## Pendientes de definición
 
 **1. CERRADO 2026-08-22 — el plan rige el acceso a Mercado.**
