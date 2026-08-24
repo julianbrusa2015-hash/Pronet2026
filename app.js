@@ -14672,8 +14672,14 @@ document.addEventListener('focusin', (e) => {
           show('chat-terminar-banner');
         }
         show('chat-cancelar-banner');
-        // Verificar si pasaron 7 días sin actividad (para habilitar cierre del vecino)
-        if (soyVecino && chat.ultimo_evento_at) {
+        // Verificar si pasaron 7 días sin actividad (para habilitar cierre del vecino).
+        // No aplica a servicio fijo: ese banner asume que el prestador dejó un
+        // trabajo puntual sin marcar como terminado — acá no hay "terminar" del
+        // prestador que el vecino deba destrabar, y tomar el cierre por acá
+        // cerraría el CHAT sin tocar servicios_fijos (que quedaría "activo"
+        // huérfano). El vecino ya tiene su propia salida siempre disponible:
+        // "Cerrar y calificar" desde Mis servicios fijos.
+        if (soyVecino && !esServicioFijo && chat.ultimo_evento_at) {
           const dias = (Date.now() - new Date(chat.ultimo_evento_at).getTime()) / 86400000;
           if (dias >= PRONET_CONFIG.INACTIVIDAD_CIERRE_DIAS) {
             // Mostrar banner de tomar control y ocultar el de cancelar

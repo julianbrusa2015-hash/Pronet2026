@@ -820,7 +820,15 @@ const PronetDB = (() => {
       let q = sb.from('servicios_fijos')
         .select('*, prestadores(nombre, foto_url)')
         .order('creado', { ascending: false });
-      if (soloActivos) q = q.eq('estado', 'activo');
+      if (soloActivos) {
+        q = q.eq('estado', 'activo');
+      } else {
+        // Sin este límite, el historial de terminados crece para siempre y
+        // cada visita a "Mis servicios fijos" trae más filas que la
+        // anterior. Los activos no tienen techo (son la relación vigente);
+        // acotar sólo aplica al total cuando se piden también terminados.
+        q = q.limit(60);
+      }
       const { data, error } = await q;
       if (error) { console.warn('[PronetDB] listarServiciosFijos', error.message); return []; }
       const filas = data || [];

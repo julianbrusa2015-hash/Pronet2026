@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v346'; // v346: FAB de chat oculto para prestador + aviso al vecino si el prestador da de baja el servicio fijo
+const CACHE_VERSION = 'pronet-v347'; // v347: banner de inactividad 7 dias no aplica a servicio fijo + limite en historial de servicios fijos
 
 const SHELL = [
   './',
