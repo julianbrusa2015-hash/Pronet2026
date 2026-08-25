@@ -451,13 +451,17 @@
            Servicios y con el flag de avisos de prestador prendido.
            No vive adentro de la fila de categorías: ahí se comía ~150px de
            los 375 del teléfono y las dejaba asomando por un hueco. -->
+      <!-- Todas las filas de control usan el mismo hueco de 6px: sólo
+           padding ABAJO, cero arriba. Con las dos mitades (una fila cierra
+           con 6 y la siguiente abre con otros 6) los huecos salían
+           distintos según qué fila fuera, y el escalonado se notaba. -->
       <div id="mkt-origen-row" style="display:none;padding:0 14px 6px"></div>
 
       <!-- Una sola fila para las tres cosas que hacés acá: publicar, buscar
            y cambiar de vista. Antes eran DOS filas apiladas (buscador+zona,
            después publicar+vista) que sumaban ~90px. El selector de zona se
            fue al header, arriba. -->
-      <div style="padding:0 14px 4px;display:flex;align-items:center;gap:8px">
+      <div style="padding:0 14px 6px;display:flex;align-items:center;gap:8px">
         <!-- Publicar es la acción principal de la pantalla y está siempre a
              la vista: no vive adentro del carrusel, donde desaparecería cada
              vez que rota a un banner pago. -->
@@ -484,7 +488,7 @@
 
       <!-- Chips de categoría: cambian según la sección activa. Van a lo
            ancho de la pantalla, sin nada que les compita el lugar. -->
-      <div class="filter-row" id="mkt-chips" style="padding:6px 16px 8px"></div>
+      <div class="filter-row" id="mkt-chips" style="padding:0 16px 6px"></div>
 
       <div id="mkt-alerta-row" style="display:none;padding:0 14px 8px">
         <button id="mkt-alerta-btn" onclick="mktToggleAlerta()"
@@ -510,7 +514,7 @@
            llena pintarBannersMercado(). El botón "Publicar" no vive acá
            sino arriba, fijo al lado de Fichas/Mapa: si viviera adentro del
            carrusel desaparecería cada vez que rota a un banner pago. -->
-      <div id="mkt-ads" style="display:none;margin:4px 14px 14px;position:relative">
+      <div id="mkt-ads" style="display:none;margin:0 14px 10px;position:relative">
         <!-- Se puede cerrar, pero vuelve: a las 24 hs o al reabrir la app.
              Un aviso que no se puede sacar no vale más — molesta más, y esa
              molestia se le pega a quien lo publica.
