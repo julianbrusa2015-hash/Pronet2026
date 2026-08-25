@@ -558,22 +558,20 @@
         activa con una flecha, y así no se veía que existiera la otra
         mitad del contenido — en una fila de filtros se leía como un
         filtro apagado.
-     2. `sticky` a la izquierda: la fila scrollea, y un cambio de modo no
-        puede irse de la pantalla al deslizar las categorías. La sombra
-        del borde derecho despega lo que le pasa por debajo.
+     2. Fila propia, a lo ancho. Metido adentro de la fila de chips se
+        comía ~150px de los 375 del teléfono y dejaba a las categorías
+        —el filtro que más se usa— asomando por un hueco.
      3. Forma de pastilla partida en dos, no de chip suelto. Es lo que lo
         distingue del chip activo, que también va en azul pleno. */
   .mkt-origen-seg {
-    position: sticky; left: 0; z-index: 2; flex-shrink: 0;
-    display: inline-flex; gap: 2px; padding: 2px;
+    display: flex; gap: 2px; padding: 2px;
     background: var(--white); border: 1.5px solid var(--border);
     border-radius: 20px;
-    box-shadow: 5px 0 10px -5px rgba(13, 15, 26, .18);
   }
   .mkt-origen-seg button {
-    border: none; background: none; border-radius: 18px;
-    padding: 4px 10px; cursor: pointer; font-family: 'Inter', sans-serif;
-    font-size: 11px; font-weight: 700; color: var(--ink3);
+    flex: 1; border: none; background: none; border-radius: 18px;
+    padding: 6px 10px; cursor: pointer; font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 700; color: var(--ink3);
     white-space: nowrap; transition: background .15s, color .15s;
   }
   .mkt-origen-seg button.on { background: var(--blue); color: #fff; }

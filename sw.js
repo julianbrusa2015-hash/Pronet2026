@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v356'; // v356: Vecinos|Prestadores muestra las dos opciones y queda fijo al scrollear los chips
+const CACHE_VERSION = 'pronet-v357'; // v357: Vecinos|Prestadores en fila propia; las categorias recuperan todo el ancho
 
 const SHELL = [
   './',

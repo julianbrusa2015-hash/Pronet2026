@@ -5186,6 +5186,26 @@ document.addEventListener('focusin', (e) => {
     const verOrigen = !soloServicios && mktTipoActivo === 'servicio' && pubsPrestadorActivo();
     if (!verOrigen) mktOrigen = 'vecino';
 
+    // Muestra LAS DOS opciones, no la activa con una flecha: un botón que
+    // dice sólo "Vecinos" no deja ver que existe la otra mitad del
+    // contenido. Con las dos etiquetas se explica solo, sin depender de
+    // un tooltip que en el teléfono nunca aparece.
+    const filaOrigen = document.getElementById('mkt-origen-row');
+    if (filaOrigen) {
+      filaOrigen.style.display = verOrigen ? 'block' : 'none';
+      if (verOrigen) {
+        const seg = (valor, etiqueta, tip) =>
+          '<button class="' + (mktOrigen === valor ? 'on' : '') + '"' +
+            ' onclick="mktSetOrigen(\'' + valor + '\')" title="' + escHTML(tip) + '"' +
+            ' role="tab" aria-selected="' + (mktOrigen === valor) + '">' + etiqueta + '</button>';
+        filaOrigen.innerHTML =
+          '<div class="mkt-origen-seg" role="tablist" aria-label="Quién publica el aviso">' +
+            seg('vecino', '🏘️ Vecinos', 'Servicios que ofrecen los vecinos del barrio') +
+            seg('prestador', '🛠️ Prestadores', 'Avisos de prestadores profesionales') +
+          '</div>';
+      }
+    }
+
     const sel = document.getElementById('mkt-secciones');
     if (sel) {
       sel.style.display = soloServicios ? 'none' : 'flex';
@@ -5207,24 +5227,7 @@ document.addEventListener('focusin', (e) => {
       const cats = mktOrigen === 'prestador'
         ? RUBROS.map(r => ({ slug: r.slug, nombre: r.n, emoji: r.emoji }))
         : catsDeTipo(mktTipoActivo);
-      // El origen va PRIMERO y MUESTRA LAS DOS OPCIONES, no la actual con
-      // una flecha: un botón que dice sólo "Vecinos" no deja ver que
-      // existe la otra mitad del contenido, y en una fila de filtros se
-      // lee como un filtro apagado más.
-      //
-      // `sticky` porque la fila scrollea: es un cambio de MODO, no un
-      // filtro, y no puede irse de la pantalla al deslizar las categorías.
-      const seg = (valor, etiqueta, tip) =>
-        '<button class="' + (mktOrigen === valor ? 'on' : '') + '"' +
-          ' onclick="mktSetOrigen(\'' + valor + '\')" title="' + escHTML(tip) + '"' +
-          ' role="tab" aria-selected="' + (mktOrigen === valor) + '">' + etiqueta + '</button>';
-      const chipOrigen = !verOrigen ? '' :
-        '<div class="mkt-origen-seg" role="tablist" aria-label="Quién publica el aviso">' +
-          seg('vecino', '🏘️ Vecinos', 'Servicios que ofrecen los vecinos del barrio') +
-          seg('prestador', '🛠️ Prestadores', 'Avisos de prestadores profesionales') +
-        '</div>';
-
-      chips.innerHTML = chipOrigen +
+      chips.innerHTML =
         '<div class="chip' + (mktFiltroActivo === 'todos' ? ' on' : '') +
         '" onclick="filtrarMercado(this,\'todos\')">Todos</div>' +
         cats.map(c =>

@@ -480,9 +480,16 @@
         </button>
       </div>
 
-      <!-- Chips de categoría: cambian según la sección activa. El PRIMERO es
-           el selector de origen (Vecinos ⇄ Prestadores) cuando corresponde —
-           lo antepone mktPintarSecciones(). -->
+      <!-- Origen del aviso: quién publica lo que estás viendo. Tiene su
+           propia fila y no va adentro de la de categorías: ahí se comía
+           ~150px de los 375 del teléfono y dejaba a las categorías —que
+           son el filtro que más se usa— asomando por un hueco.
+           Lo pinta mktPintarSecciones(); se muestra sólo en Servicios y
+           con el flag de avisos de prestador prendido. -->
+      <div id="mkt-origen-row" style="display:none;padding:0 14px 8px"></div>
+
+      <!-- Chips de categoría: cambian según la sección activa. Van a lo
+           ancho de la pantalla, sin nada que les compita el lugar. -->
       <div class="filter-row" id="mkt-chips"></div>
 
       <div id="mkt-alerta-row" style="display:none;padding:0 14px 8px">
