@@ -570,7 +570,7 @@
   }
   .mkt-origen-seg button {
     flex: 1; border: none; background: none; border-radius: 18px;
-    padding: 6px 10px; cursor: pointer; font-family: 'Inter', sans-serif;
+    padding: 5px 10px; cursor: pointer; font-family: 'Inter', sans-serif;
     font-size: 12px; font-weight: 700; color: var(--ink3);
     white-space: nowrap; transition: background .15s, color .15s;
   }
@@ -2127,12 +2127,17 @@
     display: flex; gap: 4px; margin: 0 14px 10px;
     background: var(--surface); border-radius: 12px; padding: 4px;
   }
+  #mkt-secciones { margin-bottom: 6px; padding: 3px; }
   .mkt-sec {
     flex: 1; border: none; background: none; cursor: pointer;
     padding: 9px 8px; border-radius: 9px;
     font-family: inherit; font-size: 13px; font-weight: 700;
     color: var(--ink3); transition: background .15s, color .15s;
   }
+  /* Sólo en Entre Vecinos, donde hay cinco filas de controles antes del
+     primer aviso y cada píxel cuenta. La clase la comparte la pantalla de
+     Guías, que no tiene ese problema y se queda como está. */
+  #mkt-secciones .mkt-sec { padding: 7px 8px; }
   .mkt-sec.on { background: var(--white); color: var(--blue); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .mkt-sec:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 

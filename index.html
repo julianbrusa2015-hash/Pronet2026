@@ -444,18 +444,20 @@
           title="Cosas que alguien vende: comida casera, muebles, ropa, plantas">🛒 Mercado</button>
       </div>
 
-      <!-- El origen del aviso (Vecinos ⇄ Prestadores) ya NO vive en una fila
-           propia: pasó a ser el primer chip de la fila de categorías, que lo
-           pinta mktPintarSecciones(). Ocupaba 46px de alto para una elección
-           entre dos, y como chip queda al lado de los otros filtros — que es
-           lo que es. El interruptor deslizante viejo (.mkt-origen, .mo-lbl,
-           .mo-switch en styles.css) quedó sin uso. -->
+      <!-- Origen del aviso: quién publica lo que estás viendo. Va pegado a
+           Servicios/Mercado porque son el mismo tipo de decisión —qué
+           estoy mirando— y juntos se leen como un solo bloque; abajo van
+           las acciones. Lo pinta mktPintarSecciones(): sólo aparece en
+           Servicios y con el flag de avisos de prestador prendido.
+           No vive adentro de la fila de categorías: ahí se comía ~150px de
+           los 375 del teléfono y las dejaba asomando por un hueco. -->
+      <div id="mkt-origen-row" style="display:none;padding:0 14px 6px"></div>
 
       <!-- Una sola fila para las tres cosas que hacés acá: publicar, buscar
            y cambiar de vista. Antes eran DOS filas apiladas (buscador+zona,
            después publicar+vista) que sumaban ~90px. El selector de zona se
            fue al header, arriba. -->
-      <div style="padding:0 14px 8px;display:flex;align-items:center;gap:8px">
+      <div style="padding:0 14px 4px;display:flex;align-items:center;gap:8px">
         <!-- Publicar es la acción principal de la pantalla y está siempre a
              la vista: no vive adentro del carrusel, donde desaparecería cada
              vez que rota a un banner pago. -->
@@ -480,17 +482,9 @@
         </button>
       </div>
 
-      <!-- Origen del aviso: quién publica lo que estás viendo. Tiene su
-           propia fila y no va adentro de la de categorías: ahí se comía
-           ~150px de los 375 del teléfono y dejaba a las categorías —que
-           son el filtro que más se usa— asomando por un hueco.
-           Lo pinta mktPintarSecciones(); se muestra sólo en Servicios y
-           con el flag de avisos de prestador prendido. -->
-      <div id="mkt-origen-row" style="display:none;padding:0 14px 8px"></div>
-
       <!-- Chips de categoría: cambian según la sección activa. Van a lo
            ancho de la pantalla, sin nada que les compita el lugar. -->
-      <div class="filter-row" id="mkt-chips"></div>
+      <div class="filter-row" id="mkt-chips" style="padding:6px 16px 8px"></div>
 
       <div id="mkt-alerta-row" style="display:none;padding:0 14px 8px">
         <button id="mkt-alerta-btn" onclick="mktToggleAlerta()"
