@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v352'; // v352: "Calificar PRONET" en el menu de Ayuda (resenas_app, una por persona, editable)
+const CACHE_VERSION = 'pronet-v353'; // v353: Entre Vecinos recupera ~136px de alto (ambito al header, origen como chip, una fila de controles)
 
 const SHELL = [
   './',

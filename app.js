@@ -5178,21 +5178,13 @@ document.addEventListener('focusin', (e) => {
     // El toggle de origen vive sólo en Servicios, con el flag prendido y
     // para quien NO es prestador: el prestador publica hacia este espacio,
     // no lo navega — su ventana es la vista previa de su panel.
-    const origenSel = document.getElementById('mkt-origen');
+    //
+    // Ya no es una fila propia con un interruptor deslizante: es el PRIMER
+    // CHIP de la fila de filtros (se arma abajo, junto con las categorías).
+    // Ocupaba 46px de alto para una elección entre dos, y como chip queda
+    // al lado de los otros filtros, que es lo que es.
     const verOrigen = !soloServicios && mktTipoActivo === 'servicio' && pubsPrestadorActivo();
     if (!verOrigen) mktOrigen = 'vecino';
-    if (origenSel) {
-      origenSel.style.display = verOrigen ? 'flex' : 'none';
-      // La pastilla que se desliza sale de este atributo (ver .mkt-origen en
-      // styles.css): mover un fondo entre dos botones distintos no se puede
-      // animar, así que la pastilla vive en el contenedor.
-      origenSel.dataset.origen = mktOrigen;
-      origenSel.querySelectorAll('.mo-lbl').forEach((b, i) => {
-        const suyo = i === 0 ? 'vecino' : 'prestador';
-        b.classList.toggle('on', suyo === mktOrigen);
-        b.setAttribute('aria-selected', suyo === mktOrigen ? 'true' : 'false');
-      });
-    }
 
     const sel = document.getElementById('mkt-secciones');
     if (sel) {
@@ -5215,7 +5207,18 @@ document.addEventListener('focusin', (e) => {
       const cats = mktOrigen === 'prestador'
         ? RUBROS.map(r => ({ slug: r.slug, nombre: r.n, emoji: r.emoji }))
         : catsDeTipo(mktTipoActivo);
-      chips.innerHTML =
+      // El chip de origen va PRIMERO y se distingue de los de categoría:
+      // no filtra dentro de una lista, cambia de qué lista se trata. Las
+      // flechas dicen que alterna en vez de encenderse.
+      const chipOrigen = !verOrigen ? '' :
+        '<button class="chip mkt-chip-origen" onclick="mktToggleOrigen()" ' +
+          'aria-label="Cambiar a avisos de ' + (mktOrigen === 'vecino' ? 'prestadores' : 'vecinos') + '">' +
+          (mktOrigen === 'vecino' ? '🏘️ Vecinos' : '🛠️ Prestadores') +
+          '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
+            '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>' +
+          '</svg></button>';
+
+      chips.innerHTML = chipOrigen +
         '<div class="chip' + (mktFiltroActivo === 'todos' ? ' on' : '') +
         '" onclick="filtrarMercado(this,\'todos\')">Todos</div>' +
         cats.map(c =>
@@ -6123,24 +6126,43 @@ document.addEventListener('focusin', (e) => {
    *  Va visible siempre que haya comunidad: un mercado cerrado sin cartel es
    *  indistinguible de un mercado vacío, y el vecino concluye que no hay
    *  nada en vez de que está mirando poquito. */
+  /** El renglón de ámbito que cuelga del título: dónde estás mirando, y la
+   *  acción para ampliar o volver.
+   *
+   *  A diferencia de la barra que reemplazó, este renglón NO se esconde
+   *  nunca: adentro vive el <select> de zona, y ocultarlo dejaba sin
+   *  ningún filtro de zona a quien no declaró comunidad — que hoy es la
+   *  enorme mayoría de los perfiles. Sin comunidad muestra la zona activa
+   *  (o "Escobar") y esconde sólo la acción secundaria, que ahí no aplica. */
   function mktPintarAmbito(comunidad) {
     const cont = document.getElementById('mkt-ambito');
     if (!cont) return;
     const txt = document.getElementById('mkt-ambito-txt');
     const btn = document.getElementById('mkt-ambito-btn');
+    const sep = document.getElementById('mkt-ambito-sep');
+    const mostrarAccion = (visible) => {
+      if (btn) btn.style.display = visible ? '' : 'none';
+      if (sep) sep.style.display = visible ? '' : 'none';
+    };
+    cont.style.display = 'flex';
+
     // El barrio elegido en el mapa se muestra aunque el vecino no tenga
     // comunidad: si no, el feed quedaría filtrado sin que nada lo diga.
     if (mktBarrioFiltro) {
-      cont.style.display = 'flex';
-      if (txt) txt.textContent = 'Publicaciones en ' + mktBarrioFiltro;
-      if (btn) { btn.textContent = 'Quitar filtro'; btn.setAttribute('onclick', 'mktQuitarBarrioFiltro()'); }
+      if (txt) txt.textContent = '🏘️ ' + mktBarrioFiltro;
+      if (btn) { btn.textContent = 'quitar filtro'; btn.setAttribute('onclick', 'mktQuitarBarrioFiltro()'); }
+      mostrarAccion(true);
       return;
     }
     if (btn) btn.setAttribute('onclick', 'mktToggleAmbito()');
-    if (!comunidad) { cont.style.display = 'none'; return; }
-    cont.style.display = 'flex';
-    if (txt) txt.textContent = mktAmpliado ? 'Viendo toda la zona' : 'Mercado de ' + comunidad;
-    if (btn) btn.textContent = mktAmpliado ? 'Volver a mi comunidad' : 'Ver también otros barrios';
+    if (!comunidad) {
+      if (txt) txt.textContent = '📍 ' + (mktZonaActiva || 'Toda la zona');
+      mostrarAccion(false);
+      return;
+    }
+    if (txt) txt.textContent = mktAmpliado ? '📍 Toda la zona' : '🏘️ ' + comunidad;
+    if (btn) btn.textContent = mktAmpliado ? 'volver a mi barrio' : 'ver otros barrios';
+    mostrarAccion(true);
   }
 
   // ── El aviso "Publicá lo que tenés" se puede cerrar ─────────────────
@@ -6294,23 +6316,35 @@ document.addEventListener('focusin', (e) => {
     _mktResumenLugares.length = 0;
     ordenadas.forEach(f => _mktResumenLugares.push(f.lugar));
 
+    // Una sola línea desplazable, no una tarjeta con los chips envueltos:
+    // así ocupa ~28px en vez de ~88px. Con los barrios en varias filas el
+    // bloque empujaba el feed fuera de la primera pantalla, y es un dato de
+    // apoyo — interesa de reojo, no merece el alto de una tarjeta.
+    const VISIBLES = 3;
+    const resto = ordenadas.length - VISIBLES;
     cont.style.display = 'block';
     cont.innerHTML =
-      '<div style="background:white;border:1px solid var(--border);border-radius:12px;padding:10px 12px">' +
-        '<div style="font-size:12.5px;font-weight:700;color:var(--ink)">' +
+      '<div style="display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">' +
+        '<span style="flex-shrink:0;font-size:11.5px;font-weight:800;color:var(--ink)">' +
           // Sin búsqueda ni categoría no hay un "ofrecen X": el texto pasa a
           // decir cuántos están publicando, que es la pregunta de quien mira
           // toda la zona sin buscar nada.
           (hayFiltro
             ? totalVecinos + (totalVecinos === 1 ? ' vecino ofrece ' : ' vecinos ofrecen ') + que
             : totalVecinos + (totalVecinos === 1 ? ' vecino publicando' : ' vecinos publicando')) +
-        '</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' +
-          ordenadas.map((f, i) =>
-            '<button onclick="mktFiltrarPorLugar(' + i + ')" ' +
-              'style="border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:11.5px;font-weight:600;color:var(--ink2);cursor:pointer;font-family:\'Inter\',sans-serif">' +
-              escHTML(f.lugar) + ' (' + f.cantidad + ')</button>').join('') +
-        '</div>' +
+        '</span>' +
+        ordenadas.slice(0, VISIBLES).map((f, i) =>
+          '<button onclick="mktFiltrarPorLugar(' + i + ')" ' +
+            'style="flex-shrink:0;border:none;background:none;padding:0;font-size:11px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:\'Inter\',sans-serif;white-space:nowrap">' +
+            escHTML(f.lugar) + ' (' + f.cantidad + ')</button>').join('') +
+        // Los que no entran no se pierden: el resto sigue a la derecha, y
+        // este contador dice que hay más para deslizar.
+        (resto > 0
+          ? ordenadas.slice(VISIBLES).map((f, i) =>
+              '<button onclick="mktFiltrarPorLugar(' + (i + VISIBLES) + ')" ' +
+                'style="flex-shrink:0;border:none;background:none;padding:0;font-size:11px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:\'Inter\',sans-serif;white-space:nowrap">' +
+                escHTML(f.lugar) + ' (' + f.cantidad + ')</button>').join('')
+          : '') +
       '</div>';
   }
 

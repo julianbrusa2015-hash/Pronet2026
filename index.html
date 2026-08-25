@@ -378,11 +378,38 @@
     <div class="screen" id="s-mercado">
 
       <div class="appbar">
-        <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
           <div class="back-btn" onclick="goTo('s-home')" aria-label="Volver">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </div>
-          <div class="logo" style="font-size:17px">Entre Vecinos</div>
+          <div style="flex:1;min-width:0">
+            <div class="logo" style="font-size:17px;line-height:1.2">Entre Vecinos</div>
+            <!-- De qué mercado estás viendo. Antes era una barra propia
+                 debajo del carrusel (#mkt-ambito) MÁS un desplegable "Zona"
+                 aparte en la fila del buscador: dos controles apilados que
+                 contestaban la misma pregunta —dónde estoy mirando— y entre
+                 los dos se comían ~38px de alto y 96px de ancho.
+                 Acá son uno solo, colgado del título. Lo pinta
+                 mktPintarAmbito(). -->
+            <div id="mkt-ambito" style="display:flex;align-items:center;gap:5px;margin-top:1px">
+              <!-- El <select> nativo va encima del texto con opacity:0: así
+                   el desplegable lo abre el sistema operativo (que es lo que
+                   mejor funciona en móvil) sin dibujar un control aparte.
+                   font-size:16px evita el zoom automático de iOS al enfocar. -->
+              <div style="position:relative;display:flex;align-items:center;gap:3px;flex-shrink:0">
+                <span id="mkt-ambito-txt" style="font-size:11px;font-weight:700;color:var(--ink3);white-space:nowrap"></span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#5E6480" stroke-width="3" style="flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+                <select id="mkt-zona-select" aria-label="Elegir zona o barrio" onchange="mktFiltrarZona(this.value)"
+                  style="position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;background:none;font-size:16px;font-family:'Inter',sans-serif;cursor:pointer">
+                  <!-- Lo llena poblarSelectZonaMercado() desde el catálogo. -->
+                  <option value="">📍 Zona</option>
+                </select>
+              </div>
+              <span id="mkt-ambito-sep" style="font-size:11px;color:var(--border);flex-shrink:0">·</span>
+              <button id="mkt-ambito-btn" onclick="mktToggleAmbito()"
+                style="background:none;border:none;font-size:11px;font-weight:700;color:var(--blue);cursor:pointer;font-family:'Inter',sans-serif;padding:0;flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></button>
+            </div>
+          </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <!-- Fichas/Mapa bajaron debajo del buscador (rescatado de 3527e53,
@@ -412,52 +439,31 @@
         <button class="mkt-sec"    role="tab" aria-selected="false" onclick="mktSetTipo('producto')">🛒 Mercado</button>
       </div>
 
-      <!-- Origen del aviso, sólo dentro de Servicios: publicaciones de
-           vecinos o de prestadores. Es el mismo rubro, dos orígenes. Lo
-           muestra/oculta mktPintarSecciones() según el flag. -->
-      <div id="mkt-origen" class="mkt-origen" role="tablist" aria-label="Origen del aviso"
-           data-origen="vecino" style="display:none">
-        <!-- Las etiquetas van a los costados y son las que llevan la
-             semántica (role=tab): un interruptor solo dejaría una de las dos
-             opciones sin nombre visible. Las tres cosas son clickeables. -->
-        <button class="mo-lbl on" role="tab" aria-selected="true" onclick="mktSetOrigen('vecino')">🏘️ Vecinos</button>
-        <button class="mo-switch" onclick="mktToggleOrigen()" aria-hidden="true" tabindex="-1">
-          <span class="mo-knob"></span>
-        </button>
-        <button class="mo-lbl" role="tab" aria-selected="false" onclick="mktSetOrigen('prestador')">🛠️ Prestadores</button>
-      </div>
+      <!-- El origen del aviso (Vecinos ⇄ Prestadores) ya NO vive en una fila
+           propia: pasó a ser el primer chip de la fila de categorías, que lo
+           pinta mktPintarSecciones(). Ocupaba 46px de alto para una elección
+           entre dos, y como chip queda al lado de los otros filtros — que es
+           lo que es. El interruptor deslizante viejo (.mkt-origen, .mo-lbl,
+           .mo-switch en styles.css) quedó sin uso. -->
 
-      <!-- Chips de categoría: cambian según la sección activa -->
-      <div class="filter-row" id="mkt-chips"></div>
-
+      <!-- Una sola fila para las tres cosas que hacés acá: publicar, buscar
+           y cambiar de vista. Antes eran DOS filas apiladas (buscador+zona,
+           después publicar+vista) que sumaban ~90px. El selector de zona se
+           fue al header, arriba. -->
       <div style="padding:0 14px 8px;display:flex;align-items:center;gap:8px">
-        <div style="position:relative;flex:1">
+        <!-- Publicar es la acción principal de la pantalla y está siempre a
+             la vista: no vive adentro del carrusel, donde desaparecería cada
+             vez que rota a un banner pago. -->
+        <button id="mkt-btn-publicar-fijo" onclick="abrirPublicarMercado()"
+          style="flex-shrink:0;display:flex;align-items:center;gap:5px;background:var(--blue);border:none;border-radius:10px;padding:9px 13px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:'Inter',sans-serif">
+          <span style="font-size:14px;line-height:1">+</span> Publicar
+        </button>
+        <div style="position:relative;flex:1;min-width:0">
           <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);pointer-events:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="mkt-buscador" class="ob-input" type="search" placeholder="Buscá productos, servicios..."
+          <input id="mkt-buscador" class="ob-input" type="search" placeholder="Buscá en tu barrio…"
             style="padding-left:34px;margin-bottom:0;font-size:13px"
             oninput="mktBuscar(this.value)">
         </div>
-        <select id="mkt-zona-select" onchange="mktFiltrarZona(this.value)"
-          style="width:120px;flex-shrink:0;border:1.5px solid var(--border);border-radius:10px;padding:8px 24px 8px 8px;font-size:12px;font-family:'Inter',sans-serif;color:var(--ink);background:white;appearance:none;-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 7px center">
-          <!-- Lo llena poblarSelectZonaMercado() desde el catálogo. Antes
-               era una lista fija con 10 nombres y el catálogo ya tiene 28:
-               faltaban los 17 BARRIOS enteros, así que no había forma de
-               filtrar por Araucarias desde acá. Y una lista a mano de algo
-               que el admin edita en Parametrías se desactualiza sola. -->
-          <option value="">📍 Zona</option>
-        </select>
-      </div>
-      <div style="padding:0 14px 10px;display:flex;align-items:center;gap:8px">
-        <!-- Publicar vive acá, fijo, y no adentro del carrusel de abajo: ahí
-             desaparecería cada vez que rota a un banner pago, justo cuando
-             el carrusel está lleno y más gente lo está mirando. Es la acción
-             principal de la pantalla, así que no puede depender de en qué
-             slide quedó parado. `margin-right:auto` lo deja a la izquierda y
-             empuja Fichas/Mapa —que son controles de la lista— a la derecha. -->
-        <button id="mkt-btn-publicar-fijo" onclick="abrirPublicarMercado()"
-          style="margin-right:auto;display:flex;align-items:center;gap:5px;background:var(--blue);border:none;border-radius:10px;padding:7px 13px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:'Inter',sans-serif">
-          <span style="font-size:14px;line-height:1">+</span> Publicar
-        </button>
         <button id="mkt-toggle-formato" class="mkt-vista-btn" onclick="mktToggleFormato()" title="Cambiar formato del feed" aria-label="Cambiar formato del feed">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           <span id="mkt-formato-lbl" class="sr-only">Fichas</span>
@@ -467,6 +473,12 @@
           <span id="mkt-toggle-lbl" class="sr-only">Mapa</span>
         </button>
       </div>
+
+      <!-- Chips de categoría: cambian según la sección activa. El PRIMERO es
+           el selector de origen (Vecinos ⇄ Prestadores) cuando corresponde —
+           lo antepone mktPintarSecciones(). -->
+      <div class="filter-row" id="mkt-chips"></div>
+
       <div id="mkt-alerta-row" style="display:none;padding:0 14px 8px">
         <button id="mkt-alerta-btn" onclick="mktToggleAlerta()"
           style="background:none;border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:5px">
@@ -504,15 +516,8 @@
         <div class="ads-dots" id="mkt-ads-dots"></div>
       </div>
 
-      <!-- De qué mercado estás viendo. Sólo aparece si el vecino declaró su
-           comunidad: sin ese dato el feed es toda la zona y no hay nada que
-           aclarar. -->
-      <div id="mkt-ambito" style="display:none;align-items:center;gap:8px;margin:0 14px 12px;padding:9px 12px;background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:12px">
-        <span style="font-size:14px">🏘️</span>
-        <span id="mkt-ambito-txt" style="flex:1;font-size:12px;font-weight:700;color:var(--blue)"></span>
-        <button id="mkt-ambito-btn" onclick="mktToggleAmbito()"
-          style="background:none;border:none;font-size:11.5px;font-weight:700;color:var(--blue);text-decoration:underline;cursor:pointer;font-family:'Inter',sans-serif;padding:0;flex-shrink:0"></button>
-      </div>
+      <!-- El bloque #mkt-ambito que vivía acá se mudó al header (arriba),
+           donde además absorbió el desplegable "Zona". -->
 
       <!-- Resumen de la búsqueda por barrio: "3 vecinos ofrecen pizza ·
            Araucarias (2) · Acacias (1)". Contesta de un vistazo cuántos y

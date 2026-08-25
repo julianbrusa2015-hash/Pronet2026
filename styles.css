@@ -549,6 +549,16 @@
     transition: all .12s; font-family: 'Inter', sans-serif;
   }
   .chip.on { background: var(--blue); color: white; border-color: var(--blue); }
+  /* El chip de origen (Vecinos ⇄ Prestadores) en Entre Vecinos: primero de
+     la fila y distinto a propósito. Los otros chips FILTRAN dentro de una
+     lista y se encienden; éste cambia DE QUÉ LISTA se trata, así que va
+     siempre "encendido" en celeste y con flechas que dicen que alterna.
+     Reemplazó al interruptor deslizante que ocupaba una fila entera. */
+  .mkt-chip-origen {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--blue-s); color: var(--blue-d);
+    border-color: rgba(43, 91, 255, .25); font-weight: 700;
+  }
   .results-meta { padding: 4px 18px 10px; font-size: 12px; color: var(--ink3); }
 
   /* ── MERCADO SCREEN (wireframe) ── */
