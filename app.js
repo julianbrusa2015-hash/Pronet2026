@@ -5207,16 +5207,22 @@ document.addEventListener('focusin', (e) => {
       const cats = mktOrigen === 'prestador'
         ? RUBROS.map(r => ({ slug: r.slug, nombre: r.n, emoji: r.emoji }))
         : catsDeTipo(mktTipoActivo);
-      // El chip de origen va PRIMERO y se distingue de los de categoría:
-      // no filtra dentro de una lista, cambia de qué lista se trata. Las
-      // flechas dicen que alterna en vez de encenderse.
+      // El origen va PRIMERO y MUESTRA LAS DOS OPCIONES, no la actual con
+      // una flecha: un botón que dice sólo "Vecinos" no deja ver que
+      // existe la otra mitad del contenido, y en una fila de filtros se
+      // lee como un filtro apagado más.
+      //
+      // `sticky` porque la fila scrollea: es un cambio de MODO, no un
+      // filtro, y no puede irse de la pantalla al deslizar las categorías.
+      const seg = (valor, etiqueta, tip) =>
+        '<button class="' + (mktOrigen === valor ? 'on' : '') + '"' +
+          ' onclick="mktSetOrigen(\'' + valor + '\')" title="' + escHTML(tip) + '"' +
+          ' role="tab" aria-selected="' + (mktOrigen === valor) + '">' + etiqueta + '</button>';
       const chipOrigen = !verOrigen ? '' :
-        '<button class="chip mkt-chip-origen" onclick="mktToggleOrigen()" ' +
-          'aria-label="Cambiar a avisos de ' + (mktOrigen === 'vecino' ? 'prestadores' : 'vecinos') + '">' +
-          (mktOrigen === 'vecino' ? '🏘️ Vecinos' : '🛠️ Prestadores') +
-          '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
-            '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>' +
-          '</svg></button>';
+        '<div class="mkt-origen-seg" role="tablist" aria-label="Quién publica el aviso">' +
+          seg('vecino', '🏘️ Vecinos', 'Servicios que ofrecen los vecinos del barrio') +
+          seg('prestador', '🛠️ Prestadores', 'Avisos de prestadores profesionales') +
+        '</div>';
 
       chips.innerHTML = chipOrigen +
         '<div class="chip' + (mktFiltroActivo === 'todos' ? ' on' : '') +

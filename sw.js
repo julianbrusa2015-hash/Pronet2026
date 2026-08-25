@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v355'; // v355: Mis alertas sale de Entre Vecinos y va a Tu actividad (junta alertas de Servicios y de Mercado)
+const CACHE_VERSION = 'pronet-v356'; // v356: Vecinos|Prestadores muestra las dos opciones y queda fijo al scrollear los chips
 
 const SHELL = [
   './',

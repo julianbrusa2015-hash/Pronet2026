@@ -549,16 +549,35 @@
     transition: all .12s; font-family: 'Inter', sans-serif;
   }
   .chip.on { background: var(--blue); color: white; border-color: var(--blue); }
-  /* El chip de origen (Vecinos ⇄ Prestadores) en Entre Vecinos: primero de
-     la fila y distinto a propósito. Los otros chips FILTRAN dentro de una
-     lista y se encienden; éste cambia DE QUÉ LISTA se trata, así que va
-     siempre "encendido" en celeste y con flechas que dicen que alterna.
-     Reemplazó al interruptor deslizante que ocupaba una fila entera. */
-  .mkt-chip-origen {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: var(--blue-s); color: var(--blue-d);
-    border-color: rgba(43, 91, 255, .25); font-weight: 700;
+  /* Origen del aviso (Vecinos | Prestadores) en Entre Vecinos.
+     Reemplazó al interruptor deslizante que ocupaba una fila entera, pero
+     NO es un chip más: los chips filtran dentro de una lista, éste cambia
+     de qué lista se trata. Tres decisiones que lo separan del resto:
+
+     1. Muestra LAS DOS opciones. La primera versión mostraba sólo la
+        activa con una flecha, y así no se veía que existiera la otra
+        mitad del contenido — en una fila de filtros se leía como un
+        filtro apagado.
+     2. `sticky` a la izquierda: la fila scrollea, y un cambio de modo no
+        puede irse de la pantalla al deslizar las categorías. La sombra
+        del borde derecho despega lo que le pasa por debajo.
+     3. Forma de pastilla partida en dos, no de chip suelto. Es lo que lo
+        distingue del chip activo, que también va en azul pleno. */
+  .mkt-origen-seg {
+    position: sticky; left: 0; z-index: 2; flex-shrink: 0;
+    display: inline-flex; gap: 2px; padding: 2px;
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 5px 0 10px -5px rgba(13, 15, 26, .18);
   }
+  .mkt-origen-seg button {
+    border: none; background: none; border-radius: 18px;
+    padding: 4px 10px; cursor: pointer; font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 700; color: var(--ink3);
+    white-space: nowrap; transition: background .15s, color .15s;
+  }
+  .mkt-origen-seg button.on { background: var(--blue); color: #fff; }
+  .mkt-origen-seg button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
   .results-meta { padding: 4px 18px 10px; font-size: 12px; color: var(--ink3); }
 
   /* ── MERCADO SCREEN (wireframe) ── */

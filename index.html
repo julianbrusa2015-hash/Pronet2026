@@ -435,8 +435,13 @@
       <!-- Las dos secciones. Para el prestador no se muestra: él sólo ve
            Servicios del Barrio (ver mktPintarSecciones en app.js). -->
       <div id="mkt-secciones" class="mkt-secciones" role="tablist" aria-label="Sección de ProMarket">
-        <button class="mkt-sec on" role="tab" aria-selected="true"  onclick="mktSetTipo('servicio')">🛠️ Servicios</button>
-        <button class="mkt-sec"    role="tab" aria-selected="false" onclick="mktSetTipo('producto')">🛒 Mercado</button>
+        <!-- Los `title` sirven sólo en escritorio (en el teléfono no hay
+             hover). No son la explicación principal de nada: lo que tiene
+             que quedar claro sin tooltip va en el texto del control. -->
+        <button class="mkt-sec on" role="tab" aria-selected="true"  onclick="mktSetTipo('servicio')"
+          title="Cosas que alguien hace para vos: peluquería, clases, arreglos, cuidado">🛠️ Servicios</button>
+        <button class="mkt-sec"    role="tab" aria-selected="false" onclick="mktSetTipo('producto')"
+          title="Cosas que alguien vende: comida casera, muebles, ropa, plantas">🛒 Mercado</button>
       </div>
 
       <!-- El origen del aviso (Vecinos ⇄ Prestadores) ya NO vive en una fila
@@ -455,6 +460,7 @@
              la vista: no vive adentro del carrusel, donde desaparecería cada
              vez que rota a un banner pago. -->
         <button id="mkt-btn-publicar-fijo" onclick="abrirPublicarMercado()"
+          title="Ofrecé algo que hacés o vendé algo que tenés, para los vecinos de tu barrio"
           style="flex-shrink:0;display:flex;align-items:center;gap:5px;background:var(--blue);border:none;border-radius:10px;padding:9px 13px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:'Inter',sans-serif">
           <span style="font-size:14px;line-height:1">+</span> Publicar
         </button>
