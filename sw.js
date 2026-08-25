@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v350'; // v350: el ABM de banners del admin elige carrusel (portada o Entre Vecinos)
+const CACHE_VERSION = 'pronet-v351'; // v351: titulo de Promocionar y slides "de la casa" acompanan al rol (el vecino no compra portada)
 
 const SHELL = [
   './',

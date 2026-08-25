@@ -4394,7 +4394,12 @@
   <div class="screen" id="s-promocionar">
     <div class="nprop-header">
       <div class="back-btn" onclick="goTo('s-miperfil')" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>
-      <h2>Promocionar mi negocio</h2>
+      <!-- El título acompaña al ítem de menú por el que se entró: el
+           prestador viene de "Promocionar mi negocio" y el vecino de
+           "Promocionar un aviso". Fijo en "mi negocio" dejaba al vecino
+           entrando por un lado y aterrizando en otro. Lo pinta
+           abrirPromocionar(), igual que el hero de abajo. -->
+      <h2 id="promo-titulo">Promocionar mi negocio</h2>
     </div>
 
     <div style="padding:16px 18px 90px">

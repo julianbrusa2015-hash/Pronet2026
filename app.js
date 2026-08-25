@@ -4096,13 +4096,27 @@ document.addEventListener('focusin', (e) => {
   //
   // La pauta apunta a vender el espacio vacío en vez de a un genérico "conocé
   // PRONET": el hueco es justamente inventario de banners sin comprar.
+  //
+  // El texto cambia según el rol porque el destino cambia: tocarlo abre
+  // abrirPromocionar(), y ahí el prestador compra la PORTADA y el vecino
+  // el carrusel de Entre Vecinos (promoUbicacion). Con el texto fijo, un
+  // vecino leía "Tu banner en la portada", tocaba, y aterrizaba comprando
+  // otra cosa — y desde el 2026-08-24 el servidor directamente le rechaza
+  // la portada, así que era una promesa que no se podía cumplir.
   function slidesHouse() {
-    return [
-      tarjetaAd('promocionarme', 'linear-gradient(135deg,#0D0F1A,#2B5BFF)', '#fff',
-              '📣', 'Promocioná tu negocio acá', 'Este espacio está libre · Tu aviso a todo el barrio'),
-      tarjetaAd('promocionarme', 'linear-gradient(135deg,#7C2D12,#EA580C)', '#fff',
-              '🎯', 'Tu banner en la portada', 'Lo ven todos los vecinos de tu zona'),
-    ];
+    return esPrestador()
+      ? [
+          tarjetaAd('promocionarme', 'linear-gradient(135deg,#0D0F1A,#2B5BFF)', '#fff',
+                  '📣', 'Promocioná tu negocio acá', 'Este espacio está libre · Tu aviso a todo el barrio'),
+          tarjetaAd('promocionarme', 'linear-gradient(135deg,#7C2D12,#EA580C)', '#fff',
+                  '🎯', 'Tu banner en la portada', 'Lo ven todos los vecinos de tu zona'),
+        ]
+      : [
+          tarjetaAd('promocionarme', 'linear-gradient(135deg,#0D0F1A,#2B5BFF)', '#fff',
+                  '📣', 'Promocioná tu aviso acá', 'Este espacio está libre · Lo ven los vecinos de tu barrio'),
+          tarjetaAd('promocionarme', 'linear-gradient(135deg,#7C2D12,#EA580C)', '#fff',
+                  '🎯', 'Tu banner en Entre Vecinos', 'Arriba del feed, sobre las publicaciones del barrio'),
+        ];
   }
 
   /** Qué slide se está viendo: el que tiene el centro más cerca del centro
@@ -12356,6 +12370,10 @@ document.addEventListener('focusin', (e) => {
 
     // Decir dónde va a salir, que no es lo mismo para los dos roles.
     const enPortada = promoUbicacion() === 'portada';
+    const tituloEl = document.getElementById('promo-titulo');
+    if (tituloEl) tituloEl.textContent = enPortada
+      ? 'Promocionar mi negocio'
+      : 'Promocionar un aviso';
     const heroTit = document.getElementById('promo-hero-tit');
     const heroSub = document.getElementById('promo-hero-sub');
     if (heroTit) heroTit.textContent = enPortada
