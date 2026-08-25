@@ -9948,6 +9948,11 @@ document.addEventListener('focusin', (e) => {
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
             '<div style="flex:1;font-size:13.5px;font-weight:800;color:var(--ink)">' + escHTML(b.nombre) +
               (b.es_house ? ' <span style="font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-s);border-radius:8px;padding:2px 6px;vertical-align:middle">🏠 De la casa</span>' : '') +
+              // A qué carrusel va. Sin esto la lista es plana y no hay forma
+              // de saber cuál sale en Inicio y cuál dentro de Entre Vecinos.
+              (b.ubicacion === 'vecinos'
+                ? ' <span style="font-size:10px;font-weight:700;color:#C2410C;background:#FFEDD5;border-radius:8px;padding:2px 6px;vertical-align:middle">🏘️ Entre Vecinos</span>'
+                : ' <span style="font-size:10px;font-weight:700;color:var(--ink3);background:var(--surface);border-radius:8px;padding:2px 6px;vertical-align:middle">🏠 Portada</span>') +
             '</div>' +
             '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:' + est.bg + ';color:' + est.color + '">' + est.txt + '</span>' +
           '</div>' +
@@ -10021,6 +10026,15 @@ document.addEventListener('focusin', (e) => {
           '<input id="nb-nombre" class="pa-in" style="width:150px" placeholder="Coffee House marzo"></div>' +
         '<div class="pa-row"><span class="pa-lbl">Enlace al tocar</span>' +
           '<input id="nb-enlace" class="pa-in" style="width:150px" placeholder="https://… o #s-mercado"></div>' +
+        // Sin este selector, todo lo que cargaba el admin caía en la portada
+        // por el default de la columna: no había forma de poner un editorial
+        // en el carrusel de Entre Vecinos. Son inventarios separados de 6
+        // (ver supabase-banners-ubicacion.sql).
+        '<div class="pa-row"><span class="pa-lbl">Carrusel</span>' +
+          '<select id="nb-ubicacion" class="pa-in" style="width:150px">' +
+            '<option value="portada">Portada (Inicio)</option>' +
+            '<option value="vecinos">Entre Vecinos</option>' +
+          '</select></div>' +
         '<div class="pa-row"><span class="pa-lbl">Desde</span>' +
           '<input id="nb-desde" class="pa-in" style="width:140px" type="date"></div>' +
         '<div class="pa-row"><span class="pa-lbl">Hasta</span>' +
@@ -10057,6 +10071,7 @@ document.addEventListener('focusin', (e) => {
     const desde  = document.getElementById('nb-desde')?.value || '';
     const hasta  = document.getElementById('nb-hasta')?.value || '';
     const esHouse = !!document.getElementById('nb-house')?.checked;
+    const ubicacion = document.getElementById('nb-ubicacion')?.value || 'portada';
     const file   = document.getElementById('nb-img')?.files?.[0];
 
     if (!nombre) return decir('⚠️ Poné un nombre para reconocerla acá', '#BE123C');
@@ -10073,7 +10088,7 @@ document.addEventListener('focusin', (e) => {
     const r = await PronetDB.crearBanner({
       nombre, imagen_url: sub.url, enlace: enlace || null,
       desde: fechaDesde(desde), hasta: fechaHasta(hasta),
-      orden: 100, activo: true, es_house: esHouse,
+      orden: 100, activo: true, es_house: esHouse, ubicacion,
     });
     if (btn) { btn.disabled = false; btn.textContent = 'Crear'; }
     if (!r.ok) return decir('⚠️ ' + r.error, '#BE123C');

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v349'; // v349: carrusel propio de banners en Entre Vecinos (inventario separado de la portada) + boton Publicar fijo
+const CACHE_VERSION = 'pronet-v350'; // v350: el ABM de banners del admin elige carrusel (portada o Entre Vecinos)
 
 const SHELL = [
   './',
