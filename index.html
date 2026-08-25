@@ -5596,6 +5596,25 @@
     </div>
   </div>
 
+  <!-- ══ MODAL: CALIFICACIONES DE LA APP (sólo admin) ══════════════════
+       El admin no califica PRONET: lo que necesita es LEER lo que dejaron
+       los demás. Por eso el mismo ítem del menú de Ayuda cambia de nombre
+       y de destino según el rol (ver abrirResenaApp en app.js).
+       La RLS ya se encarga de que sólo él vea todas: para el resto,
+       `resenas_app` devuelve únicamente la propia. -->
+  <div class="zona-modal-overlay" id="modal-resenas-app-lista">
+    <div class="zona-modal">
+      <div class="zm-handle"></div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+        <div class="zm-title" style="margin:0;flex:1">Calificaciones de PRONET</div>
+        <div id="rappl-promedio" style="font-size:13px;font-weight:800;color:var(--gold)"></div>
+      </div>
+      <div class="zm-sub" id="rappl-resumen" style="margin-bottom:14px">Cargando…</div>
+      <div id="rappl-lista"></div>
+      <button style="width:100%;margin-top:12px;background:none;border:none;color:var(--ink3);font-size:13px;padding:10px;cursor:pointer;font-family:'Inter',sans-serif" onclick="cerrarResenasAppLista()">Cerrar</button>
+    </div>
+  </div>
+
   <!-- ══ MODAL CONFIRMAR ZONA ══════════════════════════════════════════ -->
   <div class="zona-modal-overlay" id="zona-modal">
     <div class="zona-modal">

@@ -652,6 +652,31 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
+    /** Todas las reseñas de la app, con el nombre de quien la dejó. Sólo
+     *  devuelve algo si quien pregunta es admin: la RLS de `resenas_app`
+     *  acota el resto a la propia.
+     *
+     *  El nombre se trae aparte de `perfiles_publicos` y no con un embed:
+     *  `resenas_app.usuario_id` apunta a auth.users, no a perfiles, así que
+     *  un embed no resuelve y rompe la consulta entera (mismo caso que
+     *  listarServiciosFijos). */
+    async listarResenasApp() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('resenas_app')
+        .select('id, usuario_id, puntos, comentario, version_app, creado, actualizado')
+        .order('creado', { ascending: false });
+      if (error) { console.warn('[PronetDB] listarResenasApp', error.message); return []; }
+      const filas = data || [];
+      const uids = [...new Set(filas.map(f => f.usuario_id).filter(Boolean))];
+      if (uids.length) {
+        const { data: prfs } = await sb.from('perfiles_publicos').select('id, nombre').in('id', uids);
+        const mapa = {};
+        (prfs || []).forEach(p => { mapa[p.id] = p.nombre; });
+        filas.forEach(f => { f.autor = mapa[f.usuario_id] || 'Usuario'; });
+      }
+      return filas;
+    },
+
     /** Cuenta recomendaciones (recomendar=true) de un prestador: mes actual y mes anterior. */
     async contarRecomendaciones(prestadorId) {
       if (!remoto) return { actual: 0, anterior: 0 };

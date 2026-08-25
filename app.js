@@ -12048,6 +12048,9 @@ document.addEventListener('focusin', (e) => {
       mostrarGate && mostrarGate({ titulo: 'Calificar PRONET', sub: 'Necesitás una cuenta para dejar tu opinión.' });
       return;
     }
+    // El admin no califica su propia app: lo que necesita es leer lo que
+    // dejaron los demás. Mismo ítem del menú, distinto destino.
+    if (esAdmin()) return abrirResenasAppLista();
     const overlay = document.getElementById('modal-resena-app');
     if (!overlay) return;
 
@@ -12135,15 +12138,86 @@ document.addEventListener('focusin', (e) => {
     } catch { return null; }
   }
 
-  /** Deja el subtítulo del menú diciendo qué nota puso, si puso alguna. */
+  /** Deja el ítem del menú diciendo lo que corresponde según el rol: al
+   *  admin, cuántas hay y con qué promedio; al resto, qué nota puso. */
   async function reflejarResenaAppEnMenu() {
     const sub = document.getElementById('menu-resena-app-sub');
+    const tit = document.querySelector('#menu-resena-app .m-title');
     if (!sub || !usuarioActual) return;
+
+    if (esAdmin()) {
+      if (tit) tit.textContent = 'Ver calificaciones de PRONET';
+      const todas = await PronetDB.listarResenasApp().catch(() => []);
+      if (!todas.length) { sub.textContent = 'Todavía no hay calificaciones'; return; }
+      const prom = todas.reduce((n, r) => n + r.puntos, 0) / todas.length;
+      sub.textContent = '★ ' + prom.toFixed(1) + ' · ' + todas.length +
+        (todas.length === 1 ? ' calificación' : ' calificaciones');
+      return;
+    }
+
+    if (tit) tit.textContent = 'Calificar PRONET';
     const previa = await PronetDB.obtenerResenaApp().catch(() => null);
     sub.textContent = previa
       ? '★'.repeat(previa.puntos) + ' · Tocá para cambiarla'
       : 'Contanos cómo te resulta la app';
   }
+
+  // ── El listado, sólo para el admin ────────────────────────────────
+  async function abrirResenasAppLista() {
+    const overlay = document.getElementById('modal-resenas-app-lista');
+    if (!overlay) return;
+    const lista = document.getElementById('rappl-lista');
+    const resumen = document.getElementById('rappl-resumen');
+    const prom = document.getElementById('rappl-promedio');
+    if (lista) lista.innerHTML = '';
+    if (resumen) resumen.textContent = 'Cargando…';
+    if (prom) prom.textContent = '';
+    overlay.classList.add('show');
+
+    const filas = await PronetDB.listarResenasApp().catch(() => []);
+    if (!filas.length) {
+      if (resumen) resumen.textContent = 'Todavía nadie calificó la app.';
+      return;
+    }
+
+    const promedio = filas.reduce((n, r) => n + r.puntos, 0) / filas.length;
+    if (prom) prom.textContent = '★ ' + promedio.toFixed(1);
+    if (resumen) resumen.textContent = filas.length +
+      (filas.length === 1 ? ' calificación' : ' calificaciones') + ' · lo escribieron los usuarios, no se publica';
+
+    if (lista) lista.innerHTML = filas.map(r => {
+      // `actualizado` distinto de `creado` significa que cambió de opinión:
+      // se muestra esa fecha, que es la que vale, y se dice que fue editada.
+      const editada = r.actualizado && r.creado &&
+        new Date(r.actualizado).getTime() - new Date(r.creado).getTime() > 1000;
+      const fecha = new Date(editada ? r.actualizado : r.creado)
+        .toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+      return '<div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:11px 12px;margin-bottom:8px">' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<span style="flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+            escHTML(r.autor || 'Usuario') + '</span>' +
+          '<span style="flex-shrink:0;font-size:12px;color:var(--gold);letter-spacing:1px">' +
+            '★'.repeat(r.puntos) + '<span style="color:var(--border)">' + '★'.repeat(5 - r.puntos) + '</span></span>' +
+        '</div>' +
+        (r.comentario
+          ? '<div style="font-size:12.5px;color:var(--ink2);line-height:1.5;margin-top:6px;white-space:pre-line">' +
+              escHTML(r.comentario) + '</div>'
+          : '<div style="font-size:12px;color:var(--ink3);font-style:italic;margin-top:6px">Sin comentario</div>') +
+        '<div style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink3);margin-top:8px">' +
+          '<span>' + escHTML(fecha) + '</span>' +
+          (editada ? '<span>· editada</span>' : '') +
+          (r.version_app ? '<span style="margin-left:auto;background:var(--surface);border-radius:6px;padding:1px 6px">' + escHTML(r.version_app) + '</span>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  window.abrirResenasAppLista = abrirResenasAppLista;
+
+  function cerrarResenasAppLista() {
+    const overlay = document.getElementById('modal-resenas-app-lista');
+    if (overlay) overlay.classList.remove('show');
+  }
+  window.cerrarResenasAppLista = cerrarResenasAppLista;
 
   async function cerrarSesion() {
     await PronetDB.logout();
