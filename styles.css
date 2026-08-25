@@ -635,6 +635,10 @@
     /* 34px visibles, pero el área sensible llega a 44 con el ::after */
     width: 34px; height: 34px; position: relative;
   }
+  /* En Entre Vecinos comparten fila con el buscador, que es más alto: con
+     la altura fija quedaban centrados y dejaban un sobrante que rompía la
+     grilla de huecos de 6px. Ahí se estiran a la altura de la fila. */
+  #s-mercado .mkt-vista-btn { height: auto; }
   .mkt-vista-btn::after {
     content: ''; position: absolute; top: 50%; left: 50%;
     width: 44px; height: 44px; transform: translate(-50%, -50%);

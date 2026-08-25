@@ -461,7 +461,12 @@
            y cambiar de vista. Antes eran DOS filas apiladas (buscador+zona,
            después publicar+vista) que sumaban ~90px. El selector de zona se
            fue al header, arriba. -->
-      <div style="padding:0 14px 6px;display:flex;align-items:center;gap:8px">
+      <!-- `stretch` y no `center`: el buscador es más alto que el botón y
+           que los íconos de vista, así que centrados dejaban 4px de sobra
+           arriba y abajo — y ese sobrante se sumaba al hueco de la fila,
+           que salía de 10px donde el resto medía 6. Estirados, los tres
+           controles miden lo mismo y el hueco vuelve a ser el de todos. -->
+      <div style="padding:0 14px 6px;display:flex;align-items:stretch;gap:8px">
         <!-- Publicar es la acción principal de la pantalla y está siempre a
              la vista: no vive adentro del carrusel, donde desaparecería cada
              vez que rota a un banner pago. -->
