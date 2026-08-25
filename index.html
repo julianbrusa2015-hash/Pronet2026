@@ -1549,6 +1549,19 @@
           </div>
           <div class="m-chev">›</div>
         </div>
+        <!-- Calificar la APP, no a un prestador. Va en Ayuda y para los dos
+             roles: no depende de haber contratado ni de haber trabajado,
+             cualquiera con cuenta tiene una opinión sobre la herramienta.
+             El subtítulo lo pinta reflejarUsuario() con la nota que ya
+             dejó, si dejó alguna. -->
+        <div class="menu-item" id="menu-resena-app" onclick="abrirResenaApp()">
+          <div class="m-icon" style="background:var(--gold-s)">⭐</div>
+          <div class="m-txt">
+            <div class="m-title">Calificar PRONET</div>
+            <div class="m-sub" id="menu-resena-app-sub">Contanos cómo te resulta la app</div>
+          </div>
+          <div class="m-chev">›</div>
+        </div>
         <div class="menu-item" onclick="compartirApp()">
           <div class="m-icon" style="background:#F0FDF4">📤</div>
           <div class="m-txt">
@@ -5532,6 +5545,49 @@
       <div id="comunidad-list" style="margin-top:6px"></div>
       <div id="comunidad-error" role="alert" style="display:none;font-size:12px;color:#E53E3E;text-align:center;margin-top:10px"></div>
       <button style="width:100%;margin-top:10px;background:none;border:none;color:var(--ink3);font-size:13px;padding:10px;cursor:pointer;font-family:'Inter',sans-serif" onclick="omitirComunidad()">Ahora no — ver todo Escobar</button>
+    </div>
+  </div>
+
+  <!-- ══ MODAL: CALIFICAR LA APP ═══════════════════════════════════════
+       Califica PRONET, no a un prestador — no cuelga de ningún trabajo ni
+       de ningún chat, y por eso vive en `resenas_app` y no en `resenas`.
+
+       Es un modal y no una pantalla a propósito: agregar una pantalla
+       obliga a tocar TRES registros en app.js (FEATURE_SCREENS, navMap y
+       el array `all` de goTo), y esto no necesita historial de navegación
+       propio ni volver desde ningún lado.
+
+       Una por persona y editable: si ya dejó una, abre con sus estrellas y
+       su texto puestos, y guardar la reemplaza. -->
+  <div class="zona-modal-overlay" id="modal-resena-app">
+    <div class="zona-modal">
+      <div class="zm-handle"></div>
+      <div style="font-size:32px;text-align:center;margin-bottom:12px">⭐</div>
+      <div class="zm-title" style="text-align:center" id="rapp-titulo">¿Cómo te resulta PRONET?</div>
+      <div class="zm-sub" style="text-align:center" id="rapp-sub">Tu opinión nos dice qué arreglar primero. Es sobre la app, no sobre un prestador.</div>
+
+      <div class="stars-big" id="rapp-stars">
+        <span class="star-big" onclick="rappSetStars(1)" role="button" tabindex="0" aria-label="1 estrella">★</span>
+        <span class="star-big" onclick="rappSetStars(2)" role="button" tabindex="0" aria-label="2 estrellas">★</span>
+        <span class="star-big" onclick="rappSetStars(3)" role="button" tabindex="0" aria-label="3 estrellas">★</span>
+        <span class="star-big" onclick="rappSetStars(4)" role="button" tabindex="0" aria-label="4 estrellas">★</span>
+        <span class="star-big" onclick="rappSetStars(5)" role="button" tabindex="0" aria-label="5 estrellas">★</span>
+      </div>
+      <div id="rapp-label" style="text-align:center;font-size:12.5px;font-weight:700;color:var(--ink3);min-height:18px;margin-bottom:12px"></div>
+
+      <label class="ob-label" for="rapp-texto">¿Querés contarnos algo más? (opcional)</label>
+      <textarea id="rapp-texto" name="rapp-texto" maxlength="1000" rows="4"
+        oninput="rappContarChars()"
+        placeholder="Qué te sirve, qué te cuesta, qué le falta…"
+        style="width:100%;border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;font-size:13.5px;font-family:'Inter',sans-serif;outline:none;color:var(--ink);resize:vertical;line-height:1.5"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
+        <span style="font-size:11px;color:var(--ink3)">Lo lee el equipo de PRONET. No se publica.</span>
+        <span style="font-size:11px;color:var(--ink3)"><span id="rapp-chars">0</span>/1000</span>
+      </div>
+
+      <div id="rapp-error" role="alert" style="display:none;font-size:12.5px;color:#E53E3E;text-align:center;margin-top:10px"></div>
+      <button class="btn-p" id="rapp-enviar" style="width:100%;margin-top:14px" onclick="enviarResenaApp()">Enviar mi calificación</button>
+      <button style="width:100%;margin-top:8px;background:none;border:none;color:var(--ink3);font-size:13px;padding:10px;cursor:pointer;font-family:'Inter',sans-serif" onclick="cerrarResenaApp()">Ahora no</button>
     </div>
   </div>
 

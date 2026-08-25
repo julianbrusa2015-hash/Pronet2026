@@ -11291,6 +11291,8 @@ document.addEventListener('focusin', (e) => {
     }
     // ── DINÁMICO: badge de mensajes no leídos ──
     cargarBadgeMensajes();
+    // ── DINÁMICO: la nota que ya le puso a la app, si le puso alguna ──
+    reflejarResenaAppEnMenu();
     // ── DINÁMICO: PRONET Points ──
     cargarLoyalty();
     // ── DINÁMICO: denuncias pendientes (solo admin) ──
@@ -11982,6 +11984,132 @@ document.addEventListener('focusin', (e) => {
     }
   }
   window.compartirApp = compartirApp;
+
+  // ══ CALIFICAR LA APP ══════════════════════════════════════════════
+  //
+  // Califica PRONET, no a un prestador. No cuelga de un trabajo ni de un
+  // chat, así que no pasa por `dejar_resena` ni toca el rating de nadie:
+  // vive en `resenas_app`, una fila por persona, editable.
+  //
+  // No se gatea por "haber contratado algo": el que se frustró intentando
+  // publicar y se fue sin contratar es justamente el que más tiene para
+  // contar, y pedirle un trabajo cerrado primero lo dejaría afuera.
+
+  const RAPP_ETIQUETAS = ['', '😞 Muy mala', '😕 Mala', '😐 Regular', '🙂 Buena', '🤩 Excelente'];
+  let _rappPuntos = 0;
+
+  function rappSetStars(n) {
+    _rappPuntos = n;
+    document.querySelectorAll('#rapp-stars .star-big')
+      .forEach((s, i) => s.classList.toggle('lit', i < n));
+    const lbl = document.getElementById('rapp-label');
+    if (lbl) lbl.textContent = RAPP_ETIQUETAS[n] || '';
+    const err = document.getElementById('rapp-error');
+    if (err) err.style.display = 'none';
+  }
+  window.rappSetStars = rappSetStars;
+
+  async function abrirResenaApp() {
+    if (!usuarioActual) {
+      mostrarGate && mostrarGate({ titulo: 'Calificar PRONET', sub: 'Necesitás una cuenta para dejar tu opinión.' });
+      return;
+    }
+    const overlay = document.getElementById('modal-resena-app');
+    if (!overlay) return;
+
+    // Arranca limpio y recién después se pisa con lo que ya haya dejado:
+    // si no, una reseña vieja se mezcla con los restos de la anterior
+    // apertura del modal.
+    _rappPuntos = 0;
+    rappSetStars(0);
+    const ta = document.getElementById('rapp-texto');
+    if (ta) ta.value = '';
+    rappContarChars();
+    const err = document.getElementById('rapp-error');
+    if (err) err.style.display = 'none';
+    const btn = document.getElementById('rapp-enviar');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar mi calificación'; }
+    const tit = document.getElementById('rapp-titulo');
+    const sub = document.getElementById('rapp-sub');
+    if (tit) tit.textContent = '¿Cómo te resulta PRONET?';
+    if (sub) sub.textContent = 'Tu opinión nos dice qué arreglar primero. Es sobre la app, no sobre un prestador.';
+
+    overlay.classList.add('show');
+
+    // Si ya calificó, se abre con lo suyo puesto: editar es cambiar de
+    // opinión, no empezar de cero.
+    const previa = await PronetDB.obtenerResenaApp().catch(() => null);
+    if (previa && document.getElementById('modal-resena-app')?.classList.contains('show')) {
+      rappSetStars(previa.puntos);
+      if (ta) { ta.value = previa.comentario || ''; rappContarChars(); }
+      if (tit) tit.textContent = 'Tu calificación de PRONET';
+      if (sub) sub.textContent = 'Ya nos dejaste tu opinión. Podés cambiarla cuando quieras.';
+      if (btn) btn.textContent = 'Guardar cambios';
+    }
+  }
+  window.abrirResenaApp = abrirResenaApp;
+
+  function cerrarResenaApp() {
+    const overlay = document.getElementById('modal-resena-app');
+    if (overlay) overlay.classList.remove('show');
+  }
+  window.cerrarResenaApp = cerrarResenaApp;
+
+  function rappContarChars() {
+    const ta = document.getElementById('rapp-texto');
+    const c = document.getElementById('rapp-chars');
+    if (ta && c) c.textContent = String((ta.value || '').length);
+  }
+  window.rappContarChars = rappContarChars;
+
+  async function enviarResenaApp() {
+    const err = document.getElementById('rapp-error');
+    const decir = (m) => { if (err) { err.textContent = m; err.style.display = 'block'; } };
+    if (!_rappPuntos) return decir('Elegí de 1 a 5 estrellas');
+
+    const btn = document.getElementById('rapp-enviar');
+    const textoOriginal = btn?.textContent;
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+    const comentario = document.getElementById('rapp-texto')?.value || '';
+    const r = await PronetDB.guardarResenaApp(_rappPuntos, comentario, await versionAppActual());
+    if (btn) { btn.disabled = false; btn.textContent = textoOriginal || 'Enviar mi calificación'; }
+    if (!r.ok) return decir(r.error || 'No se pudo guardar');
+
+    cerrarResenaApp();
+    // El agradecimiento cambia con la nota: festejar un 2 estrellas suena
+    // a que no se leyó lo que escribió.
+    showToast && showToast(_rappPuntos >= 4
+      ? '⭐ ¡Gracias! Nos alegra que te sirva.'
+      : '🙏 Gracias. Lo vamos a tener en cuenta.');
+    reflejarResenaAppEnMenu();
+  }
+  window.enviarResenaApp = enviarResenaApp;
+
+  /** La versión con la que se está usando la app, para poder ubicar el
+   *  comentario en el tiempo ("anda lento" sin versión no se puede atar a
+   *  ningún build).
+   *
+   *  Sale del NOMBRE DEL CACHÉ del Service Worker y no de config.js: ahí
+   *  no hay ninguna constante de versión —CLAUDE.md dice que sí, pero no
+   *  está— y la única fuente que se actualiza en cada deploy es
+   *  CACHE_VERSION en sw.js. Sin SW (o en una pestaña que todavía no lo
+   *  tomó) devuelve null y la columna queda vacía, que es correcto. */
+  async function versionAppActual() {
+    try {
+      const claves = await caches.keys();
+      return claves.find(k => k.startsWith('pronet-v')) || null;
+    } catch { return null; }
+  }
+
+  /** Deja el subtítulo del menú diciendo qué nota puso, si puso alguna. */
+  async function reflejarResenaAppEnMenu() {
+    const sub = document.getElementById('menu-resena-app-sub');
+    if (!sub || !usuarioActual) return;
+    const previa = await PronetDB.obtenerResenaApp().catch(() => null);
+    sub.textContent = previa
+      ? '★'.repeat(previa.puntos) + ' · Tocá para cambiarla'
+      : 'Contanos cómo te resulta la app';
+  }
 
   async function cerrarSesion() {
     await PronetDB.logout();

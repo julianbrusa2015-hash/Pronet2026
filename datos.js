@@ -617,6 +617,41 @@ const PronetDB = (() => {
       return data || { ok: true };
     },
 
+    // ── Reseñas de la APP ─────────────────────────────────────────────
+    // Ojo con el nombre: `dejarResena` de arriba califica un TRABAJO y
+    // cuelga de un chat. Estas califican PRONET mismo — no hay contraparte
+    // ni hace falta haber contratado nada. Tabla aparte: `resenas_app`.
+
+    /** La reseña propia, si ya dejó una. `null` si todavía no. */
+    async obtenerResenaApp() {
+      if (!remoto) return null;
+      const uid = await this.usuarioIdActual();
+      if (!uid) return null;
+      const { data, error } = await sb.from('resenas_app')
+        .select('id, puntos, comentario, creado, actualizado')
+        .eq('usuario_id', uid).maybeSingle();
+      if (error) { console.warn('[PronetDB] obtenerResenaApp', error.message); return null; }
+      return data || null;
+    },
+
+    /** Guarda la reseña de la app. Es un upsert sobre `usuario_id`: hay una
+     *  sola por persona y se puede cambiar, como en las stores. */
+    async guardarResenaApp(puntos, comentario, versionApp) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const uid = await this.usuarioIdActual();
+      if (!uid) return { ok: false, error: 'Necesitás iniciar sesión' };
+      const n = Number(puntos);
+      if (!Number.isInteger(n) || n < 1 || n > 5) return { ok: false, error: 'Elegí de 1 a 5 estrellas' };
+      const { error } = await sb.from('resenas_app').upsert({
+        usuario_id: uid,
+        puntos: n,
+        comentario: (comentario || '').trim().slice(0, 1000) || null,
+        version_app: versionApp || null,
+      }, { onConflict: 'usuario_id' });
+      if (error) { console.warn('[PronetDB] guardarResenaApp', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
+    },
+
     /** Cuenta recomendaciones (recomendar=true) de un prestador: mes actual y mes anterior. */
     async contarRecomendaciones(prestadorId) {
       if (!remoto) return { actual: 0, anterior: 0 };
