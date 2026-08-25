@@ -1322,6 +1322,24 @@
           </div>
           <div class="m-chev">›</div>
         </div>
+        <!-- Mis alertas vive acá y NO dentro de Entre Vecinos, aunque el
+             botón que las crea esté allá: la pantalla junta las DOS
+             clases de alerta —`alertas_busqueda` (Mercado) y
+             `alertas_servicio` (Servicios, que se guardan desde Buscar)—
+             en una sola lista, y cada tarjeta dice a cuál pertenece. Su
+             propio estado vacío ya lo decía: "Buscá algo en Entre Vecinos
+             o en Servicios".
+             Archivada bajo Entre Vecinos quedaba escondida para el
+             prestador, que puede tener alertas de Servicios y entonces no
+             tenía dónde verlas ni cómo borrarlas. -->
+        <div class="menu-item" id="menu-mis-alertas-mkt" onclick="goTo('s-mis-alertas')">
+          <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🔔</div>
+          <div class="m-txt">
+            <div class="m-title">Mis alertas</div>
+            <div class="m-sub" id="mp-mis-alertas-sub">Búsquedas guardadas de Servicios y Mercado</div>
+          </div>
+          <div class="m-chev">›</div>
+        </div>
         <div class="menu-item" id="menu-invitar" onclick="abrirInvitar()">
           <div class="m-icon" style="background:#FFF7ED;color:#EA580C">🤝</div>
           <div class="m-txt">
@@ -1503,14 +1521,6 @@
             <div class="m-txt">
               <div class="m-title">Consultas enviadas</div>
               <div class="m-sub">Publicaciones que consultaste</div>
-            </div>
-            <div class="m-chev">›</div>
-          </div>
-          <div id="menu-mis-alertas-mkt" class="menu-item" onclick="goTo('s-mis-alertas')">
-            <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🔔</div>
-            <div class="m-txt">
-              <div class="m-title">Mis alertas</div>
-              <div class="m-sub" id="mp-mis-alertas-sub">Avisos de búsquedas guardadas</div>
             </div>
             <div class="m-chev">›</div>
           </div>
