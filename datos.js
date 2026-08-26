@@ -1,4 +1,4 @@
-// ═══ PRONET · datos.js — Capa de datos (Fase 2: modo dual) ═══
+// ═══ RedPro · datos.js — Capa de datos (Fase 2: modo dual) ═══
 //
 // MODO LOCAL  → sin credenciales en config.js: los datos se guardan en el
 //               dispositivo (localStorage). Ideal para demos sin backend.
@@ -619,7 +619,7 @@ const PronetDB = (() => {
 
     // ── Reseñas de la APP ─────────────────────────────────────────────
     // Ojo con el nombre: `dejarResena` de arriba califica un TRABAJO y
-    // cuelga de un chat. Estas califican PRONET mismo — no hay contraparte
+    // cuelga de un chat. Estas califican RedPro mismo — no hay contraparte
     // ni hace falta haber contratado nada. Tabla aparte: `resenas_app`.
 
     /** La reseña propia, si ya dejó una. `null` si todavía no. */

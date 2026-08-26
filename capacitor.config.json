@@ -1,9 +1,5 @@
 {
   "appId": "com.pronet.app",
-  "appName": "PRONET",
-  "webDir": "www",
-  "server": {
-    "url": "https://pronetprueba.netlify.app",
-    "cleartext": false
-  }
+  "appName": "RedPro",
+  "webDir": "www"
 }

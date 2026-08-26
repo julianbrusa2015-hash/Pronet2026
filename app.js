@@ -1,4 +1,4 @@
-// ═══ PRONET · app.js ═══
+// ═══ RedPro · app.js ═══
 // Bloque 1: inicialización de pantalla (era el script del <head>)
 document.addEventListener('DOMContentLoaded', function() {
     // ── Fix safe-area para PWA instalada en iOS ──────────────────────
@@ -186,7 +186,7 @@ document.addEventListener('focusin', (e) => {
     zonaModal:       true,
     miPerfilBasico:  true,
     bolsaTrabajo:    true,   // Pedidos, propuestas, estado de propuesta — ciclo transaccional completo
-    tutorialOnboarding: true, // "Cómo usar PRONET" (Guías rápidas) en Mi Perfil
+    tutorialOnboarding: true, // "Cómo usar RedPro" (Guías rápidas) en Mi Perfil
 
     // El sello es NIVEL 1 desde 2026-08-22. Estaba en Nivel 2 junto a la
     // monetización, pero no es una feature de crecimiento: es confianza básica
@@ -208,7 +208,7 @@ document.addEventListener('focusin', (e) => {
 
     // ── NIVEL 3 · Sofisticación (fase de escala) ──
     // Engagement y analítica avanzada — requieren volumen de datos
-    loyalty:         true,   // PRONET Points
+    loyalty:         true,   // RedPro Points
     analyticsAvanzado: true, // Analítica detallada
 
     // ── Nivel 4 · Exploración (no lanzado) ──
@@ -738,7 +738,7 @@ document.addEventListener('focusin', (e) => {
     await renderLoyaltyScreen();
   }
 
-  // ── Guías rápidas (Mi Perfil → "Cómo usar PRONET") ─────────────────────
+  // ── Guías rápidas (Mi Perfil → "Cómo usar RedPro") ─────────────────────
   //
   // Reemplaza al tutorial de pasos que se forzaba en el primer login
   // (2026-08-17): en vez de una interrupción única al entrar, es un llamado
@@ -1027,7 +1027,7 @@ document.addEventListener('focusin', (e) => {
                 '<div style="padding:9px 11px"><div style="font-size:11.5px;font-weight:700;color:var(--ink)">Pintura de interiores</div>' +
                 '<div style="font-size:9.5px;color:var(--ink3);margin-top:2px">Vos · Pintura</div>' +
                 '<div style="font-size:10.5px;font-weight:700;color:#B9760A;margin-top:4px">★ 4.8 · 12 reseñas</div></div></div>') },
-          { titulo: 'Se revisa antes de publicarse', desc: 'Tu aviso queda "En revisión" un rato — el equipo de PRONET lo aprueba y recién ahí aparece en Servicios, visible para todos los vecinos de tu zona.',
+          { titulo: 'Se revisa antes de publicarse', desc: 'Tu aviso queda "En revisión" un rato — el equipo de RedPro lo aprueba y recién ahí aparece en Servicios, visible para todos los vecinos de tu zona.',
             mock: guiaMock(guiaChip('🟡 En revisión', true, true) + guiaChip('✓ Publicado', false, false)) },
         ],
       },
@@ -2630,7 +2630,7 @@ document.addEventListener('focusin', (e) => {
     if (noIncluye && noIncluye.length) detalleHtml += '<div style="margin-top:4px"><span style="font-weight:600">❌ No incluye:</span> ' + noIncluye.map(escHTML).join(' · ') + '</div>';
     let html = '<div' + (tieneDetalle ? ' onclick="toggleRefPronet(\'' + detalleId + '\')" style="cursor:pointer' : ' style="') + 'display:flex;align-items:center;gap:10px;padding:12px;background:#F0FDF4;border-radius:' + (tieneDetalle ? '12px 12px 0 0' : '12px') + ';margin-bottom:' + (tieneDetalle ? '0' : '10px') + '">';
     html += '<div style="font-size:24px">📈</div>';
-    html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink)">Ref. PRONET: ' + refTxt + (tieneDetalle ? ' <span style="color:var(--blue)">ⓘ</span>' : '') + '</div>';
+    html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink)">Ref. RedPro: ' + refTxt + (tieneDetalle ? ' <span style="color:var(--blue)">ⓘ</span>' : '') + '</div>';
     html += '<div style="font-size:11px;color:var(--ink3)">' + escHTML(subtitulo) + '</div></div></div>';
     if (tieneDetalle) {
       html += '<div id="' + detalleId + '" style="display:none;padding:10px 12px;background:#F0FDF4;border-radius:0 0 12px 12px;margin-bottom:10px;font-size:11px;color:var(--ink2);line-height:1.5">' + detalleHtml + '</div>';
@@ -2656,7 +2656,7 @@ document.addEventListener('focusin', (e) => {
       nProps = await PronetDB.contarPropuestasPedido(pedido.id);
     } catch (e) {}
 
-    // Ref PRONET desde catálogo — solo si el rubro tiene ficha activa real, no el fallback
+    // Ref RedPro desde catálogo — solo si el rubro tiene ficha activa real, no el fallback
     let refTxt = null;
     let refIncluye = [];
     let refNoIncluye = [];
@@ -2696,7 +2696,7 @@ document.addEventListener('focusin', (e) => {
     html += '<div><div style="font-size:13px;font-weight:700;color:var(--ink)">' + (hayCompetencia ? 'El vecino ya recibió ' + nProps + ' propuesta' + (nProps !== 1 ? 's' : '') : 'Todavía no recibió propuestas') + '</div>';
     html += '<div style="font-size:11px;color:' + (hayCompetencia ? '#92400E' : 'var(--ink3)') + ';font-weight:' + (hayCompetencia ? '600' : '400') + '">' + (hayCompetencia ? 'Ya está comparando ofertas — respondé rápido para no quedar afuera' : 'Sé el primero en ofertar') + '</div></div></div>';
 
-    // Ref PRONET
+    // Ref RedPro
     if (refTxt) {
       html += refPronetCardHTML('ref-insights', refTxt, refIncluye, refNoIncluye, 'Rango de precios del mercado para este rubro');
     }
@@ -3152,7 +3152,7 @@ document.addEventListener('focusin', (e) => {
     }
   }
 
-  // ── ABM Beneficios PRONET Points (admin) ────────────────────────────
+  // ── ABM Beneficios RedPro Points (admin) ────────────────────────────
   async function renderBeneficiosAdmin() {
     const el = document.getElementById('mod-beneficios-lista');
     if (!el) return;
@@ -3426,7 +3426,7 @@ document.addEventListener('focusin', (e) => {
         ${incluyeHTML?`<div class="ref-section"><div class="ref-section-title">✅ Incluye</div><div class="ref-list">${incluyeHTML}</div></div>`:''}
         ${noIncluyeHTML?`<div class="ref-section"><div class="ref-section-title">❌ No incluye</div><div class="ref-list">${noIncluyeHTML}</div></div>`:''}
         <div class="ref-price-box">
-          <div class="ref-price-label">💰 Precio referencial PRONET</div>
+          <div class="ref-price-label">💰 Precio referencial RedPro</div>
           <div class="ref-price-amount">$${(ficha.precio_ref_min||0).toLocaleString('es-AR')} – $${(ficha.precio_ref_max||0).toLocaleString('es-AR')}</div>
           <div class="ref-price-note">Por ${escHTML(ficha.precio_unidad||'visita')} · Puede variar según complejidad</div>
         </div>
@@ -3787,7 +3787,7 @@ document.addEventListener('focusin', (e) => {
   async function cargarSliderRangosDesdeDB() {
     // Con el catálogo apagado, no se marca ningún rubro como "con catálogo real" —
     // el fallback de config.js sigue fijando límites del slider, pero ninguna
-    // pantalla muestra "Ref. PRONET" sin este flag.
+    // pantalla muestra "Ref. RedPro" sin este flag.
     if (!FEATURES.catalogoPrecios) return;
     try {
       const fichas = await PronetDB.listarCatalogo(true);
@@ -4062,12 +4062,12 @@ document.addEventListener('focusin', (e) => {
   function slidesPropias() {
     if (esPrestador()) return [];
     // `tipo === 'cliente'` dejaba afuera al admin logueado — perfiles.tipo
-    // también puede ser 'admin', y caía al mismo cartel "Sumate a PRONET"
+    // también puede ser 'admin', y caía al mismo cartel "Sumate a RedPro"
     // que un invitado sin cuenta. Lo que separa a los dos casos no es el
     // tipo, es si HAY sesión.
     const cta = usuarioActual
       ? { icono: '📋', titulo: 'Publicá tu pedido gratis', sub: 'Recibí propuestas de prestadores de tu zona' }
-      : { icono: '🚀', titulo: 'Sumate a PRONET gratis',   sub: 'Publicá pedidos y contactá prestadores' };
+      : { icono: '🚀', titulo: 'Sumate a RedPro gratis',   sub: 'Publicá pedidos y contactá prestadores' };
 
     const slides = [
       tarjetaAd('cta', 'linear-gradient(135deg,#0D0F1A,#1A3ACC)', '#fff',
@@ -4095,7 +4095,7 @@ document.addEventListener('focusin', (e) => {
   // el carrusel entero quedaba oculto — el hueco que reportó el usuario.
   //
   // La pauta apunta a vender el espacio vacío en vez de a un genérico "conocé
-  // PRONET": el hueco es justamente inventario de banners sin comprar.
+  // RedPro": el hueco es justamente inventario de banners sin comprar.
   //
   // El texto cambia según el rol porque el destino cambia: tocarlo abre
   // abrirPromocionar(), y ahí el prestador compra la PORTADA y el vecino
@@ -4183,7 +4183,7 @@ document.addEventListener('focusin', (e) => {
     PronetDB.clickBanner(id);
     if (!enlace) return;
     // '#s-algo' navega dentro de la app; cualquier otra cosa es un sitio
-    // externo y se abre aparte, sin sacar al usuario de PRONET.
+    // externo y se abre aparte, sin sacar al usuario de RedPro.
     if (enlace.startsWith('#')) {
       const pantalla = enlace.slice(1);
       if (typeof goTo === 'function') goTo(pantalla);
@@ -4211,7 +4211,7 @@ document.addEventListener('focusin', (e) => {
       sub.textContent = 'Publicar →';
     } else {
       if (icon) icon.textContent = '🚀';
-      title.textContent = 'Sumate a PRONET gratis';
+      title.textContent = 'Sumate a RedPro gratis';
       sub.textContent = 'Registrarme →';
     }
   }
@@ -5655,7 +5655,7 @@ document.addEventListener('focusin', (e) => {
       '</div>';
     }).join('') +
     '<div style="background:var(--blue-s);border:1px solid #C7D5FF;border-radius:12px;padding:11px 13px;font-size:11.5px;color:var(--ink2);line-height:1.55">' +
-      'Cada vendedor recibe su pedido por separado en el chat. <b>El precio final, la entrega y el pago los arreglás con cada uno ahí</b> — PRONET no cobra ni gestiona el envío.' +
+      'Cada vendedor recibe su pedido por separado en el chat. <b>El precio final, la entrega y el pago los arreglás con cada uno ahí</b> — RedPro no cobra ni gestiona el envío.' +
     '</div>';
   }
 
@@ -8344,7 +8344,7 @@ document.addEventListener('focusin', (e) => {
   async function togglePushNotif() {
     const estado = await PronetDB.estadoPush();
     if (estado === 'bloqueadas') {
-      alert('Las notificaciones están bloqueadas para PRONET.\n\nHabilitalas desde Ajustes → Safari/Chrome → Notificaciones y volvé a intentar.');
+      alert('Las notificaciones están bloqueadas para RedPro.\n\nHabilitalas desde Ajustes → Safari/Chrome → Notificaciones y volvé a intentar.');
       return;
     }
     if (estado === 'activas') {
@@ -9849,7 +9849,7 @@ document.addEventListener('focusin', (e) => {
 
       <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin:20px 2px 8px">Diagnóstico</div>
       <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px">
-        <div style="font-size:12px;color:var(--ink2);margin-bottom:2px">PRONET v1.0 · Build 2026.07</div>
+        <div style="font-size:12px;color:var(--ink2);margin-bottom:2px">RedPro v1.0 · Build 2026.07</div>
         <div id="dev-panel-datos" style="font-size:11.5px;font-weight:600;color:var(--ink3);margin-bottom:12px">Verificando…</div>
         <button onclick="reiniciarDemo()" style="width:100%;background:#FEE2E2;color:#BE123C;border:1px solid #FECACA;border-radius:10px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Reiniciar demo de este dispositivo</button>
       </div>`;
@@ -10676,9 +10676,9 @@ document.addEventListener('focusin', (e) => {
     { k: 'catalogoPrecios',   n: 'Catálogo de precios',    d: 'Precios referenciales en las fichas', nivel: 2 },
     { k: 'editarPerfilPro',   n: 'Perfil profesional',     d: 'Edición completa e historial de trabajos', nivel: 2 },
     { k: 'denuncias',         n: 'Denuncias y moderación', d: 'Reportar usuarios y panel de moderación', nivel: 2 },
-    { k: 'loyalty',           n: 'PRONET Points',          d: 'Programa de puntos y canjes', nivel: 3 },
+    { k: 'loyalty',           n: 'RedPro Points',          d: 'Programa de puntos y canjes', nivel: 3 },
     { k: 'analyticsAvanzado', n: 'Analítica avanzada',     d: 'Métricas detalladas para el prestador', nivel: 3 },
-    { k: 'tutorialOnboarding', n: 'Tutorial de bienvenida', d: 'Guías rápidas ("Cómo usar PRONET") en Mi Perfil', nivel: null },
+    { k: 'tutorialOnboarding', n: 'Tutorial de bienvenida', d: 'Guías rápidas ("Cómo usar RedPro") en Mi Perfil', nivel: null },
     // `mercadoPlaza` NO va acá: ya tiene su propio interruptor en
     // "Configuración de la app", que escribe en config_app.promarket_activo.
     // Ponerlo también en esta lista daría dos switches para lo mismo
@@ -11230,7 +11230,7 @@ document.addEventListener('focusin', (e) => {
     const tipo = admin ? 'Administrador' : (esPrestador() ? 'Prestador' : 'Cliente');
     const zona = usuarioActual.zona || 'Escobar';
 
-    // Ocultar PRONET Points para admin o si el feature está desactivado
+    // Ocultar RedPro Points para admin o si el feature está desactivado
     const loyaltyTile = document.querySelector('[data-feature="loyalty"]');
     if (loyaltyTile) loyaltyTile.style.display = (esAdmin() || !FEATURES.loyalty) ? 'none' : '';
     // La venta de espacios del carrusel se ofrece sólo si el admin la
@@ -11336,7 +11336,7 @@ document.addEventListener('focusin', (e) => {
     cargarBadgeMensajes();
     // ── DINÁMICO: la nota que ya le puso a la app, si le puso alguna ──
     reflejarResenaAppEnMenu();
-    // ── DINÁMICO: PRONET Points ──
+    // ── DINÁMICO: RedPro Points ──
     cargarLoyalty();
     // ── DINÁMICO: denuncias pendientes (solo admin) ──
     if (admin) cargarBadgeDenuncias();
@@ -11442,7 +11442,7 @@ document.addEventListener('focusin', (e) => {
     }
   }
 
-  // ── PRONET Points (dinámico) ───────────────────────────────────────
+  // ── RedPro Points (dinámico) ───────────────────────────────────────
   async function cargarLoyalty() {
     const tileEl = document.getElementById('mp-points-tile');
     const menuEl = document.getElementById('mp-points-menu');
@@ -11788,7 +11788,7 @@ document.addEventListener('focusin', (e) => {
     if (usuarioActual?.zona) { zonaActual = usuarioActual.zona; actualizarZonaLabel(zonaActual); }
     const tipo = usuarioActual?.tipo || userTipo || 'cliente';
     // El tutorial de pasos forzado se retiró (2026-08-17): la guía ahora
-    // es un llamado permanente en Mi Perfil ("Cómo usar PRONET"), no una
+    // es un llamado permanente en Mi Perfil ("Cómo usar RedPro"), no una
     // interrupción al primer login. Ver renderGuias().
     if (esPrestador()) {
       goTo('s-home');
@@ -11990,7 +11990,7 @@ document.addEventListener('focusin', (e) => {
     const isOpen = popup.style.display !== 'none';
     if (isOpen) { popup.style.display = 'none'; return; }
     const num = window.PRONET_CONFIG?.WHATSAPP_SOPORTE || '5491140618983';
-    const msg = encodeURIComponent('Hola, necesito ayuda con PRONET 👋');
+    const msg = encodeURIComponent('Hola, necesito ayuda con RedPro 👋');
     const link = document.getElementById('wa-popup-link');
     if (link) link.href = 'https://wa.me/' + num + '?text=' + msg;
     popup.style.display = 'block';
@@ -12005,7 +12005,7 @@ document.addEventListener('focusin', (e) => {
   // ══ COMPARTIR APP ═════════════════════════════════════════════════
   async function compartirApp() {
     const shareData = {
-      title: 'PRONET — Servicios de confianza en tu barrio',
+      title: 'RedPro — Servicios de confianza en tu barrio',
       text: '¡Encontrá electricistas, plomeros, niñeras y más en tu zona! Precio referencial, ranking zonal y contratá directo. Probalo gratis 👇',
       url: window.location.origin
     };
@@ -12022,7 +12022,7 @@ document.addEventListener('focusin', (e) => {
         showToast && showToast('📋 Link copiado al portapapeles');
       } catch (e) {
         // Último fallback: prompt con el link
-        prompt('Copiá este link para compartir PRONET:', shareData.url);
+        prompt('Copiá este link para compartir RedPro:', shareData.url);
       }
     }
   }
@@ -12030,7 +12030,7 @@ document.addEventListener('focusin', (e) => {
 
   // ══ CALIFICAR LA APP ══════════════════════════════════════════════
   //
-  // Califica PRONET, no a un prestador. No cuelga de un trabajo ni de un
+  // Califica RedPro, no a un prestador. No cuelga de un trabajo ni de un
   // chat, así que no pasa por `dejar_resena` ni toca el rating de nadie:
   // vive en `resenas_app`, una fila por persona, editable.
   //
@@ -12054,7 +12054,7 @@ document.addEventListener('focusin', (e) => {
 
   async function abrirResenaApp() {
     if (!usuarioActual) {
-      mostrarGate && mostrarGate({ titulo: 'Calificar PRONET', sub: 'Necesitás una cuenta para dejar tu opinión.' });
+      mostrarGate && mostrarGate({ titulo: 'Calificar RedPro', sub: 'Necesitás una cuenta para dejar tu opinión.' });
       return;
     }
     // El admin no califica su propia app: lo que necesita es leer lo que
@@ -12077,7 +12077,7 @@ document.addEventListener('focusin', (e) => {
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar mi calificación'; }
     const tit = document.getElementById('rapp-titulo');
     const sub = document.getElementById('rapp-sub');
-    if (tit) tit.textContent = '¿Cómo te resulta PRONET?';
+    if (tit) tit.textContent = '¿Cómo te resulta RedPro?';
     if (sub) sub.textContent = 'Tu opinión nos dice qué arreglar primero. Es sobre la app, no sobre un prestador.';
 
     overlay.classList.add('show');
@@ -12088,7 +12088,7 @@ document.addEventListener('focusin', (e) => {
     if (previa && document.getElementById('modal-resena-app')?.classList.contains('show')) {
       rappSetStars(previa.puntos);
       if (ta) { ta.value = previa.comentario || ''; rappContarChars(); }
-      if (tit) tit.textContent = 'Tu calificación de PRONET';
+      if (tit) tit.textContent = 'Tu calificación de RedPro';
       if (sub) sub.textContent = 'Ya nos dejaste tu opinión. Podés cambiarla cuando quieras.';
       if (btn) btn.textContent = 'Guardar cambios';
     }
@@ -12155,7 +12155,7 @@ document.addEventListener('focusin', (e) => {
     if (!sub || !usuarioActual) return;
 
     if (esAdmin()) {
-      if (tit) tit.textContent = 'Ver calificaciones de PRONET';
+      if (tit) tit.textContent = 'Ver calificaciones de RedPro';
       const todas = await PronetDB.listarResenasApp().catch(() => []);
       if (!todas.length) { sub.textContent = 'Todavía no hay calificaciones'; return; }
       const prom = todas.reduce((n, r) => n + r.puntos, 0) / todas.length;
@@ -12164,7 +12164,7 @@ document.addEventListener('focusin', (e) => {
       return;
     }
 
-    if (tit) tit.textContent = 'Calificar PRONET';
+    if (tit) tit.textContent = 'Calificar RedPro';
     const previa = await PronetDB.obtenerResenaApp().catch(() => null);
     sub.textContent = previa
       ? '★'.repeat(previa.puntos) + ' · Tocá para cambiarla'
@@ -12237,7 +12237,7 @@ document.addEventListener('focusin', (e) => {
   async function confirmarEliminarCuenta() {
     if (!usuarioActual) return;
     const ok = confirm(
-      '¿Eliminar tu cuenta de PRONET?\n\n' +
+      '¿Eliminar tu cuenta de RedPro?\n\n' +
       'Se borran tu perfil, pedidos, chats, reseñas y fotos. No se puede deshacer.'
     );
     if (!ok) return;
@@ -12555,8 +12555,8 @@ document.addEventListener('focusin', (e) => {
 
   // ══ PROMOCIONAR: COMPRAR UN ESPACIO DEL CARRUSEL ════════════════════
   //
-  // Tercer producto que PRONET le vende a un usuario, después de las
-  // suscripciones y los créditos. Sigue siendo "PRONET le cobra a alguien":
+  // Tercer producto que RedPro le vende a un usuario, después de las
+  // suscripciones y los créditos. Sigue siendo "RedPro le cobra a alguien":
   // no es plata entre vecinos.
   //
   // El orden importa y es al revés de lo intuitivo: PRIMERO SE MODERA,
@@ -13270,7 +13270,7 @@ document.addEventListener('focusin', (e) => {
     // castiga con un 0 a quien todavía no trabajó por la app.
     const rep = (prestador?.resenas > 0 && prestador?.rating)
       ? '★ ' + Number(prestador.rating).toFixed(1) + ' · ' + prestador.resenas + (prestador.resenas === 1 ? ' reseña' : ' reseñas')
-      : 'Nuevo en PRONET';
+      : 'Nuevo en RedPro';
     const id = escHTML(String(p.id || ''));
     const acciones = esPreview
       ? '<span style="font-size:11.5px;font-weight:700;color:white;background:var(--blue);padding:7px 13px;border-radius:8px;opacity:.5">Contactar (vista previa)</span>'
@@ -13377,7 +13377,7 @@ document.addEventListener('focusin', (e) => {
 
   function invCompartirWhatsapp() {
     if (!_prealtaCodigo) return;
-    const msg = '¡Hola! Te invito a sumarte a PRONET, la app de servicios de Escobar. ' +
+    const msg = '¡Hola! Te invito a sumarte a RedPro, la app de servicios de Escobar. ' +
                 'Anotate acá en un minuto (no hace falta crear cuenta): ' + invLink();
     window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
   }
@@ -13455,7 +13455,7 @@ document.addEventListener('focusin', (e) => {
     const p = _prealtasCache.get(id);
     if (!p) return;
     const link = location.origin + location.pathname + '?reclamar=' + encodeURIComponent(id);
-    const msg = 'Hola ' + (p.nombre || '').split(' ')[0] + '! Te dejo el link para terminar tu alta en PRONET. ' +
+    const msg = 'Hola ' + (p.nombre || '').split(' ')[0] + '! Te dejo el link para terminar tu alta en RedPro. ' +
                 'Ya tenés los datos cargados, sólo te falta poner un mail y una contraseña: ' + link;
     window.open('https://wa.me/' + telParaWhatsapp(p.telefono) + '?text=' + encodeURIComponent(msg), '_blank');
   }
@@ -13645,7 +13645,7 @@ document.addEventListener('focusin', (e) => {
 
     if (!res.ok) {
       if (res.codigo === 'ya_tiene_cuenta') {
-        return mostrar('Ese teléfono ya tiene una cuenta en PRONET. Iniciá sesión con ella.');
+        return mostrar('Ese teléfono ya tiene una cuenta en RedPro. Iniciá sesión con ella.');
       }
       return mostrar(res.error || 'No se pudo guardar. Probá de nuevo.');
     }
@@ -15793,7 +15793,7 @@ document.addEventListener('focusin', (e) => {
               usuario_id: destinatarioId,
               tipo: 'primer_trabajo',
               titulo: '🏆 Tu primer trabajo quedó registrado',
-              cuerpo: 'Cerraste tu primer trabajo en PRONET. Ganaste 500 puntos y ya sos Bronce. El barrio te empieza a conocer.',
+              cuerpo: 'Cerraste tu primer trabajo en RedPro. Ganaste 500 puntos y ya sos Bronce. El barrio te empieza a conocer.',
               url: '/#s-loyalty',
             }).catch(() => {});
             // Marcar para que el prestador vea el modal al abrir la app
@@ -15927,7 +15927,7 @@ document.addEventListener('focusin', (e) => {
     const llamarEl = document.getElementById('contacto-llamar');
     if (llamarEl) llamarEl.href = 'tel:' + tel;
     const waEl = document.getElementById('contacto-whatsapp');
-    if (waEl) waEl.href = 'https://wa.me/' + tel.replace('+', '') + '?text=' + encodeURIComponent('Hola! Te escribo por PRONET');
+    if (waEl) waEl.href = 'https://wa.me/' + tel.replace('+', '') + '?text=' + encodeURIComponent('Hola! Te escribo por RedPro');
     // copiarNumeroContacto() lee chatMercadoContraparteTelefono a secas —
     // se replica acá para que "Copiar número" funcione desde este chat.
     modal.dataset.telefonoActivo = chatContraparteTelefono;
@@ -16284,7 +16284,7 @@ document.addEventListener('focusin', (e) => {
       const incluye = Array.isArray(ficha.incluye) ? ficha.incluye : [];
       const noIncluye = Array.isArray(ficha.no_incluye) ? ficha.no_incluye : [];
       const tieneDetalle = incluye.length || noIncluye.length;
-      refEl.textContent = '💡 Precio ref. PRONET para ' + rubro + ': $'
+      refEl.textContent = '💡 Precio ref. RedPro para ' + rubro + ': $'
         + minTotal.toLocaleString('es-AR') + '–$'
         + maxTotal.toLocaleString('es-AR') + ' / ' + unidad + (tieneDetalle ? ' ⓘ' : '');
       refEl.style.display = '';
@@ -16393,7 +16393,7 @@ document.addEventListener('focusin', (e) => {
   // Límites de slider por rubro (min_abs, max_abs, paso de escala)
   const SLIDER_RANGOS = PRONET_CONFIG.SLIDER_RANGOS;
   // Rubros con ficha activa real en catalogo_servicios (no el fallback de config.js).
-  // Solo estos muestran "Ref. PRONET" — evita marketear un precio que nadie cargó.
+  // Solo estos muestran "Ref. RedPro" — evita marketear un precio que nadie cargó.
   let RUBROS_CON_CATALOGO = new Set();
   let npRubroActual = '_default';
 
@@ -16649,7 +16649,7 @@ document.addEventListener('focusin', (e) => {
       precioTxt = '$' + propuesta.precio.toLocaleString('es-AR') + ' ' + (MOD_MAP[mod] || '');
     }
 
-    // — Ref PRONET desde catálogo — solo si el rubro tiene ficha activa real —
+    // — Ref RedPro desde catálogo — solo si el rubro tiene ficha activa real —
     let refTxt = null;
     try {
       const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
@@ -16941,7 +16941,7 @@ document.addEventListener('focusin', (e) => {
       }
     }
 
-    // Ref PRONET: ayuda a comparar propuestas de alcance distinto — solo si hay ficha activa real.
+    // Ref RedPro: ayuda a comparar propuestas de alcance distinto — solo si hay ficha activa real.
     try {
       const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
       if (tieneCatalogo) {
@@ -17858,7 +17858,7 @@ document.addEventListener('focusin', (e) => {
     window.addEventListener('appinstalled', () => {
       deferredPrompt = null;
       document.getElementById('install-card')?.remove();
-      showToast && showToast('✅ ¡PRONET instalado! Buscalo en tu pantalla de inicio.');
+      showToast && showToast('✅ ¡RedPro instalado! Buscalo en tu pantalla de inicio.');
     });
 
     // --- iOS Safari ---
@@ -17879,7 +17879,7 @@ document.addEventListener('focusin', (e) => {
     card.innerHTML =
       '<div class="install-card-icon">📲</div>' +
       '<div class="install-card-body">' +
-        '<div class="install-card-title">Instalá PRONET</div>' +
+        '<div class="install-card-title">Instalá RedPro</div>' +
         '<div class="install-card-sub">Acceso directo desde tu pantalla de inicio, sin abrir el navegador</div>' +
       '</div>' +
       '<button class="install-card-btn">Instalar</button>' +
@@ -17904,7 +17904,7 @@ document.addEventListener('focusin', (e) => {
     hint.id = 'ios-install-hint';
     hint.className = 'ios-install-hint';
     hint.innerHTML =
-      '<span class="ios-hint-text">Para instalar PRONET: tocá <strong>⬆ Compartir</strong> → <strong>Agregar a pantalla de inicio</strong></span>' +
+      '<span class="ios-hint-text">Para instalar RedPro: tocá <strong>⬆ Compartir</strong> → <strong>Agregar a pantalla de inicio</strong></span>' +
       '<button aria-label="Cerrar">✕</button>';
     document.body.appendChild(hint);
     requestAnimationFrame(() => requestAnimationFrame(() => hint.classList.add('visible')));

@@ -1,4 +1,4 @@
-// ═══ PRONET · config.js — Configuración de la base de datos ═══
+// ═══ RedPro · config.js — Configuración de la base de datos ═══
 //
 // FASE 2: acá se pegan las credenciales de tu proyecto Supabase.
 // Mientras estos dos valores estén vacíos, la app funciona en MODO LOCAL
@@ -131,7 +131,7 @@ Object.assign(window.PRONET_CONFIG, {
   CONVERSION_PROMEDIO_ZONAL: 9,        // % de conversión promedio zonal (vistas → contactos)
 
   // Soporte
-  WHATSAPP_SOPORTE: '5491140618983', // número de WhatsApp del equipo PRONET (sin + ni espacios)
+  WHATSAPP_SOPORTE: '5491140618983', // número de WhatsApp del equipo RedPro (sin + ni espacios)
 
   // UI / previews
   RESENAS_PREVIEW: 5,               // reseñas visibles antes del botón "ver todas"

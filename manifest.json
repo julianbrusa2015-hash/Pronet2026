@@ -1,6 +1,6 @@
 {
-  "name": "PRONET – Servicios en tu zona",
-  "short_name": "PRONET",
+  "name": "RedPro – Servicios en tu zona",
+  "short_name": "RedPro",
   "description": "Red de recomendación de servicios del hogar y oficios en tu zona",
   "start_url": "./",
   "scope": "./",

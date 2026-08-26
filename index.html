@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="PRONET">
+<meta name="apple-mobile-web-app-title" content="RedPro">
 <meta name="theme-color" content="#2B5BFF">
 <meta name="description" content="Red de recomendación de servicios del hogar y oficios en tu zona">
 <!-- El SVG lo toman los navegadores actuales y queda nítido en cualquier
@@ -19,8 +19,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@1,800&display=swap" media="print" onload="this.media='all'">
 <!-- TEMPORAL data:uri manifest (reemplazado) -->
-<link rel="manifest_old" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22PRONET%22%2C%22short_name%22%3A%22PRONET%22%2C%22description%22%3A%22Servicios%20en%20tu%20zona%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%232B5BFF%22%2C%22theme_color%22%3A%22%232B5BFF%22%2C%22orientation%22%3A%22portrait%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%2527http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%2527%2520viewBox%3D%270%25200%252096%252096%2527%253E%253Crect%2520width%3D%252796%2527%2520height%3D%252796%2527%2520rx%3D%252722%2527%2520fill%3D%2527%25232B5BFF%2527%2F%253E%253Ctext%2520x%3D%252748%2527%2520y%3D%252760%2527%2520font-size%3D%252748%2527%2520text-anchor%3D%2527middle%2527%2520fill%3D%2527white%2527%253E%25F0%259F%2594%258C%253C%2F%2524text%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%2296x96%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
-<title>PRONET – Servicios en tu zona</title>
+<link rel="manifest_old" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22RedPro%22%2C%22short_name%22%3A%22RedPro%22%2C%22description%22%3A%22Servicios%20en%20tu%20zona%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%232B5BFF%22%2C%22theme_color%22%3A%22%232B5BFF%22%2C%22orientation%22%3A%22portrait%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%2527http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%2527%2520viewBox%3D%270%25200%252096%252096%2527%253E%253Crect%2520width%3D%252796%2527%2520height%3D%252796%2527%2520rx%3D%252722%2527%2520fill%3D%2527%25232B5BFF%2527%2F%253E%253Ctext%2520x%3D%252748%2527%2520y%3D%252760%2527%2520font-size%3D%252748%2527%2520text-anchor%3D%2527middle%2527%2520fill%3D%2527white%2527%253E%25F0%259F%2594%258C%253C%2F%2524text%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%2296x96%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+<title>RedPro – Servicios en tu zona</title>
 <!-- Anti-flash de login: si hay token de sesión guardado, ocultamos el login
      ANTES de pintar nada. Corre síncrono en el <head>, antes que app.js. -->
 <script>
@@ -174,14 +174,14 @@
 
       <!-- Aviso institucional: lo escribe el admin desde Parametrías → Ajustes
            (config_app: aviso_sistema_*). Distinto del carrusel de arriba —
-           ese es publicidad paga, esto es gratis y lo manda PRONET. -->
+           ese es publicidad paga, esto es gratis y lo manda RedPro. -->
       <div id="home-aviso-sistema" style="display:none;margin:10px 14px 0;border-radius:14px;padding:13px 15px;align-items:center;gap:10px" onclick="cerrarAvisoSistema()">
         <div id="home-aviso-sistema-texto" style="flex:1;font-size:13px;font-weight:700;line-height:1.4"></div>
         <div style="font-size:16px;opacity:.6;flex-shrink:0">✕</div>
       </div>
 
       <!-- El checklist de "primeros pasos" se retiró (2026-08-17): quedaba
-           redundante con Guías rápidas ("Cómo usar PRONET" en Mi Perfil),
+           redundante con Guías rápidas ("Cómo usar RedPro" en Mi Perfil),
            que cubre lo mismo con más detalle. -->
 
       <!-- Urgencias y el banner contextual ahora viven como SLIDES del
@@ -366,7 +366,7 @@
               <span style="width:6px;height:6px;background:#52D9A0;border-radius:50%"></span>
               <span id="pv-actividad-txt"></span>
             </div>
-            <div style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);color:rgba(255,255,255,.65);font-size:9.5px;font-weight:600;letter-spacing:1.4px;padding:5px 13px;border-radius:20px;margin-left:auto">by PRONET</div>
+            <div style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);color:rgba(255,255,255,.65);font-size:9.5px;font-weight:600;letter-spacing:1.4px;padding:5px 13px;border-radius:20px;margin-left:auto">by RedPro</div>
           </div>
 
         </div>
@@ -1289,10 +1289,10 @@
       </div>
 
       <!-- ── Tu actividad ────────────────────────────────────────────
-           Antes esto se llamaba "PRONET" y era una bolsa de doce ítems de
+           Antes esto se llamaba "RedPro" y era una bolsa de doce ítems de
            naturalezas distintas: contenido propio, configuración, cobros y
            administración, todo junto. El rótulo tampoco ayudaba —toda la app
-           es PRONET—, y por eso Parametrías era imposible de encontrar: era
+           es RedPro—, y por eso Parametrías era imposible de encontrar: era
            el sexto de doce en un grupo sin nombre útil.
            Ahora cada rótulo contesta "qué hay acá adentro". -->
       <div style="padding:18px 14px 6px">
@@ -1302,7 +1302,7 @@
         <div class="menu-item" data-feature="loyalty" onclick="goTo('s-loyalty')">
           <div class="m-icon" style="background:var(--blue-s);color:var(--blue)">⭐</div>
           <div class="m-txt">
-            <div class="m-title">PRONET Points</div>
+            <div class="m-title">RedPro Points</div>
             <div class="m-sub" id="mp-points-tile">Cargando...</div>
           </div>
           <div class="m-chev">›</div>
@@ -1472,7 +1472,7 @@
           <div id="menu-loyalty-admin" class="menu-item" data-feature="loyalty" onclick="goTo('s-loyalty-admin')" style="background:var(--blue-s)">
             <div class="m-icon" style="background:var(--blue-d);color:white">⭐</div>
             <div class="m-txt">
-              <div class="m-title" style="color:var(--blue-d)">Admin PRONET Points</div>
+              <div class="m-title" style="color:var(--blue-d)">Admin RedPro Points</div>
               <div class="m-sub" id="mp-canjes-sub">Canjes y beneficios · Panel Admin</div>
             </div>
             <div class="m-chev" style="color:var(--blue-d)">›</div>
@@ -1567,7 +1567,7 @@
         <div class="menu-item" data-feature="tutorialOnboarding" onclick="goTo('s-guias')">
           <div class="m-icon" style="background:var(--blue-s)">📖</div>
           <div class="m-txt">
-            <div class="m-title">Cómo usar PRONET</div>
+            <div class="m-title">Cómo usar RedPro</div>
             <div class="m-sub">Guías rápidas por tema, paso a paso</div>
           </div>
           <div class="m-chev">›</div>
@@ -1588,7 +1588,7 @@
         <div class="menu-item" id="menu-resena-app" onclick="abrirResenaApp()">
           <div class="m-icon" style="background:var(--gold-s)">⭐</div>
           <div class="m-txt">
-            <div class="m-title">Calificar PRONET</div>
+            <div class="m-title">Calificar RedPro</div>
             <div class="m-sub" id="menu-resena-app-sub">Contanos cómo te resulta la app</div>
           </div>
           <div class="m-chev">›</div>
@@ -1596,7 +1596,7 @@
         <div class="menu-item" onclick="compartirApp()">
           <div class="m-icon" style="background:#F0FDF4">📤</div>
           <div class="m-txt">
-            <div class="m-title">Compartir PRONET</div>
+            <div class="m-title">Compartir RedPro</div>
             <div class="m-sub">Invitá a vecinos y prestadores de tu zona</div>
           </div>
           <div class="m-chev">›</div>
@@ -1624,7 +1624,7 @@
         </div>
       </div>
       <div style="text-align:center;padding:14px 14px 4px;font-size:11px;color:var(--ink3)">
-        © 2026 PRONET. Todos los derechos reservados.
+        © 2026 RedPro. Todos los derechos reservados.
       </div>
 
       <!-- El panel admin (niveles, funcionalidades, diagnóstico) ya no
@@ -1633,7 +1633,7 @@
       <div style="text-align:center;padding:20px 14px 8px">
         <div onclick="cerrarSesion()" style="font-size:13px;color:#EF4444;font-weight:600;cursor:pointer;margin-bottom:12px">Cerrar sesión</div>
         <div onclick="confirmarEliminarCuenta()" style="font-size:12px;color:var(--ink3);font-weight:600;cursor:pointer;margin-bottom:12px">Eliminar mi cuenta</div>
-        <div style="font-size:11px;color:var(--ink3)">PRONET v1.0 · Build 2026.07</div>
+        <div style="font-size:11px;color:var(--ink3)">RedPro v1.0 · Build 2026.07</div>
       </div>
 
     </div><!-- /miperfil -->
@@ -1824,7 +1824,7 @@
             <div style="background:#F0FDF4;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:14px">
               <div style="width:44px;height:44px;border-radius:50%;background:#BBF7D0;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🪙</div>
               <div>
-                <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Tus puntos PRONET</div>
+                <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Tus puntos RedPro</div>
                 <div style="font-size:28px;font-weight:800;color:var(--ink);line-height:1.1"><span id="mpt-puntos">500</span> <span style="font-size:13px;font-weight:700;color:#16A34A">+500 por trabajo cerrado</span></div>
               </div>
             </div>
@@ -1846,7 +1846,7 @@
           </div>
           <!-- CTA -->
           <div style="padding:0 20px 32px;display:flex;flex-direction:column;gap:8px">
-            <button class="btn-p" onclick="cerrarModalPrimerTrabajo();goTo('s-loyalty')" style="width:100%">Ver mis puntos PRONET</button>
+            <button class="btn-p" onclick="cerrarModalPrimerTrabajo();goTo('s-loyalty')" style="width:100%">Ver mis puntos RedPro</button>
             <button onclick="cerrarModalPrimerTrabajo()" style="background:none;border:none;color:var(--ink3);font-size:13px;cursor:pointer;padding:6px;font-family:'Inter',sans-serif">Ahora no</button>
           </div>
         </div>
@@ -2485,7 +2485,7 @@
       <div style="padding:12px 14px 0">
         <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:14px">
           <div style="font-size:13px;font-weight:800;color:var(--ink);margin-bottom:2px">📣 Aviso del sistema</div>
-          <div style="font-size:11.5px;color:var(--ink3);line-height:1.4;margin-bottom:12px">Un mensaje gratis, escrito por PRONET, arriba de Inicio. Distinto de los banners pagos.</div>
+          <div style="font-size:11.5px;color:var(--ink3);line-height:1.4;margin-bottom:12px">Un mensaje gratis, escrito por RedPro, arriba de Inicio. Distinto de los banners pagos.</div>
 
           <label style="display:flex;align-items:center;gap:9px;margin-bottom:11px;cursor:pointer">
             <input type="checkbox" id="aviso-activo" style="width:18px;height:18px;accent-color:var(--blue)">
@@ -2538,7 +2538,7 @@
           </button>
           <div style="flex:1">
             <h2>📍 Zonas y barrios</h2>
-            <p>Dónde opera PRONET y cómo se agrupan</p>
+            <p>Dónde opera RedPro y cómo se agrupan</p>
           </div>
           <button onclick="abrirAltaParam('zona')" class="param-nuevo-btn" aria-label="Nueva zona">+ Nueva</button>
         </div>
@@ -3192,7 +3192,7 @@
           </div>
 
           <div style="font-size:11px;color:var(--ink3);margin-top:6px;padding:0 4px" id="np-presupuesto-ref"></div>
-          <div class="ref-inline" style="margin-top:8px;display:none" id="np-ref-inline">💡 Precio ref. PRONET</div>
+          <div class="ref-inline" style="margin-top:8px;display:none" id="np-ref-inline">💡 Precio ref. RedPro</div>
           <div style="display:none;margin-top:6px;padding:10px;background:var(--surface);border-radius:10px;font-size:11px;line-height:1.6" id="np-ref-detalle-box"></div>
           <div style="font-size:10px;color:var(--ink3);margin-top:4px;padding:0 4px;line-height:1.4;display:none" id="np-ref-nota">⚠️ Referencial basado en servicio estándar.</div>
         </div>
@@ -3390,7 +3390,7 @@
           <div style="font-size:22px">🚨</div>
           <div style="flex:1">
             <div style="font-size:12px;font-weight:700;color:#BE123C">Hacer una denuncia formal</div>
-            <div style="font-size:11px;color:#9F1239;margin-top:2px">Para casos de robo, amenazas o estafa. El equipo PRONET investiga en 72hs.</div>
+            <div style="font-size:11px;color:#9F1239;margin-top:2px">Para casos de robo, amenazas o estafa. El equipo RedPro investiga en 72hs.</div>
           </div>
           <div style="color:#BE123C;font-size:16px">›</div>
         </div>
@@ -3711,7 +3711,7 @@
         <div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:700;color:var(--ink)">Crear cuenta</div>
         <div onclick="cerrarRegistro()" style="color:var(--ink3);cursor:pointer;font-size:20px;padding:0 4px">✕</div>
       </div>
-      <div style="font-size:13px;color:var(--ink3);margin-bottom:18px">Registrate gratis en PRONET</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:18px">Registrate gratis en RedPro</div>
 
       <label for="reg-nombre" style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Nombre completo</label>
       <input id="reg-nombre" name="nombre" autocomplete="name" placeholder="Ej: Juan Pérez" required pattern=".*\s+.*" title="Ingresá nombre y apellido" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:12px;box-sizing:border-box;font-family:'Inter',sans-serif">
@@ -3781,7 +3781,7 @@
   <div class="ob-screen hidden" id="ob-splash">
     <div class="splash">
       <div style="font-size:48px;margin-bottom:16px">🔧</div>
-      <div class="splash-logo">PRONET</div>
+      <div class="splash-logo">RedPro</div>
       <div class="splash-tag">Encontrá servicios de confianza<br>en tu barrio</div>
       <div class="splash-btns">
         <button class="btn-white" onclick="obStart('prestador')">Soy prestador de servicios</button>
@@ -3800,7 +3800,7 @@
         <div class="ob-step-lbl">1 de 8</div>
       </div>
       <div class="ob-body">
-        <div class="ob-title">¿Cómo vas a usar PRONET?</div>
+        <div class="ob-title">¿Cómo vas a usar RedPro?</div>
         <div class="ob-sub">Elegí tu rol — podés cambiarlo después desde tu perfil.</div>
         <div class="type-cards">
           <div class="type-card on" id="tc-prestador" onclick="selectType('prestador')" style="padding:20px;gap:14px">
@@ -4168,7 +4168,7 @@
       <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Plazo</span><span id="ep-plazo" style="font-weight:600">—</span></div>
       <div id="ep-fecha-row" style="display:none;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Fecha tentativa</span><span id="ep-fecha" style="font-weight:600">—</span></div>
       <div id="ep-duracion-row" style="display:none;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Duración aprox.</span><span id="ep-duracion" style="font-weight:600">—</span></div>
-      <div id="ep-ref-row" style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Ref. PRONET</span><span id="ep-ref" style="font-weight:600;color:var(--blue)">—</span></div>
+      <div id="ep-ref-row" style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3)">Ref. RedPro</span><span id="ep-ref" style="font-weight:600;color:var(--blue)">—</span></div>
       <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--ink3)">Posición estimada</span><span id="ep-posicion" style="font-weight:700;color:var(--ink3)">…</span></div>
     </div>
 
@@ -4323,27 +4323,27 @@
 
       <div class="tc-section">
         <h3>1. Descripción del servicio</h3>
-        <p>PRONET es una plataforma digital que conecta prestadores de servicios del hogar y oficios con clientes en su zona geográfica. PRONET actúa como intermediario tecnológico y no es parte de los contratos de servicio entre usuarios y prestadores.</p>
+        <p>RedPro es una plataforma digital que conecta prestadores de servicios del hogar y oficios con clientes en su zona geográfica. RedPro actúa como intermediario tecnológico y no es parte de los contratos de servicio entre usuarios y prestadores.</p>
       </div>
 
       <div class="tc-section">
         <h3>2. Registro y uso de la cuenta</h3>
-        <p>Para usar PRONET debés tener al menos 18 años y proporcionar información verídica. Sos responsable de mantener la seguridad de tu cuenta y de todas las actividades que ocurran bajo ella.</p>
+        <p>Para usar RedPro debés tener al menos 18 años y proporcionar información verídica. Sos responsable de mantener la seguridad de tu cuenta y de todas las actividades que ocurran bajo ella.</p>
       </div>
 
       <div class="tc-section">
         <h3>3. Precios referenciales</h3>
-        <p>Los precios mostrados en el catálogo de servicios son referenciales y orientativos. No constituyen un precio garantizado. El precio final es acordado directamente entre el cliente y el prestador. PRONET no se responsabiliza por diferencias entre el precio referencial y el precio final acordado.</p>
+        <p>Los precios mostrados en el catálogo de servicios son referenciales y orientativos. No constituyen un precio garantizado. El precio final es acordado directamente entre el cliente y el prestador. RedPro no se responsabiliza por diferencias entre el precio referencial y el precio final acordado.</p>
       </div>
 
       <div class="tc-section">
         <h3>4. Pagos y suscripciones</h3>
-        <p>Los pagos entre clientes y prestadores son directos (efectivo, transferencia o QR/MercadoPago) y no son gestionados por PRONET. Las suscripciones al Plan Pro se cobran a través de MercadoPago. Podés cancelar tu suscripción en cualquier momento desde tu perfil.</p>
+        <p>Los pagos entre clientes y prestadores son directos (efectivo, transferencia o QR/MercadoPago) y no son gestionados por RedPro. Las suscripciones al Plan Pro se cobran a través de MercadoPago. Podés cancelar tu suscripción en cualquier momento desde tu perfil.</p>
       </div>
 
       <div class="tc-section">
         <h3>5. Reseñas y recomendaciones</h3>
-        <p>Las reseñas deben ser verídicas y basadas en experiencias reales. PRONET se reserva el derecho de moderar o eliminar reseñas que incumplan nuestras políticas de contenido. Solo pueden dejar reseñas usuarios que hayan iniciado un chat con el prestador.</p>
+        <p>Las reseñas deben ser verídicas y basadas en experiencias reales. RedPro se reserva el derecho de moderar o eliminar reseñas que incumplan nuestras políticas de contenido. Solo pueden dejar reseñas usuarios que hayan iniciado un chat con el prestador.</p>
       </div>
 
       <div class="tc-section">
@@ -4353,12 +4353,12 @@
 
       <div class="tc-section">
         <h3>7. Bolsa de trabajo (Pedidos)</h3>
-        <p>Los pedidos publicados expiran automáticamente a los 7 días, salvo que tengan propuestas pendientes de respuesta. PRONET no garantiza que los pedidos reciban propuestas ni que las propuestas sean aceptadas. El acceso a la bolsa de trabajo para prestadores requiere Plan Pro activo.</p>
+        <p>Los pedidos publicados expiran automáticamente a los 7 días, salvo que tengan propuestas pendientes de respuesta. RedPro no garantiza que los pedidos reciban propuestas ni que las propuestas sean aceptadas. El acceso a la bolsa de trabajo para prestadores requiere Plan Pro activo.</p>
       </div>
 
       <div class="tc-section">
         <h3>8. Responsabilidad</h3>
-        <p>PRONET no se responsabiliza por la calidad de los servicios prestados, daños ocasionados durante la prestación del servicio, ni por disputas entre clientes y prestadores. Recomendamos verificar las credenciales del prestador antes de contratar.</p>
+        <p>RedPro no se responsabiliza por la calidad de los servicios prestados, daños ocasionados durante la prestación del servicio, ni por disputas entre clientes y prestadores. Recomendamos verificar las credenciales del prestador antes de contratar.</p>
       </div>
 
       <div class="tc-section">
@@ -4368,7 +4368,7 @@
 
       <div class="tc-section">
         <h3>10. Modificaciones</h3>
-        <p>PRONET puede modificar estos términos en cualquier momento. Te notificaremos por email ante cambios significativos. El uso continuado de la plataforma implica la aceptación de los nuevos términos.</p>
+        <p>RedPro puede modificar estos términos en cualquier momento. Te notificaremos por email ante cambios significativos. El uso continuado de la plataforma implica la aceptación de los nuevos términos.</p>
       </div>
 
       <div style="background:var(--surface);border-radius:12px;padding:14px;text-align:center;margin-top:10px">
@@ -4404,7 +4404,7 @@
         <p><strong>Nombre completo, DNI y dirección</strong> — solo si elegís verificar tu identidad como prestador (opcional).</p>
         <p><strong>Ubicación en tiempo real</strong> — solo mientras un prestador activa "Disponible ahora"; se apaga al desactivar el toggle.</p>
         <p><strong>Token de notificaciones push</strong> — para avisarte de mensajes y propuestas nuevas.</p>
-        <p><strong>Datos de suscripción</strong> (plan, estado, vencimiento) — el cobro lo procesa MercadoPago, PRONET nunca ve tu tarjeta o CBU.</p>
+        <p><strong>Datos de suscripción</strong> (plan, estado, vencimiento) — el cobro lo procesa MercadoPago, RedPro nunca ve tu tarjeta o CBU.</p>
       </div>
 
       <div class="tc-section">
@@ -4665,7 +4665,7 @@
     <div style="padding:16px 18px 90px">
       <div id="prealta-form">
         <div style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:12px;padding:12px 14px;font-size:12.5px;color:var(--blue);line-height:1.55;margin-bottom:18px">
-          <b id="prealta-invitador">Un vecino</b> te está invitando a PRONET. Dejanos tus datos y te contactamos — <b>no necesitás crear una cuenta ahora</b>.
+          <b id="prealta-invitador">Un vecino</b> te está invitando a RedPro. Dejanos tus datos y te contactamos — <b>no necesitás crear una cuenta ahora</b>.
         </div>
 
         <!-- Atajo: el PDF417 del dorso del DNI trae apellido, nombre y número
@@ -4724,7 +4724,7 @@
   <div class="screen" id="s-guias">
     <div class="nprop-header">
       <div class="back-btn" onclick="goTo('s-miperfil')" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D4259" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>
-      <h2>Cómo usar PRONET</h2>
+      <h2>Cómo usar RedPro</h2>
     </div>
     <div id="guias-grupos" class="mkt-secciones" role="tablist" aria-label="Elegí el grupo" style="margin:14px 14px 0"></div>
     <div id="guias-tabs" class="mkt-secciones" role="tablist" aria-label="Elegí qué querés aprender" style="margin:8px 14px 0"></div>
@@ -4749,7 +4749,7 @@
         <button onclick="goTo('s-miperfil')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <h2 style="flex:1">⭐ PRONET Points</h2>
+        <h2 style="flex:1">⭐ RedPro Points</h2>
       </div>
       <p style="position:relative">Tu programa de puntos y beneficios</p>
 
@@ -4876,7 +4876,7 @@
     <div id="lv-niveles" style="display:none;padding:14px 0">
 
       <div style="padding:0 14px 12px;font-size:13px;color:var(--ink2);line-height:1.6">
-        Acumulás puntos con cada acción en PRONET. Tu nivel se actualiza automáticamente y desbloquea beneficios exclusivos.
+        Acumulás puntos con cada acción en RedPro. Tu nivel se actualiza automáticamente y desbloquea beneficios exclusivos.
       </div>
 
       <div class="niveles-grid">
@@ -5018,7 +5018,7 @@
         </div>
         <div style="font-size:17px;font-weight:700;color:white;font-family:'Sora',sans-serif">Hacer una denuncia</div>
       </div>
-      <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.5">Esta denuncia es confidencial. El equipo PRONET la revisará en <strong style="color:white">72 horas hábiles</strong> y te contactará.</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.5">Esta denuncia es confidencial. El equipo RedPro la revisará en <strong style="color:white">72 horas hábiles</strong> y te contactará.</div>
     </div>
 
     <!-- Card del prestador denunciado -->
@@ -5072,7 +5072,7 @@
       <div class="form-group">
         <label for="f-conta-con-el-mayor-detalle-posible" class="form-label">Describí lo que ocurrió</label>
         <textarea id="f-conta-con-el-mayor-detalle-posible" name="f-conta-con-el-mayor-detalle-posible" class="ob-input" rows="4" style="resize:none;line-height:1.5" placeholder="Contá con el mayor detalle posible qué pasó, cuándo y dónde..."></textarea>
-        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Cuanto más detalle, más rápido puede actuar el equipo PRONET.</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Cuanto más detalle, más rápido puede actuar el equipo RedPro.</div>
       </div>
 
       <div class="form-group">
@@ -5094,13 +5094,13 @@
           </div>
           <div class="form-opt on" style="display:flex;align-items:center;gap:12px;text-align:left" onclick="selUrgencia(this)">
             <div style="font-size:18px">❌</div>
-            <div><div style="font-size:13px;font-weight:600;color:var(--ink)">No, todavía no</div><div style="font-size:11px;color:var(--ink3)">PRONET puede orientarte sobre cómo hacerlo</div></div>
+            <div><div style="font-size:13px;font-weight:600;color:var(--ink)">No, todavía no</div><div style="font-size:11px;color:var(--ink3)">RedPro puede orientarte sobre cómo hacerlo</div></div>
           </div>
         </div>
       </div>
 
       <div style="background:#FFF8EC;border:1px solid #FCD34D;border-radius:12px;padding:12px 14px;margin:0 18px;font-size:12px;color:#92400E;line-height:1.5">
-        🔒 <strong>Tu identidad es confidencial.</strong> El prestador no sabrá quién hizo la denuncia. Solo el equipo PRONET tiene acceso a tus datos.
+        🔒 <strong>Tu identidad es confidencial.</strong> El prestador no sabrá quién hizo la denuncia. Solo el equipo RedPro tiene acceso a tus datos.
       </div>
     </div>
 
@@ -5114,11 +5114,11 @@
     <div id="denuncia-exito" style="display:none;position:absolute;inset:0;background:white;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px">
       <div style="font-size:56px;margin-bottom:16px">✅</div>
       <div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:700;color:var(--ink);margin-bottom:8px">Denuncia recibida</div>
-      <div style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:24px">El equipo PRONET la revisará en <strong>72 horas hábiles</strong> y te contactará al teléfono registrado en tu cuenta.</div>
+      <div style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:24px">El equipo RedPro la revisará en <strong>72 horas hábiles</strong> y te contactará al teléfono registrado en tu cuenta.</div>
       <div style="background:#FFF1F2;border-radius:14px;padding:16px;width:100%;text-align:left;margin-bottom:24px">
         <div style="font-size:12px;font-weight:700;color:#BE123C;margin-bottom:8px">¿Qué pasa ahora?</div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;gap:8px;font-size:12px;color:var(--ink2)"><span>1.</span><span>El equipo PRONET contacta al denunciante para verificar el caso</span></div>
+          <div style="display:flex;gap:8px;font-size:12px;color:var(--ink2)"><span>1.</span><span>El equipo RedPro contacta al denunciante para verificar el caso</span></div>
           <div style="display:flex;gap:8px;font-size:12px;color:var(--ink2)"><span>2.</span><span>El prestador recibe una notificación de revisión</span></div>
           <div style="display:flex;gap:8px;font-size:12px;color:var(--ink2)"><span>3.</span><span>Si se confirma, el perfil es suspendido y se notifica a usuarios con contacto previo</span></div>
           <div style="display:flex;gap:8px;font-size:12px;color:var(--ink2)"><span>4.</span><span>Te informamos el resultado de la investigación</span></div>
@@ -5140,7 +5140,7 @@
         </button>
         <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:white">🛡️ Panel de Moderación</div>
       </div>
-      <div style="font-size:12px;color:rgba(255,255,255,.65)">Denuncias activas · Solo visible para el equipo PRONET</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.65)">Denuncias activas · Solo visible para el equipo RedPro</div>
     </div>
 
     <!-- Stats dinámicos -->
@@ -5222,7 +5222,7 @@
         </button>
         <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:white">🗂️ Parametrías</div>
       </div>
-      <div style="font-size:12px;color:rgba(255,255,255,.65)">Datos del negocio editables sin deploy · Solo equipo PRONET</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.65)">Datos del negocio editables sin deploy · Solo equipo RedPro</div>
     </div>
 
     <div style="padding:20px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">
@@ -5419,7 +5419,7 @@
 
   </div><!-- /parametrias -->
 
-  <!-- ══ PANEL ADMIN PRONET POINTS ══════════════════════════════════════ -->
+  <!-- ══ PANEL ADMIN RedPro POINTS ══════════════════════════════════════ -->
   <div class="screen" id="s-loyalty-admin">
 
     <div class="mod-hero" style="background:linear-gradient(135deg,#6D28D9,#9B59B6)">
@@ -5427,9 +5427,9 @@
         <button onclick="goTo('s-miperfil')" aria-label="Volver" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:38px;height:38px;min-width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:white">⭐ Admin PRONET Points</div>
+        <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:white">⭐ Admin RedPro Points</div>
       </div>
-      <div style="font-size:12px;color:rgba(255,255,255,.65)">Canjes y catálogo de beneficios · Solo equipo PRONET</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.65)">Canjes y catálogo de beneficios · Solo equipo RedPro</div>
     </div>
 
     <!-- Solicitudes de canje -->
@@ -5446,9 +5446,9 @@
       <div style="padding:20px 0;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando...</div>
     </div>
 
-    <!-- ABM Beneficios PRONET Points -->
+    <!-- ABM Beneficios RedPro Points -->
     <div style="padding:20px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--border);margin-top:16px;display:flex;align-items:center;justify-content:space-between">
-      <span>🎁 Beneficios PRONET Points</span>
+      <span>🎁 Beneficios RedPro Points</span>
       <button onclick="abrirFormCanje(null)" style="background:var(--blue);color:white;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">+ Nuevo</button>
     </div>
     <div id="mod-beneficios-lista" style="padding:0 14px 12px">
@@ -5457,7 +5457,7 @@
 
   </div><!-- /loyalty-admin -->
 
-  <!-- ══ MODAL ABM BENEFICIO PRONET POINTS ═══════════════════════════════ -->
+  <!-- ══ MODAL ABM BENEFICIO RedPro POINTS ═══════════════════════════════ -->
   <div class="checkout-overlay" id="canje-form-overlay" onclick="if(event.target===this) cerrarFormCanje()">
     <div class="checkout-sheet" style="max-height:85vh;overflow-y:auto">
       <div class="checkout-handle"></div>
@@ -5580,7 +5580,7 @@
   </div>
 
   <!-- ══ MODAL: CALIFICAR LA APP ═══════════════════════════════════════
-       Califica PRONET, no a un prestador — no cuelga de ningún trabajo ni
+       Califica RedPro, no a un prestador — no cuelga de ningún trabajo ni
        de ningún chat, y por eso vive en `resenas_app` y no en `resenas`.
 
        Es un modal y no una pantalla a propósito: agregar una pantalla
@@ -5594,7 +5594,7 @@
     <div class="zona-modal">
       <div class="zm-handle"></div>
       <div style="font-size:32px;text-align:center;margin-bottom:12px">⭐</div>
-      <div class="zm-title" style="text-align:center" id="rapp-titulo">¿Cómo te resulta PRONET?</div>
+      <div class="zm-title" style="text-align:center" id="rapp-titulo">¿Cómo te resulta RedPro?</div>
       <div class="zm-sub" style="text-align:center" id="rapp-sub">Tu opinión nos dice qué arreglar primero. Es sobre la app, no sobre un prestador.</div>
 
       <div class="stars-big" id="rapp-stars">
@@ -5612,7 +5612,7 @@
         placeholder="Qué te sirve, qué te cuesta, qué le falta…"
         style="width:100%;border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;font-size:13.5px;font-family:'Inter',sans-serif;outline:none;color:var(--ink);resize:vertical;line-height:1.5"></textarea>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
-        <span style="font-size:11px;color:var(--ink3)">Lo lee el equipo de PRONET. No se publica.</span>
+        <span style="font-size:11px;color:var(--ink3)">Lo lee el equipo de RedPro. No se publica.</span>
         <span style="font-size:11px;color:var(--ink3)"><span id="rapp-chars">0</span>/1000</span>
       </div>
 
@@ -5623,7 +5623,7 @@
   </div>
 
   <!-- ══ MODAL: CALIFICACIONES DE LA APP (sólo admin) ══════════════════
-       El admin no califica PRONET: lo que necesita es LEER lo que dejaron
+       El admin no califica RedPro: lo que necesita es LEER lo que dejaron
        los demás. Por eso el mismo ítem del menú de Ayuda cambia de nombre
        y de destino según el rol (ver abrirResenaApp en app.js).
        La RLS ya se encarga de que sólo él vea todas: para el resto,
@@ -5632,7 +5632,7 @@
     <div class="zona-modal">
       <div class="zm-handle"></div>
       <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
-        <div class="zm-title" style="margin:0;flex:1">Calificaciones de PRONET</div>
+        <div class="zm-title" style="margin:0;flex:1">Calificaciones de RedPro</div>
         <div id="rappl-promedio" style="font-size:13px;font-weight:800;color:var(--gold)"></div>
       </div>
       <div class="zm-sub" id="rappl-resumen" style="margin-bottom:14px">Cargando…</div>
@@ -5885,7 +5885,7 @@
           </div>
           <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;line-height:1.5" id="edit-verif-ayuda">
             Los vecinos te dejan entrar a su casa. Estos datos no se publican:
-            los ve sólo el equipo de PRONET para darte el sello de verificado.
+            los ve sólo el equipo de RedPro para darte el sello de verificado.
           </div>
 
           <!-- Escanea el dorso del DNI (PDF417) y completa nombre + DNI solo.
@@ -5968,7 +5968,7 @@
     <!-- Burbujas de chat -->
     <div style="padding:16px 14px;background:#ECE5DD;display:flex;flex-direction:column;gap:10px">
       <div style="background:white;border-radius:0 12px 12px 12px;padding:10px 14px;font-size:13px;max-width:86%;box-shadow:0 1px 3px rgba(0,0,0,.08)">
-        ¡Hola! Bienvenido a <strong>PRONET</strong> 👋
+        ¡Hola! Bienvenido a <strong>RedPro</strong> 👋
       </div>
       <div style="background:white;border-radius:0 12px 12px 12px;padding:10px 14px;font-size:13px;max-width:86%;box-shadow:0 1px 3px rgba(0,0,0,.08)">
         ¿Tenés alguna duda? ¡Escribinos, te respondemos enseguida! 😊

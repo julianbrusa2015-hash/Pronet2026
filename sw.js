@@ -1,4 +1,4 @@
-// ═══ PRONET · Service Worker ═══
+// ═══ RedPro · Service Worker ═══
 // Cachea el "shell" de la app para que abra al instante y funcione offline.
 //
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
@@ -97,7 +97,7 @@ self.addEventListener('fetch', (event) => {
 // ═══ Notificaciones Push ═══
 // El payload viene de la Edge Function 'enviar-push': {titulo, cuerpo, url}
 self.addEventListener('push', (event) => {
-  let datos = { titulo: 'PRONET', cuerpo: '', url: '/' };
+  let datos = { titulo: 'RedPro', cuerpo: '', url: '/' };
   try { if (event.data) datos = { ...datos, ...event.data.json() }; } catch (e) {}
   event.waitUntil(
     self.registration.showNotification(datos.titulo, {
