@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v361'; // v361: la previsualizacion del banner muestra el recorte real (16:5) y deja ver la imagen completa
+const CACHE_VERSION = 'pronet-v362'; // v362: la moderacion de banners dice a que carrusel sale el aviso
 
 const SHELL = [
   './',

@@ -12772,9 +12772,20 @@ document.addEventListener('focusin', (e) => {
     cont.innerHTML = lista.map(b => {
       const quien = b.perfiles?.nombre || 'Vecino';
       const destino = b.destino_tipo === 'imagen' ? 'Abre un flyer' : 'Abre WhatsApp';
+      // Dónde va a salir. Sin esto el admin aprueba a ciegas y después no
+      // encuentra el aviso: los vecinos publican en el carrusel de Entre
+      // Vecinos y los prestadores en el de la portada, y desde afuera las
+      // dos cosas se ven igual.
+      const enVecinos = b.ubicacion === 'vecinos';
+      const donde = enVecinos
+        ? '<span style="background:#FFEDD5;color:#C2410C;border-radius:8px;padding:2px 8px;font-size:10.5px;font-weight:700">🏘️ Sale en Entre Vecinos</span>'
+        : '<span style="background:var(--blue-s);color:var(--blue-d);border-radius:8px;padding:2px 8px;font-size:10.5px;font-weight:700">🏠 Sale en la portada</span>';
       return '<div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">' +
         '<img src="' + escHTML(b.imagen_url) + '" alt="" style="width:100%;aspect-ratio:16/5;object-fit:cover;border-radius:8px;display:block;margin-bottom:9px">' +
-        '<div style="font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(b.nombre) + '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<div style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(b.nombre) + '</div>' +
+          donde +
+        '</div>' +
         '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(quien) + ' · ' + escHTML(destino) + ' · ' + (b.dias || 30) + ' días</div>' +
         '<div style="display:flex;gap:8px;margin-top:10px">' +
           '<button onclick="modResolverBanner(\'' + escHTML(b.id) + '\',true)" style="flex:1;padding:9px;font-size:12.5px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:\'Inter\',sans-serif">Aprobar</button>' +

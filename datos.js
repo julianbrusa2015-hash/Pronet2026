@@ -1223,7 +1223,10 @@ const PronetDB = (() => {
     async listarBannersPendientes() {
       if (!remoto) return [];
       const { data, error } = await sb.from('banners')
-        .select('id, nombre, imagen_url, enlace, destino_tipo, dias, creado, usuario_id, perfiles:usuario_id (nombre)')
+        // `ubicacion` va en el select: sin ella la tarjeta de moderación no
+        // puede decir a qué carrusel sale el aviso, y el admin aprueba sin
+        // saber dónde va a aparecer.
+        .select('id, nombre, imagen_url, enlace, destino_tipo, dias, creado, usuario_id, ubicacion, perfiles:usuario_id (nombre)')
         .eq('estado', 'pendiente')
         .order('creado', { ascending: true });
       if (error) { console.warn('[PronetDB] listarBannersPendientes', error.message); return []; }
