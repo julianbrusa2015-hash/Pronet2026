@@ -237,14 +237,56 @@ cada tanto es pedirle que se case para una cita. El vecino paga por uso.
 
 | Qué | Cómo |
 |---|---|
-| Publicar en Mercado | **N gratis por mes**, después compra créditos. Parametría: `mkt_pub_vecino_mes` (hoy 5; `-1` = ilimitado, `0` = paga desde la primera) |
+| Publicar en Entre Vecinos | **N gratis por mes**, después compra créditos. Parametría: `mkt_pub_vecino_mes` (hoy 5; `-1` = ilimitado, `0` = paga desde la primera) |
 | Crédito de publicación | $5.000 cada uno, sirve para una publicación extra |
-| Banner del carrusel | $12.000 — igual que el prestador, cualquiera puede contratarlo |
-| **Destacar** su publicación | $1.500 → 7 días primero **en su categoría**. Mismo precio y duración que el impulso del prestador |
-| Publicar **servicios** en Mercado | **No.** Eso es del prestador |
+| Banner del carrusel | $12.000 / 30 días — en **su** carrusel, el de Entre Vecinos |
+| **Destacar** su publicación | $1.500 → 7 días primero **en su categoría** |
+| Publicar **servicios** además de productos | **Sí**, elige la sección al publicar |
 
 Publicar pedidos, recibir propuestas, contratar y reseñar: **siempre gratis**.
 Es el núcleo del marketplace y no se cobra.
+
+### Las tres vías del vecino para ofrecer algo
+
+**Repasado 2026-08-29**, en espejo con las cinco del prestador.
+
+| | Qué es | Dónde sale | Cuánto |
+|---|---|---|---|
+| **1. Publicación** | Servicio o producto, él elige la sección | Entre Vecinos, en la sección elegida | 5 gratis/mes, después $5.000 |
+| **2. Destacar** | Sube una publicación al principio | Su categoría | $1.500 / 7 días |
+| **3. Banner** | Pieza gráfica | Carrusel de Entre Vecinos | $12.000 / 30 días |
+
+**Dónde se entra a cada una:**
+
+- **Publicar**: el botón "+ Publicar" de la barra, el FAB flotante o el CTA
+  azul del carrusel — tres accesos, todos dentro de Entre Vecinos.
+- **Destacar**: en la tarjeta de cada aviso, dentro de *Mis publicaciones*.
+  Igual que el impulso del prestador, **sólo aparece si esa categoría tiene
+  competencia real**: aparecer primero entre tres no vale nada.
+- **Banner**: *Mi Perfil → Entre Vecinos → Promocionar un aviso*. Es la
+  única de las tres que no se alcanza desde la pantalla de Entre Vecinos —
+  ver el pendiente al final de esta sección.
+
+### Y para contratar o comprar
+
+| | Cómo llega | Mecánica |
+|---|---|---|
+| **Pedido abierto** | Publicar un pedido | Propuestas → elige → chat → reseña |
+| **Pedido dirigido** | "Consultar" en el aviso de un prestador, o recontratar a alguien | El prestador responde con una propuesta normal |
+| **Compra entre vecinos** | Desde una publicación de Entre Vecinos | Chat directo + carrito |
+| **Servicio fijo** | Al elegir una propuesta de un pedido `recurrente` | Queda el acuerdo registrado |
+
+El carrito **no pasa por MercadoPago**, a propósito: la plata se coordina
+entre las partes ([ver la distinción](#los-dos-carruseles-de-banners) de
+quién le cobra a quién).
+
+> **Pendiente.** No hay ninguna entrada al banner desde la pantalla donde el
+> vecino ve el carrusel. El momento en que a alguien se le ocurre pagar un
+> aviso es justo cuando está mirando el de otro, y ahí no hay dónde tocar —
+> el único camino está a tres toques, en otra pantalla. El prestador sí
+> tiene esa puerta: cuando el carrusel de Inicio se queda sin banners pagos
+> aparecen tarjetas "de la casa" que invitan a comprar. Al carrusel de
+> Entre Vecinos nunca se le pusieron.
 
 ---
 
@@ -252,20 +294,36 @@ Es el núcleo del marketplace y no se cobra.
 
 Dos cosas distintas se llaman "publicación". Conviene no confundirlas:
 
-| | Anuncio de prestador | Publicación de Mercado |
+| | Anuncio de prestador | Publicación del vecino |
 |---|---|---|
 | Tabla | `publicaciones_prestador` | `publicaciones` |
-| Quién | Prestador | Vecino (productos) |
-| Qué | Servicios | Productos |
-| Dónde se ve | Feed de Servicios | Entre Vecinos |
-| Mecánica | Contacto directo → arma pedido dirigido | Contacto directo (chat) |
+| Quién | Prestador | Vecino |
+| Qué | Servicios | **Servicios Y productos — él elige** |
+| Dónde se ve | Entre Vecinos → Servicios → Prestadores | Entre Vecinos → la sección que eligió |
+| Mecánica | Consultar → arma **pedido dirigido** | Contacto directo (chat) |
 | Se paga con | Cupo del plan | Cupo mensual + créditos |
 
-**El prestador no publica en Mercado.** La columna "Prestador (servicios)"
-que decía esto antes describía un plan que se revirtió el 2026-08-23 — ver
-la nota en [Planes de suscripción](#planes-de-suscripción) y en ["Mis avisos
-en Servicios"](#mis-avisos-en-servicios---el-circuito-completo). Sólo el
-vecino publica en Mercado, y sólo productos.
+**El prestador no publica del lado de los vecinos.** Describía un plan que
+se revirtió el 2026-08-23 — ver la nota en
+[Planes de suscripción](#planes-de-suscripción).
+
+**El vecino sí publica en las dos secciones — corregido 2026-08-29.** Acá
+decía *"sólo el vecino publica en Mercado, y sólo productos"*: la segunda
+mitad era falsa. `pmPintarCategorias()` le muestra el selector de sección
+(sólo se lo esconde al prestador), así que elige entre **12 categorías de
+servicio** (Belleza, Talleres y clases, Salud y bienestar, Eventos,
+Mascotas…) y **5 de producto** (Comidas y bebidas, Indumentaria,
+Decoración…). Verificado además en los datos: ya hay una publicación de
+servicio hecha por un vecino.
+
+Es lo que se pidió desde el principio — *"si soy vecino entro a mercado y
+ahí debería poder promocionar, ejemplo: masajes, vendo empanadas"*.
+Masajes es un servicio.
+
+**Lo que separa al vecino del prestador no es la categoría, es la
+mecánica**: los dos pueden ofrecer un servicio de belleza, pero al vecino
+se lo contacta por chat y al prestador se le arma un pedido con propuesta,
+que es lo que alimenta reputación y ranking.
 
 > El código justifica esta restricción diciendo que el prestador "tendría una
 > sección que después no ve". **Eso ya no es cierto** —verificado 2026-08-22: el
