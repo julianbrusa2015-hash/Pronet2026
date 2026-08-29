@@ -15,6 +15,29 @@
 const PronetDB = (() => {
   const PREFIJO = 'pronet-db-';
 
+  // ── Estado del canal de presencia ───────────────────────────────────
+  // Ver los métodos presenciaEntrar/Salir/Conteo más abajo. Vive acá
+  // arriba porque _recontarPresencia() lo lee y se define antes que ellos.
+  let _canalPresencia = null;
+  let _presenciaConteo = { total: 0, vecinos: 0, prestadores: 0 };
+  let _presenciaCb = null;
+
+  function _recontarPresencia() {
+    const estado = _canalPresencia ? _canalPresencia.presenceState() : {};
+    let total = 0, vecinos = 0, prestadores = 0;
+    // Cada clave puede traer varias "metas" (la misma sesión anunciándose
+    // más de una vez tras una reconexión), así que se cuentan las metas y
+    // no las claves.
+    Object.values(estado).forEach((metas) => {
+      (metas || []).forEach((m) => {
+        total++;
+        if (m && m.rol === 'prestador') prestadores++; else vecinos++;
+      });
+    });
+    _presenciaConteo = { total, vecinos, prestadores };
+    if (_presenciaCb) { try { _presenciaCb(_presenciaConteo); } catch (e) {} }
+  }
+
   // ── Detección de modo ──────────────────────────────────────────────
   const CONFIG = (typeof window !== 'undefined' && window.PRONET_CONFIG) || {};
   let sb = null;
@@ -3376,9 +3399,62 @@ const PronetDB = (() => {
     /** Cierra la sesión actual */
     async logout() {
       if (!remoto) { try { localStorage.removeItem('pronet-usuario'); } catch (e) {} return true; }
+      this.presenciaSalir();
       await sb.auth.signOut();
       return true;
     },
+
+    // ── Presencia: cuánta gente tiene la app abierta AHORA ──────────────
+    //
+    // Va por el canal de presencia de Realtime y no por una columna de
+    // "última conexión": eso contestaría "estuvo hace poco", que es otra
+    // pregunta. Presencia se cae sola cuando el cliente cierra la app, sin
+    // necesidad de un cron que limpie sesiones colgadas.
+    //
+    // ⚠️ La clave del canal es ALEATORIA por sesión, NO el uid.
+    // Un canal de presencia lo puede leer cualquier usuario autenticado que
+    // se suscriba, y `perfiles_publicos` traduce uid → nombre. Con el uid
+    // como clave, cualquiera podría sentarse en el canal y listar quién
+    // está conectado en tiempo real. Con una clave al azar y sólo el rol en
+    // la carga, lo máximo que se filtra es CUÁNTA gente hay — que es
+    // justamente lo que el panel necesita mostrar.
+    //
+    // El costo de no usar el uid: una persona con dos pestañas cuenta dos
+    // veces. Por eso el panel lo rotula "sesiones" y no "personas".
+
+    /** Se une al canal y se anuncia. Idempotente: llamarla de nuevo no hace
+     *  nada, así que puede ir en reflejarUsuario() sin cuidado. */
+    async presenciaEntrar(rol) {
+      if (!remoto || _canalPresencia) return;
+      const uid = await this.usuarioIdActual();
+      if (!uid) return;   // invitados no cuentan: no hay sesión que anunciar
+      const clave = 'p-' + Math.random().toString(36).slice(2, 12);
+      _canalPresencia = sb.channel('presencia-global', { config: { presence: { key: clave } } });
+      // Los listeners van ANTES del subscribe: registrarlos después puede
+      // perderse el primer 'sync', que es el que trae el estado completo.
+      _canalPresencia
+        .on('presence', { event: 'sync' },  _recontarPresencia)
+        .on('presence', { event: 'join' },  _recontarPresencia)
+        .on('presence', { event: 'leave' }, _recontarPresencia)
+        .subscribe(async (estado) => {
+          if (estado === 'SUBSCRIBED') {
+            await _canalPresencia.track({ rol: rol === 'prestador' ? 'prestador' : 'vecino' });
+          }
+        });
+    },
+
+    presenciaSalir() {
+      if (!_canalPresencia) return;
+      try { sb.removeChannel(_canalPresencia); } catch (e) {}
+      _canalPresencia = null;
+      _presenciaConteo = { total: 0, vecinos: 0, prestadores: 0 };
+    },
+
+    /** El último conteo conocido, sin esperar a que llegue un evento. */
+    presenciaConteo() { return { ..._presenciaConteo }; },
+
+    /** Avisa cada vez que alguien entra o sale. `null` para dejar de oír. */
+    presenciaAlCambiar(cb) { _presenciaCb = cb; },
 
     /** Inicia login con proveedor OAuth (google | apple).
      *  Redirige al proveedor; la vuelta la maneja restaurarSesion() automáticamente. */

@@ -485,7 +485,7 @@ document.addEventListener('focusin', (e) => {
     // Los toggles de configuración se mudaron con las parametrías, así que
     // renderConfigAdmin() se llama desde ahí y no desde moderación.
     if (id === 's-moderacion') { renderModeracion(); renderBannersPendientes(); renderPubsPendientes(); }
-    if (id === 's-parametrias') { renderConfigAdmin(); }
+    if (id === 's-parametrias') { renderConfigAdmin(); pintarPresenciaAdmin(); }
     if (id === 's-param-planes')   { renderParamPlanes(); }
     if (id === 's-param-features') { renderParamFeatures(); }
     if (id === 's-param-rubros')   { renderParamRubros(); }
@@ -11440,6 +11440,43 @@ document.addEventListener('focusin', (e) => {
     const menuMisConsultas = document.getElementById('menu-mis-consultas-mkt');
     if (menuMisConsultas) menuMisConsultas.style.display = (usuarioActual && !esPrestador()) ? '' : 'none';
     actualizarEstadoProMarketPerfil();
+
+    // Anunciarse en el canal de presencia. Es idempotente, así que no
+    // molesta que reflejarUsuario() corra muchas veces por sesión.
+    PronetDB.presenciaEntrar(esPrestador() ? 'prestador' : 'vecino');
+  }
+
+  // ══ PANEL · SESIONES CONECTADAS ═══════════════════════════════════
+  //
+  // Se alimenta del mismo canal en el que ya está anunciado el admin, así
+  // que no abre una segunda conexión ni cuesta nada extra: sólo lee el
+  // estado que Realtime mantiene solo.
+  function pintarPresenciaAdmin() {
+    const caja = document.getElementById('admin-presencia');
+    if (!caja) return;
+    const dot     = document.getElementById('admin-presencia-dot');
+    const total   = document.getElementById('admin-presencia-total');
+    const detalle = document.getElementById('admin-presencia-detalle');
+
+    const pintar = (c) => {
+      const n = c ? c.total : 0;
+      if (total) total.textContent = n === 1 ? '1 sesión conectada' : n + ' sesiones conectadas';
+      if (detalle) detalle.textContent = n
+        ? c.vecinos + ' ' + (c.vecinos === 1 ? 'vecino' : 'vecinos') + ' · ' +
+          c.prestadores + ' ' + (c.prestadores === 1 ? 'prestador' : 'prestadores')
+        : 'Nadie con la app abierta en este momento';
+      // Verde mientras haya alguien; gris cuando no. El punto es el
+      // indicador que se lee de reojo, sin leer el número.
+      if (dot) dot.style.background = n > 0 ? '#34D399' : '#9CA3AF';
+    };
+
+    pintar(PronetDB.presenciaConteo());
+    // Se re-suscribe cada vez que se entra a la pantalla: el callback es
+    // uno solo, así que reemplaza al anterior en vez de acumularse.
+    PronetDB.presenciaAlCambiar((c) => {
+      if (document.getElementById('s-parametrias')?.classList.contains('active')) pintar(c);
+      else PronetDB.presenciaAlCambiar(null);   // se salió: dejar de escuchar
+    });
   }
 
   // Sub-label de la sección ProMarket en Mi Perfil: cupo restante según el

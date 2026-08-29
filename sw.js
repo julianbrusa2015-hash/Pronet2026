@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v365'; // v365: precios de las compras sueltas y espacios del carrusel editables desde el panel
+const CACHE_VERSION = 'pronet-v366'; // v366: indicador de sesiones conectadas en el panel admin (presencia de Realtime)
 
 const SHELL = [
   './',

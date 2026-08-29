@@ -5239,6 +5239,22 @@
         <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:white">🗂️ Parametrías</div>
       </div>
       <div style="font-size:12px;color:rgba(255,255,255,.65)">Datos del negocio editables sin deploy · Solo equipo PRONET</div>
+
+      <!-- Cuánta gente tiene la app abierta AHORA. Va por presencia de
+           Realtime, no por una columna de "última conexión": eso
+           contestaría "estuvo hace poco", que es otra pregunta.
+           Dice "sesiones" y no "personas" a propósito — ver la nota de
+           privacidad en presenciaEntrar() (datos.js): la clave del canal es
+           aleatoria para no exponer QUIÉN está conectado, y el costo de esa
+           decisión es que dos pestañas de la misma persona cuentan dos
+           veces. -->
+      <div id="admin-presencia" style="display:flex;align-items:center;gap:9px;margin-top:12px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:9px 12px">
+        <span id="admin-presencia-dot" style="width:9px;height:9px;border-radius:50%;background:#9CA3AF;flex-shrink:0"></span>
+        <div style="flex:1;min-width:0">
+          <div id="admin-presencia-total" style="font-size:13px;font-weight:800;color:white">Conectando…</div>
+          <div id="admin-presencia-detalle" style="font-size:11px;color:rgba(255,255,255,.7);margin-top:1px"></div>
+        </div>
+      </div>
     </div>
 
     <div style="padding:20px 16px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">
