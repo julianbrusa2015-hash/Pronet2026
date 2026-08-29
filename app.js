@@ -10000,7 +10000,7 @@ document.addEventListener('focusin', (e) => {
     wrap.innerHTML = filas.map(b => {
       const est = estadoBanner(b);
       return '<div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:11px">' +
-        '<img src="' + escHTML(b.imagen_url) + '" alt="" style="display:block;width:100%;aspect-ratio:16/7;object-fit:cover;background:var(--surface)">' +
+        '<img src="' + escHTML(b.imagen_url) + '" alt="" style="display:block;width:100%;aspect-ratio:16/5;object-fit:cover;background:var(--surface)">' +
         '<div style="padding:12px 13px">' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
             '<div style="flex:1;font-size:13.5px;font-weight:800;color:var(--ink)">' + escHTML(b.nombre) +
@@ -10099,7 +10099,7 @@ document.addEventListener('focusin', (e) => {
         '<div style="padding:7px 0">' +
           '<div style="font-size:12.5px;color:var(--ink);margin-bottom:5px">Imagen</div>' +
           '<input id="nb-img" type="file" accept="image/*" style="font-size:12px;width:100%">' +
-          '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.5">Se recorta a 16:7, así que lo importante tiene que estar centrado. Ideal 1200×525.</div>' +
+          '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.5">Se recorta a 16:5 (el alto real del carrusel), así que lo importante tiene que estar centrado. Ideal 1200×375.</div>' +
         '</div>' +
         '<label style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;cursor:pointer">' +
           '<input id="nb-house" type="checkbox" style="margin-top:2px">' +
@@ -12665,7 +12665,43 @@ document.addEventListener('focusin', (e) => {
       if (cont) cont.innerHTML = '<div style="font-size:12.5px;color:#E53E3E;padding:0 12px;text-align:center">No se pudo subir: ' + escHTML(res.error || '') + '</div>';
       return;
     }
-    if (cont) cont.innerHTML = '<img src="' + escHTML(res.url) + '" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
+    if (cont) {
+      // Con la imagen puesta, la caja deja de ser un botón: el recuadro
+      // punteado y el "tocá para subir" ya no aplican, y hacen falta dos
+      // acciones distintas.
+      cont.innerHTML = '';
+      cont.style.border = 'none';
+      cont.style.position = 'relative';
+      cont.onclick = null;
+
+      const img = document.createElement('img');
+      img.src = res.url;
+      img.alt = '';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+      cont.appendChild(img);
+
+      // Las URLs van por CLOSURE y no metidas en un onclick del HTML: adentro
+      // de un atributo el parser decodifica las entidades antes de que el JS
+      // las lea, así que escHTML no protege ahí. Mismo criterio que
+      // pintarChipAlertaServicio.
+      const barra = document.createElement('div');
+      barra.style.cssText = 'position:absolute;right:8px;bottom:8px;display:flex;gap:6px';
+      const chip = (texto, alTocar) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = texto;
+        b.style.cssText = 'background:rgba(13,15,26,.72);color:#fff;border:none;border-radius:20px;' +
+          'padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif';
+        b.addEventListener('click', (e) => { e.stopPropagation(); alTocar(); });
+        return b;
+      };
+      // "Ver completa" es el punto del asunto: la caja muestra el RECORTE que
+      // se va a publicar (16:5), así que sin esto no hay forma de comprobar
+      // qué quedó afuera.
+      barra.appendChild(chip('Ver completa', () => abrirFotoModal(res.url)));
+      barra.appendChild(chip('Cambiar', () => input.click()));
+      cont.appendChild(barra);
+    }
     cb(res.url);
   }
 
@@ -12737,7 +12773,7 @@ document.addEventListener('focusin', (e) => {
       const quien = b.perfiles?.nombre || 'Vecino';
       const destino = b.destino_tipo === 'imagen' ? 'Abre un flyer' : 'Abre WhatsApp';
       return '<div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">' +
-        '<img src="' + escHTML(b.imagen_url) + '" alt="" style="width:100%;aspect-ratio:3/1;object-fit:cover;border-radius:8px;display:block;margin-bottom:9px">' +
+        '<img src="' + escHTML(b.imagen_url) + '" alt="" style="width:100%;aspect-ratio:16/5;object-fit:cover;border-radius:8px;display:block;margin-bottom:9px">' +
         '<div style="font-size:13.5px;font-weight:700;color:var(--ink)">' + escHTML(b.nombre) + '</div>' +
         '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + escHTML(quien) + ' · ' + escHTML(destino) + ' · ' + (b.dias || 30) + ' días</div>' +
         '<div style="display:flex;gap:8px;margin-top:10px">' +

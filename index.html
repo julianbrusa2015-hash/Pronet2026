@@ -4466,13 +4466,20 @@
 
         <label class="ob-label">Imagen del aviso <span style="color:#E53E3E">*</span></label>
         <div id="promo-img-prev" onclick="document.getElementById('promo-img-input').click()"
-          style="width:100%;aspect-ratio:3/1;border-radius:14px;border:2px dashed var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;margin-bottom:6px;overflow:hidden">
+          style="width:100%;aspect-ratio:16/5;border-radius:14px;border:2px dashed var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;margin-bottom:6px;overflow:hidden">
           <div style="font-size:26px">🖼️</div>
           <div style="font-size:13px;font-weight:600;color:var(--blue)">Tocá para subir la imagen</div>
         </div>
         <input type="file" id="promo-img-input" accept="image/*" style="display:none" onchange="promoPrevisualizar(this)">
         <div style="font-size:11px;color:var(--ink3);margin-bottom:16px;line-height:1.5">
-          Formato apaisado (3:1), máx 5 MB. Si no tenés una imagen armada, escribinos y la vemos juntos.
+          <!-- 16:5 es el recorte REAL del carrusel (.ads-slide img en
+               styles.css). Antes acá decía 3:1, en el alta del admin 16:7 y
+               en la moderación 16:7: cuatro números distintos y ninguno el
+               que se publica, así que a nadie le quedaba igual de lo que
+               había subido. -->
+          Formato apaisado <b>16:5</b> — ideal 1200×375 px, máx 5 MB. Lo que quede fuera de esa
+          franja se recorta, así que centrá lo importante. Si no tenés una imagen armada,
+          escribinos y la vemos juntos.
         </div>
 
         <label class="ob-label">¿Qué pasa cuando la tocan? <span style="color:#E53E3E">*</span></label>
