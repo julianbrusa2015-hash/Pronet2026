@@ -1322,8 +1322,8 @@
         <div class="menu-item" id="menu-promocionar" style="display:none" onclick="abrirPromocionar()">
           <div class="m-icon" style="background:#FFF7ED;color:#EA580C">📣</div>
           <div class="m-txt">
-            <div class="m-title">Promocionar mi negocio</div>
-            <div class="m-sub">Tu aviso en la portada de la app</div>
+            <div class="m-title">Promocionar mi negocio (Banner)</div>
+            <div class="m-sub">Tu aviso en el carrusel de Inicio · se paga aparte</div>
           </div>
           <div class="m-chev">›</div>
         </div>
@@ -1333,8 +1333,13 @@
         <div class="menu-item" id="menu-pubs-prestador" style="display:none" onclick="abrirPubsPrestador()">
           <div class="m-icon" style="background:#E8F0FF;color:#1A4FC4">🛠️</div>
           <div class="m-txt">
-            <div class="m-title">Mis avisos en Servicios</div>
-            <div class="m-sub">Mostrá tu trabajo a los vecinos</div>
+            <!-- "(Vecinos)" porque es DONDE SALEN: el feed de estos avisos
+                 vive en Entre Vecinos → Servicios → lado Prestadores
+                 (renderFeedPrestadores, único lugar que los renderiza). El
+                 prestador no navega esa sección, pero su aviso aparece ahí.
+                 Sin la aclaración, los dos ítems se leen como lo mismo. -->
+            <div class="m-title">Mis avisos en Servicios (Vecinos)</div>
+            <div class="m-sub">Salen en Entre Vecinos · incluidos en tu plan</div>
           </div>
           <div class="m-chev">›</div>
         </div>

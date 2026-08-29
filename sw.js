@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v363'; // v363: "Verificaciones" pasa a "Verificaciones de identidad" en el panel admin
+const CACHE_VERSION = 'pronet-v364'; // v364: aclarar en el perfil que Promocionar es el Banner y Mis avisos salen en Entre Vecinos
 
 const SHELL = [
   './',

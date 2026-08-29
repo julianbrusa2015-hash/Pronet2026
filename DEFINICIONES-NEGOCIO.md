@@ -91,10 +91,21 @@ acá. Queda anotado para no repetir la confusión.
 
 **Qué es.** La ficha con foto que el prestador arma desde su propio perfil
 (*Mi Perfil → Mis avisos en Servicios*) — sube una foto, título, descripción,
-la previsualiza y la manda a revisión. **No es Entre Vecinos.** Es un sistema
-aparte, con su propia tabla (`publicaciones_prestador`), que vive en la solapa
-**Servicios** (la búsqueda normal de prestadores), no en el mercado de los
-vecinos.
+la previsualiza y la manda a revisión. Tabla propia:
+`publicaciones_prestador`, distinta de `publicaciones` (la de los vecinos).
+
+**Dónde salen: adentro de Entre Vecinos.** En la solapa **Servicios**, del
+lado **Prestadores** del selector de origen. `renderFeedPrestadores()` es el
+único lugar del código que los renderiza, y se llama desde `renderMercado()`,
+que es la pantalla de Entre Vecinos.
+
+> **Corregido 2026-08-29.** Este párrafo decía antes *"No es Entre Vecinos…
+> vive en la solapa Servicios (la búsqueda normal de prestadores)"*. Era
+> falso por partida doble: la solapa Servicios **es** parte de Entre Vecinos,
+> y estos avisos no aparecen en la búsqueda de prestadores. Lo que sí sigue
+> siendo cierto es lo de abajo — el prestador no NAVEGA Entre Vecinos: arma
+> el aviso desde su perfil y las consultas le entran por el canal habitual.
+> Su contenido vive ahí; él no.
 
 **El prestador no navega Entre Vecinos para nada de esto — ni un poco.** Ni
 para publicar (lo hace desde su perfil, sin salir de ahí) ni para ver quién
