@@ -175,6 +175,58 @@ vistas y cero pedidos dice que el aviso llama la atención pero no convierte;
 pocas vistas con buena conversión dice que el problema es que no lo
 encuentran, no el aviso en sí.
 
+### Las cinco vías del prestador para hacerse ver
+
+**Repasado 2026-08-29.** Los dos ítems del perfil se leían como lo mismo,
+así que quedaron rotulados con lo que son: *Promocionar mi negocio
+(Banner)* y *Mis avisos en Servicios (Vecinos)*. El mapa completo:
+
+| | Qué es | Dónde sale | Cuánto |
+|---|---|---|---|
+| **1. Banner** | Pieza gráfica que diseña él | Carrusel de Inicio | $12.000 / 30 días |
+| **2. Avisos en Servicios** | Ficha con foto, título y descripción | Entre Vecinos → Servicios → Prestadores | Cupo del plan |
+| **3. Impulso** | Sube un aviso del punto 2 al principio | Mismo feed | $1.500 / 7 días |
+| **4. Renovación** | Revive un aviso del punto 2 ya vencido | Mismo feed | $1.500 |
+| **5. Su ficha** | El perfil de prestador | Buscar, mapa y feed de Inicio | Gratis |
+
+**La diferencia entre 1 y 2 no es el precio, es a dónde lleva.** El banner
+abre WhatsApp o un flyer: **saca al vecino de PRONET**. El aviso arma un
+**pedido dirigido** y lo mete al circuito de pedido → propuesta → elección
+→ reseña, que es lo que alimenta la reputación y el ranking. Por eso el
+banner se cobra aparte y el aviso viene con el plan: uno es publicidad, el
+otro es el producto.
+
+**El punto 5 es la base y es gratis.** Un prestador existe en la app sin
+pagar nada; el plan Pro le suma badge en la búsqueda y desempate en el
+ranking. Todo lo demás es amplificación, no acceso.
+
+#### Impulso y renovación: dónde están y cuándo aparecen
+
+No son ítems de menú. Viven **dentro de "Mis avisos en Servicios", en la
+tarjeta de cada aviso**, y sólo aparece el que corresponde:
+
+| | Botón | Condición |
+|---|---|---|
+| Impulso | ⚡ Impulsar | El aviso está **activo y vigente**, la venta de impulsos está encendida, y **hay competencia en su rubro** |
+| Renovación | 🔄 Renovar | El aviso está **vencido** y ya pasó por moderación al menos una vez |
+
+Son excluyentes por definición —uno pide que esté al aire y el otro que
+esté vencido—, así que nunca se ven los dos juntos.
+
+Las dos condiciones que sorprenden:
+
+- **Impulsar exige competencia en el rubro.** Si es el único electricista
+  de la zona, aparecer primero no le da nada. Cobrarle por eso sería
+  venderle humo, y el que paga por nada no vuelve a comprar.
+- **Renovar exige moderación previa.** Un borrador no se renueva, se envía.
+
+Y el impulso tiene su propio interruptor de admin (*Parametrías → Ajustes
+→ Venta de impulsos*): apagado, el botón no existe para nadie.
+
+**Qué compra cada uno, que es lo que más se confunde:** impulsar es
+**visibilidad** —aparece primero por 7 días, no cambia el vencimiento—;
+renovar es **tiempo** —vuelve a publicar lo vencido, no lo pone primero—.
+
 ---
 
 ## Vecino
@@ -227,6 +279,40 @@ vecino publica en Mercado, y sólo productos.
 
 ---
 
+## La cara: el prestador la muestra, el vecino no
+
+**Decidido 2026-08-29.**
+
+| | Ve su propia foto | Cómo lo ven los demás |
+|---|---|---|
+| **Prestador** | Sí | **Con foto** (`prestadores.foto_url`) |
+| **Vecino** | Sí | **Iniciales** |
+
+**El fundamento no es prudencia, es simetría con lo que cada uno ofrece.**
+El prestador expone su cara porque vende un servicio y esa exposición es
+parte de lo que vende: el vecino contrata a una persona. El vecino publica
+una torta o pide un plomero, y no tiene por qué poner la cara para eso.
+
+**Y hay un motivo técnico que lo refuerza:** la vista `perfiles_publicos`
+—que es de donde saldría la foto del vecino para el resto de la app—
+**está expuesta al rol `anon`**. Publicarla ahí la haría legible por
+cualquiera sin cuenta, no sólo por los vecinos del barrio. Es el mismo
+criterio que ya cerró el teléfono cosechable.
+
+Por eso `perfiles.foto_url` existe y el vecino la guarda, pero **no se
+agregó a `perfiles_publicos`**. Si algún día se agrega, conviene que sea
+detrás de un `auth.uid() is not null` para que el invitado siga viendo
+iniciales.
+
+> **Bug que destapó esta definición** (`supabase-foto-perfil-vecino.sql`):
+> `perfiles` no tenía la columna, y como el nombre, el teléfono y la foto
+> viajan en un único `UPDATE`, elegir una foto le rompía al vecino el
+> guardado **completo** del perfil (PGRST204). Encima engañaba: la imagen
+> sí se subía al Storage, así que decía "✓ Foto lista" y recién al guardar
+> fallaba con un mensaje que sugería reintentar.
+
+---
+
 ## Los dos carruseles de banners
 
 **Decidido 2026-08-24.** Había un solo carrusel —el de la portada— y una
@@ -248,6 +334,29 @@ como elección sería pedirle al usuario que resuelva una pregunta de
 arquitectura que ya tiene una respuesta correcta: el prestador va a la
 portada porque su oficio le interesa a todo el barrio; el vecino va a
 Entre Vecinos porque es donde ya publica lo que vende.
+
+**El carrusel de Inicio es EXCLUSIVO de prestadores — ratificado
+2026-08-29.** El vecino no tiene forma de comprar ahí: no existe el
+camino en la interfaz, y `crear_banner` lo rechaza en el servidor con
+*"El carrusel de la portada es para prestadores"*.
+
+El motivo, en palabras del usuario: **Inicio es la pantalla donde el
+vecino busca prestadores**, así que es ahí donde tiene sentido que un
+prestador se muestre. La pauta acompaña a la intención de quien mira.
+
+> Esto **acota** la definición #1 de los banners pagos del 2026-08-10
+> (*"puede comprar cualquiera con cuenta, no sólo prestadores"*), que se
+> escribió cuando el carrusel de la portada era el único que existía. Hoy
+> sigue siendo cierta en general —cualquiera con cuenta compra un
+> banner— pero cada rol compra en el suyo.
+
+**El recorte real es 16:5** (1200×375). Está en un solo lugar del código,
+`.ads-slide img` en `styles.css`, y todo lo demás tiene que coincidir: la
+caja de previsualización, el texto de ayuda, la tarjeta de moderación y la
+lista "Mis avisos". Llegaron a convivir cuatro relaciones distintas
+—3:1, 16:7 y 16:5— y ninguna era la que se publicaba, así que a nadie le
+quedaba el aviso como lo había subido. Al tocar cualquiera de esas
+pantallas, verificar contra `.ads-slide img`.
 
 **Por qué inventario separado y no una bolsa compartida.** Con 6 en total,
 el que compra para la portada le come el lugar al que compra para Entre
