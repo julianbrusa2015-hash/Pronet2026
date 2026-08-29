@@ -2452,7 +2452,11 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style="flex:1">
-            <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:white">🪪 Verificaciones</div>
+            <!-- "de identidad" y no sólo "Verificaciones": en el panel hay
+                 varias colas de revisión —banners, avisos de prestador,
+                 denuncias— y todas son verificaciones de algo. Ésta es la
+                 que compara el DNI con la persona. -->
+            <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:white">🪪 Verificaciones de identidad</div>
             <div style="font-size:11.5px;color:rgba(255,255,255,.65);margin-top:2px">Aprobar acá enciende el sello en el perfil público</div>
           </div>
         </div>
@@ -5205,7 +5209,7 @@
       <div role="button" tabindex="0" onclick="goTo('s-verificaciones')" style="background:white;border:1px solid var(--border);border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;margin-bottom:8px">
         <span style="font-size:19px">🪪</span>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--ink)">Verificaciones</div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink)">Verificaciones de identidad</div>
           <div style="font-size:11px;color:var(--ink3);margin-top:2px">Prestadores esperando el sello</div>
         </div>
         <span id="verif-badge" style="display:none;background:#FEF3C7;color:#92400E;font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px"></span>
