@@ -9432,8 +9432,10 @@ document.addEventListener('focusin', (e) => {
     wrap.innerHTML = '<div style="padding:40px 24px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando planes…</div>';
 
     const filas = await PronetDB.listarPlanesLimites().catch(() => []);
-    // Sólo los planes de prestador: `promarket_credito` es un pago único,
-    // no un plan, y mezclarlo acá invitaría a editarlo como si lo fuera.
+    // Las TARJETAS son sólo los planes de prestador: un pago único no tiene
+    // cupos ni precio anual, y mezclarlo acá invitaría a editarlo como si
+    // los tuviera. Los sueltos van abajo, en su propio bloque —
+    // sueltosHTML() los saca de `filas`, que sí los trae todos.
     const planes = filas.filter(f => ['base', 'plus', 'pro'].includes(f.plan));
     if (!planes.length) {
       wrap.innerHTML = '<div style="padding:32px 18px;text-align:center;font-size:13px;color:#BE123C">⚠️ No se pudieron cargar los planes.</div>';
@@ -9474,10 +9476,90 @@ document.addEventListener('focusin', (e) => {
           Guardar ${escHTML(p.nombre || p.plan)}
         </button>
       </div>`).join('') + `
-      <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5">
+      <div style="background:var(--gold-s);border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;font-size:11.5px;color:#92400E;line-height:1.5;margin-bottom:22px">
         Estos valores son los que se cobran y los que limitan de verdad: los usa el trigger que bloquea propuestas y la función que crea el pago en MercadoPago. Un cambio acá impacta de inmediato.
+      </div>` + sueltosHTML(filas);
+  }
+
+  // ── Compras sueltas ─────────────────────────────────────────────────
+  //
+  // Van en la MISMA pantalla que los planes pero en un bloque aparte, con
+  // otra forma: son pagos únicos, no suscripciones. Mezclarlas entre las
+  // tarjetas de plan invitaría a editarlas como si tuvieran cupos y
+  // precio anual, que no tienen.
+  //
+  // Hasta ahora estos cinco precios sólo se cambiaban por SQL: cinco
+  // productos que cobran plata real sin ningún lugar donde tocarlos.
+  const COMPRAS_SUELTAS = [
+    { plan: 'banner',             icono: '📣', ayuda: 'Una pieza en el carrusel. Los días se configuran en Ajustes → Duración del banner' },
+    { plan: 'impulso',            icono: '⚡', ayuda: 'El aviso del prestador aparece primero. Los días salen de Ajustes → Duración del impulso' },
+    { plan: 'renovacion',         icono: '🔄', ayuda: 'Vuelve a publicar un aviso ya vencido. No lo pone primero' },
+    { plan: 'impulso_mercado',    icono: '⭐', ayuda: 'La publicación del vecino aparece primera en su categoría. Comparte la duración con el impulso' },
+    { plan: 'promarket_credito',  icono: '🎟️', ayuda: 'Una publicación extra del vecino, más allá de su cupo gratis del mes' },
+  ];
+
+  function sueltosHTML(filas) {
+    const porPlan = new Map(filas.map(f => [f.plan, f]));
+    const items = COMPRAS_SUELTAS.filter(s => porPlan.has(s.plan));
+    if (!items.length) return '';
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:0 2px 8px">
+        <div style="font-size:13px;font-weight:800;color:var(--ink)">Compras sueltas</div>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink3);line-height:1.5;margin-bottom:12px">
+        Pagos únicos, no suscripciones. Sólo tienen precio: la duración de cada uno vive en Ajustes numéricos.
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:14px">
+        ${items.map(s => {
+          const f = porPlan.get(s.plan);
+          return `
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:17px;flex-shrink:0">${s.icono}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:700;color:var(--ink)">${escHTML(f.nombre || s.plan)}</div>
+              <div style="font-size:10.5px;color:var(--ink3);margin-top:1px;line-height:1.4">${escHTML(s.ayuda)}</div>
+            </div>
+            <input id="ps-${escHTML(s.plan)}" value="${escHTML(f.precio_mes === null || f.precio_mes === undefined ? '' : String(f.precio_mes))}"
+                   inputmode="decimal" autocomplete="off" aria-label="Precio de ${escHTML(f.nombre || s.plan)}"
+                   style="width:96px;flex-shrink:0;text-align:right;font-size:13px;font-weight:600;padding:7px 9px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;color:var(--ink)">
+          </div>`;
+        }).join('')}
+        <div id="ps-msg" style="font-size:11.5px;font-weight:600;min-height:16px;margin-top:8px"></div>
+        <button onclick="guardarComprasSueltas()"
+                style="width:100%;background:var(--blue);color:white;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+          Guardar precios sueltos
+        </button>
       </div>`;
   }
+
+  /** Guarda los cinco de una. Valida todo ANTES de mandar nada: si el
+   *  tercero está mal, no queremos dos guardados y tres sin guardar. */
+  async function guardarComprasSueltas() {
+    const msg = document.getElementById('ps-msg');
+    const decir = (t, color) => { if (msg) { msg.textContent = t; msg.style.color = color; } };
+
+    const pendientes = [];
+    for (const s of COMPRAS_SUELTAS) {
+      const el = document.getElementById('ps-' + s.plan);
+      if (!el) continue;
+      const n = Number((el.value || '').trim().replace(',', '.'));
+      if (!Number.isFinite(n)) { decir('⚠️ El precio de "' + s.plan + '" no es un número', '#BE123C'); el.focus(); return; }
+      // 0 sería regalarlo sin apagar el circuito: el usuario igual pasa por
+      // el checkout, sólo que por $0. Para no venderlo está el flag.
+      if (n <= 0) { decir('⚠️ El precio de "' + s.plan + '" tiene que ser mayor a 0. Para dejar de venderlo, usá el interruptor del producto en Ajustes.', '#BE123C'); el.focus(); return; }
+      pendientes.push({ plan: s.plan, precio_mes: n });
+    }
+
+    decir('Guardando…', 'var(--ink3)');
+    for (const p of pendientes) {
+      const r = await PronetDB.guardarPlanLimites(p.plan, { precio_mes: p.precio_mes });
+      if (!r?.ok) { decir('⚠️ No se pudo guardar "' + p.plan + '": ' + (r?.error || 'error'), '#BE123C'); return; }
+    }
+    decir('✅ Guardado', 'var(--green)');
+    setTimeout(() => decir('', ''), 2500);
+  }
+  window.guardarComprasSueltas = guardarComprasSueltas;
 
   /** Guarda un plan. Valida ANTES de mandar: un precio negativo o un cupo
    *  en 0 no rompen nada visible pero dejan a alguien sin poder ofertar. */
@@ -9819,6 +9901,9 @@ document.addEventListener('focusin', (e) => {
     // desde la primera", que es una configuración legítima y distinta de
     // "ilimitado". Por eso el ilimitado necesita su propio valor.
     { k: 'mkt_pub_vecino_mes',      n: 'Publicaciones gratis del vecino', u: 'por mes', min: -1, max: 100, d: 'Cuántas puede publicar un vecino en Mercado sin pagar. Después compra créditos. -1 = ilimitado, 0 = paga desde la primera' },
+    // Es el inventario que se vende, y estaba sólo en SQL. Vale por
+    // carrusel: hoy 6 en la portada y 6 en Entre Vecinos, contados aparte.
+    { k: 'banners_activos_max',     n: 'Espacios del carrusel',    u: 'por carrusel', min: 1, max: 20, d: 'Cuántos banners pagos entran en CADA carrusel — la portada y Entre Vecinos tienen este cupo cada uno. Los "de la casa" no ocupan lugar' },
   ];
 
   async function renderParamAjustes() {
