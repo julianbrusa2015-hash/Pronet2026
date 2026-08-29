@@ -11478,6 +11478,10 @@ document.addEventListener('focusin', (e) => {
       else PronetDB.presenciaAlCambiar(null);   // se salió: dejar de escuchar
     });
   }
+  // Expuesta como el resto de los render del panel (renderParamPlanes,
+  // renderBannersPendientes, renderVerificaciones…): la llama goTo y se
+  // puede invocar suelta para verificarla.
+  window.pintarPresenciaAdmin = pintarPresenciaAdmin;
 
   // Sub-label de la sección ProMarket en Mi Perfil: cupo restante según el
   // plan (Base=3/año gratis + créditos comprados, Plus=10/mes, Pro=ilimitado).
