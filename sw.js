@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v367'; // v367: exponer pintarPresenciaAdmin como el resto de los render del panel
+const CACHE_VERSION = 'pronet-v368'; // v368: al volver de MercadoPago se relee la suscripcion antes de pintar el plan
 
 const SHELL = [
   './',

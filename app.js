@@ -17754,6 +17754,27 @@ document.addEventListener('focusin', (e) => {
               usuarioActual = await PronetDB.usuarioActual().catch(() => usuarioActual);
               reflejarUsuario();
 
+              // Releer la suscripción DESPUÉS de activar.
+              //
+              // restaurarSesion() ya la había leído al arrancar la página, en
+              // paralelo con esta función. Con el botón "Volver a la tienda" no
+              // se nota: el usuario tarda unos segundos en apretarlo y para
+              // entonces el webhook de MP ya activó el plan, así que esa lectura
+              // trae el plan nuevo. Con la redirección automática (~5s) llegamos
+              // ANTES del webhook: la lectura trae el plan viejo, verificar-pago
+              // activa el nuevo un instante después, y nadie vuelve a mirar.
+              // El plan quedaba bien en la base y mal en la pantalla — y encima
+              // se lo manda a s-miperfil, que es justo donde se ve el badge.
+              if (plan === 'plus' || plan === 'pro') {
+                const sub = await PronetDB.obtenerSuscripcion().catch(() => null);
+                if (sub) {
+                  planActual    = sub.plan     || 'base';
+                  periodoActual = sub.periodo  || 'mensual';
+                  venceActual   = sub.vence_en || null;
+                  reflejarPlan();
+                }
+              }
+
               const nombrePlan = (window.PRONET_CONFIG?.PLANES || [])
                 .find(p => p.id === plan)?.nombre || plan;
 
