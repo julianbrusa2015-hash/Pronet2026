@@ -9245,9 +9245,6 @@ document.addEventListener('focusin', (e) => {
   }
   window.toggleModoRol = toggleModoRol;
 
-  function esPro() {
-    return planActual === 'plus' || planActual === 'pro';
-  }
 
   function getPlanConfig(id) {
     const planes = (window.PRONET_CONFIG || {}).PLANES || [];
@@ -11842,7 +11839,13 @@ document.addEventListener('focusin', (e) => {
     // prestador_id en null, y en ese caso .eq('prestador_id', null) genera
     // `prestador_id=eq.` — malformado — y PostgREST devuelve 400.
     if (!usuarioActual?.prestador_id) { banner.style.display = 'none'; return; }
-    if (esPro()) { banner.style.display = 'none'; return; }
+    // Sólo se esconde para quien YA está en Pro. Antes la condición era
+    // esPro(), que devuelve true para plus O pro: al comprar Plus desaparecía
+    // el único acceso de Mi Perfil que invita a mejorar el plan, justo cuando
+    // el salto a Pro empieza a tener sentido. Quedaba el tile verde de
+    // Suscripción, pero ese dice "Plan Plus · Activo" — se lee como un estado,
+    // no como una acción.
+    if (planActual === 'pro') { banner.style.display = 'none'; return; }
     // Con head:true no viene cuerpo: el total llega en `count`, no en `data`.
     // Antes se leía data.length, que siempre era 0, así que el banner nunca
     // se mostraba.
@@ -11851,7 +11854,29 @@ document.addEventListener('focusin', (e) => {
       .select('id', { count: 'exact', head: true })
       .eq('prestador_id', usuarioActual.prestador_id)
       .eq('estado', 'calificado');
-    banner.style.display = (count ?? 0) >= 1 ? '' : 'none';
+    if ((count ?? 0) < 1) { banner.style.display = 'none'; return; }
+
+    // El mismo banner le habla a dos personas distintas: al que no paga nada
+    // y al que ya paga Plus. El boost sale de getPlanConfig (que restaurarSesion
+    // sincroniza con planes_limites) y no de un número escrito acá: prometer
+    // un múltiplo distinto del que la base acredita es la forma más fácil de
+    // mentir sin querer.
+    const boostPro = getPlanConfig('pro').loyalty_boost;
+    const tit = document.getElementById('bp-pro-titulo');
+    const txt = document.getElementById('bp-pro-texto');
+    const btn = document.getElementById('bp-pro-btn');
+    if (planActual === 'plus') {
+      if (tit) tit.textContent = 'Pasá de Plus a Pro';
+      if (txt) txt.textContent = 'Con Pro tu boost sube a ×' + boostPro
+        + ' y publicás ofertas en el marketplace. Los vecinos te ven antes que al resto.';
+      if (btn) btn.textContent = 'Mejorar a Pro';
+    } else {
+      if (tit) tit.textContent = 'Un paso para aparecer primero';
+      if (txt) txt.textContent = 'Con el plan Pro tu perfil tiene boost ×' + boostPro
+        + ' y publicás ofertas en el marketplace. Los vecinos te ven antes que al resto.';
+      if (btn) btn.textContent = 'Ver plan Pro';
+    }
+    banner.style.display = '';
   }
 
   // ── Rankings del prestador (dinámico) ──────────────────────────────
