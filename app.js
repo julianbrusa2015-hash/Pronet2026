@@ -18059,8 +18059,31 @@ document.addEventListener('focusin', (e) => {
   // ── Instalación PWA ─────────────────────────────────────────────────
   // Android: captura beforeinstallprompt y muestra card no intrusiva en home.
   // iOS Safari: hint manual con instrucciones de "Agregar a pantalla de inicio".
+  // ¿Ya estamos corriendo COMO app? Entonces no hay nada que ofrecer instalar.
+  //
+  // La guarda anterior era sólo `window.navigator.standalone`, que es una
+  // propiedad exclusiva de Safari en iOS. En Android vale undefined, y dentro
+  // del APK de Capacitor también — así que la única condición que frenaba el
+  // cartel no frenaba nada en los dos lugares donde más molesta: al usuario
+  // que ya instaló la PWA y al que abrió la app nativa.
+  function corriendoComoApp() {
+    if (window.navigator.standalone === true) return true;   // PWA en iOS
+    // PWA instalada: se abre en su propio display-mode, no en el del navegador.
+    for (const modo of ['standalone', 'minimal-ui', 'fullscreen']) {
+      try { if (window.matchMedia('(display-mode: ' + modo + ')').matches) return true; }
+      catch (e) {}
+    }
+    // APK: el bridge de Capacitor inyecta window.Capacitor. El chequeo del UA
+    // queda como respaldo por si esto corre antes de que el bridge se inyecte
+    // — todo WebView de Android trae "; wv)" en el user agent.
+    if (window.Capacitor) return true;
+    if (/; wv\)/.test(navigator.userAgent || '')) return true;
+    return false;
+  }
+  window.corriendoComoApp = corriendoComoApp;
+
   (function iniciarInstalacion() {
-    if (window.navigator.standalone) return; // ya instalada
+    if (corriendoComoApp()) return; // ya instalada, o es el APK
 
     // --- Android A2HS ---
     let deferredPrompt = null;
@@ -18089,6 +18112,7 @@ document.addEventListener('focusin', (e) => {
   })();
 
   function mostrarInstallCard(prompt) {
+    if (corriendoComoApp()) return;
     if (document.getElementById('install-card')) return;
     const home = document.getElementById('s-home');
     if (!home) return;
@@ -18118,6 +18142,7 @@ document.addEventListener('focusin', (e) => {
   }
 
   function mostrarIOSHint() {
+    if (corriendoComoApp()) return;
     if (document.getElementById('ios-install-hint')) return;
     const hint = document.createElement('div');
     hint.id = 'ios-install-hint';
