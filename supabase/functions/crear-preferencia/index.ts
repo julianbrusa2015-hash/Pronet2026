@@ -215,7 +215,16 @@ Deno.serve(async (req) => {
       const vigente = venceEn && venceEn.getTime() > Date.now();
       // Sólo se acredita al CAMBIAR de plan. Si es el mismo, no hay nada que
       // compensar — y de hecho la pantalla ni siquiera deja recomprarlo.
-      if (vigente && subActual.plan && subActual.plan !== plan) {
+      // El credito solo se aplica si el periodo que compra dura AL MENOS lo
+      // mismo que el que tiene. Sin esta guarda, alguien con 364 dias de Plus
+      // anual (49.900) comprando Pro MENSUAL (9.990) quemaba casi 50.000 de
+      // credito para pagar 100 pesos por un mes. Es el error espejo del que
+      // vinimos a arreglar: en vez de que el sistema se coma su plata, se la
+      // come el, sin enterarse.
+      const DURACION = { mes: 1, anual: 12 };
+      const duraNuevo = DURACION[periodo] || 1;
+      const duraViejo = DURACION[subActual?.periodo] || 1;
+      if (vigente && subActual.plan && subActual.plan !== plan && duraNuevo >= duraViejo) {
         const { data: precioViejo } = await supabase
           .from('planes_limites')
           .select('nombre, precio_mes, precio_anual')
