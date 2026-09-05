@@ -45,7 +45,12 @@ Deno.serve(async (req) => {
     // `ref` identifica QUÉ se está pagando cuando el producto no es el plan en
     // sí: hoy, el id del banner. Va en el metadata para que el webhook sepa
     // qué activar. Los planes y los créditos no lo usan.
-    const { plan, periodo, ref } = await req.json();
+    // `cotizar: true` devuelve el desglose del precio SIN crear la preferencia
+    // en MercadoPago. Lo usa el checkout para mostrar el crédito por prorrateo
+    // antes de que el usuario decida. Sin esto habria que repetir la formula en
+    // el cliente, y dos copias de una cuenta de plata siempre terminan
+    // divergiendo: la pantalla prometeria un numero y el cobro seria otro.
+    const { plan, periodo, ref, cotizar } = await req.json();
     // El frontend manda 'mes' (ver switchBilling en app.js), no 'mensual'.
     if (periodo !== 'mes' && periodo !== 'anual') {
       return json({ error: 'Periodo inválido' }, 400);
@@ -180,13 +185,83 @@ Deno.serve(async (req) => {
       return json({ error: 'Plan inválido' }, 400);
     }
 
-    const monto = periodo === 'anual' ? precioPlan.precio_anual : precioPlan.precio_mes;
+    const precioLista = periodo === 'anual' ? precioPlan.precio_anual : precioPlan.precio_mes;
     // Base vale $0 en la tabla — no es un plan comprable. Sin este chequeo,
     // pedir plan='base' generaría una preferencia de MP por $0.
-    if (!monto || monto <= 0) {
+    if (!precioLista || precioLista <= 0) {
       return json({ error: 'Plan inválido' }, 400);
     }
+
+    // ── Prorrateo al mejorar de plan ──────────────────────────────────────
+    //
+    // La activación pisa la fila de suscripciones con vence_en = hoy + período,
+    // así que al subir de plan el tiempo que quedaba del anterior desaparecía.
+    // Alguien que compraba Plus anual y tres días después pasaba a Pro pagaba
+    // los dos planes completos por el mismo año.
+    //
+    // Ahora se le acredita lo que no usó. La cuenta va SIEMPRE acá y nunca en
+    // el cliente: el monto que se cobra no puede depender de nada que mande el
+    // navegador.
+    let credito = 0;
+    let detalleCredito = null;
+    if (plan === 'plus' || plan === 'pro') {
+      const { data: subActual } = await supabase
+        .from('suscripciones')
+        .select('plan, periodo, vence_en')
+        .eq('usuario_id', user.id)
+        .maybeSingle();
+
+      const venceEn = subActual?.vence_en ? new Date(subActual.vence_en) : null;
+      const vigente = venceEn && venceEn.getTime() > Date.now();
+      // Sólo se acredita al CAMBIAR de plan. Si es el mismo, no hay nada que
+      // compensar — y de hecho la pantalla ni siquiera deja recomprarlo.
+      if (vigente && subActual.plan && subActual.plan !== plan) {
+        const { data: precioViejo } = await supabase
+          .from('planes_limites')
+          .select('nombre, precio_mes, precio_anual')
+          .eq('plan', subActual.plan)
+          .maybeSingle();
+
+        const anualViejo = subActual.periodo === 'anual';
+        const pagadoAntes = anualViejo ? precioViejo?.precio_anual : precioViejo?.precio_mes;
+        const diasPeriodo = anualViejo ? 365 : 30;
+
+        if (pagadoAntes && pagadoAntes > 0) {
+          const diasRestantes = (venceEn.getTime() - Date.now()) / 86400000;
+          const proporcion = Math.min(diasRestantes / diasPeriodo, 1);
+          const bruto = Math.floor(pagadoAntes * proporcion);
+          // Nunca se cobra menos que MIN_COBRO: MercadoPago rechaza importes
+          // ínfimos, y un crédito mayor al precio significaría que le estamos
+          // debiendo plata al usuario — eso no se resuelve con un descuento.
+          const MIN_COBRO = 100;
+          credito = Math.max(0, Math.min(bruto, precioLista - MIN_COBRO));
+          if (credito > 0) {
+            detalleCredito = {
+              plan_anterior: precioViejo?.nombre || subActual.plan,
+              periodo_anterior: subActual.periodo,
+              vence_en: venceEn.toISOString(),
+              dias_restantes: Math.floor(diasRestantes),
+              pagado_antes: pagadoAntes,
+            };
+          }
+        }
+      }
+    }
+
+    const monto = precioLista - credito;
     const titulo = 'Plan ' + precioPlan.nombre + ' PRONET · ' + (periodo === 'anual' ? 'Anual' : 'Mensual');
+
+    // Cotización: mismo cálculo, sin tocar MercadoPago.
+    if (cotizar === true) {
+      return json({
+        ok: true, plan, periodo,
+        nombre: precioPlan.nombre,
+        precio_lista: precioLista,
+        credito,
+        total: monto,
+        detalle: detalleCredito,
+      }, 200);
+    }
 
     const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN');
     if (!mpAccessToken) {
@@ -210,6 +285,10 @@ Deno.serve(async (req) => {
         usuario_id: user.id,
         plan,
         periodo,
+        // Queda registrado cuánto se descontó y por qué: si mañana alguien
+        // pregunta por qué pagó $X y no el precio de lista, la respuesta tiene
+        // que estar en el pago, no en la reconstrucción de una cuenta.
+        ...(credito > 0 ? { credito, credito_detalle: JSON.stringify(detalleCredito) } : {}),
         // Sin esto el webhook recibe `ref` vacío y no sabe QUÉ activar: el
         // pago entra bien pero el banner nunca se publica. Se validó arriba
         // que sea del que paga y esté aprobado, pero validarlo no alcanza —

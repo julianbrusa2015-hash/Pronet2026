@@ -14902,7 +14902,43 @@ document.addEventListener('focusin', (e) => {
     setT('checkout-propuestas-val', cfg.propuestas_mes ? cfg.propuestas_mes + '/mes' : 'Ilimitadas');
     setT('checkout-renew',        _calcRenew(esAnual ? 12 : 1));
     setT('checkout-total',        total);
+    // El precio de lista se pinta ya, para que el checkout abra sin esperar.
+    // La cotización real llega después y sólo corrige si hay crédito.
+    const filaCred = document.getElementById('checkout-credito-row');
+    if (filaCred) filaCred.style.display = 'none';
     document.getElementById('checkout-overlay').classList.add('show');
+    pedirCotizacion(planId, currentBilling, precio);
+  }
+
+  const pesosARS = (n) => '$' + Number(n).toLocaleString('es-AR') + ' ARS';
+
+  // Le pregunta al servidor cuánto sale realmente el plan, con el crédito por
+  // prorrateo ya aplicado. La cuenta vive en crear-preferencia y no acá: si la
+  // repitiéramos en el cliente, el día que una de las dos cambie el checkout
+  // prometería un número y el cobro sería otro. Si la consulta falla no se
+  // rompe nada — queda el precio de lista, que es lo que se cobraba antes.
+  async function pedirCotizacion(planId, periodo, precioLista) {
+    if (!mpCheckoutActivo()) return;
+    const q = await PronetDB.cotizarPlanMP(planId, periodo).catch(() => null);
+    // El usuario pudo cerrar el checkout o cambiar de plan mientras esto viajaba.
+    if (!q || currentCheckoutPlan !== planId || currentBilling !== periodo) return;
+    const fila = document.getElementById('checkout-credito-row');
+    const val  = document.getElementById('checkout-credito-val');
+    const lbl  = document.getElementById('checkout-credito-lbl');
+    const tot  = document.getElementById('checkout-total');
+    if (!q.credito || q.credito <= 0) {
+      if (fila) fila.style.display = 'none';
+      if (tot) tot.textContent = pesosARS(precioLista);
+      return;
+    }
+    if (lbl) {
+      const dias = q.detalle && q.detalle.dias_restantes;
+      lbl.textContent = 'Crédito por tu Plan ' + ((q.detalle && q.detalle.plan_anterior) || 'actual')
+        + (dias ? ' (' + dias + ' días sin usar)' : '');
+    }
+    if (val) val.textContent = '-' + pesosARS(q.credito);
+    if (fila) fila.style.display = '';
+    if (tot) tot.textContent = pesosARS(q.total);
   }
 
   function cerrarCheckout(e) {

@@ -2014,6 +2014,22 @@ const PronetDB = (() => {
       } catch (e) { return { ok: false, error: String(e) }; }
     },
 
+    /** Pregunta al servidor cuánto sale REALMENTE un plan, con el crédito por
+     *  prorrateo ya aplicado. No crea la preferencia ni cobra nada.
+     *
+     *  Es la misma función que después cobra, en modo cotización: así el número
+     *  que muestra el checkout y el que se cobra salen de una sola cuenta. */
+    async cotizarPlanMP(plan, periodo) {
+      if (!remoto) return null;
+      try {
+        const { data, error } = await sb.functions.invoke('crear-preferencia', {
+          body: { plan, periodo, cotizar: true },
+        });
+        if (error || !data?.ok) return null;
+        return data;
+      } catch (e) { return null; }
+    },
+
     /** Devuelve Set con los IDs de publicaciones que el usuario actual likeó. */
     async listarMisLikes(pubIds) {
       if (!remoto || !pubIds?.length) return new Set();
