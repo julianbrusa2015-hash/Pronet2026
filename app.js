@@ -4350,21 +4350,35 @@ document.addEventListener('focusin', (e) => {
     if (!bounds.isEmpty() && mapaPrestMarkers.length > 0) mapaGoogle.fitBounds(bounds, 60);
   }
 
+  // Geocodifica con el Geocoder del SDK, NO con un fetch al web service REST.
+  //
+  // Una clave de navegador de Google Maps es publica por definicion: viaja en
+  // el codigo del cliente y no hay forma de esconderla. Lo unico que la protege
+  // es la restriccion por HTTP referrer en Google Cloud. Y el web service REST
+  // IGNORA esa restriccion: en cuanto se restringe la clave devuelve
+  // REQUEST_DENIED. O sea que mientras esta funcion pegara al REST, restringir
+  // la clave rompia la app — y no restringirla dejaba que cualquiera que leyera
+  // config.js gastara la cuota.
+  //
+  // El SDK pasa por Maps JavaScript API, que si respeta el referrer. Misma
+  // funcionalidad, y la clave se puede cerrar.
   async function geocodificarDireccion(direccion) {
-    const key = PRONET_CONFIG.MAPS_KEY;
-    if (!key || !direccion) return null;
-    try {
-      const resp = await fetch(
-        'https://maps.googleapis.com/maps/api/geocode/json?address='
-        + encodeURIComponent(direccion + ', Escobar, Buenos Aires, Argentina')
-        + '&key=' + key
-      );
-      const data = await resp.json();
-      if (data.status !== 'OK' || !data.results[0]) return null;
-      return data.results[0].geometry.location;
-    } catch (e) { return null; }
-  }
-  // ── /Google Maps ─────────────────────────────────────────────────────────
+    if (!direccion) return null;
+    const listo = await cargarGoogleMapsAPI();
+    if (!listo || !window.google?.maps?.Geocoder) return null;
+    const completa = direccion + ', Escobar, Buenos Aires, Argentina';
+    return new Promise((resolve) => {
+      new google.maps.Geocoder().geocode({ address: completa }, (res, status) => {
+        if (status !== 'OK' || !res || !res[0]) return resolve(null);
+        const loc = res[0].geometry.location;
+        // El REST devolvia {lat, lng} numeros planos; el SDK devuelve un LatLng
+        // donde lat y lng son METODOS. Los dos llamadores leen coords.lat como
+        // numero y lo mandan a la base, asi que sin esta normalizacion se
+        // guardarian funciones sin un solo error a la vista.
+        resolve({ lat: loc.lat(), lng: loc.lng() });
+      });
+    });
+  }  // ── /Google Maps ─────────────────────────────────────────────────────────
 
   // Genera una posición pseudo-aleatoria pero consistente para un prestador
   // basada en su ID — siempre el mismo pin en el mismo lugar

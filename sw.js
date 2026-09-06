@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v371'; // v371: prorrateo al mejorar de plan, cotizado por el servidor
+const CACHE_VERSION = 'pronet-v372'; // v372: geocodificar por el SDK para poder restringir la clave de Maps
 
 const SHELL = [
   './',
