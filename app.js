@@ -2662,7 +2662,7 @@ document.addEventListener('focusin', (e) => {
     let refNoIncluye = [];
     try {
       const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
-      const rango = tieneCatalogo ? SLIDER_RANGOS[pedido.rubro] : null;
+      const rango = tieneCatalogo ? REF_CATALOGO[pedido.rubro] : null;
       if (rango) refTxt = '$' + rango.min.toLocaleString('es-AR') + ' – $' + rango.max.toLocaleString('es-AR');
       if (tieneCatalogo) {
         const ficha = await PronetDB.obtenerFichaPorRubro(pedido.rubro);
@@ -3507,7 +3507,7 @@ document.addEventListener('focusin', (e) => {
       const result = await PronetDB.guardarFicha(datos);
       if (result) {
         showToast && showToast('✅ Servicio guardado');
-        SLIDER_RANGOS[rubro] = { min: precioMin||30000, max: precioMax||500000 };
+        REF_CATALOGO[rubro] = { min: precioMin||30000, max: precioMax||500000 };
         if (datos.activo) RUBROS_CON_CATALOGO.add(rubro); else RUBROS_CON_CATALOGO.delete(rubro);
         goTo('s-catalogo');
       } else {
@@ -3784,7 +3784,11 @@ document.addEventListener('focusin', (e) => {
     });
   }
 
-  async function cargarSliderRangosDesdeDB() {
+  async function cargarReferenciasCatalogo() {
+    // Trae el precio de referencia de cada ficha activa. Ya NO toca los topes
+    // del slider: esos salen de la tabla rubros y los edita Parametrías >
+    // Rubros. Acá sólo se alimenta el texto "Ref. PRONET".
+    //
     // Con el catálogo apagado, no se marca ningún rubro como "con catálogo real" —
     // el fallback de config.js sigue fijando límites del slider, pero ninguna
     // pantalla muestra "Ref. PRONET" sin este flag.
@@ -3793,11 +3797,11 @@ document.addEventListener('focusin', (e) => {
       const fichas = await PronetDB.listarCatalogo(true);
       fichas.forEach(f => {
         if (f.rubro && f.precio_ref_min && f.precio_ref_max) {
-          SLIDER_RANGOS[f.rubro] = { min: f.precio_ref_min, max: f.precio_ref_max };
+          REF_CATALOGO[f.rubro] = { min: f.precio_ref_min, max: f.precio_ref_max };
           RUBROS_CON_CATALOGO.add(f.rubro);
         }
       });
-    } catch(e) { console.warn('[cargarSliderRangosDesdeDB]', e); }
+    } catch(e) { console.warn('[cargarReferenciasCatalogo]', e); }
   }
 
   // Ajusta el banner del Home según el tipo de usuario
@@ -12104,7 +12108,7 @@ document.addEventListener('focusin', (e) => {
     reflejarUsuario();
     iniciarRealtime();
     updateBellCount(); // badge inicial al entrar a la app
-    cargarSliderRangosDesdeDB();
+    cargarReferenciasCatalogo();
     // Verificar si hay una celebración de primer trabajo pendiente (solo prestadores)
     if (esPrestador()) verificarCelebracionPrimerTrabajo().catch(() => {});
 
@@ -16813,6 +16817,16 @@ document.addEventListener('focusin', (e) => {
   // Rubros con ficha activa real en catalogo_servicios (no el fallback de config.js).
   // Solo estos muestran "Ref. PRONET" — evita marketear un precio que nadie cargó.
   let RUBROS_CON_CATALOGO = new Set();
+  // Precio de referencia del catalogo, SEPARADO de los topes del slider.
+  //
+  // Los dos son rangos en pesos, pero no significan lo mismo: SLIDER_RANGOS
+  // define hasta donde puede mover el prestador el control —un tope holgado a
+  // proposito— y esto es lo que PRONET SUGIERE, que es una promesa. Compartian
+  // una sola variable con TRES escritores (rubros, el catalogo y el formulario
+  // de fichas), asi que editar el rango en Parametrias > Rubros se perdia en la
+  // proxima carga para todo rubro con ficha activa, sin nada en pantalla que lo
+  // avisara. Y cual ganaba era una carrera entre dos cargas que no se esperan.
+  const REF_CATALOGO = {};
   let npRubroActual = '_default';
 
   // Calcula los límites del slider según el rubro y el referencial del catálogo
@@ -17071,7 +17085,7 @@ document.addEventListener('focusin', (e) => {
     let refTxt = null;
     try {
       const tieneCatalogo = FEATURES.catalogoPrecios && pedido.rubro && RUBROS_CON_CATALOGO.has(pedido.rubro);
-      const rango = tieneCatalogo ? SLIDER_RANGOS[pedido.rubro] : null;
+      const rango = tieneCatalogo ? REF_CATALOGO[pedido.rubro] : null;
       if (rango) refTxt = '$' + rango.min.toLocaleString('es-AR') + '–$' + rango.max.toLocaleString('es-AR');
     } catch (e) {}
 
@@ -17906,7 +17920,7 @@ document.addEventListener('focusin', (e) => {
         iniciarRealtime();
         updateBellCount();
         quizasPreguntarRolOAuth();
-        cargarSliderRangosDesdeDB();
+        cargarReferenciasCatalogo();
         PronetDB.obtenerSuscripcion().then(s => {
           planActual       = s.plan              || 'base';
           periodoActual    = s.periodo           || 'mensual';

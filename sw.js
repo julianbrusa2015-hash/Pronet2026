@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v380'; // v380: icono nuevo (red de vecinos) en la PWA y en el APK
+const CACHE_VERSION = 'pronet-v381'; // v381: separar los topes del slider del precio de referencia del catalogo
 
 const SHELL = [
   './',
