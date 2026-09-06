@@ -2105,13 +2105,15 @@ document.addEventListener('focusin', (e) => {
     // El más accionable de todos: el pedido existe, es de su rubro, tiene
     // reloj corriendo y él todavía no ofertó. Si no aparece acá, se entera
     // cuando ya cerró.
+    // Pedidos donde YA oferté. Salen de misPropuestas, que ya vino en el
+    // Promise.all. Se calcula UNA vez acá arriba porque lo necesitan dos
+    // indicadores distintos, y tenerlo en uno solo fue justamente el bug:
+    // "vencen pronto" lo excluía y "pedidos nuevos" no.
+    const yaOferte = new Set(misPropuestas.map(pr => pr.pedido_id));
+
     if (pid) {
       const UMBRAL_HS = 24; // "por vencer" = le queda menos de un día
       const ahora = Date.now();
-
-      // Pedidos donde YA oferté: se excluyen. Salen de misPropuestas, que ya
-      // vino en el Promise.all de arriba.
-      const yaOferte = new Set(misPropuestas.map(pr => pr.pedido_id));
 
       const porVencer = disponibles.filter(p => {
         if (rubro && !matchRubro(p.rubro, rubro)) return false;
@@ -2140,7 +2142,12 @@ document.addEventListener('focusin', (e) => {
     // oportunidad con reloj, no una novedad decorativa.
     {
       const desde = marcaPedidosVistos();
+      // Se excluye lo ya ofertado: un pedido donde el prestador YA mandó
+      // propuesta no es una oportunidad pendiente, es trabajo hecho.
+      // Contarlo le decía "2 pedidos nuevos de tu rubro" a alguien que ya
+      // había ofertado en los dos, y el número no bajaba nunca al actuar.
       const sinVer = disponibles.filter(p =>
+        !yaOferte.has(p.id) &&
         (!rubro || matchRubro(p.rubro, rubro)) && p.creado && new Date(p.creado) > desde
       ).length;
       if (sinVer > 0) {
