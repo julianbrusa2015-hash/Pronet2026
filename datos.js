@@ -1968,8 +1968,19 @@ const PronetDB = (() => {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       const ext  = archivo.name.split('.').pop().toLowerCase();
       const path = `${usuarioId}/${Date.now()}.${ext}`;
-      const { error } = await sb.storage.from('mercado').upload(path, archivo,
-        { cacheControl: '3600', upsert: false });
+      // Un reintento. Las subidas desde el celular se cortan por razones
+      // pasajeras —cambio de celda, wifi que se cae— y volver a intentar
+      // una vez resuelve la mayoría sin molestar a la persona. Sólo se
+      // reintenta ante error de red: si el bucket rechazó el archivo por
+      // tipo o tamaño, insistir da el mismo resultado.
+      let error = null;
+      for (let intento = 0; intento < 2; intento++) {
+        const r = await sb.storage.from('mercado').upload(path, archivo,
+          { cacheControl: '3600', upsert: false });
+        error = r.error;
+        if (!error) break;
+        if (!/failed to fetch|network|load failed/i.test(error.message || '')) break;
+      }
       if (error) return { ok: false, error: error.message };
       const { data } = sb.storage.from('mercado').getPublicUrl(path);
       return { ok: true, url: data.publicUrl };

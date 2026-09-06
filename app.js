@@ -8498,21 +8498,45 @@ document.addEventListener('focusin', (e) => {
   }
   window.pmSelCat = pmSelCat;
 
-  function pmPrevisualizarFoto(input) {
+  // La foto se sube REDIMENSIONADA, no cruda. Antes se mandaba el archivo
+  // tal cual salía del teléfono: una foto de 12 MP son varios MB, y sobre
+  // datos móviles esa subida se corta a la mitad. El navegador reporta eso
+  // como 'Failed to fetch' —un error de red, no de permisos— y el usuario
+  // veía 'No se pudo subir la foto: Failed to fetch' sin nada que hacer.
+  //
+  // 1600px al 85% deja archivos de 200-400 KB. Es lo que ya hacía el avatar
+  // (redimensionarImagen a 512): la foto de Mercado era la única que subía
+  // sin pasar por acá.
+  //
+  // El tope de entrada sube de 5 a 10 MB —el del bucket— porque ahora el
+  // tamaño del original ya no es el que viaja: rechazar una foto de 6 MB
+  // que iba a terminar pesando 300 KB era negarle publicar por nada.
+  async function pmPrevisualizarFoto(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      showToast && showToast('⚠️ La foto no puede superar 5 MB');
+    if (file.size > 10 * 1024 * 1024) {
+      showToast && showToast('⚠️ La foto no puede superar 10 MB');
       input.value = '';
       return;
     }
-    pmFotoArchivo = file;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const prev = document.getElementById('pm-foto-preview');
-      if (prev) prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;display:block">`;
-    };
-    reader.readAsDataURL(file);
+    let listo;
+    try {
+      listo = await resizarImagen(file, 1600);
+      // El nombre se fuerza a .jpg: resizarImagen siempre devuelve JPEG, y
+      // subirFotoMercado saca la extensión del nombre. Con un .heic de
+      // iPhone se guardaba un archivo llamado .heic con contenido JPEG.
+      listo = new File([listo], 'foto.jpg', { type: 'image/jpeg' });
+    } catch (e) {
+      // Si el navegador no puede decodificarla (HEIC en un Android viejo),
+      // se sube la original: mejor intentarlo que negarse de entrada.
+      listo = file;
+    }
+    pmFotoArchivo = listo;
+    const prev = document.getElementById('pm-foto-preview');
+    if (prev) {
+      const url = URL.createObjectURL(listo);
+      prev.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;display:block">';
+    }
   }
   window.pmPrevisualizarFoto = pmPrevisualizarFoto;
 
@@ -8542,7 +8566,13 @@ document.addEventListener('focusin', (e) => {
     if (pmFotoArchivo) {
       const res = await PronetDB.subirFotoMercado(pmFotoArchivo, usuarioActual.id);
       if (!res.ok) {
-        showToast && showToast('⚠️ No se pudo subir la foto: ' + res.error);
+        // 'Failed to fetch' es lo que dice el navegador cuando la subida no
+        // llegó a destino. Mostrarlo tal cual no le sirve a nadie: se traduce
+        // a lo único que la persona puede hacer al respecto.
+        const esRed = /failed to fetch|network|load failed/i.test(res.error || '');
+        showToast && showToast(esRed
+          ? '📶 No se pudo subir la foto: se cortó la conexión. Probá de nuevo con mejor señal.'
+          : '⚠️ No se pudo subir la foto: ' + res.error);
         btn.disabled = false;
         btn.textContent = editando ? 'Guardar' : 'Publicar';
         return;
