@@ -1,11 +1,27 @@
-# NOTA (2026-08-30): se intento publicar dist/ en vez de la raiz del repo para
-# dejar de servir los .sql, las Edge Functions y los tests. El build con
-#   [build] command = "node scripts/build-web.js" / publish = "dist"
-# nunca llego a producir un deploy: package.json siguio dando 200 durante 12
-# minutos, o sea que Netlify se quedo con el ultimo deploy bueno. Se revirtio
-# para no bloquear TODOS los deploys siguientes, que es peor que la exposicion.
-# scripts/build-web.js queda en el repo y funciona local (node scripts/build-web.js).
-# Falta mirar el log de build en el panel de Netlify para saber por que falla.
+# Netlify publica dist/, no la raiz del repo.
+#
+# Sin esto servia el repo entero: los 183 .sql con el esquema y las policies de
+# RLS, el codigo de las Edge Functions que cobran, los tests y los scripts
+# quedaban descargables desde el sitio publico. scripts/build-web.js arma dist/
+# con una lista BLANCA: un archivo nuevo no se publica hasta que alguien lo
+# agregue ahi.
+[build]
+  command = "node scripts/build-web.js"
+  publish = "dist"
+
+[build.environment]
+  # El scanner de secretos de Netlify frena el build porque MAPS_KEY esta como
+  # variable de entorno Y su valor aparece en config.js. Para una clave de
+  # navegador de Google Maps eso es inevitable: la carga el browser, tiene que
+  # viajar en el codigo del cliente. No hay forma de "esconderla".
+  #
+  # Lo que la protege NO es el secreto sino la restriccion por HTTP referrer en
+  # Google Cloud Console. Al 2026-09-05 la clave estaba SIN restringir
+  # (verificado: una llamada directa a la Geocoding API sin referrer devolvio
+  # OK), asi que cualquiera que lea config.js puede gastarle la cuota al dueño.
+  # Restringirla es el arreglo real; esto solo evita que el scanner bloquee un
+  # deploy por algo que no puede dejar de estar en el cliente.
+  SECRETS_SCAN_OMIT_KEYS = "MAPS_KEY"
 
 # Optimización automática de assets en el CDN de Netlify
 # Minifica CSS (ahorra ~4 KB), comprime imágenes. JS no se toca para no romper el sourcemap.
