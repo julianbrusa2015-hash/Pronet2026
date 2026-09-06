@@ -2099,7 +2099,7 @@ document.addEventListener('focusin', (e) => {
     // superara ese número, los contadores quedarían cortos y hay que pasar a
     // contar con un RPC en vez de sobre las filas.
     const disponibles = feed.pedidos;
-    const totalDisponibles = feed.total;
+
     // Los del rubro propio primero; dentro de cada grupo, los más nuevos.
     // Sólo se usan cuando el tablero no tiene nada pendiente que mostrar.
     const recientes = disponibles.slice().sort((a, b) => {
@@ -2118,6 +2118,13 @@ document.addEventListener('focusin', (e) => {
     // indicadores distintos, y tenerlo en uno solo fue justamente el bug:
     // "vencen pronto" lo excluía y "pedidos nuevos" no.
     const yaOferte = new Set(misPropuestas.map(pr => pr.pedido_id));
+
+    // Lo que TODAVIA se puede tomar. feed.total es el count del servidor, que
+    // no sabe nada de mis propuestas: decia "Ver los 2 pedidos disponibles" a
+    // quien ya habia ofertado en los dos. Se cuenta sobre el array —topeado en
+    // 200 como el resto de los indicadores— restando los que ya tienen mi
+    // propuesta.
+    const totalLibres = disponibles.filter(p => !yaOferte.has(p.id)).length;
 
     if (pid) {
       const UMBRAL_HS = 24; // "por vencer" = le queda menos de un día
@@ -2294,7 +2301,7 @@ document.addEventListener('focusin', (e) => {
           <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 8px">
             <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Oportunidades para vos</span>
             <span role="button" tabindex="0" onclick="goTo('s-pedidos')"
-                  style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Ver los ${totalDisponibles} →</span>
+                  style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Ver los ${totalLibres} →</span>
           </div>
           ${avisoSinRubro}
           <div id="inicio-recientes"></div>` : `
@@ -2302,8 +2309,8 @@ document.addEventListener('focusin', (e) => {
                style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
             <span style="font-size:16px">💼</span>
             <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">${
-              totalDisponibles
-                ? 'Ver los ' + totalDisponibles + ' pedidos disponibles'
+              totalLibres
+                ? 'Ver los ' + totalLibres + ' pedidos disponibles'
                 : 'Ver pedidos disponibles'}</span>
             <span style="color:var(--blue);font-size:15px">›</span>
           </div>`}
@@ -2542,11 +2549,29 @@ document.addEventListener('focusin', (e) => {
       pedidos = pedidos.slice().sort((a, b) => tope(b) - tope(a));
     }
 
+    // Los pedidos donde ya oferte no se ocultan, se marcan. Ocultarlos dejaria
+    // al prestador sin forma de revisar o editar su propia propuesta desde el
+    // feed; contarlos como disponibles le mentia el numero. El sello resuelve
+    // las dos cosas: siguen a la vista y se distinguen.
+    let yaOferteFeed = new Set();
+    if (window._sb && pid) {
+      const { data: mias } = await window._sb.from('propuestas')
+        .select('pedido_id').eq('prestador_id', pid);
+      yaOferteFeed = new Set((mias || []).map(pr => pr.pedido_id));
+    }
     const activos = Object.entries(filtrosPresto).filter(([, v]) => v).length;
     if (meta) {
+      // El número grande cuenta lo que TODAVÍA se puede tomar. Los ya ofertados
+      // se nombran aparte en vez de sumarse: decir "2 pedidos disponibles" a
+      // alguien que ya ofertó en los dos convierte el contador en ruido.
+      const yaOfertados = pedidos.filter(p => yaOferteFeed.has(p.id)).length;
+      const libres = pedidos.length - yaOfertados;
       meta.innerHTML = pedidos.length
-        ? 'Pedidos disponibles · <span style="color:var(--blue);font-weight:600">' +
-          pedidos.length + ' pedido' + (pedidos.length !== 1 ? 's' : '') + '</span>'
+        ? (libres
+            ? 'Pedidos disponibles · <span style="color:var(--blue);font-weight:600">' +
+              libres + ' pedido' + (libres !== 1 ? 's' : '') + '</span>'
+            : 'Ya ofertaste en todos los de tu zona') +
+          (yaOfertados ? ' · <span style="color:var(--ink3)">' + yaOfertados + ' ya ofertado' + (yaOfertados !== 1 ? 's' : '') + '</span>' : '')
         : 'Sin resultados';
     }
 
@@ -2584,8 +2609,9 @@ document.addEventListener('focusin', (e) => {
       }
     }
 
+
     wrap.innerHTML = '';
-    pedidos.forEach(p => wrap.appendChild(crearCardPedidoDisponible(p)));
+    pedidos.forEach(p => wrap.appendChild(crearCardPedidoDisponible(p, yaOferteFeed.has(p.id))));
 
     // Marcar como vistos SÓLO si la lista no escondió pedidos nuevos.
     // Antes se marcaba al entrar, sin mirar el filtro: llegabas desde
@@ -2923,7 +2949,11 @@ document.addEventListener('focusin', (e) => {
   }
 
   // Card de pedido disponible (para que el prestador oferte)
-  function crearCardPedidoDisponible(p) {
+  // El segundo parametro marca los pedidos donde este prestador YA mando propuesta. No
+  // se ocultan —querer revisar lo que ofertaste es legitimo— pero se distinguen
+  // y dejan de contarse como disponibles. Sin el sello, el numero y la lista
+  // decian cosas distintas.
+  function crearCardPedidoDisponible(p, yaOferte = false) {
     const card = document.createElement('div');
     card.className = 'card';
     card.style.cursor = 'pointer';
@@ -2964,8 +2994,10 @@ document.addEventListener('focusin', (e) => {
         <span style="background:var(--surface);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--ink2)">${urgTxt}</span>
       </div>
       <div class="c-foot">
-        <div style="font-size:13px;font-weight:700;color:var(--blue)">Ver detalle y ofertar →</div>
-        <div class="c-zona" style="background:#ECFDF5;color:#059669">💼 Disponible</div>
+        <div style="font-size:13px;font-weight:700;color:${yaOferte ? 'var(--ink3)' : 'var(--blue)'}">${yaOferte ? 'Ver tu propuesta →' : 'Ver detalle y ofertar →'}</div>
+        ${yaOferte
+          ? '<div class="c-zona" style="background:var(--surface);color:var(--ink3)">✓ Ya ofertaste</div>'
+          : '<div class="c-zona" style="background:#ECFDF5;color:#059669">💼 Disponible</div>'}
       </div>`;
     return card;
   }
