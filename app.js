@@ -1944,9 +1944,21 @@ document.addEventListener('focusin', (e) => {
    *  Por dispositivo (localStorage), que para un contador de novedades
    *  alcanza y no agrega una tabla ni una escritura por visita.
    *
-   *  La primera vez NO devuelve el principio de los tiempos: eso mostraría
-   *  "23 pedidos nuevos" a alguien que recién entra, que es ruido y no una
-   *  novedad. Se sella el momento actual y se empieza a contar desde ahí. */
+   *  La primera vez no se cuenta desde el principio de los tiempos: eso
+   *  mostraría "23 pedidos nuevos" a alguien que recién entra, que es ruido
+   *  y no una novedad.
+   *
+   *  Pero sellar el momento actual —que es lo que se hacía— era peor: dejaba
+   *  como vistos todos los pedidos abiertos que había en ese instante, sin
+   *  que el prestador hubiera visto ninguno. Su primer tablero decía "Todo
+   *  al día" mientras listaba pedidos de su rubro justo abajo, en
+   *  "Oportunidades para vos". Las dos mitades de la pantalla se
+   *  contradecían.
+   *
+   *  El corte es el alta de la ficha: lo publicado desde que se anotó y
+   *  todavía está abierto es, honestamente, nuevo para él. El número no se
+   *  dispara porque la lista ya viene filtrada por sus zonas y su rubro, sin
+   *  los que ya ofertó y sin los cerrados. */
   function claveVistos() {
     return 'pronet_pedidos_vistos_' + (usuarioActual?.id || 'anon');
   }
@@ -1969,12 +1981,28 @@ document.addEventListener('focusin', (e) => {
   function marcarResenasComoVistas() {
     if (usuarioActual) localStorage.setItem(claveResenasVistas(), new Date().toISOString());
   }
-  function marcaPedidosVistos() {
+  /** Desde cuándo un pedido cuenta como "nuevo" para este prestador.
+   *
+   *  Antes, si no había marca guardada, esta función guardaba `ahora` y lo
+   *  devolvía. O sea: un getter que escribía. El efecto era que la PRIMERA
+   *  vez que un prestador abría su tablero, todo lo que ya estaba publicado
+   *  quedaba marcado como visto sin que lo hubiera visto nunca.
+   *
+   *  El síntoma es desconcertante justamente porque las dos mitades de la
+   *  pantalla se contradicen: el pedido aparece listado en "Oportunidades
+   *  para vos" y arriba dice "Todo al día — no tenés nada pendiente".
+   *  Le pasa a toda cuenta nueva, y también a una vieja en un teléfono
+   *  nuevo o después de limpiar los datos del navegador.
+   *
+   *  Sin marca, la referencia pasa a ser desde cuándo existe la ficha: si
+   *  nunca entró a Pedidos, no vio nada de lo publicado desde que se anotó.
+   *  Y no se escribe nada acá — la marca la pisa marcarPedidosComoVistos(),
+   *  que corre después de renderizar la pantalla de Pedidos, que es el
+   *  único momento en que "visto" es verdad. */
+  function marcaPedidosVistos(altaPrestador) {
     const guardada = localStorage.getItem(claveVistos());
     if (guardada) return new Date(guardada);
-    const ahora = new Date();
-    localStorage.setItem(claveVistos(), ahora.toISOString());
-    return ahora;
+    return altaPrestador ? new Date(altaPrestador) : new Date(0);
   }
   // Marca anterior a la visita actual. Entrar a Pedidos pisa la marca con
   // "ahora", así que sin esta copia el chip "Nuevos" se quedaría sin
@@ -2192,7 +2220,7 @@ document.addEventListener('focusin', (e) => {
     // porque un pedido nuevo del rubro propio vence en 72hs: es una
     // oportunidad con reloj, no una novedad decorativa.
     {
-      const desde = marcaPedidosVistos();
+      const desde = marcaPedidosVistos(ficha?.creado);
       // Se excluye lo ya ofertado: un pedido donde el prestador YA mandó
       // propuesta no es una oportunidad pendiente, es trabajo hecho.
       // Contarlo le decía "2 pedidos nuevos de tu rubro" a alguien que ya
