@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="PRONET">
+  <title>PRONET — isotipo de red</title>
+  <!-- Isotipo de la app: la constelación de vecinos. Sin letras, así que no
+       queda desactualizado si cambia el nombre de la marca.
+
+       Un nodo central (la persona que pide) y cinco alrededor (los que
+       responden). Se conserva la asimetría del dibujo original: una estrella
+       perfectamente radial lee como diagrama técnico, no como barrio.
+
+       Respecto de pronet-red.svg, acá los trazos y los nodos van bastante más
+       gruesos y el conjunto más grande. No es capricho: a 48px —el tamaño
+       real en el launcher de Android— la versión fina se empasta y los nodos
+       chicos directamente desaparecen. Un ícono se diseña para el tamaño en
+       el que se va a ver, no para el que se dibuja.
+
+       Se quitaron las dos aristas periféricas del original (16→52 y 100→104):
+       a tamaño chico cerraban triángulos que ensuciaban la silueta.
+
+       Las aristas van debajo de los nodos para que los círculos tapen los
+       extremos y no queden puntas sueltas. -->
+  <defs>
+    <linearGradient id="gRed" x1="0" y1="0" x2="0.62" y2="1">
+      <stop offset="0" stop-color="#0D0F1A"/>
+      <stop offset="0.6" stop-color="#1A3ACC"/>
+      <stop offset="1" stop-color="#2B5BFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#gRed)"/>
+  <g transform="translate(60,100) scale(3.3)">
+    <g stroke="#10B981" stroke-width="9" stroke-linecap="round" opacity=".8" fill="none">
+      <path d="M58,54 L16,34"/>
+      <path d="M58,54 L52,12"/>
+      <path d="M58,54 L100,30"/>
+      <path d="M58,54 L104,78"/>
+      <path d="M58,54 L30,88"/>
+    </g>
+    <g fill="#10B981">
+      <circle cx="58" cy="54" r="15"/>
+      <circle cx="16" cy="34" r="12"/>
+      <circle cx="52" cy="12" r="12"/>
+      <circle cx="100" cy="30" r="12"/>
+      <circle cx="104" cy="78" r="12"/>
+      <circle cx="30" cy="88" r="12"/>
+    </g>
+  </g>
+</svg>
