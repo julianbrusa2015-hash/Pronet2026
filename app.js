@@ -150,9 +150,25 @@ document.addEventListener('focusin', (e) => {
 (function () {
   let startY = 0;
   let startX = 0;
+  // El contenedor que scrollea de verdad bajo el dedo. Se resuelve una sola
+  // vez por gesto, en el touchstart: buscarlo en cada touchmove obligaría a
+  // un getComputedStyle por evento.
+  let scroller = null;
+
+  function buscarScroller(nodo) {
+    let el = (nodo && nodo.nodeType === 1) ? nodo : null;
+    while (el && el !== document.body) {
+      const ov = getComputedStyle(el).overflowY;
+      if ((ov === 'auto' || ov === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
   document.addEventListener('touchstart', (e) => {
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
+    scroller = buscarScroller(e.target);
   }, { passive: true });
 
   document.addEventListener('touchmove', (e) => {
@@ -162,10 +178,14 @@ document.addEventListener('focusin', (e) => {
     if (dx > Math.abs(dy)) return;
     // Solo bloquear si el gesto es hacia abajo Y el scroll está en el tope
     if (dy <= 0) return;
-    const screen = document.querySelector('.screen.active');
-    if (screen && screen.scrollTop === 0) {
-      e.preventDefault();
-    }
+    // Antes esto miraba `.screen.active`, dando por sentado que la pantalla
+    // es siempre la que scrollea. En s-edit-perfil no lo es: tiene
+    // overflow:hidden para dejar fija la cabecera con el botón Guardar, y el
+    // scroll lo hace un div interno. Su scrollTop vale 0 SIEMPRE, así que
+    // todos los gestos hacia abajo se cancelaban y la pantalla no se podía
+    // volver a subir una vez bajada. Se sentía como que se trababa.
+    if (scroller && scroller.scrollTop > 0) return;
+    e.preventDefault();
   }, { passive: false });
 })();
 
