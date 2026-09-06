@@ -9043,6 +9043,81 @@ document.addEventListener('focusin', (e) => {
   }
   window.cerrarModalConfirmPrestador = cerrarModalConfirmPrestador;
 
+  // ── Alta por Google: preguntarle qué viene a hacer ──────────────────
+  //
+  // El registro por email tiene el selector "🔍 Servicios / 🔧 Trabajar" y lo
+  // manda como metadata del signUp. Google no pasa por ahí: el trigger de la
+  // base hace coalesce(raw_user_meta_data->>'tipo', 'cliente'), y Google jamás
+  // manda `tipo`, así que TODO el que entra con Google queda vecino en
+  // silencio.
+  //
+  // No queda encerrado —el rol de prestador lo habilita prestador_id, no
+  // `tipo`, así que puede activarlo después desde Mi Perfil— pero nunca se
+  // entera de que la opción existe. Un plomero que entra con Google ve una app
+  // para buscar plomeros.
+  async function quizasPreguntarRolOAuth() {
+    if (!usuarioActual || usuarioActual.prestador_id) return;
+    if (localStorage.getItem('pronet_rol_preguntado') === '1') return;
+    if (!window._sb) return;
+    // Con qué entró. Los de 'email' ya eligieron en el formulario de registro.
+    const { data } = await window._sb.auth.getUser().catch(() => ({ data: {} }));
+    const prov = data?.user?.app_metadata?.provider;
+    if (!prov || prov === 'email') return;
+    // Sólo en el alta. Preguntárselo en cada login a alguien que ya decidió
+    // sería una molestia, y quien quiera cambiar de idea lo tiene en Mi Perfil.
+    const creado = usuarioActual.creado ? new Date(usuarioActual.creado).getTime() : 0;
+    if (!creado || (Date.now() - creado) > 24 * 3600 * 1000) return;
+    abrirModalRolOAuth();
+  }
+
+  function abrirModalRolOAuth() {
+    let m = document.getElementById('modal-rol-oauth');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'modal-rol-oauth';
+      m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;align-items:flex-end;justify-content:center';
+      m.innerHTML =
+        '<div style="background:white;border-radius:20px 20px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;box-shadow:0 -4px 24px rgba(0,0,0,.15)">' +
+          '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px"></div>' +
+          '<div style="font-family:\'Sora\',sans-serif;font-size:18px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:6px">¿Qué te trae a PRONET?</div>' +
+          '<div style="font-size:13px;color:var(--ink3);line-height:1.6;text-align:center;margin-bottom:18px">Podés cambiarlo después desde Mi Perfil.</div>' +
+          '<button onclick="elegirRolOAuth(\'vecino\')" style="width:100%;padding:16px;background:var(--blue);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;margin-bottom:10px;text-align:left">' +
+            '🔍 Busco servicios' +
+            '<div style="font-size:12px;font-weight:500;opacity:.85;margin-top:3px">Publicar pedidos y contactar prestadores</div>' +
+          '</button>' +
+          '<button onclick="elegirRolOAuth(\'prestador\')" style="width:100%;padding:16px;background:var(--surface);color:var(--ink);border:1.5px solid var(--border);border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;text-align:left">' +
+            '🔧 Quiero trabajar' +
+            '<div style="font-size:12px;font-weight:500;color:var(--ink3);margin-top:3px">Ofrecer mis servicios y recibir pedidos</div>' +
+          '</button>' +
+        '</div>';
+      document.body.appendChild(m);
+    }
+    m.style.display = 'flex';
+  }
+
+  async function elegirRolOAuth(rol) {
+    // Se marca ANTES de la parte que puede fallar: si la activación del perfil
+    // de prestador se cae, no queremos que el modal reaparezca en cada arranque
+    // preguntando algo que la persona ya contestó.
+    localStorage.setItem('pronet_rol_preguntado', '1');
+    const m = document.getElementById('modal-rol-oauth');
+    if (m) m.style.display = 'none';
+    if (rol !== 'prestador') return;
+    // Mismo camino que "Quiero ofrecer mis servicios": NO se toca `tipo`. El
+    // rol lo habilita prestador_id, y dejar tipo='cliente' es lo que le
+    // conserva la vista de vecino y el toggle entre roles.
+    const res = await PronetDB.asegurarFichaPrestador().catch(() => ({ ok: false }));
+    if (!res.ok) {
+      showToast && showToast('No se pudo activar el perfil de prestador. Podés hacerlo desde Mi Perfil.', 6000);
+      return;
+    }
+    usuarioActual = await PronetDB.usuarioActual().catch(() => usuarioActual);
+    reflejarUsuario();
+    showToast && showToast('✅ Perfil de prestador activado. Completá tus datos para recibir pedidos.', 6000);
+    setTimeout(() => goTo('s-edit-perfil'), 400);
+  }
+  window.elegirRolOAuth = elegirRolOAuth;
+
   async function confirmarActivarPrestador() {
     cerrarModalConfirmPrestador();
     if (!window._sb) { showToast('Sin conexión'); return; }
@@ -17735,6 +17810,7 @@ document.addEventListener('focusin', (e) => {
         reflejarUsuario();
         iniciarRealtime();
         updateBellCount();
+        quizasPreguntarRolOAuth();
         cargarSliderRangosDesdeDB();
         PronetDB.obtenerSuscripcion().then(s => {
           planActual       = s.plan              || 'base';

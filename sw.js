@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v373'; // v373: ocultar el boton de Apple, que sacaba al usuario a una pagina JSON de error
+const CACHE_VERSION = 'pronet-v374'; // v374: al entrar por Google se pregunta si busca servicios o viene a trabajar
 
 const SHELL = [
   './',
