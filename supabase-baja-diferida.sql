@@ -183,7 +183,20 @@ begin
     end if;
 
     delete from suscripciones where usuario_id = v_uid;
-    delete from auth.users    where id = v_uid;  -- cascadea perfiles y el resto
+
+    -- Los pedidos van explícitamente, ANTES del delete del usuario.
+    --
+    -- pedidos.usuario_id es ON DELETE SET NULL, así que borrar la cuenta no
+    -- se los lleva: los deja publicados y sin autor. Un pedido sin autor no
+    -- lo puede contestar nadie — no hay a quién mandarle la propuesta.
+    --
+    -- Y encima quedaban invisibles por accidente, no por decisión: el feed
+    -- filtra con `usuario_id <> yo`, y en SQL eso da NULL (no false) cuando
+    -- la columna es NULL, así que la fila no pasa el filtro. Basura que
+    -- nadie ve y nadie puede limpiar desde la app.
+    delete from pedidos where usuario_id = v_uid;
+
+    delete from auth.users where id = v_uid;  -- cascadea perfiles y el resto
     v_n := v_n + 1;
   end loop;
   return v_n;

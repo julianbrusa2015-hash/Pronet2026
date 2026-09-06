@@ -146,6 +146,13 @@ const PronetDB = (() => {
         .order('creado', { ascending: false })
         .limit(limite);
       if (zonas?.length)   q = q.in('zona', zonas);
+      // Un pedido sin autor no lo puede contestar nadie: no hay a quién
+      // mandarle la propuesta. Se excluye explícitamente porque hasta ahora
+      // quedaba afuera por accidente: `usuario_id <> yo` da NULL —no false—
+      // cuando la columna es NULL, y NULL no pasa el filtro. Depender de eso
+      // significa que el día que el filtro no corra (sin excluirUsuario), el
+      // pedido huérfano aparece en el feed.
+      q = q.not('usuario_id', 'is', null);
       if (excluirUsuario)  q = q.neq('usuario_id', excluirUsuario);
       // Los pedidos dirigidos sólo los ve su destinatario. Sin este filtro,
       // una recontratación aparecería en el feed de todos y el vecino

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v397'; // v397: un prestador puro podia quedar encerrado en modo vecino
+const CACHE_VERSION = 'pronet-v398'; // v398: pedidos sin autor quedaban invisibles por accidente
 
 const SHELL = [
   './',
