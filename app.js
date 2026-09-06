@@ -663,8 +663,7 @@ document.addEventListener('focusin', (e) => {
         : `<div class="rank-num" style="background:var(--surface);color:var(--ink3);font-size:13px;font-weight:700">${i+1}</div>`;
       const stars = (p.resenas || 0) > 0 ? estrellasHTML(p.rating, '10px') : '';
       const badge = badgePlanPrestador(p.plan)
-        || (p.premium ? '<span style="font-size:10px;color:#B86A00;font-weight:700">⭐ Premium</span>'
-        : (p.verificado ? '<span style="font-size:10px;color:#047857;font-weight:700">✓ Verif.</span>' : ''));
+        || (p.verificado ? '<span style="font-size:10px;color:#047857;font-weight:700">✓ Verif.</span>' : '');
       item.innerHTML = `
         ${numHTML}
         <div class="rank-av" style="background:${escHTML(p.color_bg||'#EEF2FF')};color:${escHTML(p.color_text||'#2B5BFF')}">${avatarInner(p)}</div>
@@ -942,7 +941,7 @@ document.addEventListener('focusin', (e) => {
         pasos: [
           { titulo: 'Buscá por nombre o rubro', desc: 'Desde Buscar escribís lo que necesitás — "electricista", "niñera", un nombre — y ves a los prestadores de tu zona.',
             mock: guiaMock(guiaCampo('🔍 Buscar por nombre o rubro...', true)) },
-          { titulo: 'Filtrá para achicar la lista', desc: 'Sólo Premium, mejor puntuados, más cerca, o que atiendan urgencias — los filtros se combinan y la lista se actualiza al toque.',
+          { titulo: 'Filtrá para achicar la lista', desc: 'Mejor puntuados, más cerca, o que atiendan urgencias — los filtros se combinan y la lista se actualiza al toque.',
             mock: guiaMock(guiaChip('Todos', false, false) + guiaChip('★ +4.5', true, true) + guiaChip('📍 <5 km', false, false) + guiaChip('⚡ Urgencias', false, false)) },
           { titulo: 'Comparás en la lista', desc: 'Cada tarjeta muestra rating, zona y precio referencial de un vistazo, ordenados por ranking zonal — no hace falta entrar a cada perfil para comparar.',
             mock: guiaMock(
@@ -1428,11 +1427,10 @@ document.addEventListener('focusin', (e) => {
     if (precioLbl) precioLbl.textContent = '/ ' + (p.precio_unidad || 'visita');
     set('prof-desc', p.descripcion || 'Sin descripción disponible.');
 
-    // Tags dinámicos: premium + especialidades guardadas + cobertura
+    // Tags dinámicos: especialidades guardadas + cobertura
     const tagsEl = document.getElementById('prof-tags');
     if (tagsEl) {
       const tags = [];
-      if (p.premium) tags.push('⭐ Premium');
       (p.especialidades || []).slice(0, PRONET_CONFIG.ESPECIALIDADES_CARD).forEach(e => tags.push(escHTML(e)));
       tags.push('📍 ' + escHTML(p.zona || 'Escobar'));
       tagsEl.innerHTML = tags.map(t => '<div class="prof-tag">' + t + '</div>').join('')
@@ -1596,9 +1594,7 @@ document.addEventListener('focusin', (e) => {
 
     const badgeVerif = p.verificado
       ? `<svg class="verified-badge" viewBox="0 0 18 20" fill="none"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
-    // El badge de plan reemplaza al de "Premium" (campo legacy); si el
-    // prestador no tiene un plan con badge, cae al premium viejo.
-    const badgePrem = badgePlanPrestador(p.plan) || (p.premium ? '<span class="badge b-prem">⭐ Premium</span>' : '');
+    const badgePrem = badgePlanPrestador(p.plan);
     const badgeSusp = p.suspendido ? '<div style="background:#FEE2E2;color:#BE123C;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;margin:6px 0">🚫 Cuenta suspendida</div>' : '';
     // Sin reseñas no se dibujan estrellas. `rating` arranca en 5.0 por
     // defecto, así que la versión anterior mostraba ★★★★★ 5.0 (0) a alguien
@@ -1817,7 +1813,7 @@ document.addEventListener('focusin', (e) => {
     const _boostPro    = window.PRONET_CONFIG?.BOOST_PRO     || 1.4;
     const _boostDePlan = (p) => {
       const des = p.plan ? getPlanConfig(p.plan).desempate : false;
-      if (des || p.premium)  return _boostPro;
+      if (des) return _boostPro;
       return 1.0;
     };
     prestadores = prestadores
@@ -2920,7 +2916,6 @@ document.addEventListener('focusin', (e) => {
       card.className = 'prop-card' + (i === 0 ? ' top1' : i === 1 ? ' top2' : ' top3');
       card.style.cssText = 'background:white;border-radius:14px;padding:14px;margin-bottom:10px;border:1.5px solid ' + (i === 0 ? 'var(--gold)' : 'var(--border)');
       const badgeVerif = p.verificado ? ' <svg class="verified-badge" viewBox="0 0 18 20" fill="none"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
-      const badgePrem = p.premium ? ' · ⭐ Premium' : '';
       card.innerHTML = `
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
           <span style="font-size:16px">${medallas[i]}</span>
@@ -3011,7 +3006,6 @@ document.addEventListener('focusin', (e) => {
     const filtros = {};
     const hayTexto = texto && texto.length > 1;
     if (hayTexto) filtros.busqueda = texto;
-    if (filtro === 'premium') filtros.premium = true;
     // Con texto libre → búsqueda en toda la red (sin filtro de zona)
     // Sin texto → filtrar por zona del usuario
     if (!hayTexto && zonaActual) filtros.zona = zonaParaFiltro();
@@ -4723,8 +4717,6 @@ document.addEventListener('focusin', (e) => {
     if (zonaActual) filtros.zona = zonaParaFiltro();
     const chipRubro = document.querySelector('.map-chip[data-filtro="rubro"].on');
     if (chipRubro) filtros.rubro = chipRubro.dataset.valor;
-    const chipPrem = document.getElementById('mchip-prem');
-    if (chipPrem && chipPrem.classList.contains('on')) filtros.premium = true;
     const prestadores = await PronetDB.listarPrestadores(filtros);
     wrap.innerHTML = '';
     const count = document.getElementById('sheet-count');
@@ -4742,7 +4734,7 @@ document.addEventListener('focusin', (e) => {
       card.style.cursor = 'pointer';
       card.addEventListener('click', () => { prestadorActual = p; openChat(p.id || 'x'); });
       const badgeVerif = p.verificado ? ' <svg class="verified-badge" viewBox="0 0 18 20" fill="none"><path d="M9 1L2 4v6c0 4.4 3 8.5 7 9.5C13 18.5 16 14.4 16 10V4L9 1z" fill="#39FF14"/><path d="M5.5 10l2.5 2.5 4.5-4.5" stroke="#0D0F1A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
-      const badgePrem = p.premium ? ' · ⭐ Premium' : (p.verificado ? ' · ✓ Verif.' : '');
+      const badgePrem = p.verificado ? ' · ✓ Verif.' : '';
       let distTxt;
       if (userLat && p.lat && p.lng) {
         distTxt = formatDistancia(calcDistanciaKm(userLat, userLng, p.lat, p.lng));
@@ -8505,7 +8497,7 @@ document.addEventListener('focusin', (e) => {
   window.pmPublicar = pmPublicar;
 
   function getLabelFiltro(f) {
-    const labels = { todos:'ordenados por ranking zonal', premium:'solo Premium', top:'calificación +4.5', cercano:'menos de 5 km', urgencias:'con urgencias 24h', economico:'menor precio primero' };
+    const labels = { todos:'ordenados por ranking zonal', top:'calificación +4.5', cercano:'menos de 5 km', urgencias:'con urgencias 24h', economico:'menor precio primero' };
     return labels[f] || 'ranking zonal';
   }
 

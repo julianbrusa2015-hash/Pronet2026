@@ -3291,7 +3291,7 @@ const PronetDB = (() => {
       return true;
     },
 
-    /** Lista prestadores con filtros opcionales: {rubro, zona, premium, busqueda} */
+    /** Lista prestadores con filtros opcionales: {rubro, zona, busqueda} */
     /** Busca prestadores vía RPC `buscar_prestadores`.
      *
      *  Antes se armaba con `.or()` concatenando el texto del usuario, y eso
@@ -3306,7 +3306,10 @@ const PronetDB = (() => {
         p_texto:   filtros.busqueda || null,
         p_rubro:   filtros.rubro    || null,
         p_zona:    filtros.zona     || null,
-        p_premium: filtros.premium ? true : null,
+        // p_premium queda fijo en null: el campo `premium` se retiró del
+        // cliente, pero la FIRMA del RPC no se toca — cambiarla crearía una
+        // sobrecarga y PostgREST no podría elegir cuál llamar (PGRST203).
+        p_premium: null,
         p_limite:  filtros.limite   || 100,
       });
       if (error) { console.warn('[PronetDB] listarPrestadores', error.message); return []; }
