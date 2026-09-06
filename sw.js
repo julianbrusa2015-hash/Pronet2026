@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v400'; // v400: el chip Nuevos decia 'sin resultados' viniendo del indicador
+const CACHE_VERSION = 'pronet-v401'; // v401: singular en los accesos a pedidos disponibles
 
 const SHELL = [
   './',

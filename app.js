@@ -2376,7 +2376,7 @@ document.addEventListener('focusin', (e) => {
           <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 8px">
             <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Oportunidades para vos</span>
             <span role="button" tabindex="0" onclick="goTo('s-pedidos')"
-                  style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Ver los ${totalLibres} →</span>
+                  style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">${totalLibres === 1 ? 'Ver el pedido' : 'Ver los ' + totalLibres} →</span>
           </div>
           ${avisoSinRubro}
           <div id="inicio-recientes"></div>` : `
@@ -2384,9 +2384,11 @@ document.addEventListener('focusin', (e) => {
                style="background:var(--blue-s);border:1px solid rgba(43,91,255,.15);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
             <span style="font-size:16px">💼</span>
             <span style="flex:1;font-size:13.5px;font-weight:700;color:var(--blue)">${
-              totalLibres
-                ? 'Ver los ' + totalLibres + ' pedidos disponibles'
-                : 'Ver pedidos disponibles'}</span>
+              totalLibres === 1
+                ? 'Ver el pedido disponible'
+                : totalLibres
+                  ? 'Ver los ' + totalLibres + ' pedidos disponibles'
+                  : 'Ver pedidos disponibles'}</span>
             <span style="color:var(--blue);font-size:15px">›</span>
           </div>`}
       </div>`;
