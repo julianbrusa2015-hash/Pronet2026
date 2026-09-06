@@ -10156,6 +10156,77 @@ document.addEventListener('focusin', (e) => {
 
   const soloFecha = (iso) => iso ? iso.slice(0, 10) : '';
 
+  /** Días que le quedan a un banner al aire. null si no tiene fecha de fin. */
+  function diasParaVencer(b) {
+    if (!b.hasta) return null;
+    return Math.ceil((new Date(b.hasta).getTime() - Date.now()) / 86400000);
+  }
+
+  // Orden de la lista: primero lo que está AL AIRE y, dentro de eso, lo que
+  // vence antes.
+  //
+  // Antes venía ordenada por `orden`, que es la posición en el carrusel — un
+  // criterio de presentación, no de control. Con vencidos, apagados y al aire
+  // mezclados, para saber qué se cae la semana que viene había que abrir uno
+  // por uno. Un ABM sirve para editar; para vigilar hace falta que lo urgente
+  // esté arriba.
+  const PESO_ESTADO = { 'Al aire': 0, 'Programado': 1, 'Vencido': 2, 'Apagado': 3 };
+  function ordenarBannersParaControl(filas) {
+    return [...filas].sort((a, b) => {
+      const ea = estadoBanner(a).txt, eb = estadoBanner(b).txt;
+      if (PESO_ESTADO[ea] !== PESO_ESTADO[eb]) return PESO_ESTADO[ea] - PESO_ESTADO[eb];
+      if (ea === 'Al aire') {
+        // Sin `hasta` no vence nunca: va al final del grupo, no al principio.
+        const ha = a.hasta ? new Date(a.hasta).getTime() : Infinity;
+        const hb = b.hasta ? new Date(b.hasta).getTime() : Infinity;
+        if (ha !== hb) return ha - hb;
+      }
+      return (Number(a.orden) || 0) - (Number(b.orden) || 0);
+    });
+  }
+
+  /** Cabecera de control: cuántos espacios ocupados por carrusel y qué se cae
+   *  pronto. Es lo que hay que saber ANTES de entrar a editar nada. */
+  function resumenBannersHTML(filas) {
+    const max = Number(configApp.banners_activos_max) || 6;
+    const alAire = filas.filter(b => estadoBanner(b).txt === 'Al aire');
+    const porUbic = {
+      portada: alAire.filter(b => b.ubicacion !== 'vecinos').length,
+      vecinos: alAire.filter(b => b.ubicacion === 'vecinos').length,
+    };
+    // "Pronto" = 7 días. Es una semana de margen para avisarle al anunciante y
+    // cobrarle la renovación antes de que el espacio quede vacío.
+    const porVencer = alAire
+      .map(b => ({ b, d: diasParaVencer(b) }))
+      .filter(x => x.d !== null && x.d <= 7)
+      .sort((x, y) => x.d - y.d);
+
+    const caja = (titulo, usados) => {
+      const lleno = usados >= max;
+      return '<div style="flex:1;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:10px 12px">' +
+        '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;margin-bottom:3px">' + titulo + '</div>' +
+        '<div style="font-size:19px;font-weight:800;color:' + (lleno ? 'var(--blue)' : 'var(--ink)') + '">' +
+          usados + '<span style="font-size:12px;font-weight:600;color:var(--ink3)"> / ' + max + '</span></div>' +
+        '<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">' +
+          (lleno ? 'sin espacio libre' : (max - usados) + ' libre' + (max - usados === 1 ? '' : 's')) + '</div>' +
+      '</div>';
+    };
+
+    let html = '<div style="display:flex;gap:9px;margin-bottom:11px">' +
+      caja('🏠 Portada', porUbic.portada) + caja('🏘️ Entre Vecinos', porUbic.vecinos) + '</div>';
+
+    if (porVencer.length) {
+      html += '<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:12px;padding:11px 13px;margin-bottom:11px">' +
+        '<div style="font-size:12px;font-weight:800;color:#92400E;margin-bottom:5px">⏳ Vencen esta semana</div>' +
+        porVencer.map(x =>
+          '<div style="font-size:11.5px;color:#92400E;line-height:1.7">• ' + escHTML(x.b.nombre) + ' — ' +
+          (x.d <= 0 ? '<strong>hoy</strong>' : 'en <strong>' + x.d + ' día' + (x.d === 1 ? '' : 's') + '</strong>') +
+          '</div>').join('') +
+      '</div>';
+    }
+    return html;
+  }
+
   async function renderParamBanners() {
     const wrap = document.getElementById('param-banners-lista');
     if (!wrap) return;
@@ -10168,8 +10239,9 @@ document.addEventListener('focusin', (e) => {
       return;
     }
 
-    wrap.innerHTML = filas.map(b => {
+    wrap.innerHTML = resumenBannersHTML(filas) + ordenarBannersParaControl(filas).map(b => {
       const est = estadoBanner(b);
+      const dias = est.txt === 'Al aire' ? diasParaVencer(b) : null;
       return '<div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:11px">' +
         '<img src="' + escHTML(b.imagen_url) + '" alt="" style="display:block;width:100%;aspect-ratio:16/5;object-fit:cover;background:var(--surface)">' +
         '<div style="padding:12px 13px">' +
@@ -10182,7 +10254,8 @@ document.addEventListener('focusin', (e) => {
                 ? ' <span style="font-size:10px;font-weight:700;color:#C2410C;background:#FFEDD5;border-radius:8px;padding:2px 6px;vertical-align:middle">🏘️ Entre Vecinos</span>'
                 : ' <span style="font-size:10px;font-weight:700;color:var(--ink3);background:var(--surface);border-radius:8px;padding:2px 6px;vertical-align:middle">🏠 Portada</span>') +
             '</div>' +
-            '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:' + est.bg + ';color:' + est.color + '">' + est.txt + '</span>' +
+            '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:' + est.bg + ';color:' + est.color + '">' + est.txt +
+              (dias === null ? '' : ' · ' + (dias <= 0 ? 'vence hoy' : dias + 'd')) + '</span>' +
           '</div>' +
           '<div style="font-size:11px;color:var(--ink3);margin-bottom:8px">' +
             '👆 ' + (b.clicks || 0) + ' click' + (b.clicks === 1 ? '' : 's') +
@@ -11203,6 +11276,17 @@ document.addEventListener('focusin', (e) => {
     configApp:        () => ({ ...configApp }),
     configCargada:    () => configCargada,
     sesionLista:      () => !!usuarioActual,
+  };
+
+  // Superficie de test del tablero de banners. El panel esta gateado a admin,
+  // asi que la unica forma de verificar el orden y el resumen sin usar una
+  // cuenta real de administrador es ejercitar las funciones puras con filas
+  // sinteticas. Mismo criterio que _planesAPI.
+  window._bannersAPI = {
+    estadoBanner,
+    diasParaVencer,
+    ordenarBannersParaControl,
+    resumenBannersHTML,
   };
 
   // Superficie de test de ProMarket: funciones de cupo y formato que los
