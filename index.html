@@ -1192,6 +1192,10 @@
         <div class="my-av" id="perfil-avatar">JL</div>
         <div class="my-name" id="perfil-nombre">Julián López</div>
         <div id="perfil-email" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px"></div>
+        <!-- El teléfono no se mostraba en ningún lado del perfil, sólo dentro
+             del formulario de edición. Es el dato por el que te contactan:
+             tiene que poder verificarse de un vistazo. -->
+        <div id="perfil-telefono" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px"></div>
         <div id="perfil-sub" style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px">Escobar · Prestador</div>
         <div class="my-plan" id="perfil-plan-badge" data-solo-prestador="true" style="display:none"></div>
       </div>
@@ -1352,6 +1356,17 @@
              Archivada bajo Entre Vecinos quedaba escondida para el
              prestador, que puede tener alertas de Servicios y entonces no
              tenía dónde verlas ni cómo borrarlas. -->
+        <!-- Editar perfil sólo se llegaba por el ⚙️ del encabezado, sin
+             etiqueta. Nadie encuentra ahí "cambiar mi nombre o mi teléfono". -->
+        <div class="menu-item" id="menu-editar-perfil" onclick="goTo('s-edit-perfil')">
+          <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">✏️</div>
+          <div class="m-txt">
+            <div class="m-title">Editar mi perfil</div>
+            <div class="m-sub">Nombre, teléfono, foto y dónde vivís</div>
+          </div>
+          <div class="m-chev">›</div>
+        </div>
+
         <div class="menu-item" id="menu-mis-alertas-mkt" onclick="goTo('s-mis-alertas')">
           <div class="m-icon" style="background:#EEF2FF;color:var(--blue)">🔔</div>
           <div class="m-txt">

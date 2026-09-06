@@ -11749,6 +11749,12 @@ document.addEventListener('focusin', (e) => {
     if (pNom) pNom.textContent = nombre;
     const pEmail = document.getElementById('perfil-email');
     if (pEmail) pEmail.textContent = usuarioActual?.email || '';
+    // Sin teléfono cargado se invita a ponerlo en vez de dejar el hueco:
+    // es obligatorio para publicar, así que enterarse acá ahorra el rebote.
+    const pTel = document.getElementById('perfil-telefono');
+    if (pTel) pTel.textContent = usuarioActual?.telefono
+      ? '📱 ' + usuarioActual.telefono
+      : '📱 Sin teléfono — tocá Editar mi perfil';
     const pSub = document.getElementById('perfil-sub');
     if (pSub) pSub.textContent = zona + ' · ' + tipo;
 

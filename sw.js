@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v390'; // v390: sacar el campo legacy premium, que daba el boost del plan Pro gratis
+const CACHE_VERSION = 'pronet-v391'; // v391: editar perfil se encuentra, y el telefono se ve en Mi Perfil
 
 const SHELL = [
   './',
