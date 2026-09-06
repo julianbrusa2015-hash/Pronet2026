@@ -1191,8 +1191,18 @@ document.addEventListener('focusin', (e) => {
   function formatearTel(input) {
     // Extraer solo dígitos
     let digits = input.value.replace(/\D/g, '');
-    // Quitar prefijo 54 si viene al principio
-    if (digits.startsWith('54')) digits = digits.slice(2);
+    // Quitar el prefijo 54 TODAS las veces que aparezca, no una sola.
+    //
+    // Esta funcion corre en cada tecla y vuelve a escribir '+54' adelante,
+    // asi que el 54 que saca es el suyo. Si ademas la persona escribe el
+    // codigo de pais -que es lo natural cuando el campo dice '+54 9 11...'-
+    // el suyo sobrevive y se lo come el codigo de area: al tipear '54' el
+    // campo quedaba en '+54 54' y de ahi en mas todo corria dos lugares.
+    // Asi se guardo '+54 54 9114-3265', que no es un telefono.
+    //
+    // El while es seguro: el unico codigo de area de 2 digitos en Argentina
+    // es el 11, asi que un numero nacional nunca empieza con 54.
+    while (digits.startsWith('54')) digits = digits.slice(2);
     // Quitar el 9 de celular si viene después del 54
     const esCelular = digits.startsWith('9');
     if (esCelular) digits = digits.slice(1);

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v392'; // v392: el scroll interno de editar perfil se resetea al cambiar de pantalla
+const CACHE_VERSION = 'pronet-v393'; // v393: el formateador de telefono se comia dos digitos si escribias el +54
 
 const SHELL = [
   './',
