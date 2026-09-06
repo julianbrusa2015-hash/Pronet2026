@@ -1638,7 +1638,9 @@ const PronetDB = (() => {
       return count || 0;
     },
 
-    /** Publicaciones que un usuario creó en el mes calendario actual (cupo Plus). */
+
+    /** Publicaciones que un usuario creó en el mes calendario actual (cupo Plus).
+     *  La usa el gate de publicar de los prestadores (4 llamadas en app.js). */
     async contarPublicacionesMercadoMes(usuarioId) {
       if (!remoto || !usuarioId) return 0;
       const inicio = new Date();
@@ -1652,18 +1654,26 @@ const PronetDB = (() => {
       return count || 0;
     },
 
-    /** Publicaciones que un usuario creó en el año calendario actual (cupo gratis). */
-    async contarPublicacionesMercadoAnio(usuarioId) {
-      if (!remoto || !usuarioId) return 0;
-      const inicio = new Date();
-      inicio.setMonth(0, 1);
-      inicio.setHours(0, 0, 0, 0);
-      const { count, error } = await sb.from('publicaciones')
-        .select('id', { count: 'exact', head: true })
-        .eq('autor_id', usuarioId)
-        .gte('creado', inicio.toISOString());
-      if (error) { console.warn('[PronetDB] contarPublicacionesMercadoAnio', error.message); return 0; }
-      return count || 0;
+    /** Cuánto cupo de publicaciones le queda al usuario actual.
+     *
+     *  Reemplaza a contarPublicacionesMercadoAnio, que calculaba el cupo acá
+     *  y no la llamaba nadie. (La de Mes SÍ se usa, en el gate de publicar de
+     *  los prestadores: esa queda.)
+     *
+     *  El cálculo se pide al servidor y no se rehace acá porque el límite ya
+     *  vive en el trigger chequear_cupo_publicacion_mercado, y este proyecto
+     *  ya tuvo el problema de tener cada límite escrito dos veces. Un
+     *  contador que no coincide con la regla que rechaza es peor que
+     *  ninguno: promete un lugar que después no existe.
+     *
+     *  Devuelve { ilimitado } o { plan, periodo, limite, usadas, restantes,
+     *  creditos }. Ante error devuelve null y la UI no muestra nada — mejor
+     *  sin contador que con uno inventado. */
+    async cupoPublicacionesMercado() {
+      if (!remoto) return null;
+      const { data, error } = await sb.rpc('cupo_publicaciones_mercado');
+      if (error) { console.warn('[PronetDB] cupoPublicacionesMercado', error.message); return null; }
+      return (data && data.ok) ? data : null;
     },
 
     /** Crea o reutiliza una alerta de búsqueda para el usuario actual. */

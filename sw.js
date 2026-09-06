@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v406'; // v406: la foto de Mercado se sube redimensionada
+const CACHE_VERSION = 'pronet-v407'; // v407: cupo de publicaciones visible y boton Administrar
 
 const SHELL = [
   './',

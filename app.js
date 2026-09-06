@@ -6081,8 +6081,13 @@ document.addEventListener('focusin', (e) => {
   function accionPrincipalHTML(p) {
     const esMia = usuarioActual && p.autor_id === usuarioActual.id;
     if (esMia) {
+      // Dice "Administrar" y no "Tu publicación": el botón NO edita acá, es
+      // un atajo a Mis publicaciones, que es la única pantalla donde se puede
+      // desactivar, marcar sin stock o destacar. Con la etiqueta vieja el
+      // vecino lo tocaba esperando editar, veía otra pantalla y concluía que
+      // desactivar no existía.
       return '<button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px;background:var(--surface);color:var(--ink2);border:1px solid var(--border)"' +
-             ' onclick="goTo(\'s-mis-publicaciones\')">Tu publicación</button>';
+             ' onclick="goTo(\'s-mis-publicaciones\')">Administrar →</button>';
     }
     return '<button class="btn-p" style="margin:0;padding:8px 16px;font-size:13px" onclick="mktConsultar(\'' + escHTML(p.id) + '\')">💬 Consultar</button>';
   }
@@ -7784,12 +7789,51 @@ document.addEventListener('focusin', (e) => {
         } catch (e) { /* sin umbral confirmado no se ofrece: mejor de menos */ }
       }));
     }
-    lista.innerHTML = pubs.map(p => misPubsCardHTML(p, catsConCompetencia)).join('');
+    lista.innerHTML = await cupoPublicacionesHTML() + pubs.map(p => misPubsCardHTML(p, catsConCompetencia)).join('');
     // Actualizar subtítulo del menu item
     const activas = pubs.filter(p => p.activa).length;
     const subEl = document.getElementById('mp-mis-pubs-sub');
     if (subEl) subEl.textContent = activas + ' ' + (activas === 1 ? 'publicación' : 'publicaciones') + ' activa' + (activas !== 1 ? 's' : '');
     renderTendenciasMercado();
+  }
+
+  /** La franja de cupo que va arriba de Mis publicaciones.
+   *
+   *  El vecino no tenía forma de saber cuántas le quedaban: se enteraba del
+   *  límite cuando le rebotaba la siguiente con "sin_creditos_publicacion".
+   *
+   *  Dice explícitamente que desactivar no devuelve el cupo. El trigger
+   *  cuenta las CREADAS en el período, sin mirar `activa`, y desactivar una
+   *  para hacer lugar es exactamente lo que uno intenta primero. Que la
+   *  regla sea defendible no la hace adivinable. */
+  async function cupoPublicacionesHTML() {
+    const c = await PronetDB.cupoPublicacionesMercado().catch(() => null);
+    if (!c || c.ilimitado) return '';   // sin dato o sin tope: no se muestra nada
+
+    const periodo = c.periodo === 'mes' ? 'este mes' : 'este año';
+    const sinCupo = c.restantes === 0;
+    const conCreditos = sinCupo && c.creditos > 0;
+
+    const detalle = conCreditos
+      ? 'Te queda' + (c.creditos === 1 ? '' : 'n') + ' ' + c.creditos + ' publicación' +
+        (c.creditos === 1 ? '' : 'es') + ' extra comprada' + (c.creditos === 1 ? '' : 's') + '.'
+      : sinCupo
+        ? 'Para publicar otra, comprá una publicación extra.'
+        : 'Desactivar una no libera lugar: cuenta cuántas creaste, no cuántas están activas.';
+
+    const color = sinCupo ? 'var(--warn, #9A5B00)' : 'var(--ink3)';
+    const fondo = sinCupo ? '#FFF3DC' : 'var(--surface)';
+    const borde = sinCupo ? '#F0D9A8' : 'var(--border)';
+
+    return '<div style="background:' + fondo + ';border:1px solid ' + borde +
+      ';border-radius:12px;padding:11px 14px;margin-bottom:12px">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--ink)">' +
+        escHTML(c.usadas + ' de ' + c.limite) + ' publicaciones usadas ' + periodo +
+      '</div>' +
+      '<div style="font-size:11.5px;color:' + color + ';margin-top:3px;line-height:1.5">' +
+        escHTML(detalle) +
+      '</div>' +
+    '</div>';
   }
 
   // Tendencias de búsqueda sin resultado en la zona del publicador — "se
