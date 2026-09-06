@@ -2157,7 +2157,11 @@ document.addEventListener('focusin', (e) => {
     if (resenasNuevas > 0) items.push({ ic:'⭐', txt: resenasNuevas === 1 ? '1 reseña nueva' : resenasNuevas + ' reseñas nuevas', accion: 'verResenasNuevas()' });
     if (chatsSinLeer > 0) items.push({ ic:'💬', txt: chatsSinLeer === 1 ? '1 conversación sin leer' : chatsSinLeer + ' conversaciones sin leer', accion: "irAChats('no_leidos')" });
     if (paraCerrar > 0) items.push({ ic:'🏁', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "irAChats('terminado_por_vecino')" });
-    if (enConsulta > 0) items.push({ ic:'💭', txt: enConsulta + ' vecino' + (enConsulta>1?'s':'') + ' consultando', accion: "irAChats('consulta')" });
+    // "consultando" describia un estado, no una tarea: no decia que hay que
+    // hacer para apagarlo. Y como el de al lado es "conversaciones sin leer",
+    // el prestador entra al chat, ve que ese baja y este no, y cree que esta
+    // roto. El texto ahora nombra la accion que lo apaga: contestar.
+    if (enConsulta > 0) items.push({ ic:'💭', txt: enConsulta + (enConsulta>1 ? ' vecinos esperan' : ' vecino espera') + ' tu respuesta', accion: "irAChats('consulta')" });
     // enEspera NO va en "Te esperan": son propuestas ya enviadas donde la
     // pelota esta del lado del VECINO. El prestador ya hizo todo lo que podia.
     // Listarlo junto a cosas que si exigen actuar le decia "tenes 8 pendientes"
