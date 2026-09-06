@@ -874,6 +874,24 @@
     transition:border .15s; touch-action:manipulation;
   }
   .ob-input:focus { border-color:var(--blue); }
+
+  /* No habia ninguna regla ::placeholder en todo el archivo, asi que
+     quedaban en el gris por defecto del navegador (~#757575). Contra el
+     texto real, que es --ink (#0D0F1A), la diferencia existe pero en un
+     telefono no alcanza: un placeholder con formato de dato real -sobre
+     todo un telefono- se lee como un valor ya cargado. Reportado en el
+     alta: "aparece un telefono precargado".
+
+     Va sobre .phone y no sobre .ob-input para cubrir tambien los inputs
+     que no usan esa clase (chat, buscadores, filtros).
+
+     El opacity:1 no sobra: Firefox le baja la opacidad al placeholder por
+     defecto y sin esto el color declarado no es el que se ve. */
+  .phone input::placeholder,
+  .phone textarea::placeholder {
+    color: #A3AAC4;
+    opacity: 1;
+  }
   /* Sólo lectura: tiene que VERSE distinto. Un campo bloqueado con aspecto de
      editable es peor que uno deshabilitado — el usuario toca, no pasa nada, y
      no hay nada que le explique por qué. Pasa justo en el peor momento: cuando

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v394'; // v394: el anti pull-to-refresh trababa el scroll de editar perfil
+const CACHE_VERSION = 'pronet-v395'; // v395: los placeholders parecian datos ya cargados
 
 const SHELL = [
   './',
