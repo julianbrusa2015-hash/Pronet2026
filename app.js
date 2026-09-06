@@ -2283,6 +2283,22 @@ document.addEventListener('focusin', (e) => {
   }
   window.togglePrestoFiltro = togglePrestoFiltro;
 
+  // Vista aparte, no un chip mas de la cadena de filtros: ver lo descartado y
+  // ver lo tomable son dos intenciones distintas.
+  let vistaDescartados = false;
+  function togglePrestoDescartados(el) {
+    vistaDescartados = !vistaDescartados;
+    if (el) el.classList.toggle('on', vistaDescartados);
+    // Los chips de filtro no aplican a esta lista, asi que se apagan visualmente
+    // para no prometer un recorte que no esta pasando.
+    document.querySelectorAll('#presto-chips .chip[data-f]').forEach(c => {
+      c.style.opacity = vistaDescartados ? '.4' : '';
+      c.style.pointerEvents = vistaDescartados ? 'none' : '';
+    });
+    renderPedidosPresto();
+  }
+  window.togglePrestoDescartados = togglePrestoDescartados;
+
   /** Deja los chips reflejando el estado real de `filtrosPresto`.
    *  Hace falta cuando el filtro lo prendió el tablero y no un click. */
   function sincronizarChipsPresto() {
@@ -2328,6 +2344,63 @@ document.addEventListener('focusin', (e) => {
     const meta = document.getElementById('presto-meta');
     if (!wrap) return;
     wrap.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--ink3)">⏳ Cargando pedidos…</div>';
+
+    // Vista de descartados: es una lista aparte, no un filtro más. Por eso
+    // corta acá arriba y no participa de la cadena de chips — mezclar
+    // "pedidos que puedo tomar" con "pedidos que ya dije que no" en la misma
+    // lista filtrada haría que un chip como "Por vencer" devolviera una
+    // ensalada de las dos cosas.
+    if (vistaDescartados) {
+      const descartes = await PronetDB.listarDescartes().catch(() => []);
+      if (meta) {
+        meta.innerHTML = descartes.length
+          ? 'Descartados · <span style="color:var(--blue);font-weight:600">' + descartes.length +
+            ' pedido' + (descartes.length !== 1 ? 's' : '') + '</span>'
+          : 'No descartaste ningún pedido';
+      }
+      if (!descartes.length) {
+        wrap.innerHTML = '<div style="padding:28px 18px;text-align:center;font-size:13px;color:var(--ink3);line-height:1.6">' +
+          'Todavía no descartaste ningún pedido.<br>Los que ocultes van a aparecer acá y los vas a poder recuperar.</div>';
+        return;
+      }
+      // Los pedidos, en una sola consulta por ids. El descarte guarda el id,
+      // no una copia: si el vecino edita el título, acá se ve el actual.
+      const pedidosDesc = await PronetDB.obtenerVarios('pedidos', descartes.map(d => d.pedido_id));
+      const porId = {};
+      pedidosDesc.forEach(p => { porId[p.id] = p; });
+      const ETIQUETA = { zona: '📍 Fuera de mi zona', precio: '💰 Presupuesto bajo', rubro: '🔧 No es lo mío', otro: '🤷 Otro motivo' };
+
+      wrap.innerHTML = '';
+      descartes.forEach(d => {
+        const p = porId[d.pedido_id];
+        // Un pedido borrado deja el descarte huérfano por un rato (la FK lo
+        // limpia en cascada, pero la lista puede leerse en el medio).
+        if (!p) return;
+        const caja = document.createElement('div');
+        caja.style.cssText = 'background:var(--white);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin:0 14px 10px';
+        caja.innerHTML =
+          '<div style="font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:3px">' + escHTML(p.titulo || 'Pedido') + '</div>' +
+          '<div style="font-size:11.5px;color:var(--ink3);margin-bottom:9px">' +
+            escHTML(p.rubro || '') + (p.zona ? ' · ' + escHTML(p.zona) : '') +
+            (d.motivo ? ' · ' + (ETIQUETA[d.motivo] || d.motivo) : '') +
+            (p.estado && p.estado !== 'Publicado' ? ' · <b>' + escHTML(p.estado) + '</b>' : '') +
+          '</div>';
+        const btn = document.createElement('button');
+        btn.textContent = '↩ Devolver a mi feed';
+        btn.style.cssText = 'background:var(--blue-s);color:var(--blue);border:1.5px solid #C7D5FF;border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit';
+        btn.addEventListener('click', async () => {
+          btn.disabled = true; btn.textContent = '⏳';
+          const r = await PronetDB.recuperarPedido(p.id).catch(() => ({ ok: false }));
+          if (!r.ok) { btn.disabled = false; btn.textContent = '↩ Devolver a mi feed'; showToast && showToast('⚠️ No se pudo recuperar'); return; }
+          showToast && showToast('✅ Volvió a tu feed');
+          renderPedidosPresto();
+        });
+        caja.appendChild(btn);
+        wrap.appendChild(caja);
+      });
+      return;
+    }
+
 
     const pid = usuarioActual?.prestador_id || null;
     const ficha = pid ? await PronetDB.obtener('prestadores', pid).catch(() => null) : null;

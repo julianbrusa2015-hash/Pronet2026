@@ -2884,6 +2884,10 @@
           <div class="chip"    data-f="nuevos"      onclick="togglePrestoFiltro(this,'nuevos')">🆕 Nuevos</div>
           <div class="chip"    data-f="urgentes"    onclick="togglePrestoFiltro(this,'urgentes')">🕐 Urgentes</div>
           <div class="chip"    data-f="presupuesto" onclick="togglePrestoFiltro(this,'presupuesto')">💰 Mayor presupuesto</div>
+          <!-- Sin data-f a proposito: no es un filtro de la cadena, es una vista
+               aparte. togglePrestoDescartados apaga los otros chips mientras esta
+               activa, para no prometer un recorte que no esta pasando. -->
+          <div class="chip" id="presto-chip-descartados" onclick="togglePrestoDescartados(this)">🚫 Descartados</div>
         </div>
 
         <div style="padding:12px 14px 6px;font-size:11px;color:var(--ink3)" id="presto-meta">Cargando pedidos…</div>

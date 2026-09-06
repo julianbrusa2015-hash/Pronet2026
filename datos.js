@@ -178,6 +178,17 @@ const PronetDB = (() => {
       return new Set((data || []).map(r => r.pedido_id));
     },
 
+    /** Los descartes con su motivo y su fecha, del mas nuevo al mas viejo.
+     *  listarPedidosDescartados() devuelve solo ids porque el feed no necesita
+     *  mas; esto es para la pantalla que los muestra. */
+    async listarDescartes() {
+      if (!remoto) return [];
+      const { data, error } = await sb.from('pedidos_descartados')
+        .select('pedido_id, motivo, creado').order('creado', { ascending: false });
+      if (error) { console.warn('[PronetDB] listarDescartes', error.message); return []; }
+      return data || [];
+    },
+
     /** Oculta un pedido del feed de este prestador. `motivo` es opcional
      *  ('zona' | 'precio' | 'rubro' | 'otro'); la base rechaza cualquier otro.
      *
