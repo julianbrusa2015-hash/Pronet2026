@@ -8,22 +8,43 @@
 // existente y hacer que se re-envíen notificaciones a todos los suscriptores
 // de alertas que matcheen, tantas veces como quisiera (spam de push).
 // Por eso se exige que quien llama sea el autor real de la publicación.
+//
+// ── CORS ───────────────────────────────────────────────────────────────
+// El preflight devolvía sólo Access-Control-Allow-Origin. Falta la mitad que
+// importa: supabase-js manda authorization, apikey, x-client-info y
+// content-type, y sin un Access-Control-Allow-Headers que los nombre, el
+// navegador corta el pedido ANTES de mandarlo.
+//
+// O sea que esta función nunca funcionó desde el navegador. No se notó porque
+// datos.js la invoca con `.catch(() => {})`: el error se tragaba en silencio y
+// la publicación se creaba igual. Las alertas simplemente no avisaban nunca.
+//
+// Los headers van también en las respuestas reales, no sólo en el OPTIONS: sin
+// ellos el navegador bloquea la respuesta aunque el preflight haya pasado.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const responder = (texto: string, status: number) =>
+  new Response(texto, { status, headers: CORS });
+
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return new Response('unauthorized', { status: 401 });
+  if (!authHeader) return responder('unauthorized', 401);
 
   let publicacion_id: string;
   try {
     const body = await req.json();
     publicacion_id = body.publicacion_id;
-    if (!publicacion_id) return new Response('missing publicacion_id', { status: 400 });
+    if (!publicacion_id) return responder('missing publicacion_id', 400);
   } catch {
-    return new Response('bad request', { status: 400 });
+    return responder('bad request', 400);
   }
 
   const authClient = createClient(
@@ -32,7 +53,7 @@ Deno.serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } }
   );
   const { data: { user }, error: userError } = await authClient.auth.getUser();
-  if (userError || !user) return new Response('unauthorized', { status: 401 });
+  if (userError || !user) return responder('unauthorized', 401);
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -48,11 +69,11 @@ Deno.serve(async (req) => {
 
   if (pubErr || !pub) {
     console.error('[match-alertas] publicacion no encontrada', pubErr?.message);
-    return new Response('not found', { status: 404 });
+    return responder('not found', 404);
   }
 
   if (pub.autor_id !== user.id) {
-    return new Response('forbidden', { status: 403 });
+    return responder('forbidden', 403);
   }
 
   const texto = ((pub.titulo || '') + ' ' + (pub.descripcion || '')).toLowerCase();
@@ -64,16 +85,16 @@ Deno.serve(async (req) => {
     .eq('activa', true)
     .neq('usuario_id', pub.autor_id);
 
-  if (!alertas?.length) return new Response('ok — sin alertas', { status: 200 });
+  if (!alertas?.length) return responder('ok — sin alertas', 200);
 
   const matches = alertas.filter(a => texto.includes(a.termino.toLowerCase()));
-  if (!matches.length) return new Response('ok — sin coincidencias', { status: 200 });
+  if (!matches.length) return responder('ok — sin coincidencias', 200);
 
   // Insertar una notificación por cada suscriptor que coincide
   const notis = matches.map(a => ({
     usuario_id: a.usuario_id,
     tipo: 'alerta_busqueda',
-    titulo: `Nuevo en ProMarket: ${pub.titulo}`,
+    titulo: `Nuevo en Entre Vecinos: ${pub.titulo}`,
     cuerpo: `Hay una publicación nueva que coincide con tu búsqueda "${a.termino}".`,
     url: null,
   }));
@@ -81,9 +102,9 @@ Deno.serve(async (req) => {
   const { error: notiErr } = await supabase.from('notificaciones').insert(notis);
   if (notiErr) {
     console.error('[match-alertas] error insertando notificaciones', notiErr.message);
-    return new Response('error', { status: 500 });
+    return responder('error', 500);
   }
 
   console.log(`[match-alertas] ${matches.length} notificaciones enviadas para "${pub.titulo}"`);
-  return new Response('ok', { status: 200 });
+  return responder(`ok — ${matches.length} notificaciones`, 200);
 });
