@@ -2252,6 +2252,36 @@ const PronetDB = (() => {
       } catch (e) { return { ok: false, error: e.message }; }
     },
 
+    /** Pide la baja de la cuenta. NO borra: marca la cuenta y arranca el
+     *  plazo de 30 días. El RPC apaga la ficha de prestador y las
+     *  publicaciones en la misma transacción, y anota cuáles estaban
+     *  encendidas para poder restaurar exacto si se cancela. */
+    async pedirBajaCuenta() {
+      if (!remoto) return { ok: false, error: 'No disponible en modo local' };
+      const { data, error } = await sb.rpc('pedir_baja_cuenta');
+      if (error) { console.warn('[PronetDB] pedirBajaCuenta', error.message); return { ok: false, error: error.message }; }
+      return data || { ok: false };
+    },
+
+    /** Cancela una baja pendiente y vuelve a encender lo que se había
+     *  apagado. Se llama sola al entrar: volver a la app es la señal de
+     *  que la persona se arrepintió, no hace falta pedirle nada. */
+    async cancelarBajaCuenta() {
+      if (!remoto) return { ok: false };
+      const { data, error } = await sb.rpc('cancelar_baja_cuenta');
+      if (error) { console.warn('[PronetDB] cancelarBajaCuenta', error.message); return { ok: false, error: error.message }; }
+      return data || { ok: false };
+    },
+
+    /** Devuelve la baja pendiente del usuario actual, o null. */
+    async bajaPendiente() {
+      if (!remoto) return null;
+      const { data, error } = await sb.from('bajas_cuenta')
+        .select('pedida_en').maybeSingle();
+      if (error) { console.warn('[PronetDB] bajaPendiente', error.message); return null; }
+      return data || null;
+    },
+
     /** Propuestas que el prestador creó en el mes calendario actual.
      *  Ante error devuelve 0 (falla abierta): un límite de plan no debe
      *  bloquear al usuario por una caída transitoria de red. */

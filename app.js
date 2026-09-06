@@ -12321,6 +12321,19 @@ document.addEventListener('focusin', (e) => {
   /** Entra a la app después de login/registro exitoso */
   function entrarApp() {
     document.getElementById('login-screen').classList.add('hidden');
+    // Si había una baja pendiente, entrar ES el arrepentimiento. No se le
+    // pregunta nada: se reactiva y se avisa. Va acá y no en loginWith
+    // porque entrarApp es el único punto por el que pasan las tres vías
+    // (email, OAuth y sesión restaurada).
+    PronetDB.bajaPendiente().then(async (baja) => {
+      if (!baja) return;
+      const r = await PronetDB.cancelarBajaCuenta();
+      if (r && r.reactivada) {
+        showToast && showToast('✅ Tu cuenta volvió a estar activa');
+        usuarioActual = await PronetDB.usuarioActual();
+        reflejarUsuario();
+      }
+    }).catch(() => {});
     reflejarUsuario();
     iniciarRealtime();
     updateBellCount(); // badge inicial al entrar a la app
@@ -12789,28 +12802,58 @@ document.addEventListener('focusin', (e) => {
     location.reload();
   }
 
-  async function confirmarEliminarCuenta() {
+  // ── Baja de cuenta ───────────────────────────────────────────────
+  // Google Play exige que la eliminación esté disponible dentro de la app,
+  // pero no que sea inmediata. Acá se PIDE la baja y el borrado real ocurre
+  // 30 días después (cron purgar-cuentas-baja). Volver a entrar la cancela.
+  function confirmarEliminarCuenta() {
     if (!usuarioActual) return;
-    const ok = confirm(
-      '¿Eliminar tu cuenta de PRONET?\n\n' +
-      'Se borran tu perfil, pedidos, chats, reseñas y fotos. No se puede deshacer.'
-    );
-    if (!ok) return;
+    const inp = document.getElementById('baja-confirmar');
+    if (inp) inp.value = '';
+    const err = document.getElementById('baja-error');
+    if (err) err.style.display = 'none';
+    validarPalabraBaja();
+    document.getElementById('modal-baja')?.classList.add('show');
+  }
 
-    const btn = document.activeElement;
-    if (btn) btn.style.pointerEvents = 'none';
-    const r = await PronetDB.eliminarCuenta();
-    if (btn) btn.style.pointerEvents = '';
+  function cerrarModalBaja() {
+    document.getElementById('modal-baja')?.classList.remove('show');
+  }
 
-    if (!r.ok) {
-      alert('No se pudo eliminar la cuenta. Probá de nuevo o escribinos a legal@pronet.app.');
+  // El botón arranca apagado y sólo se enciende con la palabra exacta.
+  // Se compara en mayúsculas y sin espacios: el objetivo es que el gesto
+  // sea deliberado, no que la persona pelee con el teclado del celular.
+  function validarPalabraBaja() {
+    const inp = document.getElementById('baja-confirmar');
+    const btn = document.getElementById('baja-btn');
+    if (!inp || !btn) return;
+    const ok = inp.value.trim().toUpperCase() === 'ELIMINAR';
+    btn.style.opacity = ok ? '1' : '.45';
+    btn.style.pointerEvents = ok ? 'auto' : 'none';
+  }
+
+  async function confirmarBajaCuenta() {
+    const inp = document.getElementById('baja-confirmar');
+    if (!inp || inp.value.trim().toUpperCase() !== 'ELIMINAR') return;
+    const btn = document.getElementById('baja-btn');
+    if (btn) { btn.style.pointerEvents = 'none'; btn.textContent = 'Dando de baja…'; }
+    const r = await PronetDB.pedirBajaCuenta();
+    if (btn) { btn.style.pointerEvents = 'auto'; btn.textContent = 'Dar de baja'; }
+
+    if (!r || !r.ok) {
+      const err = document.getElementById('baja-error');
+      if (err) { err.textContent = 'No se pudo dar de baja. Probá de nuevo o escribinos a legal@pronet.app.'; err.style.display = 'block'; }
       return;
     }
-    alert('Tu cuenta fue eliminada.');
+    cerrarModalBaja();
+    alert('Tu cuenta quedó dada de baja.\n\nTenés 30 días para arrepentirte: volvé a entrar con tu email y contraseña y se reactiva sola.');
     await PronetDB.logout();
     usuarioActual = null;
     location.reload();
   }
+  window.cerrarModalBaja    = cerrarModalBaja;
+  window.validarPalabraBaja = validarPalabraBaja;
+  window.confirmarBajaCuenta = confirmarBajaCuenta;
 
   function togglePw(btn) {
     // FIX: el botón llega como parámetro (this) en vez de depender del global 'event'

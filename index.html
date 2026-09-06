@@ -5636,6 +5636,35 @@
        en Entre Vecinos. Se pregunta al entrar a la sección, que es donde el
        dato se nota, y no en el registro, donde sería un paso más sin
        contexto. -->
+  <!-- ══ MODAL: DAR DE BAJA LA CUENTA ══════════════════════════════
+       Antes esto era un confirm() del sistema: un toque en "Aceptar" y la
+       cuenta dejaba de existir. Se perdió una cuenta real así.
+
+       Escribir la palabra es a propósito más molesto que un botón: es la
+       única forma de que el gesto no se pueda hacer sin querer. -->
+  <div class="zona-modal-overlay" id="modal-baja">
+    <div class="zona-modal">
+      <div class="zm-handle"></div>
+      <div style="font-size:32px;text-align:center;margin-bottom:12px">👋</div>
+      <div class="zm-title" style="text-align:center">Dar de baja mi cuenta</div>
+      <div class="zm-sub" style="text-align:center">
+        Tu perfil deja de verse hoy. Tenés <b>30 días</b> para arrepentirte:
+        si volvés a entrar en ese plazo, se reactiva sola con todo adentro.
+        Pasados los 30 días se borra y no se puede recuperar.
+      </div>
+      <label class="ob-label" for="baja-confirmar" style="display:block;margin-top:14px">
+        Escribí <b>ELIMINAR</b> para confirmar
+      </label>
+      <input class="ob-input" id="baja-confirmar" name="baja-confirmar" type="text"
+        autocomplete="off" autocapitalize="characters" placeholder="Ej: ELIMINAR" maxlength="12"
+        oninput="validarPalabraBaja()">
+      <div id="baja-error" role="alert" style="display:none;font-size:12px;color:#E53E3E;margin-top:6px"></div>
+      <button class="btn-p" id="baja-btn" style="width:100%;margin-top:14px;background:#E53E3E;opacity:.45;pointer-events:none"
+        onclick="confirmarBajaCuenta()">Dar de baja</button>
+      <button style="width:100%;margin-top:8px;background:none;border:none;color:var(--ink3);font-size:13px;padding:10px;cursor:pointer;font-family:'Inter',sans-serif" onclick="cerrarModalBaja()">Mejor no</button>
+    </div>
+  </div>
+
   <div class="zona-modal-overlay" id="modal-comunidad">
     <div class="zona-modal">
       <div class="zm-handle"></div>
