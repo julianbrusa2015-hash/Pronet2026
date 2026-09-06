@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v404'; // v404: sacar el motivo de descarte por presupuesto
+const CACHE_VERSION = 'pronet-v405'; // v405: sacar el chip 'Mayor presupuesto', que no ordenaba nada
 
 const SHELL = [
   './',

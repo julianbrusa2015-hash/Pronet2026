@@ -2431,7 +2431,13 @@ document.addEventListener('focusin', (e) => {
   // distancias y conteos escritos a mano, y cuatro chips que sólo hacían
   // this.classList.toggle('on') — se prendían y no filtraban nada.
   // Ahora consultan datos reales.
-  const filtrosPresto = { zona: true, rubro: true, urgentes: false, presupuesto: false, porVencer: false, nuevos: false };
+  // Sin `presupuesto`: ordenar por monto no ordenaba nada. Publicar pedido
+  // nunca tuvo un paso para que el vecino declare presupuesto, asi que
+  // presupuesto_min/max estan en null en todos los pedidos y el sort caia
+  // siempre al 0 del fallback. Un filtro que no cambia el orden es peor que
+  // ninguno: el prestador lo toca, no pasa nada, y no sabe si fallo la app o
+  // si de verdad ese es el orden.
+  const filtrosPresto = { zona: true, rubro: true, urgentes: false, porVencer: false, nuevos: false };
   // "Mi rubro" arranca prendido: un plomero que entra a Pedidos no tiene
   // por qué ver una vidriería antes que ver que no hay nada de lo suyo. El
   // que sí tiene rubro sin coincidencias recibe abajo un cartel con
@@ -2630,10 +2636,6 @@ document.addEventListener('focusin', (e) => {
       const desde = _marcaPedidosPrevia || new Date(0);
       pedidos = pedidos.filter(p => p.creado && new Date(p.creado) > desde);
     }
-    if (filtrosPresto.presupuesto) {
-      const tope = p => p.presupuesto_max || p.presupuesto_min || 0;
-      pedidos = pedidos.slice().sort((a, b) => tope(b) - tope(a));
-    }
 
     // Los pedidos donde ya oferte no se ocultan, se marcan. Ocultarlos dejaria
     // al prestador sin forma de revisar o editar su propia propuesta desde el
@@ -2667,7 +2669,7 @@ document.addEventListener('focusin', (e) => {
       // cartel nombra el rubro y ofrece sacarlo, en vez de un genérico que
       // no dice qué botón tocar.
       const soloRubro = filtrosPresto.rubro && rubro &&
-        !filtrosPresto.urgentes && !filtrosPresto.presupuesto && !filtrosPresto.porVencer && !filtrosPresto.nuevos;
+        !filtrosPresto.urgentes && !filtrosPresto.porVencer && !filtrosPresto.nuevos;
       if (soloRubro) {
         wrap.innerHTML = '<div style="padding:28px 18px;text-align:center">' +
           '<div style="font-size:13px;color:var(--ink3);margin-bottom:12px">No tenés pedidos nuevos de <b>' + escHTML(rubro) + '</b> en tu zona por ahora.</div>' +
