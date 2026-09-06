@@ -2046,8 +2046,12 @@ document.addEventListener('focusin', (e) => {
       const ultimoAutor = await PronetDB.ultimoAutorPorChat(chatsConsulta.map(c => c.id)).catch(() => ({}));
       const esperando = chatsConsulta.filter(c => {
         const autor = ultimoAutor[c.id];
-        // Sin mensajes todavia, el vecino abrio la consulta y espera igual.
-        return !autor || autor !== usuarioActual?.id;
+        // Un chat SIN mensajes no es un vecino esperando. Los chats de
+        // consulta con pedido los abre EL PRESTADOR desde "Consultar primero"
+        // (ver iniciarConsulta): si nadie escribio una palabra, el unico que
+        // hizo algo fue el, y el tablero le decia que un vecino lo consultaba.
+        // Hace falta un mensaje, y que el ultimo NO sea suyo.
+        return !!autor && autor !== usuarioActual?.id;
       });
       enConsulta = distintos(esperando, 'vecino_id');
     }
@@ -2070,7 +2074,11 @@ document.addEventListener('focusin', (e) => {
     // Cada acción deja la pantalla destino FILTRADA por lo que dice el
     // indicador. Mandar a la lista completa obligaba a volver a buscar a
     // mano lo que el tablero acababa de señalar.
-    if (elegido > 0)    items.push({ ic:'🟢', txt: '¡Te eligieron! ' + elegido + ' trabajo' + (elegido>1?'s':'') + ' en curso', accion: "irAChats('activo')" });
+    // "Trabajo en curso" NO va en "Te esperan": ganar el trabajo es una buena
+    // noticia, no una tarea. Lo que si es tarea —cerrarlo cuando el vecino lo
+    // da por terminado— ya tiene su propio indicador. Dejarlo aca hacia que el
+    // numero no bajara nunca al tocarlo, porque el trabajo sigue en curso
+    // hasta que termina. Se pinta abajo, en la franja informativa.
     if (resenasNuevas > 0) items.push({ ic:'⭐', txt: resenasNuevas === 1 ? '1 reseña nueva' : resenasNuevas + ' reseñas nuevas', accion: 'verResenasNuevas()' });
     if (chatsSinLeer > 0) items.push({ ic:'💬', txt: chatsSinLeer === 1 ? '1 conversación sin leer' : chatsSinLeer + ' conversaciones sin leer', accion: "irAChats('no_leidos')" });
     if (paraCerrar > 0) items.push({ ic:'🏁', txt: paraCerrar + ' trabajo' + (paraCerrar>1?'s':'') + ' para cerrar', accion: "irAChats('terminado_por_vecino')" });
@@ -2217,17 +2225,35 @@ document.addEventListener('focusin', (e) => {
       </div>`;
 
 
-    // Informativo, no accionable: son propuestas ya enviadas esperando que el
-    // vecino decida. Va aparte del bloque "Te esperan" y en tono apagado, para
-    // que se lea como estado y no como tarea. Sigue siendo clickeable —querer
-    // verlas es legítimo—; lo que no corresponde es contarlas como algo que el
-    // prestador tiene que hacer.
-    const bloqueEnEvaluacion = enEspera > 0 ? `
-      <div role="button" tabindex="0" onclick="abrirMisPropuestas('pendiente')"
-           style="display:flex;align-items:center;gap:9px;padding:9px 14px;margin-bottom:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer">
-        <span style="font-size:14px">🕐</span>
-        <span style="flex:1;font-size:12.5px;color:var(--ink3)">${enEspera} propuesta${enEspera > 1 ? 's' : ''} en evaluación — esperando que el vecino decida</span>
-        <span style="color:var(--ink3);font-size:14px">›</span>
+    // Franja informativa: estados, no tareas. Va aparte de "Te esperan" y en
+    // tono apagado, porque son cosas donde el prestador ya hizo lo suyo y la
+    // pelota está del otro lado. Mezclarlas con lo accionable le decía "tenés
+    // N pendientes" sobre números que no bajan al actuar — la forma más rápida
+    // de que deje de mirar el tablero.
+    const informativos = [];
+    if (elegido > 0) {
+      informativos.push({
+        ic: '🟢',
+        txt: elegido + ' trabajo' + (elegido > 1 ? 's' : '') + ' en curso',
+        accion: "irAChats('activo')",
+      });
+    }
+    if (enEspera > 0) {
+      informativos.push({
+        ic: '🕐',
+        txt: enEspera + ' propuesta' + (enEspera > 1 ? 's' : '') + ' en evaluación — esperando que el vecino decida',
+        accion: "abrirMisPropuestas('pendiente')",
+      });
+    }
+    const bloqueEnEvaluacion = informativos.length ? `
+      <div style="margin-bottom:10px">
+        ${informativos.map(it => `
+          <div role="button" tabindex="0" onclick="${it.accion}"
+               style="display:flex;align-items:center;gap:9px;padding:9px 14px;margin-bottom:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer">
+            <span style="font-size:14px">${it.ic}</span>
+            <span style="flex:1;font-size:12.5px;color:var(--ink3)">${escHTML(it.txt)}</span>
+            <span style="color:var(--ink3);font-size:14px">›</span>
+          </div>`).join('')}
       </div>` : '';
 
     // Sin rubro definido el prestador está INVISIBLE: notificar_rubro no lo

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v386'; // v386: pedidos nuevos deja de contar aquellos donde el prestador ya oferto
+const CACHE_VERSION = 'pronet-v387'; // v387: el tablero separa lo accionable de lo informativo, y consulta exige un mensaje del vecino
 
 const SHELL = [
   './',
