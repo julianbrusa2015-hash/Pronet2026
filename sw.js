@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v376'; // v376: clave de Maps rotada por una restringida por referrer y a una sola API
+const CACHE_VERSION = 'pronet-v377'; // v377: borrar el CSS del toggle deslizante viejo de Entre Vecinos
 
 const SHELL = [
   './',

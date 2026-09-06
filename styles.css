@@ -2160,7 +2160,7 @@
      que lleva el azul pleno; el tema de abajo es la elección fina, con
      el mismo celeste marcado que ya usan las solapas de Entre Vecinos —
      mismo criterio de "el de abajo pesa distinto" que ya está documentado
-     unas líneas arriba para #mkt-secciones / #mkt-origen. */
+     unas líneas arriba para #mkt-secciones / .mkt-origen-seg. */
   #guias-grupos .mkt-sec.on {
     background: var(--blue); color: white;
     box-shadow: none;
@@ -2170,47 +2170,6 @@
     box-shadow: none;
   }
 
-  /* ── Origen del aviso: vecinos ↔ prestadores ──
-     Va apilado justo debajo del selector de sección y con la misma forma, así
-     que con el mismo estilo parecían el mismo control repetido dos veces.
-     Acá la pastilla se DESLIZA de un lado al otro: el movimiento dice que es
-     una elección entre dos, no dos botones sueltos.
-     La pastilla es un pseudo-elemento del contenedor y no el fondo del botón
-     activo — un fondo no se puede animar entre dos elementos distintos. */
-  .mkt-origen {
-    display: flex; align-items: center; justify-content: center;
-    gap: 12px; margin: 0 14px 12px;
-  }
-  /* Las etiquetas: la activa se enciende, la otra queda apagada. Son
-     botones de verdad — tocar el nombre elige esa opción, no hace falta
-     acertarle a la perilla. */
-  .mo-lbl {
-    border: none; background: none; padding: 6px 2px; cursor: pointer;
-    font-family: inherit; font-size: 13px; font-weight: 700;
-    color: var(--ink3); transition: color .2s;
-  }
-  .mo-lbl.on { color: var(--blue); }
-  .mo-lbl:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
-
-  /* La pista del interruptor. Se pinta según el lado activo: gris a la
-     izquierda (vecinos), azul a la derecha (prestadores). */
-  .mo-switch {
-    position: relative; flex-shrink: 0; padding: 0; border: none;
-    width: 52px; height: 30px; border-radius: 999px; cursor: pointer;
-    background: #C9D2E3; transition: background .28s;
-  }
-  .mkt-origen[data-origen="prestador"] .mo-switch { background: var(--blue); }
-  .mo-knob {
-    position: absolute; top: 3px; left: 3px;
-    width: 24px; height: 24px; border-radius: 50%;
-    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.28);
-    transition: transform .28s cubic-bezier(.4,0,.2,1);
-  }
-  .mkt-origen[data-origen="prestador"] .mo-knob { transform: translateX(22px); }
-
-  @media (prefers-reduced-motion: reduce) {
-    .mo-switch, .mo-knob { transition: none; }
-  }
 
   /* Selector de puntaje del comentario. Gris hasta que se elige: en gris
      no promete nada, y así "sin puntuar" se distingue de "puntuó bajo". */
