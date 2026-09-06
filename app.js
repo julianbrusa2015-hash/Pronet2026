@@ -15536,6 +15536,64 @@ document.addEventListener('focusin', (e) => {
     }
   }
 
+  /** Prestador descarta un pedido desde el detalle.
+   *
+   *  Se pide el motivo pero NO se exige: quien está apurado toca "Sólo
+   *  ocultarlo" y sale. Un formulario obligatorio acá haría que prefiera dejar
+   *  el pedido en el feed antes que contestar, y se perderían las dos cosas —
+   *  el descarte y el dato. */
+  function abrirDescartarPedido() {
+    if (!pedidoActual?.id) return;
+    let m = document.getElementById('modal-descartar-pedido');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'modal-descartar-pedido';
+      m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;align-items:flex-end;justify-content:center';
+      const op = (motivo, txt) =>
+        '<button onclick="confirmarDescartar(\'' + motivo + '\')" style="width:100%;padding:13px 15px;background:var(--surface);color:var(--ink);border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;margin-bottom:8px">' + txt + '</button>';
+      m.innerHTML =
+        '<div style="background:white;border-radius:20px 20px 0 0;padding:22px 20px calc(24px + var(--safe-bottom));width:100%;max-width:480px">' +
+          '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px"></div>' +
+          '<div style="font-family:\'Sora\',sans-serif;font-size:17px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:5px">No me interesa este pedido</div>' +
+          '<div style="font-size:12.5px;color:var(--ink3);line-height:1.6;text-align:center;margin-bottom:18px">Se oculta de tu feed. El vecino no se entera, y lo podés recuperar cuando quieras.</div>' +
+          op('zona',   '📍 Está fuera de mi zona') +
+          op('precio', '💰 El presupuesto es muy bajo') +
+          op('rubro',  '🔧 No es lo que hago') +
+          op('otro',   '🤷 Otro motivo') +
+          '<button onclick="confirmarDescartar(null)" style="width:100%;padding:12px;background:none;color:var(--ink3);border:none;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px">Sólo ocultarlo, sin decir por qué</button>' +
+          '<button onclick="cerrarDescartarPedido()" style="width:100%;padding:10px;background:none;color:var(--ink3);border:none;font-size:13px;cursor:pointer;font-family:inherit">Cancelar</button>' +
+        '</div>';
+      document.body.appendChild(m);
+    }
+    m.style.display = 'flex';
+  }
+  window.abrirDescartarPedido = abrirDescartarPedido;
+
+  function cerrarDescartarPedido() {
+    const m = document.getElementById('modal-descartar-pedido');
+    if (m) m.style.display = 'none';
+  }
+  window.cerrarDescartarPedido = cerrarDescartarPedido;
+
+  async function confirmarDescartar(motivo) {
+    const id = pedidoActual?.id;
+    cerrarDescartarPedido();
+    if (!id) return;
+    const r = await PronetDB.descartarPedido(id, motivo).catch(() => ({ ok: false }));
+    if (!r.ok) { showToast && showToast('⚠️ No se pudo ocultar. ' + (r.error || '')); return; }
+    goTo('s-pedidos');
+    renderPedidosPresto();
+    // El deshacer va en el toast, que acepta una acción como segundo
+    // argumento. Es el lugar correcto: el momento de arrepentirse es el
+    // segundo siguiente, no tres menús después.
+    showToast && showToast('Pedido oculto de tu feed · Tocá para deshacer', async () => {
+      const u = await PronetDB.recuperarPedido(id).catch(() => ({ ok: false }));
+      showToast && showToast(u.ok ? '✅ Pedido recuperado' : '⚠️ No se pudo recuperar');
+      if (u.ok) renderPedidosPresto();
+    });
+  }
+  window.confirmarDescartar = confirmarDescartar;
+
   /** Prestador inicia consulta desde el detalle del pedido. */
   async function consultarAntesDeProponer() {
     if (!pedidoActual?.id) return;

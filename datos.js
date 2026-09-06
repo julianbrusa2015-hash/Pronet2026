@@ -158,7 +158,54 @@ const PronetDB = (() => {
         console.warn('[PronetDB] listarPedidosDisponibles', error.message);
         return { pedidos: [], total: 0 };
       }
-      return { pedidos: data || [], total: count ?? (data || []).length };
+      // Los que el prestador descartó salen del feed. Se filtra acá y no en
+      // la consulta porque un NOT IN con muchos ids se va de largo en la URL
+      // de PostgREST; el feed ya viene acotado por el parametro limite.
+      let filas = data || [];
+      if (miPrestadorId) {
+        const descartados = await this.listarPedidosDescartados();
+        if (descartados.size) filas = filas.filter(p => !descartados.has(p.id));
+      }
+      return { pedidos: filas, total: count ?? filas.length };
+    },
+
+    /** Ids de los pedidos que ESTE prestador descartó. Un Set, porque el feed
+     *  lo usa para excluir y preguntar por pertenencia es lo único que hace. */
+    async listarPedidosDescartados() {
+      if (!remoto) return new Set();
+      const { data, error } = await sb.from('pedidos_descartados').select('pedido_id');
+      if (error) { console.warn('[PronetDB] listarPedidosDescartados', error.message); return new Set(); }
+      return new Set((data || []).map(r => r.pedido_id));
+    },
+
+    /** Oculta un pedido del feed de este prestador. `motivo` es opcional
+     *  ('zona' | 'precio' | 'rubro' | 'otro'); la base rechaza cualquier otro.
+     *
+     *  El prestador_id NO se manda desde acá aunque lo tengamos a mano: la RLS
+     *  lo exige igual contra perfiles.prestador_id, así que mandarlo sólo daría
+     *  la ilusión de que el cliente elige de quién es el descarte. */
+    async descartarPedido(pedidoId, motivo = null) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const uid = await this.usuarioIdActual();
+      if (!uid || !pedidoId) return { ok: false, error: 'Sin sesión' };
+      const perfil = await this.usuarioActual();
+      if (!perfil?.prestador_id) return { ok: false, error: 'Sin ficha de prestador' };
+      const { error } = await sb.from('pedidos_descartados')
+        .upsert({ prestador_id: perfil.prestador_id, pedido_id: pedidoId, motivo },
+                { onConflict: 'prestador_id,pedido_id' });
+      if (error) { console.warn('[PronetDB] descartarPedido', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
+    },
+
+    /** Deshace un descarte: el pedido vuelve al feed. */
+    async recuperarPedido(pedidoId) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      if (!pedidoId) return { ok: false, error: 'Falta el pedido' };
+      // No hace falta filtrar por prestador: la policy de DELETE ya sólo deja
+      // borrar las filas propias. Agregarlo acá no protegería nada más.
+      const { error } = await sb.from('pedidos_descartados').delete().eq('pedido_id', pedidoId);
+      if (error) { console.warn('[PronetDB] recuperarPedido', error.message); return { ok: false, error: error.message }; }
+      return { ok: true };
     },
 
     /** Filas de una colección por una lista de ids. Evita el patrón de

@@ -3094,6 +3094,14 @@
             💬 Consultar primero
           </button>
         </div>
+        <!-- La tercera salida. Antes las unicas dos eran proponer o consultar:
+             un pedido que no servia se quedaba en el feed hasta vencer. Va en
+             texto plano y no como boton para no competir con las dos acciones
+             que si queremos que pasen. -->
+        <button onclick="abrirDescartarPedido()" id="pd-btn-descartar"
+          style="width:100%;background:none;border:none;color:var(--ink3);font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;padding:4px 0 2px">
+          No me interesa este pedido
+        </button>
         <div id="pd-cta-sub" style="text-align:center;margin-top:4px;font-size:11px;color:var(--ink3)">Tu propuesta le llega directo al vecino</div>
       </div>
 
