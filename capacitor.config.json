@@ -4,6 +4,12 @@
   "webDir": "www",
   "server": {
     "url": "https://pronetprueba.netlify.app",
-    "cleartext": false
+    "cleartext": false,
+    "allowNavigation": [
+      "zgmwtyxtygnjfakeriiz.supabase.co",
+      "accounts.google.com",
+      "*.google.com",
+      "*.googleusercontent.com"
+    ]
   }
 }
