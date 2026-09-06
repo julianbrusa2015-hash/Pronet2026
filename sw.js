@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v382'; // v382: el prestador puede descartar un pedido, con motivo opcional y deshacer
+const CACHE_VERSION = 'pronet-v383'; // v383: descartar un pedido ya descartado es un no-op, no un error de RLS
 
 const SHELL = [
   './',

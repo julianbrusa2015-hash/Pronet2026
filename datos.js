@@ -190,10 +190,16 @@ const PronetDB = (() => {
       if (!uid || !pedidoId) return { ok: false, error: 'Sin sesión' };
       const perfil = await this.usuarioActual();
       if (!perfil?.prestador_id) return { ok: false, error: 'Sin ficha de prestador' };
+      // insert y no upsert: un upsert necesita permiso de UPDATE, que a
+      // proposito no se otorgo —cambiar el motivo de un descarte viejo no es
+      // un caso real— y la RLS lo rechazaba. Descartar algo ya descartado no
+      // es un error del usuario: es un no-op, y asi se lo trata.
       const { error } = await sb.from('pedidos_descartados')
-        .upsert({ prestador_id: perfil.prestador_id, pedido_id: pedidoId, motivo },
-                { onConflict: 'prestador_id,pedido_id' });
-      if (error) { console.warn('[PronetDB] descartarPedido', error.message); return { ok: false, error: error.message }; }
+        .insert({ prestador_id: perfil.prestador_id, pedido_id: pedidoId, motivo });
+      if (error && error.code !== '23505') {
+        console.warn('[PronetDB] descartarPedido', error.message);
+        return { ok: false, error: error.message };
+      }
       return { ok: true };
     },
 
