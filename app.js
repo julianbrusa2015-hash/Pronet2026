@@ -9529,6 +9529,22 @@ document.addEventListener('focusin', (e) => {
     return !!(usuarioActual?.prestador_id && usuarioActual?.tipo !== 'prestador');
   }
 
+  // modoRol vive en localStorage y sobrevive al logout: es del dispositivo,
+  // no de la cuenta. Para un prestador puro no tiene sentido — y es peor que
+  // eso: esPrestador() devuelve false con modoRol='vecino', pero el switch
+  // para volver sólo se muestra si tieneDoblePerfil(), que para un prestador
+  // puro es false. O sea que heredar un 'vecino' de otra cuenta lo dejaba
+  // viendo la app de vecino SIN NINGUNA FORMA DE SALIR.
+  //
+  // Esto ya se limpiaba, pero sólo al restaurar la sesión. Al entrar con
+  // email y contraseña no corría: loginWith() va directo a entrarApp().
+  function normalizarModoRol() {
+    if (!tieneDoblePerfil() && modoRol === 'vecino') {
+      modoRol = null;
+      localStorage.setItem('pronet-modo-rol', '');
+    }
+  }
+
   function toggleModoRol() {
     modoRol = modoRol === 'vecino' ? null : 'vecino';
     localStorage.setItem('pronet-modo-rol', modoRol || '');
@@ -11801,7 +11817,11 @@ document.addEventListener('focusin', (e) => {
     // ── Toggle doble perfil ──
     const toggleCard = document.getElementById('doble-perfil-toggle');
     if (toggleCard) {
-      toggleCard.style.display = tieneDoblePerfil() ? '' : 'none';
+      // El `|| modoRol === 'vecino'` es la salida de emergencia: si por lo
+      // que sea alguien queda forzado a modo vecino sin doble perfil, tiene
+      // que poder volver. Sin esto el switch se esconde justo cuando es lo
+      // único que lo saca de ahí.
+      toggleCard.style.display = (tieneDoblePerfil() || modoRol === 'vecino') ? '' : 'none';
       const lbl = document.getElementById('modo-actual-lbl');
       const btn = document.getElementById('modo-cambiar-btn');
       if (lbl) lbl.textContent = modoRol === 'vecino' ? 'Vecino' : 'Prestador';
@@ -12321,6 +12341,7 @@ document.addEventListener('focusin', (e) => {
   /** Entra a la app después de login/registro exitoso */
   function entrarApp() {
     document.getElementById('login-screen').classList.add('hidden');
+    normalizarModoRol();
     // Si había una baja pendiente, entrar ES el arrepentimiento. No se le
     // pregunta nada: se reactiva y se avisa. Va acá y no en loginWith
     // porque entrarApp es el único punto por el que pasan las tres vías
@@ -18294,10 +18315,7 @@ document.addEventListener('focusin', (e) => {
         // modoRol persiste en localStorage entre sesiones y entre cuentas.
         // Si el usuario que ingresa es un prestador puro (sin doble perfil),
         // limpiar para que no herede un 'vecino' de una sesión anterior.
-        if (!tieneDoblePerfil()) {
-          modoRol = null;
-          localStorage.setItem('pronet-modo-rol', '');
-        }
+        normalizarModoRol();
         if (loginEl) loginEl.classList.add('hidden');
         reflejarUsuario();
         iniciarRealtime();

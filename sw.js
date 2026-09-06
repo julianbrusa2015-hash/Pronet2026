@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v396'; // v396: baja de cuenta diferida 30 dias con confirmacion escrita
+const CACHE_VERSION = 'pronet-v397'; // v397: un prestador puro podia quedar encerrado en modo vecino
 
 const SHELL = [
   './',
