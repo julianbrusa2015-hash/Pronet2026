@@ -2009,11 +2009,21 @@ document.addEventListener('focusin', (e) => {
   // referencia justo en el momento en que el prestador lo va a usar: llega
   // desde el indicador "3 pedidos nuevos" y encuentra cero.
   let _marcaPedidosPrevia = null;
+  // El alta de la ficha, cacheada al pintar cualquiera de las dos pantallas
+  // del prestador. Es la línea de base cuando todavía no hay marca guardada,
+  // y la necesitan los DOS lugares que cuentan "nuevos": el indicador del
+  // tablero y el chip de la pantalla Pedidos. Tenerla en uno solo fue
+  // exactamente el bug.
+  let _altaPrestador = null;
   /** Guarda la marca anterior SIN pisarla. Va al entrar a la pantalla. */
   function capturarMarcaPedidos() {
     if (!usuarioActual) return;
-    const previa = localStorage.getItem(claveVistos());
-    _marcaPedidosPrevia = previa ? new Date(previa) : null;
+    // Misma función que el indicador del tablero, a propósito. Antes esto
+    // leía localStorage por su cuenta y se quedaba en null si no había
+    // marca; el chip "Nuevos" entonces filtraba TODO y la pantalla decía
+    // "Sin resultados" justo cuando el prestador llegaba desde el
+    // indicador que le acababa de decir "1 pedido nuevo de tu rubro".
+    _marcaPedidosPrevia = marcaPedidosVistos(_altaPrestador);
   }
   /** Pisa la marca: de acá en adelante nada es "nuevo". Va DESPUÉS de
    *  renderizar, y sólo si lo que se listó incluye todo lo nuevo. */
@@ -2032,6 +2042,7 @@ document.addEventListener('focusin', (e) => {
     // `perfiles`, y el rubro vive en `prestadores`. Hay que traer la ficha
     // aparte, igual que hace el ranking de Mi Perfil.
     const ficha = pid ? await PronetDB.obtener('prestadores', pid).catch(() => null) : null;
+    _altaPrestador = ficha?.creado || _altaPrestador;
     // 'General' es el rubro por DEFECTO que pone handle_new_user cuando el
     // alta no trae uno — lo tienen 4 de los 11 prestadores. No matchea
     // ningún pedido, así que tratarlo como rubro real dejaba el tablero
@@ -2220,7 +2231,7 @@ document.addEventListener('focusin', (e) => {
     // porque un pedido nuevo del rubro propio vence en 72hs: es una
     // oportunidad con reloj, no una novedad decorativa.
     {
-      const desde = marcaPedidosVistos(ficha?.creado);
+      const desde = marcaPedidosVistos(_altaPrestador);
       // Se excluye lo ya ofertado: un pedido donde el prestador YA mandó
       // propuesta no es una oportunidad pendiente, es trabajo hecho.
       // Contarlo le decía "2 pedidos nuevos de tu rubro" a alguien que ya
@@ -2548,6 +2559,7 @@ document.addEventListener('focusin', (e) => {
 
     const pid = usuarioActual?.prestador_id || null;
     const ficha = pid ? await PronetDB.obtener('prestadores', pid).catch(() => null) : null;
+    _altaPrestador = ficha?.creado || _altaPrestador;
     // 'General' es el rubro por DEFECTO que pone handle_new_user cuando el
     // alta no trae uno — lo tienen 4 de los 11 prestadores. No matchea
     // ningún pedido, así que tratarlo como rubro real dejaba el tablero
@@ -2605,8 +2617,12 @@ document.addEventListener('focusin', (e) => {
     }
     // "Nuevos" usa la marca ANTERIOR a esta visita (ver marcarPedidosComoVistos).
     if (filtrosPresto.nuevos) {
-      const desde = _marcaPedidosPrevia;
-      pedidos = desde ? pedidos.filter(p => p.creado && new Date(p.creado) > desde) : [];
+      // Ya no hay rama de lista vacía: capturarMarcaPedidos() siempre deja
+      // una fecha. Devolver [] cuando faltaba la marca era peor que no
+      // filtrar — le mostraba "Sin resultados" a quien venía siguiendo un
+      // indicador que decía que sí había.
+      const desde = _marcaPedidosPrevia || new Date(0);
+      pedidos = pedidos.filter(p => p.creado && new Date(p.creado) > desde);
     }
     if (filtrosPresto.presupuesto) {
       const tope = p => p.presupuesto_max || p.presupuesto_min || 0;
