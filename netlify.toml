@@ -21,7 +21,14 @@
   # OK), asi que cualquiera que lea config.js puede gastarle la cuota al dueño.
   # Restringirla es el arreglo real; esto solo evita que el scanner bloquee un
   # deploy por algo que no puede dejar de estar en el cliente.
+  # OJO: son DOS scanners distintos y fallan distinto.
+  #   - El de claves declaradas busca el VALOR de tus env vars en el output.
+  #     Ese dio 0 hallazgos. Se omite MAPS_KEY igual, por si cambia.
+  #   - Smart detection es heuristico: reconoce el formato "AIza..." y lo marca
+  #     como "likely secret". Es el que frenaba el build, y NO lo apaga
+  #     SECRETS_SCAN_OMIT_KEYS.
   SECRETS_SCAN_OMIT_KEYS = "MAPS_KEY"
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
 
 # Optimización automática de assets en el CDN de Netlify
 # Minifica CSS (ahorra ~4 KB), comprime imágenes. JS no se toca para no romper el sourcemap.
