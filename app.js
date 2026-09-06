@@ -15887,7 +15887,16 @@ document.addEventListener('focusin', (e) => {
           '<div style="font-family:\'Sora\',sans-serif;font-size:17px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:5px">No me interesa este pedido</div>' +
           '<div style="font-size:12.5px;color:var(--ink3);line-height:1.6;text-align:center;margin-bottom:18px">Se oculta de tu feed. El vecino no se entera, y lo podés recuperar cuando quieras.</div>' +
           op('zona',   '📍 Está fuera de mi zona') +
-          op('precio', '💰 El presupuesto es muy bajo') +
+          // Sin opción de presupuesto: el pedido NO trae monto. Publicar
+          // pedido nunca tuvo un paso para que el vecino declare
+          // presupuesto (ver el comentario en publicarPedido), asi que
+          // presupuesto_min/max van siempre en null y el prestador no ve
+          // ninguna cifra. Ofrecer "el presupuesto es muy bajo" como motivo
+          // le pedia opinion sobre un dato que la pantalla no le mostro.
+          //
+          // La etiqueta sigue en el mapa ETIQUETA de la vista Descartados,
+          // para que un registro viejo con motivo "precio" no se muestre
+          // como slug crudo.
           op('rubro',  '🔧 No es lo que hago') +
           op('otro',   '🤷 Otro motivo') +
           '<button onclick="confirmarDescartar(null)" style="width:100%;padding:12px;background:none;color:var(--ink3);border:none;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px">Sólo ocultarlo, sin decir por qué</button>' +
