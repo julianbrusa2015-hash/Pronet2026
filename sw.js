@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v388'; // v388: los pedidos ya ofertados se marcan y dejan de contarse como disponibles
+const CACHE_VERSION = 'pronet-v389'; // v389: realtime de mensajes solo reacciona a INSERT — era la causa del chat duplicado
 
 const SHELL = [
   './',

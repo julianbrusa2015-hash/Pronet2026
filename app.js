@@ -15814,6 +15814,17 @@ document.addEventListener('focusin', (e) => {
     cargarContactoChatTrabajo(chatActualId);
     if (chatSuscripcion) chatSuscripcion();
     chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
+      // Sólo INSERT. La suscripción usa event:'*', así que también llegan UPDATE
+      // y DELETE, y ninguno de los dos es un mensaje nuevo.
+      //
+      // El UPDATE de marcar leído era el peor: volvía a disparar este handler con
+      // la fila completa, así que se redibujaba la burbuja. Es el "chat duplicado"
+      // que estaba reportado en pruebas de dispositivo sin causa conocida.
+      //
+      // En un DELETE, Supabase manda payload.new como objeto VACÍO — que es
+      // truthy, así que el `if (payload.new)` de abajo no lo frena. Borrar 62
+      // mensajes generó 62 notificaciones de 'Nuevo mensaje: ""'.
+      if (payload.eventType !== 'INSERT') return;
       if (payload.new && payload.new.chat_id === chatActualId) {
         const esPropio = payload.new.autor_id === usuarioActual.id;
         if (!esPropio) { agregarBurbuja(payload.new.texto, payload.new.creado, false, payload.new.id); PronetDB.marcarLeidos(chatActualId); }
@@ -16198,6 +16209,17 @@ document.addEventListener('focusin', (e) => {
         await actualizarBannersChat(chatActualId);
         if (chatSuscripcion) chatSuscripcion();
         chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
+          // Sólo INSERT. La suscripción usa event:'*', así que también llegan UPDATE
+          // y DELETE, y ninguno de los dos es un mensaje nuevo.
+          //
+          // El UPDATE de marcar leído era el peor: volvía a disparar este handler con
+          // la fila completa, así que se redibujaba la burbuja. Es el "chat duplicado"
+          // que estaba reportado en pruebas de dispositivo sin causa conocida.
+          //
+          // En un DELETE, Supabase manda payload.new como objeto VACÍO — que es
+          // truthy, así que el `if (payload.new)` de abajo no lo frena. Borrar 62
+          // mensajes generó 62 notificaciones de 'Nuevo mensaje: ""'.
+          if (payload.eventType !== 'INSERT') return;
           if (payload.new && payload.new.chat_id === chatActualId) {
             const esPropio = payload.new.autor_id === usuarioActual.id;
             if (!esPropio) { agregarBurbuja(payload.new.texto, payload.new.creado, false, payload.new.id); PronetDB.marcarLeidos(chatActualId); }
@@ -16675,6 +16697,17 @@ document.addEventListener('focusin', (e) => {
     await actualizarBannersChat(chatActualId);
     if (chatSuscripcion) chatSuscripcion();
     chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
+      // Sólo INSERT. La suscripción usa event:'*', así que también llegan UPDATE
+      // y DELETE, y ninguno de los dos es un mensaje nuevo.
+      //
+      // El UPDATE de marcar leído era el peor: volvía a disparar este handler con
+      // la fila completa, así que se redibujaba la burbuja. Es el "chat duplicado"
+      // que estaba reportado en pruebas de dispositivo sin causa conocida.
+      //
+      // En un DELETE, Supabase manda payload.new como objeto VACÍO — que es
+      // truthy, así que el `if (payload.new)` de abajo no lo frena. Borrar 62
+      // mensajes generó 62 notificaciones de 'Nuevo mensaje: ""'.
+      if (payload.eventType !== 'INSERT') return;
       if (payload.new && payload.new.chat_id === chatActualId) {
         const esPropio = payload.new.autor_id === usuarioActual.id;
         // Si es propio ya lo mostramos por optimistic UI — no duplicar
@@ -16727,6 +16760,17 @@ document.addEventListener('focusin', (e) => {
         await actualizarBannersChat(chatActualId);
         if (chatSuscripcion) chatSuscripcion();
         chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
+          // Sólo INSERT. La suscripción usa event:'*', así que también llegan UPDATE
+          // y DELETE, y ninguno de los dos es un mensaje nuevo.
+          //
+          // El UPDATE de marcar leído era el peor: volvía a disparar este handler con
+          // la fila completa, así que se redibujaba la burbuja. Es el "chat duplicado"
+          // que estaba reportado en pruebas de dispositivo sin causa conocida.
+          //
+          // En un DELETE, Supabase manda payload.new como objeto VACÍO — que es
+          // truthy, así que el `if (payload.new)` de abajo no lo frena. Borrar 62
+          // mensajes generó 62 notificaciones de 'Nuevo mensaje: ""'.
+          if (payload.eventType !== 'INSERT') return;
           if (payload.new && payload.new.chat_id === chatActualId) {
             if (payload.new.autor_id !== usuarioActual.id) {
               agregarBurbuja(payload.new.texto, payload.new.creado, false, payload.new.id);
@@ -16802,6 +16846,17 @@ document.addEventListener('focusin', (e) => {
       // Suscribirse al nuevo chat
       if (chatSuscripcion) chatSuscripcion();
       chatSuscripcion = PronetDB.suscribir('mensajes_chat', (payload) => {
+        // Sólo INSERT. La suscripción usa event:'*', así que también llegan UPDATE
+        // y DELETE, y ninguno de los dos es un mensaje nuevo.
+        //
+        // El UPDATE de marcar leído era el peor: volvía a disparar este handler con
+        // la fila completa, así que se redibujaba la burbuja. Es el "chat duplicado"
+        // que estaba reportado en pruebas de dispositivo sin causa conocida.
+        //
+        // En un DELETE, Supabase manda payload.new como objeto VACÍO — que es
+        // truthy, así que el `if (payload.new)` de abajo no lo frena. Borrar 62
+        // mensajes generó 62 notificaciones de 'Nuevo mensaje: ""'.
+        if (payload.eventType !== 'INSERT') return;
         if (payload.new && payload.new.chat_id === chatActualId) {
           if (payload.new.autor_id !== usuarioActual.id) {
             agregarBurbuja(payload.new.texto, payload.new.creado, false, payload.new.id);
@@ -17871,6 +17926,17 @@ document.addEventListener('focusin', (e) => {
 
     // Realtime global de mensajes de chat (cuando el chat no está abierto)
     PronetDB.suscribir('mensajes_chat', (payload) => {
+      // Sólo INSERT. La suscripción usa event:'*', así que también llegan UPDATE
+      // y DELETE, y ninguno de los dos es un mensaje nuevo.
+      //
+      // El UPDATE de marcar leído era el peor: volvía a disparar este handler con
+      // la fila completa, así que se redibujaba la burbuja. Es el "chat duplicado"
+      // que estaba reportado en pruebas de dispositivo sin causa conocida.
+      //
+      // En un DELETE, Supabase manda payload.new como objeto VACÍO — que es
+      // truthy, así que el `if (payload.new)` de abajo no lo frena. Borrar 62
+      // mensajes generó 62 notificaciones de 'Nuevo mensaje: ""'.
+      if (payload.eventType !== 'INSERT') return;
       if (!payload.new || !usuarioActual) return;
       const msg = payload.new;
       // Si el mensaje es propio o el chat está abierto → ya se maneja en abrirChat
