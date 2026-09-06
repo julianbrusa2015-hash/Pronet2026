@@ -358,7 +358,17 @@ document.addEventListener('focusin', (e) => {
     }
     all.forEach(s => {
       const el = document.getElementById(s);
-      if (el) { el.classList.remove('active'); el.scrollTop = 0; }
+      if (!el) return;
+      el.classList.remove('active');
+      el.scrollTop = 0;
+      // No siempre scrollea la .screen. s-edit-perfil tiene overflow:hidden
+      // para que su cabecera quede fija, y quien scrollea es un div interno:
+      // ese se quedaba donde lo habias dejado. Al volver a entrar, la
+      // pantalla aparecia a mitad de camino y el nombre y el telefono no se
+      // veian — parecia que los datos no se habian guardado.
+      el.querySelectorAll('*').forEach(hijo => {
+        if (hijo.scrollTop) hijo.scrollTop = 0;
+      });
     });
     // El scroll que importa no es el de cada .screen (eso ya se resetea
     // arriba) sino el del contenedor compartido .phone: si quedó desplazado
