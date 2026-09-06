@@ -11935,15 +11935,26 @@ document.addEventListener('focusin', (e) => {
     // Suscripción, pero ese dice "Plan Plus · Activo" — se lee como un estado,
     // no como una acción.
     if (planActual === 'pro') { banner.style.display = 'none'; return; }
-    // Con head:true no viene cuerpo: el total llega en `count`, no en `data`.
-    // Antes se leía data.length, que siempre era 0, así que el banner nunca
-    // se mostraba.
-    const { count } = await window._sb
-      .from('chats_trabajo')
-      .select('id', { count: 'exact', head: true })
-      .eq('prestador_id', usuarioActual.prestador_id)
-      .eq('estado', 'calificado');
-    if ((count ?? 0) < 1) { banner.style.display = 'none'; return; }
+    // El requisito de haber cerrado un trabajo aplica SOLO a quien está en
+    // Base. Ahí el banner cumple su propósito original: ofrecer Pro después de
+    // que la persona vio que la app le sirve. En el día uno sería sólo ruido.
+    //
+    // Quien ya paga Plus no tiene que ganarse la invitación a mejorar — ya
+    // demostró que paga. Y es justo el que más chances tiene de decir que sí.
+    // Con la condición puesta, un prestador de Plus sin trabajos cerrados se
+    // quedaba sin ningún acceso que INVITE a subir: le sobrevivía el tile verde
+    // "Plan Plus · Activo", que se lee como un estado, no como una acción.
+    if (planActual !== 'plus') {
+      // Con head:true no viene cuerpo: el total llega en `count`, no en `data`.
+      // Antes se leía data.length, que siempre era 0, así que el banner nunca
+      // se mostraba.
+      const { count } = await window._sb
+        .from('chats_trabajo')
+        .select('id', { count: 'exact', head: true })
+        .eq('prestador_id', usuarioActual.prestador_id)
+        .eq('estado', 'calificado');
+      if ((count ?? 0) < 1) { banner.style.display = 'none'; return; }
+    }
 
     // El mismo banner le habla a dos personas distintas: al que no paga nada
     // y al que ya paga Plus. El boost sale de getPlanConfig (que restaurarSesion
