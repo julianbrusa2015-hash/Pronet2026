@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v375'; // v375: el banner de mejorar a Pro ya no exige un trabajo cerrado si el prestador esta en Plus
+const CACHE_VERSION = 'pronet-v376'; // v376: clave de Maps rotada por una restringida por referrer y a una sola API
 
 const SHELL = [
   './',

@@ -66,7 +66,7 @@ window.PRONET_CONFIG.LOYALTY_NIVELES = [
 //   console.cloud.google.com → nuevo proyecto → APIs & Services →
 //   Habilitar: Maps JavaScript API + Geocoding API →
 //   Credentials → Create API Key → restringir a tu dominio (pronetprueba.netlify.app)
-window.PRONET_CONFIG.MAPS_KEY = 'AIzaSyCkSY-QijgqiSuanlgp5EpjxxCkfoOFSMY';   // ← pegá tu key acá
+window.PRONET_CONFIG.MAPS_KEY = 'AIzaSyAo6ypHnJ5GcRVTf2W3SWoD006L-wtmLfM';   // ← pegá tu key acá
 
 Object.assign(window.PRONET_CONFIG, {
   // Propuestas
