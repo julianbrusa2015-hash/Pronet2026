@@ -65,8 +65,8 @@
      black-translucent+viewport-fit=cover. Se declara sin @supports para que
      funcione aunque Safari evalúe incorrectamente el feature query. */
   .nav {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    height: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: var(--safe-bottom);
+    height: calc(80px + var(--safe-bottom));
   }
   /* .screen es position:absolute;inset:0 — el padding va acá, no en .screens.
      El max() es lo que evita el bug que teníamos en la PWA de iOS: app.js
@@ -77,10 +77,10 @@
      nada. */
   .screen {
     padding-top: max(env(safe-area-inset-top, 0px), var(--safe-top-fallback, 0px));
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(80px + var(--safe-bottom));
   }
-  .pub-footer  { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
-  .chat-footer { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .pub-footer  { padding-bottom: calc(24px + var(--safe-bottom)); }
+  .chat-footer { padding-bottom: calc(24px + var(--safe-bottom)); }
   @media (display-mode: standalone) {
     html, body { background: var(--surface); }
     .phone {
@@ -239,7 +239,7 @@
   /* ── iOS install hint ── */
   .ios-install-hint {
     position: fixed;
-    bottom: calc(80px + env(safe-area-inset-bottom, 0px) + 10px);
+    bottom: calc(80px + var(--safe-bottom) + 10px);
     left: 50%; transform: translateX(-50%) translateY(16px);
     width: min(92%, 340px);
     background: #1C1C2E; color: white;
@@ -651,7 +651,7 @@
     overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
   }
   .mkt-fab {
-    position: fixed; right: 20px; bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    position: fixed; right: 20px; bottom: calc(24px + var(--safe-bottom));
     width: 54px; height: 54px; border-radius: 50%;
     background: var(--blue); color: white; box-shadow: 0 6px 18px rgba(43,91,255,.4);
     display: flex; align-items: center; justify-content: center;
@@ -1380,7 +1380,7 @@
   #s-detalle-pedido .pd-scroll-body {
     flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: none;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(80px + var(--safe-bottom));
   }
 
   /* Estado propuesta: header fijo arriba, resto scrollea abajo */
@@ -1771,7 +1771,7 @@
   #s-pedidos .ped-scroll-body {
     flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: none;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(80px + var(--safe-bottom));
   }
 
   .ped-header {
@@ -2994,6 +2994,19 @@
 
   :root {
     --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-top-fallback, 0px));
+    /* El par de abajo. Antes no existia: los ~10 usos leian
+       env(safe-area-inset-bottom) crudo, sin respaldo posible.
+
+       Importa por Android. env() lo resuelve el WebView, y en el APK nada
+       garantizaba que devolviera algo: MainActivity no tocaba la ventana,
+       el layout no declara fitsSystemWindows y Capacitor 8.5.0 no aplica
+       insets. El respaldo en JS estaba gateado con navigator.standalone, que
+       es exclusivo de Safari iOS, asi que en Android no corria nunca.
+
+       Ahora MainActivity publica los insets reales como --safe-*-fallback y
+       el max() se queda con el mayor. Si env() ya funcionaba, el valor no se
+       duplica: max() no suma. */
+    --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-bottom-fallback, 0px));
   }
 
   /* Orden deliberado: primero el caso general (que es el de hoy), después
