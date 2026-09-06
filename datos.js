@@ -178,6 +178,28 @@ const PronetDB = (() => {
       return new Set((data || []).map(r => r.pedido_id));
     },
 
+    /** Quien escribio el ULTIMO mensaje de cada chat: { chatId: autorId }.
+     *
+     *  chats_trabajo guarda el texto del ultimo mensaje y su hora, pero no
+     *  quien lo mando. Y esa es justo la pregunta que hace falta para saber
+     *  si la pelota esta del lado del prestador o del vecino.
+     *
+     *  Una sola consulta ordenada por fecha y se toma el primero de cada chat
+     *  en memoria: N consultas —una por chat— seria peor con cualquier
+     *  cantidad de chats. */
+    async ultimoAutorPorChat(chatIds) {
+      const ids = [...new Set((chatIds || []).filter(Boolean))];
+      if (!remoto || !ids.length) return {};
+      const { data, error } = await sb.from('mensajes_chat')
+        .select('chat_id, autor_id, creado')
+        .in('chat_id', ids)
+        .order('creado', { ascending: false });
+      if (error) { console.warn('[PronetDB] ultimoAutorPorChat', error.message); return {}; }
+      const ultimo = {};
+      (data || []).forEach(m => { if (!(m.chat_id in ultimo)) ultimo[m.chat_id] = m.autor_id; });
+      return ultimo;
+    },
+
     /** Los descartes con su motivo y su fecha, del mas nuevo al mas viejo.
      *  listarPedidosDescartados() devuelve solo ids porque el feed no necesita
      *  mas; esto es para la pantalla que los muestra. */
