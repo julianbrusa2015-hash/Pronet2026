@@ -13438,11 +13438,11 @@ document.addEventListener('focusin', (e) => {
         const zoom  = ov.querySelector('.crop-zoom');
         el.src = url;
 
-        // Medidas del marco (16:5) ya en el layout.
-        const FW = frame.clientWidth, FH = FW * DH / DW;
-        frame.style.height = FH + 'px';
-        // Escala base = la mínima que CUBRE el marco (nunca deja huecos).
-        const base = Math.max(FW / NW, FH / NH);
+        // Las medidas del marco se leen DESPUÉS del layout: recién insertado,
+        // frame.clientWidth vale 0, y calcular con eso dejaba la altura en 0px
+        // (que además pisa el aspect-ratio del CSS) y la imagen en 0x0. Un
+        // requestAnimationFrame garantiza que el navegador ya midió el modal.
+        let FW = 0, FH = 0, base = 0;
         let z = 1, ox = 0, oy = 0;
 
         const clamp = () => {
@@ -13458,7 +13458,14 @@ document.addEventListener('focusin', (e) => {
           el.style.width = w + 'px'; el.style.height = h + 'px';
           el.style.left = ox + 'px'; el.style.top = oy + 'px';
         };
-        clamp(); pintar();
+        // Medir y pintar una vez que el marco ya tiene ancho real.
+        requestAnimationFrame(() => {
+          FW = frame.clientWidth; FH = FW * DH / DW;
+          frame.style.height = FH + 'px';
+          // Escala base = la mínima que CUBRE el marco (nunca deja huecos).
+          base = Math.max(FW / NW, FH / NH);
+          clamp(); pintar();
+        });
 
         // Arrastre con pointer events (sirve mouse y touch por igual).
         let dragging = false, px = 0, py = 0;
