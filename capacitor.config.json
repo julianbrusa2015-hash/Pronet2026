@@ -9,7 +9,11 @@
       "zgmwtyxtygnjfakeriiz.supabase.co",
       "accounts.google.com",
       "*.google.com",
-      "*.googleusercontent.com"
+      "*.googleusercontent.com",
+      "*.mercadopago.com",
+      "*.mercadopago.com.ar",
+      "*.mercadolibre.com",
+      "*.mlstatic.com"
     ]
   }
 }
