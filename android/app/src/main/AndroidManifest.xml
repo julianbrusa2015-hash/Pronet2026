@@ -29,6 +29,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Deep link de vuelta del login de Google (Custom Tab). Google
+                 redirige al callback de Supabase y este a com.pronet.app://
+                 login-callback; este intent-filter hace que Android reabra la
+                 app con esa URL, que datos.js toma en appUrlOpen para completar
+                 la sesión. singleTask (arriba) evita abrir una segunda copia. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.pronet.app" android:host="login-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider

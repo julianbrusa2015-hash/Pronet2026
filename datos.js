@@ -52,6 +52,34 @@ const PronetDB = (() => {
   }
   const remoto = !!sb;
 
+  // ── OAuth nativo: vuelta del Custom Tab por deep link ──────────────────
+  // Sólo en el APK y sólo si están los plugins (@capacitor/app + @capacitor/
+  // browser). Toma el `code` (PKCE) o los tokens (implícito) de la URL de
+  // vuelta, cierra el Custom Tab y recarga para que restaurarSesion() levante
+  // la sesión ya guardada en localStorage. En web/PWA no corre (isNativePlatform
+  // es false) y el flujo sigue siendo el redirect de siempre.
+  if (remoto && window.Capacitor && window.Capacitor.isNativePlatform &&
+      window.Capacitor.isNativePlatform() &&
+      window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+    window.Capacitor.Plugins.App.addListener('appUrlOpen', async (ev) => {
+      const url = ev && ev.url;
+      if (!url || url.indexOf('login-callback') === -1) return;
+      try {
+        const u = new URL(url);
+        const code = u.searchParams.get('code');
+        if (code) {
+          await sb.auth.exchangeCodeForSession(code);
+        } else {
+          const h = new URLSearchParams((u.hash || '').replace(/^#/, ''));
+          const at = h.get('access_token'), rt = h.get('refresh_token');
+          if (at && rt) await sb.auth.setSession({ access_token: at, refresh_token: rt });
+        }
+      } catch (e) { console.warn('[PronetDB] deep link OAuth', e && e.message); }
+      try { await window.Capacitor.Plugins.Browser.close(); } catch (e) {}
+      window.location.reload();
+    });
+  }
+
   // SLUG de la URL de la Edge Function de push, no su nombre en el dashboard.
   // Ahí figura como "enviar-push" pero la URL es .../functions/v1/bright-service:
   // el slug quedó del nombre original y no se puede renombrar. Apuntar a
@@ -3624,6 +3652,30 @@ const PronetDB = (() => {
      *  Redirige al proveedor; la vuelta la maneja restaurarSesion() automáticamente. */
     async loginConOAuth(provider) {
       if (!remoto) return { ok: false, error: 'OAuth requiere modo remoto' };
+
+      // En el APK (webview de Capacitor) el flujo web no sirve: navegar el
+      // webview a Google da 'disallowed_useragent' (Google bloquea OAuth en
+      // webviews embebidos) y la vuelta no restaura la sesión. La salida es
+      // abrir el consentimiento en un Custom Tab (Chrome real) y volver por un
+      // deep link. skipBrowserRedirect deja que Supabase arme la URL sin navegar
+      // el webview; el listener de appUrlOpen (arriba, al crear el cliente)
+      // completa la sesión al volver.
+      const nativo = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
+                        window.Capacitor.isNativePlatform() &&
+                        window.Capacitor.Plugins && window.Capacitor.Plugins.Browser);
+      if (nativo) {
+        const { data, error } = await sb.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: 'com.pronet.app://login-callback',
+                     scopes: 'email profile', skipBrowserRedirect: true },
+        });
+        if (error) return { ok: false, error: error.message };
+        if (!data || !data.url) return { ok: false, error: 'No se pudo abrir el login de Google' };
+        await window.Capacitor.Plugins.Browser.open({ url: data.url });
+        return { ok: true };   // la sesión la completa el listener de appUrlOpen
+      }
+
+      // Web / PWA: el flujo de siempre (redirige y vuelve por restaurarSesion).
       const redirectTo = window.location.origin + window.location.pathname;
       const { error } = await sb.auth.signInWithOAuth({
         provider,

@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v413'; // v413: pantalla Ganar puntos alineada a lo que se acredita de verdad
+const CACHE_VERSION = 'pronet-v414'; // v414: login de Google en el APK via Custom Tab + deep link (nativo, guardado por plataforma)
 
 const SHELL = [
   './',
