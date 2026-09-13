@@ -3667,7 +3667,12 @@ const PronetDB = (() => {
         const { data, error } = await sb.auth.signInWithOAuth({
           provider,
           options: { redirectTo: 'com.pronet.app://login-callback',
-                     scopes: 'email profile', skipBrowserRedirect: true },
+                     scopes: 'email profile', skipBrowserRedirect: true,
+                     // prompt=select_account: que Google SIEMPRE muestre el
+                     // selector de cuentas. Sin esto, con una sola sesión de
+                     // Google en el teléfono entra directo con esa y no deja
+                     // elegir otra.
+                     queryParams: { prompt: 'select_account' } },
         });
         if (error) return { ok: false, error: error.message };
         if (!data || !data.url) return { ok: false, error: 'No se pudo abrir el login de Google' };
@@ -3679,7 +3684,10 @@ const PronetDB = (() => {
       const redirectTo = window.location.origin + window.location.pathname;
       const { error } = await sb.auth.signInWithOAuth({
         provider,
-        options: { redirectTo, scopes: 'email profile' },
+        options: { redirectTo, scopes: 'email profile',
+                   // Mismo motivo que en el branch nativo: mostrar siempre el
+                   // selector de cuentas de Google en vez de entrar directo.
+                   queryParams: { prompt: 'select_account' } },
       });
       if (error) return { ok: false, error: error.message };
       return { ok: true };
