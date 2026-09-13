@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v411'; // v411: textos de Mercado (contacto parejo) y sin promesa de puntos por referido
+const CACHE_VERSION = 'pronet-v412'; // v412: sacar promesas de puntos por referido (tip, card y regla loyalty)
 
 const SHELL = [
   './',
