@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v409'; // v409: el marco del recortador se media antes del layout
+const CACHE_VERSION = 'pronet-v410'; // v410: borrar publicación propia (cascada) y no ofrecer renovar sin lugar en el plan
 
 const SHELL = [
   './',

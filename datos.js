@@ -1973,6 +1973,19 @@ const PronetDB = (() => {
       return { ok: true };
     },
 
+    /** Borra definitivamente una publicación propia. RLS
+     *  (publicaciones_borrar_propia) sólo deja borrar la del autor. Los
+     *  comentarios, likes y chats de mercado se van con ella por FK ON DELETE
+     *  CASCADE — no hay que borrarlos a mano. Es distinto de desactivar: eso la
+     *  oculta pero sigue contando para el cupo; esto la elimina de verdad. */
+    async borrarPublicacion(id) {
+      if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
+      const { error } = await sb.from('publicaciones')
+        .delete().eq('id', id);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+
     /** Sube una foto al bucket mercado y devuelve la URL pública. */
     async subirFotoMercado(archivo, usuarioId) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };

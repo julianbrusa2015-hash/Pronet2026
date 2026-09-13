@@ -7898,6 +7898,7 @@ document.addEventListener('focusin', (e) => {
             ${stockBtn}
             ${destacarBtn}
             <button onclick="editarMiPublicacion('${p.id}')" style="background:none;border:1.5px solid var(--blue);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Inter',sans-serif">Editar</button>
+            <button onclick="eliminarMiPublicacion('${p.id}')" style="background:none;border:1.5px solid #FCA5A5;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:#DC2626;cursor:pointer;font-family:'Inter',sans-serif">Borrar</button>
           </div>
         </div>
       </div>`;
@@ -7950,6 +7951,24 @@ document.addEventListener('focusin', (e) => {
     renderMisPublicaciones();
   }
   window.toggleStockPublicacion = toggleStockPublicacion;
+
+  /** Borrado definitivo de una publicación propia. Pide confirmación porque no
+   *  se deshace y arrastra los comentarios: "desactivar" ya cubre el "sacarla
+   *  un rato", así que quien elige borrar tiene que saber que es para siempre. */
+  async function eliminarMiPublicacion(id) {
+    if (!confirm('¿Borrar esta publicación? Se eliminan también sus comentarios y no se puede deshacer.')) return;
+    const card = document.getElementById('mispub-' + id);
+    if (card) card.style.opacity = '0.5';
+    const res = await PronetDB.borrarPublicacion(id);
+    if (!res.ok) {
+      if (card) card.style.opacity = '';
+      showToast && showToast('⚠️ No se pudo borrar: ' + (res.error || ''));
+      return;
+    }
+    showToast && showToast('🗑️ Publicación borrada');
+    renderMisPublicaciones();
+  }
+  window.eliminarMiPublicacion = eliminarMiPublicacion;
 
   // ── Consultas recibidas ProMarket (vista autor) ───────────────────────
 
@@ -13896,6 +13915,13 @@ document.addEventListener('focusin', (e) => {
       // Renovar sólo tiene sentido en lo que ya pasó por moderación una vez:
       // un borrador no se renueva, se envía.
       const renovable = vencida && !!p.moderado_en;
+      // ...y sólo si hay lugar en el plan. Renovar es volver a poner un aviso
+      // al aire, así que ocupa un slot: si ya están todos ocupados, el pago
+      // entra pero la activación lo rechaza y el webhook lo devuelve = cobrado
+      // sin entregar (era el hallazgo del C20-02). Se mira el mismo cupo de
+      // publicados que la franja de arriba (vivos < slots), espejo de
+      // hay_lugar_pub_prestador, y se ofrece el botón sólo cuando alcanza.
+      const hayLugarRenovar = vivos < slots;
       // Impulsar sólo lo que está al aire de verdad: pagar por subir algo
       // que nadie puede ver sería cobrar por nada.
       const impulsado = p.impulso_hasta && new Date(p.impulso_hasta) > new Date();
@@ -13949,8 +13975,11 @@ document.addEventListener('focusin', (e) => {
           (renovable
             ? '<div style="margin-top:9px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:9px 11px">' +
                 '<div style="font-size:11.5px;color:#9A3412;line-height:1.4">Salió de Servicios. Renovalo y vuelve al aire con la misma foto y el mismo texto, sin pasar de nuevo por revisión.</div>' +
-                '<button style="width:100%;margin-top:8px;border:0;background:#EA580C;color:white;border-radius:9px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppRenovar(\'' + p.id + '\')">🔄 Renovar · ' + precioSuelto('renovacion') + '</button>' +
-                '<div style="font-size:10.5px;color:#9A3412;opacity:.8;margin-top:4px;line-height:1.4">Le da más tiempo. No cambia el orden en que aparece.</div>' +
+                (hayLugarRenovar
+                  ? '<button style="width:100%;margin-top:8px;border:0;background:#EA580C;color:white;border-radius:9px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppRenovar(\'' + p.id + '\')">🔄 Renovar · ' + precioSuelto('renovacion') + '</button>' +
+                    '<div style="font-size:10.5px;color:#9A3412;opacity:.8;margin-top:4px;line-height:1.4">Le da más tiempo. No cambia el orden en que aparece.</div>'
+                  : '<button disabled style="width:100%;margin-top:8px;border:0;background:#E5E7EB;color:#9CA3AF;border-radius:9px;padding:9px;font-size:12px;font-weight:700;cursor:not-allowed;font-family:\'Inter\',sans-serif">🔄 Renovar · ' + precioSuelto('renovacion') + '</button>' +
+                    '<div style="font-size:10.5px;color:#9A3412;margin-top:4px;line-height:1.4">Tu plan permite ' + slots + ' aviso' + (slots === 1 ? '' : 's') + ' publicado' + (slots === 1 ? '' : 's') + ' a la vez y ya está' + (slots === 1 ? '' : 'n') + ' ocupado' + (slots === 1 ? '' : 's') + '. Dejá vencer o borrá otro, o mejorá tu plan, para renovar este.</div>') +
               '</div>' : '') +
           '<div style="display:flex;gap:8px;margin-top:10px">' +
             '<button style="flex:1;border:1px solid var(--border);background:white;border-radius:10px;padding:8px 4px;font-size:11.5px;font-weight:700;color:var(--ink2);cursor:pointer;font-family:\'Inter\',sans-serif" onclick="ppVistaPrevia(\'' + p.id + '\')">👀 Vista previa</button>' +
