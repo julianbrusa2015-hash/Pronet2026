@@ -13397,12 +13397,135 @@ document.addEventListener('focusin', (e) => {
   }
   window.promoSetDestino = promoSetDestino;
 
+  /** Recortador 16:5 para el banner del carrusel.
+   *
+   *  El carrusel muestra la imagen con object-fit:cover sobre un marco
+   *  16:5, así que una foto de celular (vertical o 4:3) se recortaba sola,
+   *  al centro, sin que el vecino eligiera qué parte entra. Acá elige: 
+   *  arrastra y hace zoom dentro del marco, y lo que se sube YA es 16:5
+   *  exacto — lo que ve en el marco es lo que va a salir publicado.
+   *
+   *  Vanilla, sin librerías (la CSP bloquea scripts externos). El modal se
+   *  crea dentro de .phone —no en body— o abriría con 0px de alto.
+   *
+   *  Devuelve un File JPEG 16:5, o null si el vecino cancela. */
+  function recortarImagen16x5(file) {
+    return new Promise((resolve) => {
+      const DW = 1280, DH = 400;          // salida 16:5
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const NW = img.naturalWidth, NH = img.naturalHeight;
+        const phone = document.querySelector('.phone') || document.body;
+
+        const ov = document.createElement('div');
+        ov.className = 'crop-ov';
+        ov.innerHTML =
+          '<div class="crop-box">' +
+            '<div class="crop-tit">Encuadrá tu banner</div>' +
+            '<div class="crop-sub">Arrastrá y usá el zoom. Lo que se ve en el marco es lo que se publica.</div>' +
+            '<div class="crop-frame"><img class="crop-img" alt=""></div>' +
+            '<input class="crop-zoom" type="range" min="1" max="3" step="0.01" value="1" aria-label="Zoom">' +
+            '<div class="crop-acc">' +
+              '<button type="button" class="crop-cancel">Cancelar</button>' +
+              '<button type="button" class="crop-ok">Usar esta imagen</button>' +
+            '</div>' +
+          '</div>';
+        phone.appendChild(ov);
+
+        const frame = ov.querySelector('.crop-frame');
+        const el    = ov.querySelector('.crop-img');
+        const zoom  = ov.querySelector('.crop-zoom');
+        el.src = url;
+
+        // Medidas del marco (16:5) ya en el layout.
+        const FW = frame.clientWidth, FH = FW * DH / DW;
+        frame.style.height = FH + 'px';
+        // Escala base = la mínima que CUBRE el marco (nunca deja huecos).
+        const base = Math.max(FW / NW, FH / NH);
+        let z = 1, ox = 0, oy = 0;
+
+        const clamp = () => {
+          const w = NW * base * z, h = NH * base * z;
+          // La imagen siempre tapa el marco: los offsets se topan para que
+          // no asome el fondo por ningún borde.
+          const minX = FW - w, minY = FH - h;
+          ox = Math.min(0, Math.max(minX, ox));
+          oy = Math.min(0, Math.max(minY, oy));
+        };
+        const pintar = () => {
+          const w = NW * base * z, h = NH * base * z;
+          el.style.width = w + 'px'; el.style.height = h + 'px';
+          el.style.left = ox + 'px'; el.style.top = oy + 'px';
+        };
+        clamp(); pintar();
+
+        // Arrastre con pointer events (sirve mouse y touch por igual).
+        let dragging = false, px = 0, py = 0;
+        frame.addEventListener('pointerdown', (e) => {
+          dragging = true; px = e.clientX; py = e.clientY;
+          frame.setPointerCapture(e.pointerId);
+        });
+        frame.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          ox += e.clientX - px; oy += e.clientY - py;
+          px = e.clientX; py = e.clientY;
+          clamp(); pintar();
+        });
+        const soltar = () => { dragging = false; };
+        frame.addEventListener('pointerup', soltar);
+        frame.addEventListener('pointercancel', soltar);
+
+        // Zoom desde el centro del marco, para que no salte al agrandar.
+        zoom.addEventListener('input', () => {
+          const nz = parseFloat(zoom.value);
+          const cx = FW / 2, cy = FH / 2;
+          ox = cx - (cx - ox) * (nz / z);
+          oy = cy - (cy - oy) * (nz / z);
+          z = nz; clamp(); pintar();
+        });
+
+        const cerrar = (resultado) => {
+          URL.revokeObjectURL(url);
+          ov.remove();
+          resolve(resultado);
+        };
+        ov.querySelector('.crop-cancel').addEventListener('click', () => cerrar(null));
+        ov.querySelector('.crop-ok').addEventListener('click', () => {
+          // El canvas es el marco escalado a 1280x400: el factor marco->canvas
+          // es el mismo en X e Y porque ambos son 16:5, así que el recorte
+          // que se ve es exactamente el que se guarda.
+          const k = DW / FW;
+          const canvas = document.createElement('canvas');
+          canvas.width = DW; canvas.height = DH;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, ox * k, oy * k, NW * base * z * k, NH * base * z * k);
+          canvas.toBlob((blob) => {
+            if (!blob) { cerrar(null); return; }
+            cerrar(new File([blob], 'banner.jpg', { type: 'image/jpeg' }));
+          }, 'image/jpeg', 0.88);
+        });
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
   /** Sube y previsualiza. Se sube al elegirla y no al enviar: así el vecino
    *  ve si la imagen entró antes de completar el resto. */
-  async function _promoSubir(input, contenedorId, cb) {
-    const file = input.files?.[0];
+  async function _promoSubir(input, contenedorId, cb, recortar) {
+    let file = input.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { showToast && showToast('⚠️ La imagen no puede superar 5 MB'); input.value = ''; return; }
+    // El banner del carrusel se recorta a 16:5 acá: el vecino elige el
+    // encuadre y lo que se sube ya tiene la proporción final. Si cancela,
+    // se corta sin subir nada. El flyer no pasa por acá (no es 16:5).
+    if (recortar) {
+      const cortada = await recortarImagen16x5(file);
+      if (!cortada) { input.value = ''; return; }
+      file = cortada;
+    }
     const cont = document.getElementById(contenedorId);
     if (cont) cont.innerHTML = '<div style="font-size:13px;color:var(--ink3)">⏳ Subiendo…</div>';
     const res = await PronetDB.subirImagenBanner(file, true);   // true = carpeta propia
@@ -13450,7 +13573,7 @@ document.addEventListener('focusin', (e) => {
     cb(res.url);
   }
 
-  function promoPrevisualizar(input) { _promoSubir(input, 'promo-img-prev', (u) => { promoImagenUrl = u; }); }
+  function promoPrevisualizar(input) { _promoSubir(input, 'promo-img-prev', (u) => { promoImagenUrl = u; }, true); }
   window.promoPrevisualizar = promoPrevisualizar;
   function promoPrevisualizarFlyer(input) { _promoSubir(input, 'promo-flyer-prev', (u) => { promoFlyerUrl = u; }); }
   window.promoPrevisualizarFlyer = promoPrevisualizarFlyer;

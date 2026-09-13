@@ -2554,6 +2554,34 @@
   .empty-sub { font-size:13px; color:var(--ink3); line-height:1.6; margin-bottom:24px; }
   .empty-actions { display:flex; flex-direction:column; gap:10px; width:100%; }
 
+  /* ── Recortador de banner 16:5 ── */
+  /* Vive dentro de .phone (por eso position:absolute) para no abrir con 0px
+     de alto, como el resto de los modales de la app. */
+  .crop-ov {
+    position:absolute; inset:0; z-index:99999;
+    background:rgba(13,15,26,.75); display:flex; align-items:center;
+    justify-content:center; padding:18px;
+  }
+  .crop-box {
+    background:var(--white); border-radius:16px; padding:18px 16px;
+    width:100%; max-width:440px; box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  .crop-tit { font-family:'Sora',sans-serif; font-size:16px; font-weight:700; color:var(--ink); text-align:center; }
+  .crop-sub { font-size:12px; color:var(--ink3); text-align:center; margin:5px 0 14px; line-height:1.5; }
+  /* El marco ES la relación final del carrusel: lo de adentro se publica. */
+  .crop-frame {
+    position:relative; width:100%; aspect-ratio:16 / 5; overflow:hidden;
+    border-radius:12px; background:#0D0F1A; touch-action:none; cursor:grab;
+    border:2px solid var(--blue);
+  }
+  .crop-frame:active { cursor:grabbing; }
+  .crop-img { position:absolute; left:0; top:0; max-width:none; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+  .crop-zoom { width:100%; margin:14px 0 4px; accent-color:var(--blue); }
+  .crop-acc { display:flex; gap:10px; margin-top:10px; }
+  .crop-acc button { flex:1; padding:11px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; border:none; }
+  .crop-cancel { background:var(--surface); color:var(--ink2); border:1.5px solid var(--border) !important; }
+  .crop-ok { background:var(--blue); color:#fff; }
+
   /* ── Editar perfil ── */
   #s-edit-perfil { overflow: hidden; }
   .edit-header { background:white; padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-shrink:0; }
