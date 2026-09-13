@@ -22,6 +22,7 @@ DECLARE
   v_legacy_activo   boolean;
   v_legacy_hasta    timestamptz;
   v_inicio          timestamptz;
+  v_limite          int;
   v_existentes      int;
   v_faltante        int;
   v_creditos_orig   int;
@@ -101,12 +102,19 @@ BEGIN
     );
   END IF;
 
-  -- ── Base / vecino ocasional: 3 gratis por año, después créditos ──
-  v_inicio := date_trunc('year', now() at time zone 'America/Argentina/Buenos_Aires')
+  -- ── Base / vecino ocasional: N gratis por MES, después créditos ──
+  -- El trigger paso de "3 por año" a "N por mes, con N en config_app"
+  -- (supabase-cupo-vecino-parametrizable.sql + el reenganche del trigger).
+  -- El test tiene que espejar ESO, no el modelo anual viejo, o inserta 3 y
+  -- espera que la 4ta se bloquee cuando el cupo mensual real es 5.
+  SELECT coalesce(nullif(valor, '')::int, 5) INTO v_limite
+    FROM config_app WHERE clave = 'mkt_pub_vecino_mes';
+  v_limite := coalesce(v_limite, 5);
+  v_inicio := date_trunc('month', now() at time zone 'America/Argentina/Buenos_Aires')
               at time zone 'America/Argentina/Buenos_Aires';
   SELECT count(*) INTO v_existentes FROM publicaciones
    WHERE autor_id = p_usuario_id AND creado >= v_inicio;
-  v_faltante := GREATEST(0, 3 - v_existentes);
+  v_faltante := GREATEST(0, v_limite - v_existentes);
 
   SELECT promarket_creditos INTO v_creditos_orig FROM perfiles WHERE id = p_usuario_id;
 
@@ -116,7 +124,7 @@ BEGIN
             v_inicio + (i * interval '1 day'));
   END LOOP;
 
-  -- Paso 1: sin créditos, la publicación que excede las 3 gratis debe bloquearse.
+  -- Paso 1: sin créditos, la publicación que excede el cupo mensual gratis debe bloquearse.
   UPDATE perfiles SET promarket_creditos = 0 WHERE id = p_usuario_id;
   BEGIN
     INSERT INTO publicaciones (autor_id, categoria, titulo, zona)
@@ -145,7 +153,7 @@ BEGIN
     'pass', v_bloqueada AND v_motivo LIKE 'sin_creditos_publicacion%'
             AND v_con_credito_ok AND v_creditos_post = 0,
     'plan', v_plan,
-    'limite', 3,
+    'limite', v_limite,
     'existentes_prev', v_existentes,
     'insertadas_test', v_faltante,
     'motivo_bloqueo', v_motivo,
