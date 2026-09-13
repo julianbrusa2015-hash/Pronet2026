@@ -879,7 +879,7 @@ document.addEventListener('focusin', (e) => {
       {
         id: 'consultar-vendedor', grupo: 'mercado', tab: '💬 Consultar a un vendedor',
         pasos: [
-          { titulo: 'Abrís el chat de la publicación', desc: 'Desde la tarjeta o el detalle, tocás "Consultar" y se abre un chat privado con quien publicó — sin compartir tu teléfono todavía.',
+          { titulo: 'Abrís el chat de la publicación', desc: 'Desde la tarjeta o el detalle, tocás "Consultar" y se abre un chat privado con quien publicó. Entre vecinos el contacto es parejo: para coordinar la entrega, cualquiera de los dos puede ver el teléfono del otro desde el botón de contacto.',
             mock: guiaMock(guiaChip('💬 Consultar', true, true)) },
           { titulo: 'Preguntás lo que necesites', desc: 'Disponibilidad, si queda stock, si hace envío — todo por el chat, igual que con un prestador.',
             mock: guiaMock(
