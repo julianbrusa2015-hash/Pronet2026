@@ -449,7 +449,16 @@ const PronetDB = (() => {
         const { PushNotifications } = window.Capacitor.Plugins;
         const perm = await PushNotifications.checkPermissions();
         if (perm.receive === 'denied') return 'bloqueadas';
-        return perm.receive === 'granted' ? 'activas' : 'inactivas';
+        // 'granted' NO alcanza para decir "activas": en Android 13+ el permiso
+        // se concede aparte del registro FCM, y el token puede no haberse
+        // obtenido nunca (Google Play Services caído, etc.). Sin este chequeo,
+        // el estado daba 'activas' por el solo permiso y el toggle pasaba a
+        // DESACTIVAR — el usuario tocaba "activar" y le decía "desactivadas",
+        // sin haber registrado jamás. Marcamos 'activas' sólo si además hay
+        // token confirmado en este dispositivo (lo setea activarPush).
+        let tokOk = false;
+        try { tokOk = localStorage.getItem('pronet_push_ok') === '1'; } catch (e) {}
+        return (perm.receive === 'granted' && tokOk) ? 'activas' : 'inactivas';
       }
       if (Notification.permission === 'denied') return 'bloqueadas';
       const reg = await navigator.serviceWorker.ready;
@@ -472,7 +481,11 @@ const PronetDB = (() => {
           PushNotifications.addListener('registration', async (token) => {
             if (resuelto) return; // token refresh posterior — ver guardarTokenFCM
             resuelto = true;
-            resolve(await this.guardarTokenFCM(token.value));
+            const res = await this.guardarTokenFCM(token.value);
+            // Marca local: este dispositivo YA obtuvo token y lo guardó. La lee
+            // estadoPush() para no confundir "permiso concedido" con "activado".
+            try { if (res && res.ok) localStorage.setItem('pronet_push_ok', '1'); } catch (e) {}
+            resolve(res);
           });
           PushNotifications.addListener('registrationError', (err) => {
             if (resuelto) return;
@@ -480,6 +493,15 @@ const PronetDB = (() => {
             resolve({ ok: false, error: String(err?.error || err) });
           });
           PushNotifications.register();
+          // Red de seguridad: si NI 'registration' NI 'registrationError' se
+          // disparan (el register se cuelga, típico cuando Google Play Services
+          // no está disponible), la promesa quedaba colgada y el toggle no
+          // mostraba nada. Con esto, a los 12s devuelve un error legible.
+          setTimeout(() => {
+            if (resuelto) return;
+            resuelto = true;
+            resolve({ ok: false, error: 'El registro de FCM no respondió (12s). Suele ser Google Play Services desactualizado o sin conexión con Google en este teléfono.' });
+          }, 12000);
         });
       }
 
@@ -521,6 +543,7 @@ const PronetDB = (() => {
     async desactivarPush() {
       try {
         if (this._esNativo()) {
+          try { localStorage.removeItem('pronet_push_ok'); } catch (e) {}
           const uid = await this.usuarioIdActual();
           if (uid) await sb.from('push_suscripciones').delete().eq('usuario_id', uid).eq('tipo', 'fcm');
           return { ok: true };
