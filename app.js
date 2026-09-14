@@ -15106,9 +15106,22 @@ document.addEventListener('focusin', (e) => {
       del.style.cssText = 'flex:1;font-size:11px;font-weight:600;color:#BE123C;background:#FFF1F2;border:1px solid #FECDD3;border-radius:8px;padding:7px;cursor:pointer;font-family:inherit';
       del.addEventListener('click', async (e) => {
         e.stopPropagation();
+        // pedidos_borrar_dueno (RLS) bloquea el DELETE si existe alguna
+        // propuesta que no esté 'retirada' — conteoProps ya cuenta
+        // exactamente eso. Sin este chequeo, el DELETE lo filtraba la RLS
+        // en silencio (0 filas, sin error) y el pedido "no se borraba"
+        // sin ningún aviso.
+        if (conteoProps[p.id] > 0) {
+          alert((p.estado || '') !== 'Publicado'
+            ? 'Este pedido ya recibió propuestas — no se puede borrar, para no perder ese historial. Usá "Archivar" para sacarlo de la lista.'
+            : 'No podés borrar un pedido con propuestas. Elegí a uno de los prestadores, o esperá a que las retiren o el pedido se cierre.');
+          return;
+        }
+        if (!confirm('¿Eliminar "' + (p.titulo || 'este pedido') + '"? No se puede deshacer.')) return;
         del.textContent = '⏳...';
         del.disabled = true;
-        await PronetDB.borrar('pedidos', p.id);
+        const ok = await PronetDB.borrar('pedidos', p.id);
+        if (!ok) { showToast && showToast('⚠️ No se pudo eliminar el pedido'); del.textContent = '🗑 Eliminar'; del.disabled = false; return; }
         renderPedidosGuardados();
       });
 

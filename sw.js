@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v416'; // v416: push nativo — estado real (permiso+token) y error visible si el registro FCM falla/cuelga
+const CACHE_VERSION = 'pronet-v417'; // v417: fix — borrar pedido con propuestas fallaba en silencio (RLS); ahora avisa y agrega confirm()
 
 const SHELL = [
   './',
