@@ -7918,7 +7918,7 @@ document.addEventListener('focusin', (e) => {
     }
     showToast && showToast('Abriendo el pago…');
     const res = await PronetDB.crearPreferenciaMP('impulso_mercado', 'mes', id);
-    if (res?.init_point) { window.location.href = res.init_point; return; }
+    if (res?.init_point) { abrirCheckoutMP(res.init_point); return; }
     showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
   }
   window.destacarMiPublicacion = destacarMiPublicacion;
@@ -8492,7 +8492,7 @@ document.addEventListener('focusin', (e) => {
       showToast && showToast('⚠️ No se pudo iniciar el pago. ' + (res.error || ''));
       return;
     }
-    window.location.href = res.init_point;
+    abrirCheckoutMP(res.init_point);
   }
   window.comprarPublicacionExtra = comprarPublicacionExtra;
 
@@ -9738,6 +9738,21 @@ document.addEventListener('focusin', (e) => {
   /** ¿El checkout redirige a MercadoPago? Si es false, activa el plan gratis (modo test). */
   function mpCheckoutActivo() {
     return configApp.mp_checkout_activo === 'true';
+  }
+
+  /** Abre el checkout de MercadoPago. En la app nativa lo hace en un Custom
+   *  Tab (Chrome real) en vez de navegar el WebView — el checkout de MP está
+   *  armado para un navegador normal, y dentro del WebView de Capacitor el
+   *  layout queda desfasado (mismo motivo que el login de Google, ver
+   *  login_google_apk_customtab). La vuelta la maneja el listener
+   *  appUrlOpen de datos.js (pago-callback). */
+  function abrirCheckoutMP(url) {
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+        window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+      window.Capacitor.Plugins.Browser.open({ url });
+      return;
+    }
+    window.location.href = url;
   }
 
   /** ¿El tab ProMarket está habilitado? Lo controla el admin.
@@ -13819,7 +13834,7 @@ document.addEventListener('focusin', (e) => {
     }
     showToast && showToast('Abriendo el pago…');
     const res = await PronetDB.crearPreferenciaMP('banner', 'mes', id);
-    if (res?.init_point) { window.location.href = res.init_point; return; }
+    if (res?.init_point) { abrirCheckoutMP(res.init_point); return; }
     showToast && showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
   }
   window.promoPagar = promoPagar;
@@ -14134,7 +14149,7 @@ document.addEventListener('focusin', (e) => {
     }
     showToast && showToast('Abriendo el pago…');
     const res = await PronetDB.crearPreferenciaMP('impulso', 'mes', id);
-    if (res?.init_point) { window.location.href = res.init_point; return; }
+    if (res?.init_point) { abrirCheckoutMP(res.init_point); return; }
     showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
   }
   window.ppImpulsar = ppImpulsar;
@@ -14161,7 +14176,7 @@ document.addEventListener('focusin', (e) => {
         'Precio: ' + precioSuelto('renovacion') + '\n\n¿Seguimos al pago?')) return;
     showToast && showToast('Abriendo el pago…');
     const res = await PronetDB.crearPreferenciaMP('renovacion', 'mes', id);
-    if (res?.init_point) { window.location.href = res.init_point; return; }
+    if (res?.init_point) { abrirCheckoutMP(res.init_point); return; }
     showToast && showToast('⚠️ No se pudo abrir el pago. ' + (res?.error || ''));
   }
   window.ppRenovar = ppRenovar;
@@ -15731,7 +15746,7 @@ document.addEventListener('focusin', (e) => {
         showToast && showToast('⚠️ No se pudo iniciar el pago. ' + (res.error || ''));
         return;
       }
-      window.location.href = res.init_point;
+      abrirCheckoutMP(res.init_point);
       return;
     }
 

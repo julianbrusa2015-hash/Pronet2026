@@ -4,7 +4,7 @@
 // IMPORTANTE al actualizar la app: subí una versión nueva cambiando el número
 // de CACHE_VERSION. Eso invalida el caché viejo y los usuarios reciben la
 // versión nueva en la próxima apertura.
-const CACHE_VERSION = 'pronet-v417'; // v417: fix — borrar pedido con propuestas fallaba en silencio (RLS); ahora avisa y agrega confirm()
+const CACHE_VERSION = 'pronet-v418'; // v418: fix — checkout de MercadoPago en el APK abre en Custom Tab en vez del WebView (layout desfasado)
 
 const SHELL = [
   './',

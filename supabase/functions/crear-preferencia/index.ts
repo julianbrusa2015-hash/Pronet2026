@@ -50,7 +50,12 @@ Deno.serve(async (req) => {
     // antes de que el usuario decida. Sin esto habria que repetir la formula en
     // el cliente, y dos copias de una cuenta de plata siempre terminan
     // divergiendo: la pantalla prometeria un numero y el cobro seria otro.
-    const { plan, periodo, ref, cotizar } = await req.json();
+    // `nativo: true` lo manda la app de Capacitor (ver crearPreferenciaMP en
+    // datos.js). El checkout de MP está armado para un navegador normal, no
+    // para el WebView de la app — hay que abrirlo en un Custom Tab y volver
+    // por deep link, igual que el login de Google. Sin esto, MP redirigía a
+    // la URL https del sitio y el WebView renderizaba el checkout desfasado.
+    const { plan, periodo, ref, cotizar, nativo } = await req.json();
     // El frontend manda 'mes' (ver switchBilling en app.js), no 'mensual'.
     if (periodo !== 'mes' && periodo !== 'anual') {
       return json({ error: 'Periodo inválido' }, 400);
@@ -304,7 +309,11 @@ Deno.serve(async (req) => {
         // hay que mandarlo.
         ...(ref ? { ref } : {}),
       },
-      back_urls: {
+      back_urls: nativo ? {
+        success: 'com.pronet.app://pago-callback?mp=success',
+        failure: 'com.pronet.app://pago-callback?mp=failure',
+        pending: 'com.pronet.app://pago-callback?mp=pending',
+      } : {
         success: siteUrl + '/?mp=success',
         failure: siteUrl + '/?mp=failure',
         pending: siteUrl + '/?mp=pending',

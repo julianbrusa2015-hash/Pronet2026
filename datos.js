@@ -52,31 +52,49 @@ const PronetDB = (() => {
   }
   const remoto = !!sb;
 
-  // ── OAuth nativo: vuelta del Custom Tab por deep link ──────────────────
+  // ── Deep links nativos: vuelta del Custom Tab ──────────────────────────
   // Sólo en el APK y sólo si están los plugins (@capacitor/app + @capacitor/
-  // browser). Toma el `code` (PKCE) o los tokens (implícito) de la URL de
-  // vuelta, cierra el Custom Tab y recarga para que restaurarSesion() levante
-  // la sesión ya guardada en localStorage. En web/PWA no corre (isNativePlatform
-  // es false) y el flujo sigue siendo el redirect de siempre.
+  // browser). Un solo listener, dos orígenes posibles (login de Google y
+  // checkout de MercadoPago) — ambos abren un Custom Tab y vuelven acá.
+  // En web/PWA no corre (isNativePlatform es false) y los flujos siguen
+  // siendo el redirect de siempre.
   if (remoto && window.Capacitor && window.Capacitor.isNativePlatform &&
       window.Capacitor.isNativePlatform() &&
       window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
     window.Capacitor.Plugins.App.addListener('appUrlOpen', async (ev) => {
       const url = ev && ev.url;
-      if (!url || url.indexOf('login-callback') === -1) return;
-      try {
-        const u = new URL(url);
-        const code = u.searchParams.get('code');
-        if (code) {
-          await sb.auth.exchangeCodeForSession(code);
-        } else {
-          const h = new URLSearchParams((u.hash || '').replace(/^#/, ''));
-          const at = h.get('access_token'), rt = h.get('refresh_token');
-          if (at && rt) await sb.auth.setSession({ access_token: at, refresh_token: rt });
-        }
-      } catch (e) { console.warn('[PronetDB] deep link OAuth', e && e.message); }
-      try { await window.Capacitor.Plugins.Browser.close(); } catch (e) {}
-      window.location.reload();
+      if (!url) return;
+
+      if (url.indexOf('login-callback') !== -1) {
+        // Toma el `code` (PKCE) o los tokens (implícito) de la URL de vuelta,
+        // cierra el Custom Tab y recarga para que restaurarSesion() levante
+        // la sesión ya guardada en localStorage.
+        try {
+          const u = new URL(url);
+          const code = u.searchParams.get('code');
+          if (code) {
+            await sb.auth.exchangeCodeForSession(code);
+          } else {
+            const h = new URLSearchParams((u.hash || '').replace(/^#/, ''));
+            const at = h.get('access_token'), rt = h.get('refresh_token');
+            if (at && rt) await sb.auth.setSession({ access_token: at, refresh_token: rt });
+          }
+        } catch (e) { console.warn('[PronetDB] deep link OAuth', e && e.message); }
+        try { await window.Capacitor.Plugins.Browser.close(); } catch (e) {}
+        window.location.reload();
+        return;
+      }
+
+      if (url.indexOf('pago-callback') !== -1) {
+        // La activación real la hace el webhook server-side (ver
+        // webhook-mp) — acá sólo cerramos el Custom Tab y recargamos para
+        // que la app vuelva a leer el plan actual. No hace falta parsear
+        // el ?mp=success/failure: si el pago no se acreditó, el plan
+        // simplemente no cambia y el usuario lo ve reflejado igual.
+        try { await window.Capacitor.Plugins.Browser.close(); } catch (e) {}
+        window.location.reload();
+        return;
+      }
     });
   }
 
@@ -2185,7 +2203,13 @@ const PronetDB = (() => {
     async crearPreferenciaMP(plan, periodo, ref = null) {
       if (!remoto) return { ok: false, error: 'Requiere modo remoto' };
       try {
-        const { data, error } = await sb.functions.invoke('crear-preferencia', { body: { plan, periodo, ref } });
+        // nativo=true hace que crear-preferencia arme back_urls con deep link
+        // (com.pronet.app://pago-callback) en vez de la URL https del sitio —
+        // sin esto, MP no tiene forma de volver a la app nativa después de
+        // pagar. El cliente abre el checkout en Custom Tab (ver abrirCheckoutMP
+        // en app.js), no en el WebView.
+        const nativo = this._esNativo();
+        const { data, error } = await sb.functions.invoke('crear-preferencia', { body: { plan, periodo, ref, nativo } });
         if (error) { console.warn('[PronetDB] crearPreferenciaMP', error.message); return { ok: false, error: error.message }; }
         if (!data?.init_point) return { ok: false, error: 'Respuesta inválida de MercadoPago' };
         return { ok: true, init_point: data.init_point };

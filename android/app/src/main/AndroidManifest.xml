@@ -29,16 +29,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Deep link de vuelta del login de Google (Custom Tab). Google
+            <!-- Deep links de vuelta de un Custom Tab. login-callback: Google
                  redirige al callback de Supabase y este a com.pronet.app://
-                 login-callback; este intent-filter hace que Android reabra la
-                 app con esa URL, que datos.js toma en appUrlOpen para completar
-                 la sesión. singleTask (arriba) evita abrir una segunda copia. -->
+                 login-callback. pago-callback: MercadoPago vuelve ahí después
+                 del checkout (ver back_urls en crear-preferencia). Cualquiera
+                 de los dos hace que Android reabra la app con esa URL, que
+                 datos.js toma en appUrlOpen. singleTask (arriba) evita abrir
+                 una segunda copia. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="com.pronet.app" android:host="login-callback" />
+                <data android:scheme="com.pronet.app" android:host="pago-callback" />
             </intent-filter>
 
         </activity>
