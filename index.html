@@ -2284,52 +2284,59 @@
         <div style="height:16px"></div>
       </div>
 
-      <!-- Checkout overlay -->
-      <div class="checkout-overlay" id="checkout-overlay" onclick="cerrarCheckout(event)">
-        <div class="checkout-sheet">
-          <div class="checkout-handle"></div>
-          <div class="checkout-title" id="checkout-title">Activar Plan Pro</div>
-          <div class="checkout-sub" id="checkout-sub">Anual · $99.900 ARS · 2 meses gratis</div>
-
-          <div class="checkout-row"><span>Plan</span><span id="checkout-plan-label">Pro Anual</span></div>
-          <div class="checkout-row"><span id="checkout-boost-lbl">Loyalty boost</span><span id="checkout-boost-val" style="color:var(--blue)">×1.5 activado</span></div>
-          <div class="checkout-row"><span>Propuestas/mes</span><span id="checkout-propuestas-val">Ilimitadas</span></div>
-          <div class="checkout-row"><span>Renovación</span><span id="checkout-renew">5 jul 2027</span></div>
-          <div class="checkout-row" id="checkout-credito-row" style="display:none"><span id="checkout-credito-lbl">Crédito de tu plan actual</span><span id="checkout-credito-val" style="color:var(--green)">-$0 ARS</span></div>
-          <div class="checkout-row"><span>Total</span><span id="checkout-total">$99.900 ARS</span></div>
-
-          <div style="font-size:12px;font-weight:600;color:var(--ink2);margin:14px 0 8px">Método de pago</div>
-          <div class="checkout-methods">
-            <div class="cm-opt on" onclick="selPayMethod(this)">
-              <div class="cm-icon">💳</div>
-              <div class="cm-lbl">Tarjeta</div>
-            </div>
-            <div class="cm-opt" onclick="selPayMethod(this)">
-              <div class="cm-icon">📲</div>
-              <div class="cm-lbl">MercadoPago</div>
-            </div>
-          </div>
-
-          <button class="btn-p" style="width:100%" onclick="confirmarPago()">Confirmar pago seguro 🔒</button>
-          <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--ink3)">Podés cancelar en cualquier momento · Sin permanencia</div>
-        </div>
-      </div>
-
-      <!-- Éxito pago -->
-      <div class="rev-success" id="subs-success" style="z-index:90">
-        <div class="rev-success-icon">🎉</div>
-        <div class="rev-success-title" id="subs-success-title">¡Plan Pro activado!</div>
-        <div class="rev-success-sub" id="subs-success-sub">Tu boost ×1.5 ya está activo. Vas a notar más visitas y contactos en las próximas horas.</div>
-        <div class="rev-impact">
-          <div class="ri-row"><div class="ri-icon">⭐</div><div class="ri-txt">Badge <strong>Premium</strong> visible en el feed</div></div>
-          <div class="ri-row"><div class="ri-icon">🏆</div><div class="ri-txt">Boost <strong>×1.4</strong> en tu ranking zonal activo</div></div>
-          <div class="ri-row"><div class="ri-icon">📊</div><div class="ri-txt">Estadísticas de visibilidad <strong>desbloqueadas</strong></div></div>
-          <div class="ri-row"><div class="ri-icon">💳</div><div class="ri-txt">Próxima renovación: <strong>5 jul 2027</strong></div></div>
-        </div>
-        <button class="btn-p" style="width:100%" onclick="cerrarSubsSuccess()">Ir a mi perfil →</button>
-      </div>
-
     </div><!-- /subs -->
+
+    <!-- Checkout overlay y éxito de pago de Planes: viven ACÁ, hermanos de
+         .screen, no adentro de #s-subs. #s-subs scrollea (overflow-y:auto)
+         y estos dos son position:absolute — si quedaban anidados adentro,
+         su inset:0 se mide contra el contenido scrolleado completo, no
+         contra lo que se ve en pantalla: si el vecino había scrolleado la
+         lista de planes, el modal aparecía arriba del todo, fuera de vista.
+         Mismo motivo por el que los zona-modal-overlay viven acá y no
+         adentro de una pantalla (ver memoria modales_van_en_phone). -->
+    <div class="checkout-overlay" id="checkout-overlay" onclick="cerrarCheckout(event)">
+      <div class="checkout-sheet">
+        <div class="checkout-handle"></div>
+        <div class="checkout-title" id="checkout-title">Activar Plan Pro</div>
+        <div class="checkout-sub" id="checkout-sub">Anual · $99.900 ARS · 2 meses gratis</div>
+
+        <div class="checkout-row"><span>Plan</span><span id="checkout-plan-label">Pro Anual</span></div>
+        <div class="checkout-row"><span id="checkout-boost-lbl">Loyalty boost</span><span id="checkout-boost-val" style="color:var(--blue)">×1.5 activado</span></div>
+        <div class="checkout-row"><span>Propuestas/mes</span><span id="checkout-propuestas-val">Ilimitadas</span></div>
+        <div class="checkout-row"><span>Renovación</span><span id="checkout-renew">5 jul 2027</span></div>
+        <div class="checkout-row" id="checkout-credito-row" style="display:none"><span id="checkout-credito-lbl">Crédito de tu plan actual</span><span id="checkout-credito-val" style="color:var(--green)">-$0 ARS</span></div>
+        <div class="checkout-row"><span>Total</span><span id="checkout-total">$99.900 ARS</span></div>
+
+        <div style="font-size:12px;font-weight:600;color:var(--ink2);margin:14px 0 8px">Método de pago</div>
+        <div class="checkout-methods">
+          <div class="cm-opt on" onclick="selPayMethod(this)">
+            <div class="cm-icon">💳</div>
+            <div class="cm-lbl">Tarjeta</div>
+          </div>
+          <div class="cm-opt" onclick="selPayMethod(this)">
+            <div class="cm-icon">📲</div>
+            <div class="cm-lbl">MercadoPago</div>
+          </div>
+        </div>
+
+        <button class="btn-p" style="width:100%" onclick="confirmarPago()">Confirmar pago seguro 🔒</button>
+        <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--ink3)">Podés cancelar en cualquier momento · Sin permanencia</div>
+      </div>
+    </div>
+
+    <!-- Éxito pago -->
+    <div class="rev-success" id="subs-success" style="z-index:90">
+      <div class="rev-success-icon">🎉</div>
+      <div class="rev-success-title" id="subs-success-title">¡Plan Pro activado!</div>
+      <div class="rev-success-sub" id="subs-success-sub">Tu boost ×1.5 ya está activo. Vas a notar más visitas y contactos en las próximas horas.</div>
+      <div class="rev-impact">
+        <div class="ri-row"><div class="ri-icon">⭐</div><div class="ri-txt">Badge <strong>Premium</strong> visible en el feed</div></div>
+        <div class="ri-row"><div class="ri-icon">🏆</div><div class="ri-txt">Boost <strong>×1.4</strong> en tu ranking zonal activo</div></div>
+        <div class="ri-row"><div class="ri-icon">📊</div><div class="ri-txt">Estadísticas de visibilidad <strong>desbloqueadas</strong></div></div>
+        <div class="ri-row"><div class="ri-icon">💳</div><div class="ri-txt">Próxima renovación: <strong>5 jul 2027</strong></div></div>
+      </div>
+      <button class="btn-p" style="width:100%" onclick="cerrarSubsSuccess()">Ir a mi perfil →</button>
+    </div>
 
     <!-- ══ LISTA DE CHATS ════════════════════════════════════════════════ -->
     <div class="screen chats-screen" id="s-chats">
